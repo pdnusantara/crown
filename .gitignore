@@ -12,3 +12,4 @@ dist
 
 # Docker
 *.log
+node_modules
