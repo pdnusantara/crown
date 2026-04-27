@@ -1,0 +1,14 @@
+# Backend
+backend/node_modules
+backend/.env
+backend/dist
+
+# Frontend
+.env
+.env.local
+.env.production
+node_modules
+dist
+
+# Docker
+*.log

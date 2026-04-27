@@ -1,0 +1,262 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: #0A0A0A;
+    color: #F5F5F0;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #1A1A1A;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #C9A84C;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #E8C875;
+  }
+}
+
+@layer components {
+  .glass {
+    background: rgba(26, 26, 26, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(201, 168, 76, 0.15);
+  }
+
+  .glass-strong {
+    background: rgba(26, 26, 26, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(201, 168, 76, 0.2);
+  }
+
+  .gold-text {
+    background: linear-gradient(135deg, #C9A84C 0%, #E8C875 50%, #C9A84C 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-size: 200% auto;
+  }
+
+  .gold-border {
+    border: 1px solid rgba(201, 168, 76, 0.3);
+  }
+
+  .card-hover {
+    transition: all 0.2s ease;
+  }
+
+  .card-hover:hover {
+    border-color: rgba(201, 168, 76, 0.4);
+    box-shadow: 0 0 20px rgba(201, 168, 76, 0.1);
+    transform: translateY(-1px);
+  }
+
+  .sidebar-link {
+    @apply flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer;
+    color: #6B7280;
+  }
+
+  .sidebar-link:hover {
+    background: rgba(201, 168, 76, 0.08);
+    color: #F5F5F0;
+  }
+
+  .sidebar-link.active {
+    background: rgba(201, 168, 76, 0.12);
+    color: #C9A84C;
+    border-left: 3px solid #C9A84C;
+    padding-left: calc(1rem - 3px);
+  }
+
+  .shimmer {
+    background: linear-gradient(90deg, #1A1A1A 25%, #2A2A2A 50%, #1A1A1A 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  .page-transition {
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .status-badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+}
+
+/* ── Print styles ──────────────────────────────────────────────────────────── */
+@media print {
+  body * { visibility: hidden !important; }
+  .receipt-content, .receipt-content * { visibility: visible !important; }
+  .no-print { display: none !important; }
+  .receipt-content {
+    position: fixed !important;
+    top: 0; left: 0;
+    width: 80mm;
+    background: white !important;
+    color: #111 !important;
+    padding: 8mm;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+}
+
+/* ── Skeleton shimmer ──────────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #1A1A1A 25%, #252525 50%, #1A1A1A 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.6s infinite linear;
+}
+
+/* ── Light mode overrides ──────────────────────────────────────────────────── */
+.light-mode body {
+  background-color: #F0EFE9 !important;
+  color: #111111 !important;
+}
+.light-mode .bg-dark {
+  background-color: #F0EFE9 !important;
+}
+.light-mode .bg-dark-surface {
+  background-color: #FFFFFF !important;
+}
+.light-mode .bg-dark-card {
+  background-color: #F5F4EF !important;
+}
+.light-mode .text-off-white {
+  color: #111111 !important;
+}
+.light-mode .text-muted {
+  color: #555555 !important;
+}
+.light-mode .border-dark-border {
+  border-color: #DDDBD0 !important;
+}
+.light-mode .glass {
+  background: rgba(255, 255, 255, 0.88) !important;
+  border-color: rgba(201, 168, 76, 0.25) !important;
+}
+.light-mode .sidebar-link {
+  color: #333333;
+}
+.light-mode .sidebar-link:hover {
+  background-color: #ECEAE2;
+  color: #111111;
+}
+.light-mode .sidebar-link.active {
+  background-color: rgba(201, 168, 76, 0.12);
+  color: #A8893A;
+}
+.light-mode header {
+  background-color: #FFFFFF !important;
+  border-color: #DDDBD0 !important;
+}
+.light-mode .min-h-screen {
+  background-color: #F0EFE9;
+}
+
+/* ── Accessibility & Keyboard Navigation ──────────────────────────────────── */
+
+/* Skip to main content */
+.skip-link {
+  position: absolute;
+  top: -50px;
+  left: 8px;
+  z-index: 99999;
+  background: #C9A84C;
+  color: #0A0A0A;
+  font-weight: 700;
+  font-size: 0.875rem;
+  padding: 10px 20px;
+  border-radius: 0 0 10px 10px;
+  text-decoration: none;
+  transition: top 0.2s;
+}
+.skip-link:focus {
+  top: 0;
+  outline: 3px solid #E8C875;
+  outline-offset: 2px;
+}
+
+/* Visible focus ring for keyboard navigation */
+:focus-visible {
+  outline: 2px solid #C9A84C;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Remove focus ring for mouse users */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* High-contrast focus for interactive elements */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="option"]:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid #C9A84C;
+  outline-offset: 2px;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Screen reader only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

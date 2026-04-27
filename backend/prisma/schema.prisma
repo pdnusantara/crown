@@ -1,0 +1,438 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  super_admin
+  tenant_admin
+  kasir
+  barber
+  customer
+}
+
+enum SubscriptionStatus {
+  trial
+  active
+  overdue
+  expired
+}
+
+enum SubscriptionPackage {
+  Basic
+  Pro
+  Enterprise
+}
+
+enum BranchAddonType {
+  monthly
+  onetime
+}
+
+enum TicketStatus {
+  open
+  in_progress
+  resolved
+}
+
+enum TicketPriority {
+  low
+  medium
+  high
+}
+
+enum QueueStatus {
+  waiting
+  in_progress
+  done
+  paid
+  cancelled
+}
+
+enum QueueType {
+  walk_in
+  booking
+}
+
+enum BookingStatus {
+  pending
+  confirmed
+  in_progress
+  done
+  cancelled
+}
+
+enum TransactionStatus {
+  completed
+  cancelled
+  refunded
+}
+
+enum ShiftStatus {
+  open
+  closed
+}
+
+enum BroadcastType {
+  info
+  warning
+  error
+  success
+}
+
+enum PaymentMethod {
+  cash
+  transfer
+  qris
+  card
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  password      String
+  name          String
+  role          Role
+  phone         String?
+  photo         String?
+  tenantId      String?
+  branchId      String?
+  isActive      Boolean  @default(true)
+  deletedAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  tenant        Tenant?  @relation(fields: [tenantId], references: [id])
+  branch        Branch?  @relation(fields: [branchId], references: [id])
+  refreshTokens RefreshToken[]
+  ratings       BarberRating[] @relation("BarberRatings")
+  ticketsCreated Ticket[]
+  ticketReplies  TicketReply[]
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Tenant {
+  id           String   @id @default(cuid())
+  name         String
+  slug         String?  @unique
+  email        String   @unique
+  phone        String?
+  address      String?
+  logo         String?
+  isSuspended  Boolean  @default(false)
+  deletedAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  branches     Branch[]
+  users        User[]
+  services     Service[]
+  customers    Customer[]
+  vouchers     Voucher[]
+  subscription Subscription?
+  featureFlags TenantFeatureFlag[]
+  tickets      Ticket[]
+  broadcasts   BroadcastRecipient[]
+}
+
+model Branch {
+  id           String   @id @default(cuid())
+  tenantId     String
+  name         String
+  address      String?
+  phone        String?
+  openTime     String   @default("09:00")
+  closeTime    String   @default("21:00")
+  isActive     Boolean  @default(true)
+  deletedAt    DateTime?
+  createdAt    DateTime @default(now())
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  users        User[]
+  transactions Transaction[]
+  queues       Queue[]
+  bookings     Booking[]
+  shifts       Shift[]
+}
+
+model Service {
+  id               String   @id @default(cuid())
+  tenantId         String
+  name             String
+  description      String?
+  price            Int
+  duration         Int
+  category         String
+  icon             String?
+  isActive         Boolean  @default(true)
+  deletedAt        DateTime?
+  createdAt        DateTime @default(now())
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  transactionItems TransactionItem[]
+}
+
+model Customer {
+  id            String    @id @default(cuid())
+  tenantId      String
+  name          String
+  phone         String
+  email         String?
+  gender        String?
+  birthDate     DateTime?
+  address       Json?
+  loyaltyPoints Int       @default(0)
+  visitCount    Int       @default(0)
+  notes         String?
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  transactions  Transaction[]
+  bookings      Booking[]
+}
+
+model Transaction {
+  id             String            @id @default(cuid())
+  tenantId       String
+  branchId       String
+  customerId     String?
+  shiftId        String?
+  subtotal       Int
+  discountType   String?
+  discountValue  Int               @default(0)
+  discountAmount Int               @default(0)
+  tax            Int               @default(0)
+  total          Int
+  paymentMethod  PaymentMethod     @default(cash)
+  cashReceived   Int?
+  change         Int?
+  status         TransactionStatus @default(completed)
+  createdAt      DateTime          @default(now())
+  branch         Branch            @relation(fields: [branchId], references: [id])
+  customer       Customer?         @relation(fields: [customerId], references: [id])
+  shift          Shift?            @relation(fields: [shiftId], references: [id])
+  items          TransactionItem[]
+}
+
+model TransactionItem {
+  id            String      @id @default(cuid())
+  transactionId String
+  serviceId     String
+  barberId      String?
+  name          String
+  price         Int
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  service       Service     @relation(fields: [serviceId], references: [id])
+}
+
+model Queue {
+  id            String      @id @default(cuid())
+  tenantId      String
+  branchId      String
+  customerId    String?
+  customerName  String
+  customerPhone String?
+  serviceId     String?
+  serviceNames  String?     // pipe-separated names (denormalized for now; pivot table if needed later)
+  barberId      String?
+  barberName    String?
+  type          QueueType   @default(walk_in)
+  queueNumber   Int
+  status        QueueStatus @default(waiting)
+  notes         String?
+  estimatedTime Int?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  branch        Branch      @relation(fields: [branchId], references: [id])
+}
+
+model Booking {
+  id            String        @id @default(cuid())
+  tenantId      String
+  branchId      String
+  customerId    String?
+  customerName  String
+  customerPhone String
+  serviceId     String
+  barberId      String?
+  date          String
+  time          String
+  status        BookingStatus @default(pending)
+  notes         String?
+  createdAt     DateTime      @default(now())
+  branch        Branch        @relation(fields: [branchId], references: [id])
+  customer      Customer?     @relation(fields: [customerId], references: [id])
+}
+
+model Voucher {
+  id          String    @id @default(cuid())
+  tenantId    String
+  code        String
+  description String?
+  type        String
+  value       Int
+  minPurchase Int       @default(0)
+  maxUses     Int?
+  usedCount   Int       @default(0)
+  isActive    Boolean   @default(true)
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, code])
+}
+
+model Package {
+  name             SubscriptionPackage @id
+  price            Int
+  maxBranches      Int                 @default(1)
+  maxStaff         Int                 @default(5)
+  branchAddonPrice Int                 @default(0)
+  branchAddonType  BranchAddonType     @default(monthly)
+  description      String?
+  features         String[]            @default([])
+  updatedAt        DateTime            @updatedAt
+}
+
+model Subscription {
+  id        String              @id @default(cuid())
+  tenantId  String              @unique
+  package   SubscriptionPackage @default(Basic)
+  status    SubscriptionStatus  @default(trial)
+  price     Int
+  startDate DateTime
+  endDate   DateTime
+  autoRenew Boolean             @default(true)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  tenant    Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoices  Invoice[]
+}
+
+model Invoice {
+  id             String       @id @default(cuid())
+  subscriptionId String
+  period         String
+  amount         Int
+  type           String       @default("subscription")
+  status         String       @default("pending")
+  paidAt         DateTime?
+  createdAt      DateTime     @default(now())
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+}
+
+model TenantFeatureFlag {
+  id       String  @id @default(cuid())
+  tenantId String
+  flagId   String
+  enabled  Boolean @default(false)
+  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, flagId])
+}
+
+model Ticket {
+  id          String         @id @default(cuid())
+  tenantId    String
+  subject     String
+  description String
+  category    String
+  priority    TicketPriority @default(medium)
+  status      TicketStatus   @default(open)
+  createdById String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy   User           @relation(fields: [createdById], references: [id])
+  replies     TicketReply[]
+}
+
+model TicketReply {
+  id        String   @id @default(cuid())
+  ticketId  String
+  authorId  String
+  message   String
+  isAdmin   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id])
+}
+
+model Broadcast {
+  id         String              @id @default(cuid())
+  title      String
+  message    String
+  type       BroadcastType       @default(info)
+  active     Boolean             @default(true)
+  sentAt     DateTime            @default(now())
+  recipients BroadcastRecipient[]
+}
+
+model BroadcastRecipient {
+  id          String    @id @default(cuid())
+  broadcastId String
+  tenantId    String
+  isRead      Boolean   @default(false)
+  broadcast   Broadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([broadcastId, tenantId])
+}
+
+model Shift {
+  id                String      @id @default(cuid())
+  branchId          String
+  kasirId           String
+  status            ShiftStatus @default(open)
+  openedAt          DateTime    @default(now())
+  closedAt          DateTime?
+  totalRevenue      Int?
+  totalTransactions Int?
+  branch            Branch      @relation(fields: [branchId], references: [id])
+  transactions      Transaction[]
+}
+
+model BarberRating {
+  id        String   @id @default(cuid())
+  barberId  String
+  rating    Int
+  createdAt DateTime @default(now())
+  barber    User     @relation("BarberRatings", fields: [barberId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actorName String
+  action    String
+  target    String
+  detail    String?
+  severity  String   @default("info")
+  createdAt DateTime @default(now())
+}
+
+model ErrorLog {
+  id         String    @id @default(cuid())
+  level      String    @default("error")
+  type       String    @default("api_error")
+  message    String
+  stack      String?
+  path       String?
+  method     String?
+  statusCode Int?
+  tenantId   String?
+  userId     String?
+  metadata   Json?
+  resolved   Boolean   @default(false)
+  resolvedAt DateTime?
+  resolvedBy String?
+  createdAt  DateTime  @default(now())
+}

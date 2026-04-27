@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create:*)",
+      "Bash(npx create-vite@latest --template react .)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('Name:', d['name']\\); print\\('Scripts:', list\\(d['scripts'].keys\\(\\)\\)\\)\")",
+      "Bash(grep -l \"useToast\\\\|toast\\\\.\" src/pages/**/*.jsx src/pages/*.jsx)",
+      "Bash(grep -l \"CommandPalette\" src/components/layout/AppLayout.jsx)",
+      "Bash(grep -l \"ErrorBoundary\" src/main.jsx)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('\\\\n'.join\\(sorted\\(d['dependencies'].keys\\(\\)\\)\\)\\)\")",
+      "Bash(grep -l \"useVirtualizer\\\\|react-virtual\" src/pages/**/*.jsx)",
+      "Bash(grep -l \"linearRegression\\\\|Forecasting\\\\|prediksi\" src/pages/**/*.jsx)",
+      "Bash(grep -l \"cmd-history\\\\|searchHistory\" src/components/ui/CommandPalette.jsx)",
+      "Bash(grep -l \"DndContext\\\\|useSortable\\\\|dnd-kit\" src/pages/kasir/QueuePage.jsx)",
+      "Bash(docker info *)",
+      "PowerShell(docker info 2>&1)",
+      "PowerShell(Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force)",
+      "PowerShell(netstat -ano)",
+      "PowerShell(Start-Process \"cmd\" -ArgumentList \"/k\", \"title BarberOS Backend && cd /d D:\\\\crown\\\\backend && npm run dev\" -WindowStyle Normal)",
+      "PowerShell(Start-Process \"cmd\" -ArgumentList \"/k\", \"title BarberOS Frontend && cd /d D:\\\\crown && npm run dev\" -WindowStyle Normal)",
+      "PowerShell(Start-Process \"http://localhost:5173\")",
+      "PowerShell(Stop-Process -Force -Confirm:$false)",
+      "PowerShell(Start-Process cmd -ArgumentList '/k', 'cd /d D:\\\\crown\\\\backend && color 0B && echo  BarberOS Backend - http://localhost:3001 && echo. && npm run dev' -WindowStyle Normal)",
+      "PowerShell(Start-Process cmd -ArgumentList '/k', 'cd /d D:\\\\crown && color 0D && echo  BarberOS Frontend - http://localhost:5173 && echo. && npm run dev' -WindowStyle Normal)",
+      "Bash(node -e \"require\\('./src/config/socket'\\); require\\('./src/routes/queue'\\); console.log\\('OK: modules load cleanly'\\)\")",
+      "Bash(node --check server.js)",
+      "Bash(node -e \"const { addDays } = require\\('D:/crown/node_modules/date-fns'\\); console.log\\(typeof addDays\\)\")",
+      "Bash(npx prisma *)",
+      "Bash(node *)",
+      "WebFetch(domain:github.com)"
+    ]
+  }
+}
