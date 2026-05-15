@@ -31,10 +31,11 @@ export const Badge = ({ children, variant = 'muted', className = '', dot = false
 
 export const getSegmentBadge = (segment) => {
   const map = {
-    VIP: 'gold',
-    Regular: 'info',
-    New: 'success',
-    Inactive: 'muted',
+    // Legacy labels (jaga backward compat dengan halaman lain)
+    VIP: 'gold', Regular: 'info', New: 'success', Inactive: 'muted',
+    // Skema baru 6-tier (lihat TACustomersPage SEGMENTS)
+    vip: 'gold', loyal: 'info', new: 'success',
+    atRisk: 'warning', lost: 'danger', never: 'muted',
   }
   return map[segment] || 'muted'
 }

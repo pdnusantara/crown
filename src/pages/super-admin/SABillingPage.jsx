@@ -4,26 +4,31 @@ import { motion } from 'framer-motion'
 import {
   CreditCard, TrendingUp, AlertTriangle, CheckCircle, RefreshCw,
   ChevronDown, Receipt, ToggleLeft, ToggleRight, Clock, Filter, CheckSquare,
-  Search, Plus, UserX,
+  Search, Plus, UserX, ExternalLink, Pause, Play, Download,
 } from 'lucide-react'
-import { format, differenceInDays, addDays } from 'date-fns'
+import { differenceInDays, addDays } from 'date-fns'
 import { useTenants } from '../../hooks/useTenants.js'
 import {
   useSubscriptions, useUpgradePackage, useRenewSubscription,
   useToggleAutoRenew, usePayInvoice, useCreateSubscription, computeMrr,
+  usePauseSubscription, useResumeSubscription,
 } from '../../hooks/useSubscription.js'
 import { usePackages } from '../../hooks/usePackages.js'
+import { useCreatePaymentOrder, usePaymentSettings } from '../../hooks/usePayment.js'
+import api from '../../lib/api.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import Card, { CardHeader } from '../../components/ui/Card.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Modal from '../../components/ui/Modal.jsx'
 import { formatRupiah, formatDate } from '../../utils/format.js'
+import { DEFAULT_TZ } from '../../utils/timezone.js'
 
 const STATUS_VARIANTS = {
   active:  'success',
   overdue: 'danger',
   trial:   'warning',
+  paused:  'info',
   expired: 'muted',
 }
 
@@ -33,13 +38,19 @@ const PACKAGE_COLORS = {
   Enterprise: 'text-purple-400 bg-purple-400/10 border-purple-400/20',
 }
 
-const STATUS_FILTERS = ['all', 'active', 'trial', 'overdue', 'expired']
-const DURATION_OPTIONS = [{ label: '30 hari', days: 30 }, { label: '90 hari', days: 90 }, { label: '1 tahun', days: 365 }]
+const STATUS_FILTERS = ['all', 'active', 'trial', 'overdue', 'paused', 'expired']
+const DURATION_OPTIONS = [
+  { label: '30 hari', days: 30,  cycle: 'monthly' },
+  { label: '90 hari', days: 90,  cycle: 'monthly' },
+  { label: '1 tahun', days: 365, cycle: 'annual'  },
+]
 
-const DEFAULT_CREATE = { tenantId: '', package: 'Basic', status: 'active', days: 30, price: 0, autoRenew: true }
+const DEFAULT_CREATE = { tenantId: '', package: 'Basic', status: 'active', days: 30, cycle: 'monthly', price: 0, autoRenew: true }
 
 function DaysLeft({ endDate }) {
   const { t } = useTranslation()
+  // differenceInDays cukup memadai — selisih hari secara absolut, tidak
+  // bergantung TZ karena Date object adalah UTC instan.
   const days = differenceInDays(new Date(endDate), new Date())
   if (days < 0) return <span className="text-red-400 text-xs font-medium">{t('superAdmin.billing.overdueDays', { days: Math.abs(days) })}</span>
   if (days <= 7) return <span className="text-amber-400 text-xs font-medium">{t('superAdmin.billing.remainingDays', { days })}</span>
@@ -48,19 +59,26 @@ function DaysLeft({ endDate }) {
 
 export default function SABillingPage() {
   const { t } = useTranslation()
-  const { data: tenants = [], isLoading: isLoadingTenants } = useTenants()
-  const { data: subscriptions = [], isLoading: isLoadingSubs, isError: isSubError, error: subError, refetch: refetchSubs } = useSubscriptions({ limit: 100 })
+  const { data: tenants = [], isLoading: isLoadingTenants } = useTenants({ limit: 500 })
+  const { data: subscriptions = [], isLoading: isLoadingSubs, isError: isSubError, error: subError, refetch: refetchSubs } = useSubscriptions({ limit: 500 })
   const { data: pkgData, isLoading: isLoadingPkgs } = usePackages()
-  const upgradePkg  = useUpgradePackage()
-  const renewSub    = useRenewSubscription()
-  const toggleAuto  = useToggleAutoRenew()
-  const payInvoice  = usePayInvoice()
-  const createSub   = useCreateSubscription()
-  const toast       = useToast()
+  const upgradePkg       = useUpgradePackage()
+  const renewSub         = useRenewSubscription()
+  const toggleAuto       = useToggleAutoRenew()
+  const payInvoice       = usePayInvoice()
+  const createSub        = useCreateSubscription()
+  const createPayment    = useCreatePaymentOrder()
+  const pauseSub         = usePauseSubscription()
+  const resumeSub        = useResumeSubscription()
+  const { data: paySettings } = usePaymentSettings()
+  const toast            = useToast()
 
   const [upgradeModal, setUpgradeModal] = useState(null)
   const [invoiceModal, setInvoiceModal] = useState(null)
   const [createModal, setCreateModal]   = useState(false)
+  const [pauseModal, setPauseModal]     = useState(null)
+  const [pauseDays, setPauseDays]       = useState(7)
+  const [pauseReason, setPauseReason]   = useState('')
   const [selectedPkg, setSelectedPkg]   = useState('')
   const [busyId, setBusyId]             = useState(null)
   const [statusFilter, setStatusFilter] = useState('all')
@@ -77,6 +95,7 @@ export default function SABillingPage() {
   const overdueCount = subscriptions.filter(s => s.status === 'overdue').length
   const activeCount  = subscriptions.filter(s => s.status === 'active').length
   const trialCount   = subscriptions.filter(s => s.status === 'trial').length
+  const pausedCount  = subscriptions.filter(s => s.status === 'paused').length
 
   // Tenants that have no subscription yet
   const tenantsWithoutSub = useMemo(() => {
@@ -94,7 +113,8 @@ export default function SABillingPage() {
     return true
   }), [subscriptions, statusFilter, pkgFilter, searchText, tenants])
 
-  const tenantName = (tenantId) => tenants.find(tt => tt.id === tenantId)?.name || tenantId
+  const tenantName = (tenantId) => tenants.find(tt => tt.id === tenantId)?.name || '—'
+  const tenantTz   = (tenantId) => tenants.find(tt => tt.id === tenantId)?.timezone || DEFAULT_TZ
 
   const handleUpgrade = async () => {
     if (!selectedPkg || !upgradeModal || selectedPkg === upgradeModal.currentPackage) return
@@ -150,6 +170,20 @@ export default function SABillingPage() {
     }
   }
 
+  const handlePayDuitku = async (inv, type = 'subscription') => {
+    if (!invoiceModal) return
+    try {
+      const result = await createPayment.mutateAsync({
+        subscriptionId: invoiceModal.id,
+        invoiceId:      inv?.id,
+        type,
+      })
+      window.open(result.paymentUrl, '_blank', 'noopener,noreferrer')
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal membuat link pembayaran')
+    }
+  }
+
   const handleCreateFormChange = (field, value) => {
     setCreateForm(prev => {
       const next = { ...prev, [field]: value }
@@ -158,8 +192,87 @@ export default function SABillingPage() {
         const pkg = packages[value]
         next.price = pkg?.price ?? 0
       }
+      // Sync billingCycle when duration changes (30/90 → monthly, 365 → annual)
+      if (field === 'days') {
+        const opt = DURATION_OPTIONS.find(o => o.days === value)
+        if (opt) next.cycle = opt.cycle
+      }
       return next
     })
+  }
+
+  const openPauseModal = (sub) => {
+    setPauseModal(sub)
+    setPauseDays(7)
+    setPauseReason('')
+  }
+
+  const handlePause = async () => {
+    if (!pauseModal || pauseSub.isPending) return
+    const pauseUntil = addDays(new Date(), pauseDays).toISOString()
+    try {
+      await pauseSub.mutateAsync({
+        subscriptionId: pauseModal.id,
+        pauseUntil,
+        reason: pauseReason.trim() || undefined,
+      })
+      toast.success(`Subscription ${tenantName(pauseModal.tenantId)} di-pause hingga ${pauseDays} hari ke depan`)
+      setPauseModal(null)
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal pause subscription')
+    }
+  }
+
+  const handleResume = async (sub) => {
+    if (busyId) return
+    setBusyId(sub.id)
+    try {
+      await resumeSub.mutateAsync({ subscriptionId: sub.id })
+      toast.success(`Subscription ${tenantName(sub.tenantId)} kembali aktif`)
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal resume subscription')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const handleExportCsv = () => {
+    if (filteredSubs.length === 0) {
+      toast.info('Tidak ada data untuk diexport')
+      return
+    }
+    const headers = ['Tenant', 'Email', 'Paket', 'Status', 'Cycle', 'Harga', 'Mulai', 'Berakhir', 'Auto-Renew', 'Pause Until', 'Pause Reason']
+    const rows = filteredSubs.map(s => {
+      const t = tenants.find(tt => tt.id === s.tenantId)
+      const tz = t?.timezone || DEFAULT_TZ
+      return [
+        s.tenant?.name || t?.name || '—',
+        s.tenant?.email || t?.email || '',
+        s.package || '',
+        s.status || '',
+        s.billingCycle || '',
+        s.price ?? 0,
+        s.startDate ? formatDate(s.startDate, tz) : '',
+        s.endDate ? formatDate(s.endDate, tz) : '',
+        s.autoRenew ? 'YA' : 'TIDAK',
+        s.pauseUntil ? formatDate(s.pauseUntil, tz) : '',
+        s.pauseReason || '',
+      ]
+    })
+    const csv = [headers, ...rows]
+      .map(r => r.map(cell => {
+        const v = String(cell ?? '')
+        return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v
+      }).join(','))
+      .join('\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `subscriptions-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success(`${filteredSubs.length} subscription ter-export`)
   }
 
   const handleCreate = async () => {
@@ -175,6 +288,7 @@ export default function SABillingPage() {
         price: createForm.price,
         startDate,
         endDate,
+        billingCycle: createForm.cycle,
         autoRenew: createForm.autoRenew,
       })
       const tName = tenants.find(t => t.id === createForm.tenantId)?.name || createForm.tenantId
@@ -183,6 +297,21 @@ export default function SABillingPage() {
       setCreateForm(DEFAULT_CREATE)
     } catch (err) {
       toast.error(err?.response?.data?.error || t('common.saveFailed'))
+    }
+  }
+
+  const [triggerLoading, setTriggerLoading] = useState(false)
+  const handleTriggerRenewal = async () => {
+    setTriggerLoading(true)
+    try {
+      const res = await api.post('/payment/trigger-renewal')
+      const d = res.data.data
+      toast.success(`Job selesai: ${d.overdueCount} overdue, ${d.expiredCount} expired`)
+      refetchSubs()
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal menjalankan renewal job')
+    } finally {
+      setTriggerLoading(false)
     }
   }
 
@@ -202,27 +331,54 @@ export default function SABillingPage() {
     if (status === 'overdue') return t('superAdmin.billing.statusOverdue')
     if (status === 'trial')   return t('superAdmin.billing.statusTrial')
     if (status === 'expired') return t('superAdmin.billing.statusExpired')
+    if (status === 'paused')  return 'Paused'
     return status
   }
 
   const rowHighlight = (status) => {
     if (status === 'overdue') return 'bg-red-500/5 border-l-2 border-l-red-500/50'
     if (status === 'expired') return 'bg-dark-surface/20 opacity-70'
+    if (status === 'paused')  return 'bg-blue-500/5 border-l-2 border-l-blue-500/50'
     return ''
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-2xl font-display font-bold gold-text">{t('superAdmin.billing.pageTitle')}</h1>
           <p className="text-muted text-sm mt-1">{t('superAdmin.billing.pageSubtitle')}</p>
         </div>
         {!isLoading && (
-          <Button onClick={() => openCreateModal()} size="sm">
-            <Plus size={14} className="mr-1" />
-            Buat Subscription
-          </Button>
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleExportCsv}
+              disabled={subscriptions.length === 0}
+              title="Export subscriptions hasil filter ke CSV"
+            >
+              <Download size={13} className="mr-1" />
+              <span className="hidden sm:inline">Export CSV</span>
+              <span className="sm:hidden">Export</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              loading={triggerLoading}
+              onClick={handleTriggerRenewal}
+              title="Jalankan job renewal sekarang (reminder, overdue, expired)"
+            >
+              <RefreshCw size={13} className="mr-1" />
+              <span className="hidden sm:inline">Run Renewal Job</span>
+              <span className="sm:hidden">Renewal</span>
+            </Button>
+            <Button onClick={() => openCreateModal()} size="sm">
+              <Plus size={14} className="mr-1" />
+              <span className="hidden sm:inline">Buat Subscription</span>
+              <span className="sm:hidden">Buat</span>
+            </Button>
+          </div>
         )}
       </div>
 
@@ -270,23 +426,24 @@ export default function SABillingPage() {
 
       {!isLoading && (
         <>
-          {/* KPI Row — 5 cards */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {/* KPI Row — 6 cards (incl. paused) */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {[
               { label: t('superAdmin.billing.kpiMrr'),     value: formatRupiah(mrr),  icon: TrendingUp,    color: 'text-gold',        sub: t('superAdmin.billing.kpiMrrSub') },
               { label: t('superAdmin.billing.kpiArr'),     value: formatRupiah(arr),  icon: TrendingUp,    color: 'text-green-400',   sub: t('superAdmin.billing.kpiArrSub') },
               { label: t('superAdmin.billing.kpiActive'),  value: activeCount,        icon: CheckCircle,   color: 'text-green-400',   sub: t('superAdmin.billing.kpiActiveSub') },
               { label: 'Trial',                            value: trialCount,         icon: Clock,         color: 'text-amber-400',   sub: 'Masa percobaan' },
+              { label: 'Paused',                           value: pausedCount,        icon: Pause,         color: 'text-blue-400',    sub: 'Sementara nonaktif' },
               { label: t('superAdmin.billing.kpiOverdue'), value: overdueCount,       icon: AlertTriangle, color: 'text-red-400',     sub: t('superAdmin.billing.kpiOverdueSub') },
             ].map((kpi, i) => (
-              <motion.div key={kpi.label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
-                <Card className="p-5">
+              <motion.div key={kpi.label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+                <Card className="p-4">
                   <div className="flex items-start justify-between mb-2">
-                    <p className="text-xs text-muted">{kpi.label}</p>
-                    <kpi.icon size={16} className={kpi.color} />
+                    <p className="text-xs text-muted truncate">{kpi.label}</p>
+                    <kpi.icon size={14} className={`${kpi.color} flex-shrink-0`} />
                   </div>
-                  <p className="text-2xl font-bold text-off-white">{kpi.value}</p>
-                  <p className="text-xs text-muted mt-1">{kpi.sub}</p>
+                  <p className="text-xl font-bold text-off-white break-all">{kpi.value}</p>
+                  <p className="text-[10px] text-muted mt-1 truncate">{kpi.sub}</p>
                 </Card>
               </motion.div>
             ))}
@@ -394,17 +551,23 @@ export default function SABillingPage() {
                   )}
                   {filteredSubs.map(sub => {
                     const variant = STATUS_VARIANTS[sub.status] || 'success'
+                    const tz = sub.tenant?.timezone || tenantTz(sub.tenantId)
                     return (
                       <tr key={sub.id} className={`border-b border-dark-border/50 hover:bg-dark-surface/40 transition-colors ${rowHighlight(sub.status)}`}>
                         <td className="px-4 py-3 font-medium text-off-white">{sub.tenant?.name || tenantName(sub.tenantId)}</td>
                         <td className="px-4 py-3">
-                          <span className={`text-xs font-semibold px-2 py-1 rounded-full border ${PACKAGE_COLORS[sub.package]}`}>{sub.package}</span>
+                          <span className={`text-xs font-semibold px-2 py-1 rounded-full border ${PACKAGE_COLORS[sub.package] || 'text-muted border-dark-border'}`}>{sub.package}</span>
                         </td>
                         <td className="px-4 py-3"><Badge variant={variant}>{statusLabel(sub.status)}</Badge></td>
                         <td className="px-4 py-3">
                           <div>
-                            <p className="text-off-white text-xs">{format(new Date(sub.endDate), 'dd MMM yyyy')}</p>
+                            <p className="text-off-white text-xs">{formatDate(sub.endDate, tz)}</p>
                             <DaysLeft endDate={sub.endDate} />
+                            {sub.status === 'paused' && sub.pauseUntil && (
+                              <p className="text-[10px] text-blue-400/80 mt-0.5">
+                                Pause hingga {formatDate(sub.pauseUntil, tz)}
+                              </p>
+                            )}
                           </div>
                         </td>
                         <td className="px-4 py-3 text-gold font-semibold">{formatRupiah(sub.price)}</td>
@@ -421,16 +584,25 @@ export default function SABillingPage() {
                           </button>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 flex-wrap">
                             <Button size="sm" variant="secondary" onClick={() => setInvoiceModal(sub)}>
                               <Receipt size={13} className="mr-1" />{t('superAdmin.billing.invoiceBtn')}
                             </Button>
                             <Button size="sm" onClick={() => { setUpgradeModal({ subscriptionId: sub.id, tenantName: sub.tenant?.name || tenantName(sub.tenantId), currentPackage: sub.package }); setSelectedPkg(sub.package) }}>
                               <ChevronDown size={13} className="mr-1" />{t('superAdmin.billing.packageBtn')}
                             </Button>
-                            {sub.status !== 'active' && (
+                            {sub.status !== 'active' && sub.status !== 'paused' && (
                               <Button size="sm" variant="secondary" disabled={busyId === sub.id} onClick={() => handleRenew(sub)}>
                                 <RefreshCw size={13} className="mr-1" />{t('superAdmin.billing.extendBtn')}
+                              </Button>
+                            )}
+                            {sub.status === 'paused' ? (
+                              <Button size="sm" variant="secondary" disabled={busyId === sub.id || resumeSub.isPending} onClick={() => handleResume(sub)} title="Resume — kembali aktif">
+                                <Play size={13} className="mr-1" />Resume
+                              </Button>
+                            ) : (sub.status === 'active' || sub.status === 'trial') && (
+                              <Button size="sm" variant="secondary" onClick={() => openPauseModal(sub)} title="Pause subscription sementara">
+                                <Pause size={13} className="mr-1" />Pause
                               </Button>
                             )}
                           </div>
@@ -504,7 +676,7 @@ export default function SABillingPage() {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-muted">{formatDate(inv.createdAt || inv.paidAt)}</p>
+                  <p className="text-xs text-muted">{formatDate(inv.createdAt || inv.paidAt, invoiceModal?.tenant?.timezone || tenantTz(invoiceModal?.tenantId))}</p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <span className="text-gold font-semibold text-sm">{formatRupiah(inv.amount)}</span>
@@ -512,15 +684,28 @@ export default function SABillingPage() {
                     {inv.status === 'paid' ? t('superAdmin.billing.invoicePaid') : inv.status === 'overdue' ? t('superAdmin.billing.invoiceOverdue') : t('superAdmin.billing.invoicePending')}
                   </Badge>
                   {inv.status !== 'paid' && (
-                    <button
-                      onClick={() => handlePayInvoice(inv)}
-                      disabled={payInvoice.isPending}
-                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-medium hover:bg-green-500/20 transition-all disabled:opacity-40"
-                      title="Tandai lunas"
-                    >
-                      <CheckSquare size={12} />
-                      Lunas
-                    </button>
+                    <>
+                      {paySettings?.active && (
+                        <button
+                          onClick={() => handlePayDuitku(inv, inv.type || 'subscription')}
+                          disabled={createPayment.isPending}
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium hover:bg-blue-500/20 transition-all disabled:opacity-40"
+                          title="Buat link pembayaran Duitku"
+                        >
+                          <ExternalLink size={12} />
+                          Duitku
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handlePayInvoice(inv)}
+                        disabled={payInvoice.isPending}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-xs font-medium hover:bg-green-500/20 transition-all disabled:opacity-40"
+                        title="Tandai lunas"
+                      >
+                        <CheckSquare size={12} />
+                        Lunas
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -631,6 +816,59 @@ export default function SABillingPage() {
             <Button variant="secondary" fullWidth onClick={() => setCreateModal(false)} disabled={createSub.isPending}>Batal</Button>
             <Button fullWidth onClick={handleCreate} disabled={createSub.isPending || !createForm.tenantId}>
               {createSub.isPending ? t('common.loading') : 'Buat Subscription'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Pause Modal */}
+      <Modal
+        isOpen={!!pauseModal}
+        onClose={() => !pauseSub.isPending && setPauseModal(null)}
+        title={`Pause Subscription — ${pauseModal ? (pauseModal.tenant?.name || tenantName(pauseModal.tenantId)) : ''}`}
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div className="p-3 bg-blue-500/5 border border-blue-500/20 rounded-xl">
+            <p className="text-xs text-blue-300">
+              Tenant tidak akan ditagih selama pause. Auto-renew otomatis dimatikan.
+              Sisa hari paid yang tidak terpakai akan ditambahkan ke tanggal akhir saat resume.
+            </p>
+          </div>
+          <div>
+            <label className="text-xs text-muted mb-1.5 block">Durasi Pause</label>
+            <div className="grid grid-cols-3 gap-2">
+              {[7, 14, 30].map(d => (
+                <button
+                  key={d}
+                  onClick={() => setPauseDays(d)}
+                  className={`py-2 rounded-lg text-xs font-medium border transition-all ${
+                    pauseDays === d
+                      ? 'border-blue-400 bg-blue-400/10 text-blue-400'
+                      : 'border-dark-border text-muted hover:text-off-white'
+                  }`}
+                >
+                  {d} hari
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-muted/60 mt-1">Maksimum 30 hari per pause cycle.</p>
+          </div>
+          <div>
+            <label className="text-xs text-muted mb-1.5 block">Alasan <span className="text-muted/50">(opsional)</span></label>
+            <textarea
+              value={pauseReason}
+              onChange={e => setPauseReason(e.target.value.slice(0, 500))}
+              rows={2}
+              placeholder="Mis. tenant minta jeda renovasi cabang..."
+              className="w-full bg-dark-surface border border-dark-border rounded-xl px-3 py-2 text-sm text-off-white placeholder-muted focus:outline-none focus:border-gold/50 resize-y"
+            />
+            <p className="text-[10px] text-muted/60 mt-0.5 text-right">{pauseReason.length}/500</p>
+          </div>
+          <div className="flex gap-3 pt-1">
+            <Button variant="secondary" fullWidth onClick={() => setPauseModal(null)} disabled={pauseSub.isPending}>Batal</Button>
+            <Button fullWidth onClick={handlePause} disabled={pauseSub.isPending} icon={Pause}>
+              {pauseSub.isPending ? 'Memproses...' : `Pause ${pauseDays} hari`}
             </Button>
           </div>
         </div>

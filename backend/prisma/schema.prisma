@@ -20,6 +20,12 @@ enum SubscriptionStatus {
   active
   overdue
   expired
+  paused
+}
+
+enum BillingCycle {
+  monthly
+  annual
 }
 
 enum SubscriptionPackage {
@@ -66,6 +72,11 @@ enum BookingStatus {
   cancelled
 }
 
+enum BookingSource {
+  online   // dibuat oleh pelanggan via halaman publik / aplikasi customer
+  walk_in  // diinput langsung oleh kasir di counter
+}
+
 enum TransactionStatus {
   completed
   cancelled
@@ -92,19 +103,20 @@ enum PaymentMethod {
 }
 
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  password      String
-  name          String
-  role          Role
-  phone         String?
-  photo         String?
-  tenantId      String?
-  branchId      String?
-  isActive      Boolean  @default(true)
-  deletedAt     DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id             String   @id @default(cuid())
+  email          String   @unique
+  password       String
+  name           String
+  role           Role
+  phone          String?
+  photo          String?
+  commissionRate Float    @default(0.35)
+  tenantId       String?
+  branchId       String?
+  isActive       Boolean  @default(true)
+  deletedAt      DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
   tenant        Tenant?  @relation(fields: [tenantId], references: [id])
   branch        Branch?  @relation(fields: [branchId], references: [id])
   refreshTokens RefreshToken[]
@@ -130,6 +142,18 @@ model Tenant {
   phone        String?
   address      String?
   logo         String?
+  // Tax / billing identity — dipakai di faktur & metadata Duitku.
+  companyName  String?
+  npwp         String?
+  taxAddress   String?
+  // Timezone IANA (mis. "Asia/Jakarta", "Asia/Makassar", "Asia/Jayapura").
+  // Dipakai untuk format tanggal & grouping laporan harian agar konsisten
+  // antar viewer (kasir di Jakarta vs admin di laptop saat di luar negeri).
+  timezone     String   @default("Asia/Jakarta")
+  // Konfigurasi tampilan halaman booking publik (/book) — disimpan sebagai
+  // JSON agar field-field marketing (tagline, hero image, gallery, sosmed)
+  // bisa diperluas tanpa migrasi schema setiap kali.
+  bookingPage  Json?
   isSuspended  Boolean  @default(false)
   deletedAt    DateTime?
   createdAt    DateTime @default(now())
@@ -148,6 +172,9 @@ model Tenant {
 model Branch {
   id           String   @id @default(cuid())
   tenantId     String
+  // Kode pendek per cabang dipakai di URL (mis. "main", "cab1") — unik per tenant.
+  // Nullable supaya branch lama tetap valid sebelum di-backfill.
+  code         String?
   name         String
   address      String?
   phone        String?
@@ -162,6 +189,8 @@ model Branch {
   queues       Queue[]
   bookings     Booking[]
   shifts       Shift[]
+
+  @@unique([tenantId, code])
 }
 
 model Service {
@@ -204,7 +233,15 @@ model Transaction {
   tenantId       String
   branchId       String
   customerId     String?
+  // Snapshot identitas pelanggan — diisi saat walk-in tanpa registrasi atau
+  // saat customer record kemudian dihapus, supaya struk & laporan tetap utuh.
+  customerName   String?
+  customerPhone  String?
   shiftId        String?
+  // Diisi kalau transaksi berasal dari booking (customer reservasi sebelumnya).
+  // Kosong untuk walk-in murni di counter. Index agar query "transaksi per
+  // booking" cepat.
+  bookingId      String?
   subtotal       Int
   discountType   String?
   discountValue  Int               @default(0)
@@ -219,7 +256,11 @@ model Transaction {
   branch         Branch            @relation(fields: [branchId], references: [id])
   customer       Customer?         @relation(fields: [customerId], references: [id])
   shift          Shift?            @relation(fields: [shiftId], references: [id])
+  booking        Booking?          @relation(fields: [bookingId], references: [id])
   items          TransactionItem[]
+
+  @@index([bookingId])
+  @@index([branchId, createdAt])
 }
 
 model TransactionItem {
@@ -261,15 +302,25 @@ model Booking {
   customerId    String?
   customerName  String
   customerPhone String
-  serviceId     String
+  serviceId     String?
+  serviceName   String?
   barberId      String?
+  barberName    String?
   date          String
   time          String
   status        BookingStatus @default(pending)
+  // Asal pembuatan booking — supaya kasir bisa membedakan booking online
+  // (dari halaman publik / aplikasi customer) dengan booking walk-in
+  // (diinput langsung kasir di counter).
+  source        BookingSource @default(online)
   notes         String?
   createdAt     DateTime      @default(now())
   branch        Branch        @relation(fields: [branchId], references: [id])
   customer      Customer?     @relation(fields: [customerId], references: [id])
+  transactions  Transaction[]
+
+  @@index([tenantId, branchId, date])
+  @@index([branchId, status])
 }
 
 model Voucher {
@@ -297,24 +348,32 @@ model Package {
   maxStaff         Int                 @default(5)
   branchAddonPrice Int                 @default(0)
   branchAddonType  BranchAddonType     @default(monthly)
+  // Diskon untuk pembayaran tahunan (% dari harga 12 bulan). Default 17 ≈ 2 bulan gratis.
+  annualDiscountPercent Int             @default(17)
   description      String?
   features         String[]            @default([])
   updatedAt        DateTime            @updatedAt
 }
 
 model Subscription {
-  id        String              @id @default(cuid())
-  tenantId  String              @unique
-  package   SubscriptionPackage @default(Basic)
-  status    SubscriptionStatus  @default(trial)
-  price     Int
-  startDate DateTime
-  endDate   DateTime
-  autoRenew Boolean             @default(true)
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
-  tenant    Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  invoices  Invoice[]
+  id           String              @id @default(cuid())
+  tenantId     String              @unique
+  package      SubscriptionPackage @default(Basic)
+  status       SubscriptionStatus  @default(trial)
+  price        Int
+  billingCycle BillingCycle        @default(monthly)
+  startDate    DateTime
+  endDate      DateTime
+  autoRenew    Boolean             @default(true)
+  // Pause window — saat status=paused, cron auto-renew di-skip dan endDate akan
+  // diperpanjang sebesar (pauseUntil - pausedAt) saat resume.
+  pausedAt     DateTime?
+  pauseUntil   DateTime?
+  pauseReason  String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoices     Invoice[]
 }
 
 model Invoice {
@@ -322,6 +381,11 @@ model Invoice {
   subscriptionId String
   period         String
   amount         Int
+  // Untuk audit & faktur: nilai sebelum diskon (kalau ada promo/annual).
+  originalAmount Int?
+  discountAmount Int          @default(0)
+  promotionCode  String?
+  billingCycle   BillingCycle?
   type           String       @default("subscription")
   status         String       @default("pending")
   paidAt         DateTime?
@@ -387,17 +451,50 @@ model BroadcastRecipient {
   @@unique([broadcastId, tenantId])
 }
 
+// BarberSchedule = jadwal kerja barber per tenggat hari (bukan shift kasir).
+// Disimpan di server supaya admin lain bisa lihat, barber bisa cek jadwalnya
+// sendiri, dan laporan jam kerja akurat.
+model BarberSchedule {
+  id        String   @id @default(cuid())
+  tenantId  String
+  branchId  String?
+  staffId   String
+  date      String   // "YYYY-MM-DD" tenant-local — sama format seperti Booking.date
+  shift     String   // 'Pagi' | 'Sore' | 'Full' — label simbolik utk preset
+  startTime String   // "HH:MM"
+  endTime   String   // "HH:MM"
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId, date])
+  @@index([staffId, date])
+}
+
 model Shift {
   id                String      @id @default(cuid())
   branchId          String
   kasirId           String
+  // Snapshot nama kasir saat shift dibuka — supaya audit trail tetap valid
+  // walau user di-rename atau di-deactivate.
+  kasirName         String?
   status            ShiftStatus @default(open)
   openedAt          DateTime    @default(now())
   closedAt          DateTime?
+  // Kas drawer reconciliation — semua nullable supaya kompatibel dengan
+  // data lama yang belum diisi.
+  openingCash       Int?        @default(0)
+  closingCash       Int?
+  expectedCash      Int?
+  cashDifference    Int?
+  notes             String?
   totalRevenue      Int?
   totalTransactions Int?
   branch            Branch      @relation(fields: [branchId], references: [id])
   transactions      Transaction[]
+
+  @@index([branchId, status])
+  @@index([kasirId, status])
 }
 
 model BarberRating {
@@ -417,6 +514,98 @@ model AuditLog {
   detail    String?
   severity  String   @default("info")
   createdAt DateTime @default(now())
+}
+
+// Key-value store for system-wide settings (e.g. Duitku credentials)
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+// Tracks payment orders created via Duitku
+model PaymentOrder {
+  id              String   @id @default(cuid())
+  merchantOrderId String   @unique
+  // Idempotency: jika frontend kirim key yang sama, kembalikan order existing
+  // alih-alih membuat baru (mencegah double-charge dari double-click).
+  idempotencyKey  String?  @unique
+  tenantId        String
+  invoiceId       String?
+  subscriptionId  String?
+  type            String   // subscription | branch_addon | upgrade
+  targetPackage   SubscriptionPackage? // diisi hanya untuk type=upgrade — paket tujuan
+  billingCycle    BillingCycle? // monthly | annual untuk subscription/upgrade
+  promotionCode   String?
+  discountAmount  Int      @default(0)
+  amount          Int      // total final yang dibayar (sudah dikurangi diskon)
+  status          String   @default("pending") // pending | success | failed | expired | cancelled
+  paymentUrl      String?
+  reference       String?
+  paymentMethod   String?
+  expiresAt       DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// Promo / kupon — super_admin yang membuat, tenant_admin yang redeem.
+model Promotion {
+  id            String   @id @default(cuid())
+  code          String   @unique
+  description   String?
+  discountType  String   // percent | flat
+  discountValue Int      // jika percent: 0-100. jika flat: nominal IDR.
+  validFrom     DateTime?
+  validUntil    DateTime?
+  maxUses       Int?     // total redemption maksimum (null = unlimited)
+  usedCount     Int      @default(0)
+  // Kosong = berlaku semua. Diisi = hanya berlaku pada nilai-nilai yang terdaftar.
+  appliesTo     String[] @default([]) // 'subscription' | 'upgrade' | 'branch_addon'
+  packageScope  String[] @default([]) // 'Basic' | 'Pro' | 'Enterprise'
+  cycleScope    String[] @default([]) // 'monthly' | 'annual'
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  redemptions   PromotionRedemption[]
+}
+
+model PromotionRedemption {
+  id             String    @id @default(cuid())
+  promotionId    String
+  tenantId       String
+  paymentOrderId String?
+  invoiceId      String?
+  discountApplied Int      @default(0)
+  redeemedAt     DateTime  @default(now())
+  promotion      Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([promotionId])
+}
+
+// Konten landing page yang dikelola super_admin.
+model LandingTestimonial {
+  id           String   @id @default(cuid())
+  name         String
+  role         String?  // jabatan pemilik
+  businessName String?  // nama barbershop
+  message      String
+  rating       Int      @default(5) // 1-5
+  photoUrl     String?
+  displayOrder Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model LandingFAQ {
+  id           String   @id @default(cuid())
+  question     String
+  answer       String
+  displayOrder Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model ErrorLog {

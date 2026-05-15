@@ -7,11 +7,11 @@ import { useAuthStore } from '../../store/authStore.js'
 import { useExpenseStore, EXPENSE_CATEGORIES } from '../../store/expenseStore.js'
 import { useFeatureFlagStore } from '../../store/featureFlagStore.js'
 import { useReportSummary } from '../../hooks/useReports.js'
+import { useBranches } from '../../hooks/useBranches.js'
 import { formatRupiah } from '../../utils/format.js'
 import Button from '../../components/ui/Button.jsx'
 import Modal from '../../components/ui/Modal.jsx'
 import Input from '../../components/ui/Input.jsx'
-import { useTenantStore } from '../../store/tenantStore.js'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -209,11 +209,10 @@ export default function TAExpensePage() {
   const { user } = useAuthStore()
   const { isEnabled } = useFeatureFlagStore()
   const { getByPeriod, deleteExpense, getTotalByPeriod, getCategoryTotals } = useExpenseStore()
-  const { getBranchesByTenant } = useTenantStore()
 
   const tenantId   = user?.tenantId
   const isAllowed  = isEnabled(tenantId, 'expense_tracking')
-  const branches   = tenantId ? getBranchesByTenant(tenantId) : []
+  const { data: branches = [] } = useBranches(tenantId)
 
   // Period state — default to current month
   const [activeMonth, setActiveMonth] = useState(new Date())

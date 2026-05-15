@@ -1,5 +1,7 @@
+import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../lib/api.js'
+import { getSocket } from '../lib/socket.js'
 
 // Normalize dari bentuk list API (array) → object keyed by name agar
 // kompatibel dengan UI lama yang pakai `packages.Basic`, `packages.Pro`, dll.
@@ -12,7 +14,8 @@ function listToMap(list) {
 }
 
 export function usePackages() {
-  return useQuery({
+  const qc = useQueryClient()
+  const query = useQuery({
     queryKey: ['packages'],
     queryFn: async () => {
       const res = await api.get('/packages')
@@ -22,6 +25,16 @@ export function usePackages() {
     // Paket jarang berubah — cache 5 menit
     staleTime: 5 * 60 * 1000,
   })
+
+  // Realtime: super_admin men-update paket → semua tab/pengguna lain ikut refresh.
+  useEffect(() => {
+    const s = getSocket()
+    const onUpdate = () => qc.invalidateQueries({ queryKey: ['packages'] })
+    s.on('package:updated', onUpdate)
+    return () => { s.off('package:updated', onUpdate) }
+  }, [qc])
+
+  return query
 }
 
 export function useUpdatePackage() {

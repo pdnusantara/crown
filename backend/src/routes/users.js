@@ -1,9 +1,23 @@
 const router = require('express').Router();
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { z } = require('zod');
 const prisma = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { parsePagination, paginatedResponse } = require('../utils/pagination');
+
+// Charset menghindari karakter ambigu (0/O, 1/l/I) supaya gampang dibacakan
+// admin ke staf via telepon/WA.
+const TEMP_PASSWORD_CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+
+function generateTempPassword(len = 10) {
+  const bytes = crypto.randomBytes(len);
+  let out = '';
+  for (let i = 0; i < len; i++) {
+    out += TEMP_PASSWORD_CHARSET[bytes[i] % TEMP_PASSWORD_CHARSET.length];
+  }
+  return out;
+}
 
 const userSelect = {
   id: true,
@@ -12,6 +26,7 @@ const userSelect = {
   role: true,
   phone: true,
   photo: true,
+  commissionRate: true,
   tenantId: true,
   branchId: true,
   isActive: true,
@@ -23,11 +38,14 @@ const userSelect = {
 
 const createUserSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(6),
+  // Password opsional — kalau tidak dikirim, server generate otomatis dan
+  // mengembalikannya satu kali di response (lihat POST handler).
+  password: z.string().min(6).optional(),
   name: z.string().min(1),
   role: z.enum(['super_admin', 'tenant_admin', 'kasir', 'barber', 'customer']),
   phone: z.string().optional(),
   photo: z.string().optional(),
+  commissionRate: z.number().min(0).max(1).optional(),
   tenantId: z.string().optional(),
   branchId: z.string().optional(),
   isActive: z.boolean().optional(),
@@ -38,22 +56,29 @@ const updateUserSchema = createUserSchema.partial().omit({ password: true }).ext
 });
 
 // GET /api/users
-router.get('/', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
+router.get('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir', 'barber'), async (req, res, next) => {
   try {
     const { page, limit, skip } = parsePagination(req.query);
     const { search, role, tenantId, branchId, isActive } = req.query;
 
     const where = { deletedAt: null };
 
-    // tenant_admin can only see users in their tenant
-    if (req.user.role === 'tenant_admin') {
+    if (req.user.role === 'kasir' || req.user.role === 'barber') {
+      // Kasir and barber can only list barbers in their own branch
       where.tenantId = req.user.tenantId;
-    } else if (tenantId) {
-      where.tenantId = tenantId;
+      where.branchId = req.user.branchId;
+      where.role = 'barber';
+    } else if (req.user.role === 'tenant_admin') {
+      where.tenantId = req.user.tenantId;
+      if (branchId) where.branchId = branchId;
+      if (role) where.role = role;
+    } else {
+      // super_admin: full access
+      if (tenantId) where.tenantId = tenantId;
+      if (branchId) where.branchId = branchId;
+      if (role) where.role = role;
     }
 
-    if (branchId) where.branchId = branchId;
-    if (role) where.role = role;
     if (isActive !== undefined) where.isActive = isActive === 'true';
     if (search) {
       where.OR = [
@@ -106,14 +131,21 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin'), async
       }
     }
 
-    const hashedPassword = await bcrypt.hash(body.password, 10);
+    // Password yang dikirim admin (kalau ada) ditampilkan kembali ke admin
+    // sekali supaya bisa diberikan ke staf; kalau tidak ada, server generate.
+    const plaintextPassword = body.password || generateTempPassword();
+    const generated = !body.password;
+    const hashedPassword = await bcrypt.hash(plaintextPassword, 10);
 
     const user = await prisma.user.create({
       data: { ...body, password: hashedPassword },
       select: userSelect,
     });
 
-    res.status(201).json({ success: true, data: user });
+    res.status(201).json({
+      success: true,
+      data: { ...user, tempPassword: plaintextPassword, passwordGenerated: generated },
+    });
   } catch (err) {
     next(err);
   }
@@ -142,6 +174,50 @@ router.put('/:id', authenticate, requireRole('super_admin', 'tenant_admin'), asy
     });
 
     res.json({ success: true, data: user });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/users/:id/reset-password — generate password baru, return sekali
+router.post('/:id/reset-password', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
+  try {
+    const existing = await prisma.user.findFirst({
+      where: { id: req.params.id, deletedAt: null },
+      select: { id: true, email: true, name: true, role: true, tenantId: true },
+    });
+    if (!existing) return res.status(404).json({ success: false, error: 'User not found' });
+
+    if (req.user.role === 'tenant_admin') {
+      if (existing.tenantId !== req.user.tenantId) {
+        return res.status(403).json({ success: false, error: 'Access denied' });
+      }
+      // Tenant admin tidak boleh me-reset password admin tenant lain atau super_admin
+      if (existing.role === 'super_admin' || existing.role === 'tenant_admin') {
+        return res.status(403).json({ success: false, error: 'Cannot reset admin password' });
+      }
+    }
+
+    const tempPassword = generateTempPassword();
+    const hashed = await bcrypt.hash(tempPassword, 10);
+
+    await prisma.user.update({
+      where: { id: existing.id },
+      data: { password: hashed },
+    });
+
+    // Sekaligus invalidate refresh token aktif supaya sesi lama otomatis logout
+    await prisma.refreshToken.deleteMany({ where: { userId: existing.id } });
+
+    res.json({
+      success: true,
+      data: {
+        userId: existing.id,
+        email: existing.email,
+        name: existing.name,
+        tempPassword,
+      },
+    });
   } catch (err) {
     next(err);
   }

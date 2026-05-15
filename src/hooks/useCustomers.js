@@ -1,26 +1,140 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import api from '../lib/api.js'
 import { useAuthStore } from '../store/authStore.js'
+import { getSocket } from '../lib/socket.js'
+
+/**
+ * Subscribe ke event customer:* dari tenant room.
+ * Memanggil invalidate untuk seluruh query 'customers' tenant.
+ * Aman dipanggil multi-instance — listener di-cleanup pada unmount.
+ */
+function useCustomerRealtime(tenantId) {
+  const qc = useQueryClient()
+  useEffect(() => {
+    if (!tenantId) return
+    const socket = getSocket()
+    const invalidate = () => {
+      qc.invalidateQueries({ queryKey: ['customers', tenantId] })
+      qc.invalidateQueries({ queryKey: ['customers', 'stats', tenantId] })
+    }
+    socket.on('customer:created', invalidate)
+    socket.on('customer:updated', invalidate)
+    socket.on('customer:deleted', invalidate)
+    return () => {
+      socket.off('customer:created', invalidate)
+      socket.off('customer:updated', invalidate)
+      socket.off('customer:deleted', invalidate)
+    }
+  }, [tenantId, qc])
+}
 
 export function useCustomers(filters = {}) {
   const { user } = useAuthStore()
-  return useQuery({
-    queryKey: ['customers', user?.tenantId, filters],
+  const tenantId = user?.tenantId
+  useCustomerRealtime(tenantId)
+
+  // Default ke limit besar bila tanpa pagination — caller lama (mis. POSPage
+  // lookup) butuh seluruh data; halaman admin override eksplisit.
+  const params = { tenantId, ...filters }
+  if (params.limit == null && params.page == null) params.limit = 1000
+
+  const query = useQuery({
+    queryKey: ['customers', tenantId, params],
     queryFn: async () => {
-      const res = await api.get('/customers', { params: { tenantId: user?.tenantId, ...filters } })
-      const raw = res.data.data
-      return Array.isArray(raw) ? raw : (raw?.data || [])
+      const res = await api.get('/customers', { params })
+      const raw = res.data?.data
+      if (Array.isArray(raw)) {
+        return { data: raw, total: raw.length, page: 1, limit: raw.length, totalPages: 1 }
+      }
+      return {
+        data:       raw?.data       || [],
+        total:      raw?.total      ?? 0,
+        page:       raw?.page       ?? (Number(params.page) || 1),
+        limit:      raw?.limit      ?? (Number(params.limit) || 20),
+        totalPages: raw?.totalPages ?? 0,
+      }
     },
-    enabled: !!user?.tenantId,
+    enabled: !!tenantId,
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
   })
+
+  return {
+    ...query,
+    customers:  query.data?.data || [],
+    total:      query.data?.total || 0,
+    page:       query.data?.page || 1,
+    limit:      query.data?.limit || 20,
+    totalPages: query.data?.totalPages || 0,
+    // Backwards-compat: callsite lama destructures `data` sebagai array.
+    data:       query.data?.data || [],
+  }
+}
+
+export function useCustomer(id) {
+  const { user } = useAuthStore()
+  return useQuery({
+    queryKey: ['customers', 'detail', user?.tenantId, id],
+    queryFn: async () => {
+      const res = await api.get(`/customers/${id}`)
+      return res.data?.data
+    },
+    enabled: !!id && !!user?.tenantId,
+    staleTime: 30_000,
+  })
+}
+
+export function useCustomerStats() {
+  const { user } = useAuthStore()
+  const tenantId = user?.tenantId
+  // Bumped ke v2 setelah skema segment refactor (vip/loyal/new/atRisk/lost/never).
+  // Cache key v1 lama (regular/inactive) di-ignore otomatis karena beda key.
+  const cacheKey = tenantId ? `customer-stats-v2:${tenantId}` : null
+
+  // Bersihkan cache key v1 lama (one-time cleanup) supaya tidak menumpuk di localStorage.
+  if (typeof window !== 'undefined' && tenantId) {
+    try { window.localStorage.removeItem(`customer-stats:${tenantId}`) } catch {}
+  }
+
+  // Initial data dari localStorage agar refresh halaman tidak flash 0/skeleton.
+  const initial = (() => {
+    if (!cacheKey || typeof window === 'undefined') return undefined
+    try {
+      const raw = window.localStorage.getItem(cacheKey)
+      return raw ? JSON.parse(raw) : undefined
+    } catch { return undefined }
+  })()
+
+  return useQuery({
+    queryKey: ['customers', 'stats', tenantId],
+    queryFn: async () => {
+      const res = await api.get('/customers/stats', { params: { tenantId } })
+      const data = res.data?.data || null
+      if (cacheKey && data) {
+        try { window.localStorage.setItem(cacheKey, JSON.stringify(data)) } catch {}
+      }
+      return data
+    },
+    enabled: !!tenantId,
+    staleTime: 30_000,
+    initialData: initial,
+    // Selalu refetch di mount supaya angka tile update walaupun ada cache.
+    refetchOnMount: 'always',
+  })
+}
+
+const invalidateAll = (qc, tenantId) => {
+  qc.invalidateQueries({ queryKey: ['customers', tenantId] })
+  qc.invalidateQueries({ queryKey: ['customers', 'stats', tenantId] })
 }
 
 export function useCreateCustomer() {
   const qc = useQueryClient()
   const { user } = useAuthStore()
   return useMutation({
-    mutationFn: (data) => api.post('/customers', { ...data, tenantId: user?.tenantId }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['customers', user?.tenantId] }),
+    mutationFn: (data) => api.post('/customers', { ...data, tenantId: user?.tenantId }).then(r => r.data?.data),
+    onSuccess: () => invalidateAll(qc, user?.tenantId),
   })
 }
 
@@ -28,8 +142,11 @@ export function useUpdateCustomer() {
   const qc = useQueryClient()
   const { user } = useAuthStore()
   return useMutation({
-    mutationFn: ({ id, ...data }) => api.put(`/customers/${id}`, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['customers', user?.tenantId] }),
+    mutationFn: ({ id, ...data }) => api.put(`/customers/${id}`, data).then(r => r.data?.data),
+    onSuccess: (_data, vars) => {
+      invalidateAll(qc, user?.tenantId)
+      if (vars?.id) qc.invalidateQueries({ queryKey: ['customers', 'detail', user?.tenantId, vars.id] })
+    },
   })
 }
 
@@ -38,6 +155,45 @@ export function useDeleteCustomer() {
   const { user } = useAuthStore()
   return useMutation({
     mutationFn: (id) => api.delete(`/customers/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['customers', user?.tenantId] }),
+    onSuccess: () => invalidateAll(qc, user?.tenantId),
+  })
+}
+
+export function useBulkDeleteCustomers() {
+  const qc = useQueryClient()
+  const { user } = useAuthStore()
+  return useMutation({
+    mutationFn: (ids) => api.post('/customers/bulk-delete', { ids }).then(r => r.data?.data),
+    onSuccess: () => invalidateAll(qc, user?.tenantId),
+  })
+}
+
+/**
+ * Ambil semua data customer terfilter (max 5000) untuk ekspor lengkap.
+ * Dipakai imperatively (mutateAsync) supaya hanya jalan saat tombol diklik.
+ */
+export function useExportCustomers() {
+  const { user } = useAuthStore()
+  return useMutation({
+    mutationFn: async (filters = {}) => {
+      const params = { tenantId: user?.tenantId, ...filters }
+      const res = await api.get('/customers/export/all', { params })
+      return {
+        data: res.data?.data || [],
+        meta: res.data?.meta || { count: 0, capped: false },
+      }
+    },
+  })
+}
+
+export function useUpdateLoyalty() {
+  const qc = useQueryClient()
+  const { user } = useAuthStore()
+  return useMutation({
+    mutationFn: ({ id, points }) => api.patch(`/customers/${id}/loyalty`, { points }).then(r => r.data?.data),
+    onSuccess: (_data, vars) => {
+      invalidateAll(qc, user?.tenantId)
+      if (vars?.id) qc.invalidateQueries({ queryKey: ['customers', 'detail', user?.tenantId, vars.id] })
+    },
   })
 }

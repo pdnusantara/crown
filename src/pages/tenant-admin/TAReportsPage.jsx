@@ -1,17 +1,25 @@
 import React, { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts'
-import { Download, TrendingUp, DollarSign, Receipt, Users, Activity } from 'lucide-react'
+import {
+  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+} from 'recharts'
+import {
+  Download, TrendingUp, DollarSign, Receipt, Users, BarChart2,
+  AlertTriangle, RefreshCw,
+} from 'lucide-react'
+import { format, subDays } from 'date-fns'
 import { useAuthStore } from '../../store/authStore.js'
-import { useTenantStore } from '../../store/tenantStore.js'
-import { usePosStore } from '../../store/posStore.js'
+import { useBranches } from '../../hooks/useBranches.js'
+import {
+  useReportSummary, useDailyReport, useBarberReport, useServiceReport,
+} from '../../hooks/useReports.js'
 import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Table from '../../components/ui/Table.jsx'
-import { HeatmapChart } from '../../components/ui/HeatmapChart.jsx'
-import { formatRupiah, formatDate } from '../../utils/format.js'
-import { subDays, format } from 'date-fns'
+import { formatRupiah } from '../../utils/format.js'
+import { useChartTheme, tooltipStyle } from '../../utils/chartTheme.js'
 
 function linearRegression(data) {
   const n = data.length
@@ -27,139 +35,256 @@ function linearRegression(data) {
   return { slope, intercept }
 }
 
-const generateRevenueTrend = () => {
-  return Array.from({ length: 30 }, (_, i) => ({
-    date: format(subDays(new Date(), 29 - i), 'dd/MM'),
-    revenue: Math.floor(Math.random() * 4000000) + 1000000,
-    transactions: Math.floor(Math.random() * 30) + 10,
-  }))
+const PIE_COLORS = ['#C9A84C', '#E8C875', '#A8893A', '#D4AF68', '#B89640', '#9A7A2E']
+
+const PERIODS = [
+  { id: 'today', days: 1 },
+  { id: 'week',  days: 7 },
+  { id: 'month', days: 30 },
+  { id: 'year',  days: 365 },
+]
+
+function periodRange(period) {
+  const today = new Date()
+  const endDate = today.toISOString().split('T')[0]
+  const days = (PERIODS.find(p => p.id === period) || PERIODS[2]).days
+  const startDate = subDays(today, days - 1).toISOString().split('T')[0]
+  return { startDate, endDate, days }
 }
 
-function generateHeatmapData() {
-  return Array.from({ length: 12 }, (_, hi) => {
-    const hour = 9 + hi
-    return Array.from({ length: 7 }, (_, di) => {
-      const isWeekend = di >= 5
-      const isPeak = hour >= 10 && hour <= 16
-      const base = isWeekend ? 8 : 5
-      const peakMult = isPeak ? 2 : 1
-      return Math.floor(Math.random() * base * peakMult) + (isPeak ? 2 : 0)
-    })
-  })
+const csvEscape = (v) => {
+  const s = String(v ?? '')
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+const downloadCSV = (filename, sections) => {
+  const lines = []
+  for (const sec of sections) {
+    if (sec.title) { lines.push(`# ${sec.title}`) }
+    if (sec.header) lines.push(sec.header.map(csvEscape).join(','))
+    for (const row of sec.rows) lines.push(row.map(csvEscape).join(','))
+    lines.push('')
+  }
+  const blob = new Blob(['﻿', lines.join('\r\n')], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url; a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
-const PIE_COLORS = ['#C9A84C', '#E8C875', '#A8893A', '#D4AF68', '#B89640']
+function Skeleton({ className = '' }) {
+  return <div className={`animate-pulse rounded-xl bg-dark-card ${className}`} />
+}
 
 export default function TAReportsPage() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
-  const { getServicesByTenant, getStaffByTenant } = useTenantStore()
-  const { transactions } = usePosStore()
-  const [period, setPeriod] = useState('month')
+  const tenantId = user?.tenantId
+  const { data: branches = [] } = useBranches(tenantId)
 
-  const services = getServicesByTenant(user.tenantId)
-  const staff = getStaffByTenant(user.tenantId).filter(s => s.role === 'barber')
+  const [period, setPeriod]     = useState('month')
+  const [branchId, setBranchId] = useState('') // '' = all
 
-  const revenueTrend = useMemo(() => generateRevenueTrend(), [])
-  const heatmapData = useMemo(() => generateHeatmapData(), [])
+  const { startDate, endDate, days } = useMemo(() => periodRange(period), [period])
 
-  const totalRevenue = revenueTrend.reduce((s, d) => s + d.revenue, 0)
-  const totalTxns = revenueTrend.reduce((s, d) => s + d.transactions, 0)
-  const avgPerTxn = Math.round(totalRevenue / totalTxns)
+  const summaryQ  = useReportSummary(tenantId, startDate, endDate, branchId || undefined)
+  const dailyQ    = useDailyReport(tenantId, days, branchId || undefined)
+  const barbersQ  = useBarberReport(tenantId, { startDate, endDate, ...(branchId ? { branchId } : {}) })
+  const servicesQ = useServiceReport(tenantId, { startDate, endDate, ...(branchId ? { branchId } : {}) })
 
-  // Revenue Forecasting
+  const summary  = summaryQ.data
+  const daily    = dailyQ.data || []
+  const barbers  = barbersQ.data || []
+  const services = servicesQ.data || []
+
+  const isLoading = summaryQ.isLoading || dailyQ.isLoading
+  const isError   = summaryQ.isError && dailyQ.isError
+  const isFetching = summaryQ.isFetching || dailyQ.isFetching || barbersQ.isFetching || servicesQ.isFetching
+
+  const chart = useChartTheme()
+
+  // Build daily trend array filling in zero-revenue days
+  const revenueTrend = useMemo(() => {
+    const map = {}
+    daily.forEach(d => { map[d.date] = d })
+    return Array.from({ length: days }, (_, i) => {
+      const d = subDays(new Date(), days - 1 - i)
+      const key = d.toISOString().split('T')[0]
+      return {
+        date: format(d, days > 60 ? 'MMM yy' : 'dd/MM'),
+        revenue: map[key]?.revenue ?? 0,
+        transactions: map[key]?.transactions ?? 0,
+      }
+    })
+  }, [daily, days])
+
+  const hasData = revenueTrend.some(d => d.revenue > 0) || (summary?.summary?.totalRevenue || 0) > 0
+
+  // Revenue forecast from last 14 real data points
   const last14 = revenueTrend.slice(-14)
-  const revenueValues = last14.map(d => d.revenue)
-  const { slope, intercept } = linearRegression(revenueValues)
-
+  const { slope, intercept } = linearRegression(last14.map(d => d.revenue))
   const forecast7 = Array.from({ length: 7 }, (_, i) => {
     const x = last14.length + i
-    const predicted = Math.max(0, Math.round(slope * x + intercept))
     return {
       date: format(subDays(new Date(), -1 - i), 'dd/MM'),
-      forecast: predicted,
+      forecast: Math.max(0, Math.round(slope * x + intercept)),
     }
   })
-
   const forecastTotal7 = forecast7.reduce((s, d) => s + d.forecast, 0)
-
-  // Combined chart: last 14 days solid + next 7 dashed
   const combinedChart = [
     ...last14.map(d => ({ date: d.date, actual: d.revenue, forecast: null })),
     ...forecast7.map(d => ({ date: d.date, actual: null, forecast: d.forecast })),
   ]
 
-  const serviceData = services.slice(0, 6).map(s => ({
-    name: s.name,
-    value: Math.floor(Math.random() * 100) + 20,
-    revenue: Math.floor(Math.random() * 5000000) + 500000,
-  }))
-
-  const barberPerf = staff.slice(0, 8).map(b => ({
-    ...b,
-    txns: Math.floor(Math.random() * 60) + 20,
-    revenue: Math.floor(Math.random() * 8000000) + 2000000,
-    commission: 0,
-  })).map(b => ({ ...b, commission: Math.round(b.revenue * b.commissionRate) }))
-    .sort((a, b) => b.revenue - a.revenue)
+  const serviceData = services.slice(0, 6).map(s => ({ name: s.name, value: s.count, revenue: s.revenue }))
 
   const exportCSV = () => {
-    const header = 'Tanggal,Revenue,Transaksi\n'
-    const rows = revenueTrend.map(d => `${d.date},${d.revenue},${d.transactions}`).join('\n')
-    const blob = new Blob([header + rows], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `laporan-${period}-${format(new Date(), 'yyyy-MM-dd')}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    const periodLabel = `${startDate} → ${endDate}`
+    const branchLabel = branchId ? (branches.find(b => b.id === branchId)?.name || branchId) : t('tenantAdmin.reports.allBranches')
+    const sections = [
+      {
+        title: `Laporan ${periodLabel} · ${branchLabel}`,
+        header: ['Metrik', 'Nilai'],
+        rows: [
+          ['Total Revenue',     summary?.summary?.totalRevenue || 0],
+          ['Total Transaksi',   summary?.summary?.totalTransactions || 0],
+          ['Avg/Transaksi',     summary?.summary?.averageTransactionValue || 0],
+          ['Pelanggan Unik',    summary?.summary?.totalCustomers || 0],
+          ['Pelanggan Baru',    summary?.summary?.totalNewCustomers || 0],
+        ],
+      },
+      {
+        title: 'Daily Revenue',
+        header: ['Tanggal', 'Revenue', 'Transaksi'],
+        rows: revenueTrend.map(d => [d.date, d.revenue, d.transactions]),
+      },
+      {
+        title: 'Top Services',
+        header: ['Layanan', 'Jumlah', 'Revenue'],
+        rows: services.map(s => [s.name, s.count, s.revenue]),
+      },
+      {
+        title: 'Performa Barber',
+        header: ['Barber', 'Transaksi', 'Revenue', 'Avg Rating'],
+        rows: barbers.map(b => [b.barberName, b.servicesCount, b.revenue, b.averageRating ? b.averageRating.toFixed(1) : '']),
+      },
+      {
+        title: 'Revenue per Cabang',
+        header: ['Cabang', 'Revenue', 'Transaksi'],
+        rows: (summary?.revenueByBranch || []).map(b => [b.branchName, b.revenue, b.transactions]),
+      },
+      {
+        title: 'Revenue per Metode Pembayaran',
+        header: ['Metode', 'Revenue', 'Transaksi'],
+        rows: (summary?.revenueByPaymentMethod || []).map(p => [p.method, p.revenue, p.count]),
+      },
+    ]
+    const fname = `laporan-${period}-${endDate}${branchId ? '-' + (branches.find(b => b.id === branchId)?.name || branchId) : ''}.csv`
+    downloadCSV(fname, sections)
   }
 
   const barberColumns = [
-    { key: 'name', label: t('tenantAdmin.reports.colBarber'), render: (v) => <span className="font-medium text-off-white">{v}</span> },
-    { key: 'txns', label: t('common.transactions'), sortable: true, render: v => <span className="text-off-white">{v}</span> },
-    { key: 'revenue', label: t('common.revenue'), sortable: true, render: v => <span className="text-gold font-medium">{formatRupiah(v)}</span> },
-    { key: 'commission', label: t('tenantAdmin.reports.colCommission'), sortable: true, render: v => <span className="text-green-400">{formatRupiah(v)}</span> },
-    { key: 'rating', label: t('tenantAdmin.reports.colRating'), render: v => v ? <span className="text-amber-400">⭐ {v}</span> : '-' },
+    { key: 'barberName',   label: t('tenantAdmin.reports.colBarber'),    render: v => <span className="font-medium text-off-white">{v}</span> },
+    { key: 'servicesCount', label: t('common.transactions'), sortable: true, render: v => <span className="text-off-white">{v}</span> },
+    { key: 'revenue',      label: t('common.revenue'), sortable: true, render: v => <span className="text-gold font-medium">{formatRupiah(v)}</span> },
+    { key: 'averageRating', label: t('tenantAdmin.reports.colRating'),   render: v => v ? <span className="text-amber-400">⭐ {v?.toFixed(1)}</span> : '-' },
   ]
+
+  const kpiValues = {
+    totalRevenue:      summary?.summary?.totalRevenue ?? 0,
+    totalTransactions: summary?.summary?.totalTransactions ?? 0,
+    avgPerTxn:         summary?.summary?.averageTransactionValue ?? 0,
+    uniqueCustomers:   summary?.summary?.totalCustomers ?? 0,
+  }
+
+  // Loading skeleton hanya kalau benar-benar belum ada data sama sekali (no cache).
+  // Kalau initialData dari localStorage ada, summary terisi → langsung tampil angka.
+  const showKpiSkeleton = isLoading && !summary
+
+  const periodLabel = (id) => {
+    if (id === 'today') return t('common.today')
+    if (id === 'week')  return t('tenantAdmin.reports.periodWeek')
+    if (id === 'month') return t('tenantAdmin.reports.periodMonth')
+    if (id === 'year')  return t('tenantAdmin.reports.periodYear')
+    return id
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
+        <div className="min-w-0">
           <h1 className="font-display text-2xl font-bold text-off-white">{t('tenantAdmin.reports.titleFull')}</h1>
           <p className="text-muted text-sm mt-1">{t('tenantAdmin.reports.subtitle')}</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2 sm:gap-3 flex-wrap items-center">
+          {branches.length > 1 && (
+            <select
+              value={branchId}
+              onChange={e => setBranchId(e.target.value)}
+              className="bg-dark-card border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-gold/60 cursor-pointer max-w-[180px]"
+              aria-label="Filter cabang"
+            >
+              <option value="">{t('tenantAdmin.reports.allBranches')}</option>
+              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          )}
           <div className="flex bg-dark-card border border-dark-border rounded-xl overflow-hidden">
-            {['today', 'week', 'month'].map(p => (
+            {PERIODS.map(p => (
               <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${period === p ? 'bg-gold text-dark' : 'text-muted hover:text-off-white'}`}
+                key={p.id}
+                onClick={() => setPeriod(p.id)}
+                className={`px-3 sm:px-4 py-2 text-sm font-medium transition-colors ${
+                  period === p.id ? 'bg-gold text-dark' : 'text-off-white hover:bg-dark-surface/60'
+                }`}
               >
-                {p === 'today' ? t('common.today') : p === 'week' ? t('tenantAdmin.reports.periodWeek') : t('tenantAdmin.reports.periodMonth')}
+                {periodLabel(p.id)}
               </button>
             ))}
           </div>
-          <Button variant="secondary" icon={Download} onClick={exportCSV}>{t('tenantAdmin.reports.exportCSV')}</Button>
+          <Button
+            variant="secondary"
+            icon={Download}
+            onClick={exportCSV}
+            disabled={!hasData || isFetching}
+          >
+            {t('tenantAdmin.reports.exportCSV')}
+          </Button>
         </div>
       </div>
+
+      {/* Error state */}
+      {isError && !summary && (
+        <Card className="p-10 text-center">
+          <AlertTriangle className="w-10 h-10 text-amber-400 mx-auto mb-3" />
+          <p className="text-off-white font-medium">{t('tenantAdmin.reports.errorLoading')}</p>
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={RefreshCw}
+            className="mt-4"
+            onClick={() => { summaryQ.refetch(); dailyQ.refetch(); barbersQ.refetch(); servicesQ.refetch() }}
+          >
+            {t('tenantAdmin.reports.retry')}
+          </Button>
+        </Card>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { title: t('tenantAdmin.reports.totalRevenue'), value: formatRupiah(totalRevenue), icon: DollarSign },
-          { title: t('tenantAdmin.reports.totalTransactions'), value: totalTxns, icon: Receipt },
-          { title: t('tenantAdmin.reports.avgPerTransaction'), value: formatRupiah(avgPerTxn), icon: TrendingUp },
-          { title: t('tenantAdmin.reports.uniqueCustomers'), value: Math.floor(totalTxns * 0.8), icon: Users },
+          { title: t('tenantAdmin.reports.totalRevenue'),       value: showKpiSkeleton ? null : formatRupiah(kpiValues.totalRevenue),       icon: DollarSign },
+          { title: t('tenantAdmin.reports.totalTransactions'),  value: showKpiSkeleton ? null : kpiValues.totalTransactions,                icon: Receipt },
+          { title: t('tenantAdmin.reports.avgPerTransaction'),  value: showKpiSkeleton ? null : formatRupiah(kpiValues.avgPerTxn),          icon: TrendingUp },
+          { title: t('tenantAdmin.reports.uniqueCustomers'),    value: showKpiSkeleton ? null : kpiValues.uniqueCustomers,                  icon: Users },
         ].map((kpi, i) => (
           <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
             <Card className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-muted">{kpi.title}</p>
-                  <p className="text-xl font-bold text-off-white mt-1">{kpi.value}</p>
+                  {kpi.value === null
+                    ? <Skeleton className="h-7 w-24 mt-1" />
+                    : <p className="text-xl font-bold text-off-white mt-1">{kpi.value}</p>}
                 </div>
                 <kpi.icon className="w-8 h-8 text-gold/40" />
               </div>
@@ -168,119 +293,127 @@ export default function TAReportsPage() {
         ))}
       </div>
 
-      {/* Revenue Chart */}
-      <Card>
-        <CardHeader><h3 className="font-semibold text-off-white">{t('tenantAdmin.reports.dailyRevenueTrend')}</h3></CardHeader>
-        <CardBody>
-          <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={revenueTrend}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
-              <XAxis dataKey="date" tick={{ fill: '#6B7280', fontSize: 11 }} tickLine={false} interval={6} />
-              <YAxis tick={{ fill: '#6B7280', fontSize: 11 }} tickLine={false} tickFormatter={v => `${(v/1000000).toFixed(1)}M`} />
-              <Tooltip contentStyle={{ background: '#1A1A1A', border: '1px solid #2A2A2A', borderRadius: 12 }} labelStyle={{ color: '#F5F5F0' }} formatter={v => [formatRupiah(v), t('common.revenue')]} />
-              <Line type="monotone" dataKey="revenue" stroke="#C9A84C" strokeWidth={2.5} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardBody>
-      </Card>
+      {/* Empty state */}
+      {!isLoading && !isError && !hasData && (
+        <Card className="p-10 text-center">
+          <BarChart2 className="w-10 h-10 text-muted/30 mx-auto mb-3" />
+          <p className="text-off-white font-medium">{t('tenantAdmin.reports.noTxData')}</p>
+          <p className="text-muted text-sm mt-1">{t('tenantAdmin.reports.noTxDataHint')}</p>
+        </Card>
+      )}
 
-      {/* Revenue Forecast */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-off-white">{t('tenantAdmin.reports.revenueForecast')}</h3>
-            <div className="flex items-center gap-4 text-xs text-muted">
-              <span className="flex items-center gap-1.5"><span className="w-8 h-0.5 bg-gold inline-block" /> {t('tenantAdmin.reports.actual')}</span>
-              <span className="flex items-center gap-1.5"><span className="w-8 border-t-2 border-dashed border-gold inline-block" /> {t('tenantAdmin.reports.prediction')}</span>
-            </div>
-          </div>
-        </CardHeader>
-        <CardBody>
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
-            <div className="lg:col-span-1 p-4 bg-gold/10 border border-gold/20 rounded-xl">
-              <p className="text-xs text-muted mb-1">{t('tenantAdmin.reports.forecast7Days')}</p>
-              <p className="text-xl font-bold text-gold">{formatRupiah(forecastTotal7)}</p>
-              <p className="text-xs text-muted mt-1">
-                {t('tenantAdmin.reports.trendLabel')}: {slope >= 0 ? '📈' : '📉'} {slope >= 0 ? '+' : ''}{formatRupiah(Math.round(slope))}{t('tenantAdmin.reports.perDay')}
-              </p>
-            </div>
-            <div className="lg:col-span-3">
-              <ResponsiveContainer width="100%" height={180}>
-                <LineChart data={combinedChart}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
-                  <XAxis dataKey="date" tick={{ fill: '#6B7280', fontSize: 10 }} tickLine={false} interval={2} />
-                  <YAxis tick={{ fill: '#6B7280', fontSize: 10 }} tickLine={false} tickFormatter={v => `${(v/1000000).toFixed(1)}M`} width={45} />
-                  <Tooltip contentStyle={{ background: '#1A1A1A', border: '1px solid #2A2A2A', borderRadius: 12 }} formatter={v => [formatRupiah(v), '']} />
-                  <Line type="monotone" dataKey="actual" stroke="#C9A84C" strokeWidth={2} dot={false} name={t('tenantAdmin.reports.actual')} connectNulls={false} />
-                  <Line type="monotone" dataKey="forecast" stroke="#C9A84C" strokeWidth={2} dot={false} strokeDasharray="5 5" name={t('tenantAdmin.reports.prediction')} connectNulls={false} />
+      {/* Revenue Trend Chart */}
+      {(isLoading || hasData) && (
+        <Card>
+          <CardHeader><h3 className="font-semibold text-off-white">{t('tenantAdmin.reports.dailyRevenueTrend')}</h3></CardHeader>
+          <CardBody>
+            {dailyQ.isLoading && !daily.length ? <Skeleton className="h-64" /> : (
+              <ResponsiveContainer width="100%" height={260}>
+                <LineChart data={revenueTrend}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
+                  <XAxis dataKey="date" tick={{ fill: chart.axisTick, fontSize: 11 }} tickLine={false} interval={Math.max(0, Math.floor(revenueTrend.length / 8))} />
+                  <YAxis tick={{ fill: chart.axisTick, fontSize: 11 }} tickLine={false} tickFormatter={v => `${(v/1000000).toFixed(1)}M`} />
+                  <Tooltip contentStyle={tooltipStyle(chart)} labelStyle={{ color: chart.tooltipLabel }} formatter={v => [formatRupiah(v), t('common.revenue')]} />
+                  <Line type="monotone" dataKey="revenue" stroke="#C9A84C" strokeWidth={2.5} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
-            </div>
-          </div>
-        </CardBody>
-      </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Service Breakdown */}
-        <Card>
-          <CardHeader><h3 className="font-semibold text-off-white">{t('tenantAdmin.reports.topServices')}</h3></CardHeader>
-          <CardBody>
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie data={serviceData} cx="50%" cy="50%" innerRadius={55} outerRadius={85} dataKey="value" nameKey="name" paddingAngle={3}>
-                  {serviceData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-                </Pie>
-                <Tooltip contentStyle={{ background: '#1A1A1A', border: '1px solid #2A2A2A', borderRadius: 12 }} formatter={(v, n) => [v + 'x', n]} />
-                <Legend wrapperStyle={{ fontSize: 12, color: '#6B7280' }} />
-              </PieChart>
-            </ResponsiveContainer>
+            )}
           </CardBody>
         </Card>
+      )}
 
-        {/* Transaction distribution */}
+      {/* Revenue Forecast — only meaningful for week+ periods */}
+      {hasData && days >= 7 && (
         <Card>
-          <CardHeader><h3 className="font-semibold text-off-white">{t('tenantAdmin.reports.transactionsPerDay')}</h3></CardHeader>
+          <CardHeader>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h3 className="font-semibold text-off-white">{t('tenantAdmin.reports.revenueForecast')}</h3>
+              <div className="flex items-center gap-4 text-xs text-muted">
+                <span className="flex items-center gap-1.5"><span className="w-8 h-0.5 bg-gold inline-block" /> {t('tenantAdmin.reports.actual')}</span>
+                <span className="flex items-center gap-1.5"><span className="w-8 border-t-2 border-dashed border-gold inline-block" /> {t('tenantAdmin.reports.prediction')}</span>
+              </div>
+            </div>
+          </CardHeader>
           <CardBody>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={revenueTrend.slice(-14)} barSize={16}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" vertical={false} />
-                <XAxis dataKey="date" tick={{ fill: '#6B7280', fontSize: 11 }} tickLine={false} />
-                <YAxis tick={{ fill: '#6B7280', fontSize: 11 }} tickLine={false} />
-                <Tooltip contentStyle={{ background: '#1A1A1A', border: '1px solid #2A2A2A', borderRadius: 12 }} />
-                <Bar dataKey="transactions" fill="#C9A84C" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
+              <div className="lg:col-span-1 p-4 bg-gold/10 border border-gold/20 rounded-xl">
+                <p className="text-xs text-muted mb-1">{t('tenantAdmin.reports.forecast7Days')}</p>
+                <p className="text-xl font-bold text-gold">{formatRupiah(forecastTotal7)}</p>
+                <p className="text-xs text-muted mt-1">
+                  {t('tenantAdmin.reports.trendLabel')}: {slope >= 0 ? '📈' : '📉'} {slope >= 0 ? '+' : ''}{formatRupiah(Math.round(slope))}{t('tenantAdmin.reports.perDay')}
+                </p>
+              </div>
+              <div className="lg:col-span-3">
+                <ResponsiveContainer width="100%" height={180}>
+                  <LineChart data={combinedChart}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
+                    <XAxis dataKey="date" tick={{ fill: chart.axisTick, fontSize: 10 }} tickLine={false} interval={2} />
+                    <YAxis tick={{ fill: chart.axisTick, fontSize: 10 }} tickLine={false} tickFormatter={v => `${(v/1000000).toFixed(1)}M`} width={45} />
+                    <Tooltip contentStyle={tooltipStyle(chart)} labelStyle={{ color: chart.tooltipLabel }} formatter={v => [formatRupiah(v), '']} />
+                    <Line type="monotone" dataKey="actual"   stroke="#C9A84C" strokeWidth={2} dot={false} name={t('tenantAdmin.reports.actual')}     connectNulls={false} />
+                    <Line type="monotone" dataKey="forecast" stroke="#C9A84C" strokeWidth={2} dot={false} strokeDasharray="5 5" name={t('tenantAdmin.reports.prediction')} connectNulls={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           </CardBody>
         </Card>
-      </div>
+      )}
 
-      {/* Heatmap */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Activity className="w-5 h-5 text-gold" />
-            <h3 className="font-semibold text-off-white">{t('tenantAdmin.reports.busiestHours')}</h3>
-          </div>
-        </CardHeader>
-        <CardBody>
-          <HeatmapChart data={heatmapData} />
-          <div className="flex items-center gap-3 mt-3 text-xs text-muted">
-            <span>{t('tenantAdmin.reports.quiet')}</span>
-            <div className="flex gap-1">
-              {[0.1, 0.3, 0.5, 0.7, 0.9].map(o => (
-                <div key={o} className="w-5 h-3 rounded" style={{ backgroundColor: `rgba(201, 168, 76, ${o})` }} />
-              ))}
-            </div>
-            <span>{t('tenantAdmin.reports.busy')}</span>
-          </div>
-        </CardBody>
-      </Card>
+      {/* Service & Transaction charts */}
+      {(isLoading || hasData) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Service Breakdown */}
+          <Card>
+            <CardHeader><h3 className="font-semibold text-off-white">{t('tenantAdmin.reports.topServices')}</h3></CardHeader>
+            <CardBody>
+              {servicesQ.isLoading && !services.length ? <Skeleton className="h-56" /> : serviceData.length === 0 ? (
+                <div className="h-56 flex items-center justify-center text-muted text-sm">{t('tenantAdmin.reports.noServiceData')}</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie data={serviceData} cx="50%" cy="50%" innerRadius={55} outerRadius={85} dataKey="value" nameKey="name" paddingAngle={3}>
+                      {serviceData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip contentStyle={tooltipStyle(chart)} labelStyle={{ color: chart.tooltipLabel }} formatter={(v, n) => [v + 'x', n]} />
+                    <Legend wrapperStyle={{ fontSize: 12, color: chart.legendText }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </CardBody>
+          </Card>
+
+          {/* Transactions per day */}
+          <Card>
+            <CardHeader><h3 className="font-semibold text-off-white">{t('tenantAdmin.reports.transactionsPerDay')}</h3></CardHeader>
+            <CardBody>
+              {dailyQ.isLoading && !daily.length ? <Skeleton className="h-56" /> : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={revenueTrend.slice(-14)} barSize={16}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} vertical={false} />
+                    <XAxis dataKey="date" tick={{ fill: chart.axisTick, fontSize: 11 }} tickLine={false} />
+                    <YAxis tick={{ fill: chart.axisTick, fontSize: 11 }} tickLine={false} />
+                    <Tooltip contentStyle={tooltipStyle(chart)} labelStyle={{ color: chart.tooltipLabel }} />
+                    <Bar dataKey="transactions" fill="#C9A84C" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardBody>
+          </Card>
+        </div>
+      )}
 
       {/* Barber Performance Table */}
-      <Card>
-        <CardHeader><h3 className="font-semibold text-off-white">{t('tenantAdmin.reports.barberPerformance')}</h3></CardHeader>
-        <Table columns={barberColumns} data={barberPerf} sortable />
-      </Card>
+      {(isLoading || hasData) && (
+        <Card>
+          <CardHeader><h3 className="font-semibold text-off-white">{t('tenantAdmin.reports.barberPerformance')}</h3></CardHeader>
+          {barbersQ.isLoading && !barbers.length
+            ? <CardBody><Skeleton className="h-40" /></CardBody>
+            : barbers.length === 0
+              ? <CardBody><p className="text-muted text-sm text-center py-6">{t('tenantAdmin.reports.noBarberData')}</p></CardBody>
+              : <Table columns={barberColumns} data={barbers} sortable />}
+        </Card>
+      )}
     </div>
   )
 }

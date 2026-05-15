@@ -5,13 +5,21 @@ const prisma = require('../config/database');
 function errorHandler(err, req, res, next) {
   // Zod validation errors
   if (err instanceof ZodError) {
+    const details = err.errors.map((e) => ({
+      field: e.path.join('.'),
+      message: e.message,
+    }));
+    // Log validation failures — 4xx kalau tidak dilog, sangat sulit ditelusuri
+    // dari sisi server. Kita cetak path + field-field yang gagal saja, BUKAN
+    // request body (bisa berisi data sensitif seperti password).
+    console.warn(
+      `[Zod 400] ${req.method} ${req.path} —`,
+      details.map((d) => `${d.field || '(root)'}: ${d.message}`).join('; '),
+    );
     return res.status(400).json({
       success: false,
       error: 'Validation failed',
-      details: err.errors.map((e) => ({
-        field: e.path.join('.'),
-        message: e.message,
-      })),
+      details,
     });
   }
 

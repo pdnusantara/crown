@@ -9,6 +9,10 @@ export const usePublicTenantStore = create((set) => ({
   slug: null,
   name: null,
   logo: null,
+  timezone: null,
+  address: null,
+  phone: null,
+  bookingPage: null, // { tagline, description, heroImage, gallery, … }
   status: 'idle',
 
   resolve: async () => {
@@ -19,14 +23,22 @@ export const usePublicTenantStore = create((set) => ({
     }
     set({ status: 'loading', slug })
     try {
-      const res = await axios.get(`${BASE_URL}/tenants/resolve`, {
-        headers: { 'X-Tenant-Slug': slug },
-      })
-      const t = res.data.data
+      const [resolveRes, infoRes] = await Promise.all([
+        axios.get(`${BASE_URL}/tenants/resolve`, { headers: { 'X-Tenant-Slug': slug } }),
+        // /public/info returns the bookingPage config and richer contact info.
+        // Fail-soft if it errors so existing logo/name behavior still works.
+        axios.get(`${BASE_URL}/public/info`, { headers: { 'X-Tenant-Slug': slug } }).catch(() => null),
+      ])
+      const t = resolveRes.data.data
+      const info = infoRes?.data?.data || {}
       set({
         status: t.isSuspended ? 'suspended' : 'found',
         name: t.name,
-        logo: t.logo,
+        logo: t.logo || info.logo || null,
+        timezone: t.timezone || 'Asia/Jakarta',
+        address: info.address || null,
+        phone: info.phone || null,
+        bookingPage: info.bookingPage || null,
         slug,
       })
     } catch {

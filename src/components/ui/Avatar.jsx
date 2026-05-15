@@ -10,25 +10,30 @@ const sizes = {
 }
 
 const getInitials = (name = '') => {
-  return name
-    .split(' ')
+  const trimmed = String(name || '').trim()
+  if (!trimmed) return '?'
+  return trimmed
+    .split(/\s+/)
     .slice(0, 2)
     .map(n => n[0])
     .join('')
-    .toUpperCase()
+    .toUpperCase() || '?'
 }
 
+const COLORS = [
+  'from-amber-500 to-orange-500',
+  'from-blue-500 to-cyan-500',
+  'from-violet-500 to-purple-500',
+  'from-green-500 to-emerald-500',
+  'from-pink-500 to-rose-500',
+  'from-gold to-gold-light',
+]
+
 const getColor = (name = '') => {
-  const colors = [
-    'from-amber-500 to-orange-500',
-    'from-blue-500 to-cyan-500',
-    'from-violet-500 to-purple-500',
-    'from-green-500 to-emerald-500',
-    'from-pink-500 to-rose-500',
-    'from-gold to-gold-light',
-  ]
-  const index = name.charCodeAt(0) % colors.length
-  return colors[index]
+  const trimmed = String(name || '').trim()
+  if (!trimmed) return COLORS[5]
+  const index = trimmed.charCodeAt(0) % COLORS.length
+  return COLORS[index] || COLORS[5]
 }
 
 export const Avatar = ({ src, name, size = 'md', className = '', ring = false }) => {

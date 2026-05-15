@@ -81,13 +81,23 @@ export function useBranchQueue(branchId) {
   return { ...q, queue }
 }
 
+function getTodayDateString() {
+  const d = new Date()
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
 export function useQueue(branchId) {
   const qc = useQueryClient()
 
   const query = useQuery({
     queryKey: ['queue', branchId],
     queryFn: async () => {
-      const res = await api.get('/queue', { params: { branchId } })
+      const res = await api.get('/queue', {
+        params: { branchId, date: getTodayDateString(), limit: 500 },
+      })
       const raw = res.data.data
       return Array.isArray(raw) ? raw : (raw?.data || [])
     },
@@ -116,11 +126,20 @@ export function useQueue(branchId) {
     }
     socket.on('connect', handleReconnect)
 
+    // Reset kanban saat lewat tengah malam — antrian kemarin tidak boleh ikut
+    const now = new Date()
+    const nextMidnight = new Date(now)
+    nextMidnight.setHours(24, 0, 0, 500)
+    const midnightId = setTimeout(() => {
+      qc.invalidateQueries({ queryKey: ['queue', branchId] })
+    }, nextMidnight.getTime() - now.getTime())
+
     return () => {
       socket.off('queue:created', invalidate)
       socket.off('queue:updated', invalidate)
       socket.off('queue:deleted', invalidate)
       socket.off('connect', handleReconnect)
+      clearTimeout(midnightId)
       leaveBranchRoom(branchId)
     }
   }, [branchId, qc])

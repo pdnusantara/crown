@@ -2,18 +2,19 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
-import { Eye, EyeOff, Scissors, Mail, Lock, ChevronRight } from 'lucide-react'
+import { Eye, EyeOff, Scissors, Mail, Lock, ChevronRight, Shield, Building2, ExternalLink } from 'lucide-react'
 import { useAuthStore } from '../store/authStore.js'
 import { usePublicTenantStore } from '../store/publicTenantStore.js'
 import Button from '../components/ui/Button.jsx'
 import Input from '../components/ui/Input.jsx'
+import { getTenantSlug } from '../lib/tenantSlug.js'
 
 // Credentials match backend seed (run: cd backend && npm run db:seed)
-const DEMO_USERS = [
-  { email: 'admin@barberos.com',       password: 'Admin123!',  role: 'Super Admin',    color: 'from-amber-500 to-orange-500' },
-  { email: 'admin@barberkingdom.com',  password: 'Admin123!',  role: 'Tenant Admin',   color: 'from-gold to-gold-light' },
-  { email: 'kasir@barberkingdom.com',  password: 'Kasir123!',  role: 'Kasir',          color: 'from-blue-500 to-cyan-500' },
-  { email: 'budi@barberkingdom.com',   password: 'Barber123!', role: 'Barber',         color: 'from-green-500 to-emerald-500' },
+const SUPER_ADMIN_DEMO = { email: 'admin@barberos.com', password: 'Admin123!', role: 'Super Admin', color: 'from-amber-500 to-orange-500' }
+const TENANT_DEMOS = [
+  { email: 'admin@barberkingdom.com',  password: 'Admin123!',  role: 'Tenant Admin', color: 'from-gold to-gold-light' },
+  { email: 'kasir@barberkingdom.com',  password: 'Kasir123!',  role: 'Kasir',         color: 'from-blue-500 to-cyan-500' },
+  { email: 'budi@barberkingdom.com',   password: 'Barber123!', role: 'Barber',        color: 'from-green-500 to-emerald-500' },
 ]
 
 export default function Login() {
@@ -24,22 +25,40 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [redirectUrl, setRedirectUrl] = useState(null)
 
   const isTenantContext = tenantStatus === 'found'
+  const slug = getTenantSlug()
+  // Main domain = no tenant slug detected. We use this to gate the demo accounts
+  // and surface the "this is the super-admin sign-in" banner.
+  const isMainDomain = !slug && !isTenantContext
+  const demoUsers = isMainDomain ? [SUPER_ADMIN_DEMO] : TENANT_DEMOS
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     clearError()
+    setRedirectUrl(null)
     const result = await login(email, password)
-    if (result.success) navigate(result.redirectTo)
+    if (result.success) {
+      navigate(result.redirectTo)
+    } else if (result.redirect) {
+      // Backend told us this account belongs on a different domain — surface
+      // a one-click button so the user doesn't have to retype the URL.
+      setRedirectUrl(result.redirect)
+    }
   }
 
   const handleQuickLogin = async (user) => {
     clearError()
+    setRedirectUrl(null)
     setEmail(user.email)
     setPassword(user.password)
     const result = await login(user.email, user.password)
-    if (result.success) navigate(result.redirectTo)
+    if (result.success) {
+      navigate(result.redirectTo)
+    } else if (result.redirect) {
+      setRedirectUrl(result.redirect)
+    }
   }
 
   return (
@@ -90,15 +109,44 @@ export default function Login() {
           transition={{ duration: 0.5, delay: 0.1 }}
           className="glass rounded-3xl p-6"
         >
-          <h2 className="font-display text-xl font-semibold text-off-white mb-5">{t('auth.loginTitle')}</h2>
+          <h2 className="font-display text-xl font-semibold text-off-white mb-3">{t('auth.loginTitle')}</h2>
+
+          {/* Domain context banner */}
+          {isMainDomain && (
+            <div className="flex items-start gap-2 bg-amber-400/10 border border-amber-400/30 rounded-xl p-3 mb-4 text-amber-200 text-xs leading-relaxed">
+              <Shield size={14} className="mt-0.5 flex-shrink-0 text-amber-400" />
+              <p>
+                Login domain ini khusus <span className="font-semibold">Super-Admin</span>.
+                Akun tenant silakan login melalui subdomain bisnis Anda
+                (mis. <span className="font-mono text-amber-100">tenant.sembapos.com</span>).
+              </p>
+            </div>
+          )}
+          {isTenantContext && (
+            <div className="flex items-start gap-2 bg-gold/10 border border-gold/30 rounded-xl p-3 mb-4 text-off-white text-xs leading-relaxed">
+              <Building2 size={14} className="mt-0.5 flex-shrink-0 text-gold" />
+              <p>
+                Login tenant <span className="font-semibold">{tenantName}</span>. Super-admin tidak bisa login dari subdomain ini.
+              </p>
+            </div>
+          )}
 
           {error && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
-              className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 mb-4 text-red-400 text-sm"
+              className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 mb-4 text-red-400 text-sm space-y-2"
             >
-              {error}
+              <p>{error}</p>
+              {redirectUrl && (
+                <a
+                  href={redirectUrl}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-gold hover:text-gold-light underline underline-offset-2"
+                >
+                  <ExternalLink size={12} />
+                  Buka domain yang benar
+                </a>
+              )}
             </motion.div>
           )}
 
@@ -152,7 +200,7 @@ export default function Login() {
               <div className="flex-1 h-px bg-dark-border" />
             </div>
             <div className="grid grid-cols-2 gap-2">
-              {DEMO_USERS.map(user => (
+              {demoUsers.map(user => (
                 <button
                   key={user.email}
                   onClick={() => handleQuickLogin(user)}

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Clock, ChevronRight, User, GripVertical, X as XIcon } from 'lucide-react'
+import { Plus, Clock, ChevronRight, User, GripVertical, X as XIcon, ShoppingCart, Search, Users as UsersIcon } from 'lucide-react'
 import {
   DndContext,
   DragOverlay,
@@ -17,24 +18,32 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useAuthStore } from '../../store/authStore.js'
-import { useTenantStore } from '../../store/tenantStore.js'
+import { usePosStore } from '../../store/posStore.js'
 import { useBranchQueue, useAddToQueue, useUpdateQueueStatus, useDeleteQueueItem } from '../../hooks/useQueue.js'
+import { useServices } from '../../hooks/useServices.js'
+import { useUsers } from '../../hooks/useUsers.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Modal from '../../components/ui/Modal.jsx'
 import Input from '../../components/ui/Input.jsx'
 import Badge, { getStatusBadge } from '../../components/ui/Badge.jsx'
 import LiveBadge from '../../components/ui/LiveBadge.jsx'
+import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx'
+import { getBranchSlug } from '../../utils/branchSlug.js'
 
 const COLUMNS = [
-  { id: 'waiting', label: 'Menunggu', color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/20' },
-  { id: 'in-progress', label: 'Sedang Dilayani', color: 'text-blue-400', bg: 'bg-blue-400/10', border: 'border-blue-400/20' },
-  { id: 'done', label: 'Selesai', color: 'text-green-400', bg: 'bg-green-400/10', border: 'border-green-400/20' },
-  { id: 'paid', label: 'Sudah Bayar', color: 'text-gold', bg: 'bg-gold/10', border: 'border-gold/20' },
+  { id: 'waiting', label: 'Menunggu', short: 'Antri', color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/20', dot: 'bg-amber-400' },
+  { id: 'in-progress', label: 'Sedang Dilayani', short: 'Dilayani', color: 'text-blue-400', bg: 'bg-blue-400/10', border: 'border-blue-400/20', dot: 'bg-blue-400' },
+  { id: 'done', label: 'Selesai', short: 'Selesai', color: 'text-green-400', bg: 'bg-green-400/10', border: 'border-green-400/20', dot: 'bg-green-400' },
+  { id: 'paid', label: 'Sudah Bayar', short: 'Bayar', color: 'text-gold', bg: 'bg-gold/10', border: 'border-gold/20', dot: 'bg-gold' },
 ]
 
 const STATUS_NEXT = { waiting: 'in-progress', 'in-progress': 'done', done: 'paid' }
-const STATUS_BTN = { waiting: 'Mulai', 'in-progress': 'Selesai', done: 'Bayar' }
+const STATUS_BTN  = { waiting: 'Mulai', 'in-progress': 'Selesai', done: 'Ke Kasir' }
+
+// Kartu di kolom "Sudah Bayar" otomatis hilang dari kanban setelah X menit.
+// Riwayat penuh tetap tersimpan & bisa dilihat di halaman Transaksi.
+const PAID_VISIBLE_MINUTES = 30
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
@@ -58,53 +67,63 @@ function ElapsedTimer({ startedAt }) {
   return <span className="text-xs text-blue-300">{elapsed} menit</span>
 }
 
-function TicketCard({ item, col, onAdvance, onCancel, isDragging = false }) {
+function TicketCard({ item, col, onAdvance, onCancel, isDragging = false, compact = false }) {
   const cancelable = item.status === 'waiting' || item.status === 'in-progress'
   return (
-    <div className={`bg-dark-card border border-dark-border rounded-xl p-3 ${isDragging ? 'opacity-50 shadow-2xl' : ''}`}>
+    <div className={`bg-dark-card border border-dark-border rounded-xl ${compact ? 'p-3' : 'p-3.5 sm:p-3'} ${isDragging ? 'opacity-50 shadow-2xl' : ''}`}>
       <div className="flex items-center justify-between mb-2">
-        <span className={`text-xs font-bold ${col.color}`}>{item.ticketNumber}</span>
+        <span className={`text-sm sm:text-xs font-bold ${col.color}`}>{item.ticketNumber}</span>
         <div className="flex items-center gap-1">
-          <Badge variant={item.type === 'booking' ? 'info' : 'muted'} className="text-xs">
+          <Badge variant={item.type === 'booking' ? 'info' : 'muted'} className="text-[11px] sm:text-xs">
             {item.type === 'booking' ? '📅' : '🚶'} {item.type}
           </Badge>
           {cancelable && onCancel && (
             <button
               onClick={(e) => { e.stopPropagation(); onCancel(item) }}
               title="Batalkan antrian"
-              className="text-muted hover:text-red-400 p-0.5 rounded transition-colors"
+              aria-label="Batalkan antrian"
+              className="ml-0.5 inline-flex items-center justify-center w-8 h-8 sm:w-7 sm:h-7 rounded-lg text-muted hover:text-red-400 hover:bg-red-500/10 active:bg-red-500/20 transition-colors"
             >
-              <XIcon className="w-3.5 h-3.5" />
+              <XIcon className="w-4 h-4 sm:w-3.5 sm:h-3.5" strokeWidth={2.2} />
             </button>
           )}
         </div>
       </div>
-      <p className="font-semibold text-off-white text-sm">{item.customerName}</p>
-      <p className="text-xs text-muted mt-0.5">{item.services?.join(', ')}</p>
-      {item.staffName && (
-        <div className="flex items-center gap-1 mt-2">
-          <User className="w-3 h-3 text-muted" />
-          <span className="text-xs text-muted">{item.staffName}</span>
-        </div>
-      )}
-      {item.status === 'waiting' && (
-        <div className="flex items-center gap-1 mt-1">
-          <Clock className="w-3 h-3 text-amber-400" />
-          <span className="text-xs text-amber-400">~{item.waitTime} min</span>
-        </div>
-      )}
-      {item.status === 'in-progress' && item.updatedAt && (
-        <div className="flex items-center gap-1 mt-1">
-          <Clock className="w-3 h-3 text-blue-400" />
-          <ElapsedTimer startedAt={item.updatedAt} />
-        </div>
-      )}
+      <p className="font-semibold text-off-white text-sm leading-tight truncate" title={item.customerName}>{item.customerName}</p>
+      <p className="text-xs text-muted mt-0.5 line-clamp-2 break-words">{item.services?.join(', ')}</p>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
+        {item.staffName && (
+          <div className="flex items-center gap-1">
+            <User className="w-3 h-3 text-muted" />
+            <span className="text-xs text-muted">{item.staffName}</span>
+          </div>
+        )}
+        {item.status === 'waiting' && (
+          <div className="flex items-center gap-1">
+            <Clock className="w-3 h-3 text-amber-400" />
+            <span className="text-xs text-amber-400">~{item.waitTime} min</span>
+          </div>
+        )}
+        {item.status === 'in-progress' && item.updatedAt && (
+          <div className="flex items-center gap-1">
+            <Clock className="w-3 h-3 text-blue-400" />
+            <ElapsedTimer startedAt={item.updatedAt} />
+          </div>
+        )}
+      </div>
       {STATUS_BTN[item.status] && (
         <button
           onClick={() => onAdvance(item)}
-          className={`mt-2 w-full py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-all ${col.bg} ${col.color} border ${col.border} hover:opacity-80`}
+          className={`mt-2.5 w-full py-2.5 sm:py-1.5 rounded-lg text-sm sm:text-xs font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] ${
+            item.status === 'done'
+              ? 'bg-gold/15 text-gold border border-gold/40 hover:bg-gold/25'
+              : `${col.bg} ${col.color} border ${col.border} hover:opacity-80`
+          }`}
         >
-          Lanjutkan <ChevronRight className="w-3 h-3" />
+          {item.status === 'done'
+            ? <><ShoppingCart className="w-4 h-4 sm:w-3 sm:h-3" /> {STATUS_BTN[item.status]}</>
+            : <>{STATUS_BTN[item.status]} <ChevronRight className="w-4 h-4 sm:w-3 sm:h-3" /></>
+          }
         </button>
       )}
     </div>
@@ -145,19 +164,19 @@ function SortableTicketCard({ item, col, onAdvance, onCancel }) {
   )
 }
 
-function DroppableColumn({ col, items, onAdvance, onCancel, isMobile }) {
-  const { setNodeRef, isOver } = useSortable ? { setNodeRef: undefined, isOver: false } : {}
-
+function DroppableColumn({ col, items, onAdvance, onCancel, isMobile, hideHeader = false }) {
   return (
     <div
-      className={`rounded-2xl border ${col.border} ${col.bg} p-3 min-h-[400px] transition-all ${isOver ? 'ring-2 ring-gold/40' : ''}`}
+      className={`rounded-2xl border ${col.border} ${col.bg} p-3 ${isMobile ? '' : 'min-h-[400px]'} transition-all`}
     >
-      <div className="flex items-center justify-between mb-3">
-        <h3 className={`font-semibold text-sm ${col.color}`}>{col.label}</h3>
-        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${col.bg} ${col.color} border ${col.border}`}>
-          {items.length}
-        </span>
-      </div>
+      {!hideHeader && (
+        <div className="flex items-center justify-between mb-3">
+          <h3 className={`font-semibold text-sm ${col.color}`}>{col.label}</h3>
+          <span className={`min-w-6 h-6 px-2 rounded-full flex items-center justify-center text-xs font-bold ${col.bg} ${col.color} border ${col.border}`}>
+            {items.length}
+          </span>
+        </div>
+      )}
       <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
         <div className="space-y-2">
           <AnimatePresence>
@@ -188,9 +207,39 @@ function DroppableColumn({ col, items, onAdvance, onCancel, isMobile }) {
   )
 }
 
+function MobileStatusTabs({ active, onChange, counts }) {
+  return (
+    <div className="sticky top-0 z-20 -mx-4 px-4 pb-2 pt-1 bg-dark-bg/95 backdrop-blur-sm border-b border-dark-border">
+      <div className="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {COLUMNS.map(col => {
+          const isActive = active === col.id
+          const count = counts[col.id] || 0
+          return (
+            <button
+              key={col.id}
+              onClick={() => onChange(col.id)}
+              className={`flex-1 min-w-[80px] flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${
+                isActive
+                  ? `${col.bg} ${col.color} border ${col.border}`
+                  : 'text-muted border border-transparent hover:text-off-white'
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${col.dot}`} />
+              {col.short}
+              <span className={`ml-0.5 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center ${
+                isActive ? `${col.bg} ${col.color}` : 'bg-dark-card text-muted'
+              }`}>{count}</span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function QueuePage() {
   const { user } = useAuthStore()
-  const { getBarbersByBranch, getServicesByTenant } = useTenantStore()
+  const navigate = useNavigate()
   const { queue = [] } = useBranchQueue(user?.branchId)
   const addToQueueM = useAddToQueue()
   const updateStatusM = useUpdateQueueStatus()
@@ -201,16 +250,49 @@ export default function QueuePage() {
   const [showModal, setShowModal] = useState(false)
   const [form, setForm] = useState({ customerName: '', phone: '', services: '', barberId: '' })
   const [activeItem, setActiveItem] = useState(null)
+  const [mobileTab, setMobileTab] = useState('waiting')
+  const [cancelTarget, setCancelTarget] = useState(null)
+  const [search, setSearch] = useState('')
+  const [filterBarber, setFilterBarber] = useState('')
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   )
 
-  const barbers = getBarbersByBranch(user.branchId)
-  const services = getServicesByTenant(user.tenantId)
-  const branchQueue = queue
+  const { data: services = [] } = useServices({ isActive: 'true' })
+  const { data: barbers = [] } = useUsers({ role: 'barber', branchId: user?.branchId })
 
-  const getByStatus = (status) => branchQueue.filter(q => q.status === status)
+  // Tick setiap 60 detik supaya filter "Sudah Bayar > 30 menit" otomatis recompute
+  // tanpa perlu user me-refresh halaman.
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 60_000)
+    return () => clearInterval(id)
+  }, [])
+
+  // Apply search & barber filter sebelum bagi per status
+  const branchQueue = useMemo(() => {
+    const s = search.trim().toLowerCase()
+    return queue.filter(q => {
+      if (filterBarber && q.staffId !== filterBarber) return false
+      if (!s) return true
+      return (
+        (q.customerName || '').toLowerCase().includes(s) ||
+        (q.ticketNumber || '').toLowerCase().includes(s) ||
+        (q.services || []).join(' ').toLowerCase().includes(s)
+      )
+    })
+  }, [queue, search, filterBarber])
+
+  const getByStatus = (status) => {
+    const items = branchQueue.filter(q => q.status === status)
+    if (status !== 'paid') return items
+    const cutoff = Date.now() - PAID_VISIBLE_MINUTES * 60_000
+    return items.filter(q => {
+      const t = new Date(q.updatedAt || q.createdAt).getTime()
+      return Number.isFinite(t) ? t >= cutoff : true
+    })
+  }
 
   const handleAddWalkIn = async () => {
     if (!form.customerName) return toast.error(t('queue.toast.nameRequired'))
@@ -249,15 +331,25 @@ export default function QueuePage() {
   }
 
   const handleAdvance = (item) => {
+    // "done → paid" step goes through POS instead of direct status change
+    if (item.status === 'done') {
+      usePosStore.getState().loadFromQueue(item, services)
+      navigate(`/${getBranchSlug(user)}/kasir/pos?queueId=${item.id}`)
+      return
+    }
     const next = STATUS_NEXT[item.status]
     if (next) advanceTo(item, next)
   }
 
-  const handleCancel = async (item) => {
-    if (!window.confirm(t('queue.toast.cancelConfirm', { name: item.customerName }))) return
+  const handleCancel = (item) => {
+    setCancelTarget(item)
+  }
+
+  const confirmCancel = async () => {
+    if (!cancelTarget) return
     try {
-      await deleteQueueM.mutateAsync({ id: item.id, branchId: user.branchId })
-      toast.success(t('queue.toast.cancelled', { name: item.customerName }))
+      await deleteQueueM.mutateAsync({ id: cancelTarget.id, branchId: user.branchId })
+      toast.success(t('queue.toast.cancelled', { name: cancelTarget.customerName }))
     } catch (err) {
       toast.error(err?.response?.data?.error || t('queue.toast.cancelFailed'))
     }
@@ -284,55 +376,136 @@ export default function QueuePage() {
     }
   }
 
+  const counts = useMemo(() => ({
+    waiting: getByStatus('waiting').length,
+    'in-progress': getByStatus('in-progress').length,
+    done: getByStatus('done').length,
+    paid: getByStatus('paid').length,
+  }), [branchQueue])
+
+  const activeCol = COLUMNS.find(c => c.id === mobileTab) || COLUMNS[0]
+  const activeItems = getByStatus(mobileTab)
+
+  const activeFilters = (search ? 1 : 0) + (filterBarber ? 1 : 0)
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="font-display text-2xl font-bold text-off-white">Antrian</h1>
+    <div className="space-y-3 sm:space-y-4 pb-20 sm:pb-0">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white">Antrian</h1>
             <LiveBadge />
           </div>
-          <p className="text-muted text-sm mt-1">{branchQueue.filter(q => q.status === 'waiting').length} menunggu</p>
+          <p className="text-muted text-xs sm:text-sm mt-1">
+            {counts.waiting} menunggu · {counts['in-progress']} dilayani
+          </p>
         </div>
-        <Button icon={Plus} onClick={() => setShowModal(true)}>Walk-in</Button>
+        <div className="hidden sm:block">
+          <Button icon={Plus} onClick={() => setShowModal(true)}>Walk-in</Button>
+        </div>
       </div>
 
-      {/* Kanban Board */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {COLUMNS.map(col => {
-            const items = getByStatus(col.id)
-            return (
+      {/* Search + Filter Barber */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Cari nama, tiket, atau layanan…"
+            className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-10 pr-9 py-2.5 text-sm outline-none focus:border-gold/60 transition-colors"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              aria-label="Hapus pencarian"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-7 h-7 inline-flex items-center justify-center rounded-md text-muted hover:text-off-white hover:bg-dark-card transition-colors"
+            >
+              <XIcon className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+        {barbers.length > 0 && (
+          <div className="relative sm:w-56">
+            <UsersIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
+            <select
+              value={filterBarber}
+              onChange={e => setFilterBarber(e.target.value)}
+              className="w-full appearance-none bg-dark-surface border border-dark-border text-off-white rounded-xl pl-9 pr-8 py-2.5 text-sm outline-none focus:border-gold/60 cursor-pointer"
+            >
+              <option value="">Semua barber</option>
+              {barbers.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+            <ChevronRight className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted rotate-90 pointer-events-none" />
+          </div>
+        )}
+        {activeFilters > 0 && (
+          <button
+            onClick={() => { setSearch(''); setFilterBarber('') }}
+            className="px-3 py-2.5 rounded-xl text-xs font-semibold text-muted hover:text-off-white hover:bg-dark-card transition-colors whitespace-nowrap"
+          >
+            Reset ({activeFilters})
+          </button>
+        )}
+      </div>
+
+      {isMobile ? (
+        <>
+          <MobileStatusTabs active={mobileTab} onChange={setMobileTab} counts={counts} />
+          <DroppableColumn
+            col={activeCol}
+            items={activeItems}
+            onAdvance={handleAdvance}
+            onCancel={handleCancel}
+            isMobile
+            hideHeader
+          />
+        </>
+      ) : (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {COLUMNS.map(col => (
               <DroppableColumn
                 key={col.id}
                 col={col}
-                items={items}
+                items={getByStatus(col.id)}
                 onAdvance={handleAdvance}
                 onCancel={handleCancel}
-                isMobile={isMobile}
+                isMobile={false}
               />
-            )
-          })}
-        </div>
+            ))}
+          </div>
 
-        <DragOverlay>
-          {activeItem ? (
-            <div className="opacity-90 rotate-2 scale-105">
-              <TicketCard
-                item={activeItem}
-                col={COLUMNS.find(c => c.id === activeItem.status) || COLUMNS[0]}
-                onAdvance={() => {}}
-                isDragging={true}
-              />
-            </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+          <DragOverlay>
+            {activeItem ? (
+              <div className="opacity-90 rotate-2 scale-105">
+                <TicketCard
+                  item={activeItem}
+                  col={COLUMNS.find(c => c.id === activeItem.status) || COLUMNS[0]}
+                  onAdvance={() => {}}
+                  isDragging={true}
+                />
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      )}
+
+      {/* Floating Walk-in (mobile) */}
+      {isMobile && (
+        <button
+          onClick={() => setShowModal(true)}
+          aria-label="Tambah Walk-in"
+          className="fixed bottom-20 right-4 z-30 h-14 w-14 rounded-full bg-gold text-dark-bg shadow-2xl shadow-gold/30 flex items-center justify-center active:scale-95 transition-transform"
+        >
+          <Plus className="w-6 h-6" strokeWidth={2.5} />
+        </button>
+      )}
 
       {/* Walk-in Modal */}
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Tambah Walk-in">
@@ -359,6 +532,18 @@ export default function QueuePage() {
           </div>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={!!cancelTarget}
+        onClose={() => setCancelTarget(null)}
+        onConfirm={confirmCancel}
+        variant="danger"
+        title="Batalkan antrian?"
+        description={cancelTarget ? `Tiket ${cancelTarget.ticketNumber} akan dibatalkan dan tidak bisa dikembalikan.` : ''}
+        highlight={cancelTarget?.customerName}
+        confirmText="Ya, Batalkan"
+        cancelText="Tidak, Kembali"
+      />
     </div>
   )
 }

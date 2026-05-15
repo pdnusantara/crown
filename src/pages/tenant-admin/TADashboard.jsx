@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, useInView } from 'framer-motion'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import {
   DollarSign, Receipt, UserPlus, ArrowUpRight, ArrowDownRight,
   Crown, Minus, CalendarDays, Users, BarChart3, MapPin, Tag, Clock,
-  TrendingUp, Zap, Building2,
+  TrendingUp, Zap, Building2, Sparkles, X, ArrowRight,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
+import { useSubscription } from '../../hooks/useSubscription.js'
 import { useBranches } from '../../hooks/useBranches.js'
 import { useUsers } from '../../hooks/useUsers.js'
 import { useReportSummary, useYesterdayStats, useDailyReport, useBarberReport, useServiceReport } from '../../hooks/useReports.js'
@@ -317,6 +318,9 @@ export default function TADashboard() {
   return (
     <div className="space-y-6">
 
+      <WelcomeBanner />
+      <TrialBanner tenantId={tenantId} />
+
       {/* Greeting header */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -524,5 +528,114 @@ export default function TADashboard() {
         )}
       </motion.div>
     </div>
+  )
+}
+
+// ── Trial banner — persistent saat status=trial atau <=7 hari ────────────────
+function TrialBanner({ tenantId }) {
+  const navigate = useNavigate()
+  const { data: sub } = useSubscription(tenantId)
+  if (!sub) return null
+  const daysLeft = Math.max(0, Math.ceil((new Date(sub.endDate).getTime() - Date.now()) / 86400000))
+  const isTrial = sub.status === 'trial'
+  const expiringSoon = sub.status === 'active' && daysLeft <= 7
+  if (!isTrial && !expiringSoon) return null
+
+  const tone = daysLeft <= 3 ? 'red' : daysLeft <= 7 ? 'amber' : 'blue'
+  const styles = {
+    red:   'from-red-500/15 to-red-600/5 border-red-500/30',
+    amber: 'from-amber-500/15 to-amber-600/5 border-amber-500/30',
+    blue:  'from-blue-500/15 to-blue-600/5 border-blue-500/30',
+  }[tone]
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-gradient-to-r border ${styles}`}
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <Sparkles size={16} className="text-gold flex-shrink-0" />
+        <div className="text-sm">
+          <span className="text-off-white font-semibold">
+            {isTrial ? 'Trial' : 'Langganan'} berakhir dalam {daysLeft} hari
+          </span>
+          <span className="text-muted ml-2">
+            ({new Date(sub.endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })})
+          </span>
+        </div>
+      </div>
+      <button
+        onClick={() => navigate('/admin/billing')}
+        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gold text-dark text-sm font-semibold hover:bg-gold/90 transition-colors"
+      >
+        {isTrial ? 'Aktifkan Sekarang' : 'Perpanjang'} <ArrowRight size={12} />
+      </button>
+    </motion.div>
+  )
+}
+
+// ── Welcome banner (muncul saat redirect dari /register) ─────────────────────
+function WelcomeBanner() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const isWelcome = searchParams.get('welcome') === '1'
+  const [open, setOpen] = useState(isWelcome)
+
+  function dismiss() {
+    setOpen(false)
+    const next = new URLSearchParams(searchParams)
+    next.delete('welcome')
+    setSearchParams(next, { replace: true })
+  }
+
+  if (!open) return null
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="relative overflow-hidden p-5 rounded-2xl bg-gradient-to-br from-gold/15 via-amber-500/5 to-transparent border border-gold/30"
+    >
+      <button
+        onClick={dismiss}
+        aria-label="Tutup"
+        className="absolute top-3 right-3 p-1 rounded-lg text-muted hover:text-off-white hover:bg-dark-card transition-colors"
+      >
+        <X size={14} />
+      </button>
+      <div className="flex items-start gap-4">
+        <div className="w-12 h-12 rounded-xl bg-gold/20 border border-gold/30 flex items-center justify-center flex-shrink-0">
+          <Sparkles className="text-gold" size={22} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-display text-lg font-bold text-off-white mb-1">
+            Selamat datang di SembaPOS! 🎉
+          </h3>
+          <p className="text-sm text-muted mb-3">
+            Trial 14 hari Anda sudah aktif. Berikut langkah cepat untuk memulai:
+          </p>
+          <ol className="text-sm text-off-white/90 space-y-1.5 mb-4 list-decimal list-inside">
+            <li>Tambah <strong>cabang</strong> pertama → tentukan jam buka & tutup.</li>
+            <li>Buat daftar <strong>layanan</strong> (potong rambut, cuci, dll) dengan harga & durasi.</li>
+            <li>Tambah <strong>staf</strong> (kasir & barber) dengan akses login masing-masing.</li>
+            <li>Atur <strong>WhatsApp</strong> di Settings supaya notifikasi otomatis terkirim.</li>
+          </ol>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => { dismiss(); navigate('/admin/branches') }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-gold text-dark text-sm font-semibold hover:bg-gold/90 transition-colors"
+            >
+              Mulai Setup <ArrowRight size={13} />
+            </button>
+            <button
+              onClick={() => { dismiss(); navigate('/admin/billing') }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-dark-card border border-dark-border text-sm hover:border-gold/40 transition-colors"
+            >
+              Lihat Status Trial
+            </button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
   )
 }

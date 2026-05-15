@@ -3,6 +3,11 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  build: {
+    // Keep previous hashed chunks so existing open tabs
+    // don't crash with failed dynamic-import after deploy.
+    emptyOutDir: false,
+  },
   plugins: [
     react(),
     VitePWA({
@@ -24,6 +29,8 @@ export default defineConfig({
         ]
       },
       workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         runtimeCaching: [
           {

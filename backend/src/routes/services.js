@@ -34,7 +34,7 @@ const updateServiceSchema = createServiceSchema.partial().omit({ tenantId: true 
 router.get('/', authenticate, async (req, res, next) => {
   try {
     const { page, limit, skip } = parsePagination(req.query);
-    const { search, category, isActive } = req.query;
+    const { search, category, isActive, sortBy, sortDir } = req.query;
 
     const where = { deletedAt: null };
 
@@ -48,12 +48,79 @@ router.get('/', authenticate, async (req, res, next) => {
     if (category) where.category = category;
     if (isActive !== undefined) where.isActive = isActive === 'true';
 
+    // Sort whitelist: name | price | duration | createdAt | category
+    const allowedSort = new Set(['name', 'price', 'duration', 'createdAt', 'category']);
+    const dir = sortDir === 'asc' ? 'asc' : 'desc';
+    const orderBy = allowedSort.has(sortBy)
+      ? { [sortBy]: dir }
+      : { createdAt: 'desc' };
+
     const [data, total] = await Promise.all([
-      prisma.service.findMany({ where, select: serviceSelect, skip, take: limit, orderBy: { createdAt: 'desc' } }),
+      prisma.service.findMany({ where, select: serviceSelect, skip, take: limit, orderBy }),
       prisma.service.count({ where }),
     ]);
 
     res.json({ success: true, data: paginatedResponse(data, total, page, limit) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/services/categories — list distinct categories with counts (active only)
+router.get('/categories', authenticate, async (req, res, next) => {
+  try {
+    const tenantId = req.user.role === 'super_admin'
+      ? (req.query.tenantId || null)
+      : req.user.tenantId;
+    if (!tenantId) return res.json({ success: true, data: [] });
+
+    const groups = await prisma.service.groupBy({
+      by: ['category'],
+      where: { tenantId, deletedAt: null },
+      _count: { _all: true },
+      _sum: { price: true },
+      orderBy: { _count: { category: 'desc' } },
+    });
+    const data = groups
+      .filter(g => g.category && g.category.trim())
+      .map(g => ({
+        category: g.category,
+        count: g._count?._all || 0,
+        revenuePotential: g._sum?.price || 0,
+      }));
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/services/stats — quick overview for header tiles
+router.get('/stats', authenticate, async (req, res, next) => {
+  try {
+    const tenantId = req.user.role === 'super_admin'
+      ? (req.query.tenantId || null)
+      : req.user.tenantId;
+    if (!tenantId) return res.json({ success: true, data: { total: 0, active: 0, inactive: 0, avgPrice: 0, avgDuration: 0, categories: 0 } });
+
+    const where = { tenantId, deletedAt: null };
+    const [total, active, agg, distinctCats] = await Promise.all([
+      prisma.service.count({ where }),
+      prisma.service.count({ where: { ...where, isActive: true } }),
+      prisma.service.aggregate({ where, _avg: { price: true, duration: true } }),
+      prisma.service.findMany({ where, distinct: ['category'], select: { category: true } }),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        total,
+        active,
+        inactive: total - active,
+        avgPrice: Math.round(agg._avg?.price || 0),
+        avgDuration: Math.round(agg._avg?.duration || 0),
+        categories: distinctCats.filter(c => c.category && c.category.trim()).length,
+      },
+    });
   } catch (err) {
     next(err);
   }

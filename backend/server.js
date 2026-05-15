@@ -9,9 +9,12 @@ const rateLimit = require('express-rate-limit');
 const routes = require('./src/routes/index');
 const errorHandler = require('./src/middleware/errorHandler');
 const tenantResolver = require('./src/middleware/tenantResolver');
+const { resolveBranchAliasMiddleware } = require('./src/utils/branchResolver');
 const { initSocket } = require('./src/config/socket');
+const { initRenewalJob } = require('./src/jobs/subscriptionRenewal');
 
 const app = express();
+app.set('trust proxy', 1);
 
 // Security middleware
 app.use(helmet());
@@ -50,33 +53,71 @@ const isDev = process.env.NODE_ENV !== 'production';
 // General rate limiting
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: isDev ? 1000 : 100,  // loose in dev
+  // Aplikasi dashboard cukup "chatty" (polling, beberapa query paralel).
+  // Batas 100/15m terlalu cepat mentok di production dan memicu 429 palsu.
+  max: isDev ? 2000 : 1200,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => (
+    req.path === '/auth/me' ||
+    req.path === '/auth/refresh'
+  ),
   message: { success: false, error: 'Too many requests, please try again later.' },
 });
 
-// Login/refresh rate limiting — only on mutation endpoints, not /me
+// Login rate limiting — brute-force protection on /auth/login only.
+// `skipSuccessfulRequests` means we only count failed attempts, so legit users
+// in a shared office (multiple admin/kasir/barber on one NAT IP) don't get
+// blocked by each other's successful logins.
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: isDev ? 100 : 15,    // strict in prod only
+  max: isDev ? 100 : 30,
   standardHeaders: true,
   legacyHeaders: false,
+  skipSuccessfulRequests: true,
   message: { success: false, error: 'Too many authentication attempts, please try again later.' },
 });
 
+// Refresh rate limiting — separate, much more lenient bucket. Refresh fires
+// automatically every ~15min per active user; sharing the login bucket meant
+// 4 users on one IP could exhaust it in a single window before anyone tried
+// to actually log in. Successful refreshes don't count against the budget.
+const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isDev ? 1000 : 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  message: { success: false, error: 'Too many refresh attempts, please try again later.' },
+});
+
 app.use('/api', generalLimiter);
-// Apply strict limiter only to login & refresh — NOT to /me or /logout
 app.use('/api/auth/login', loginLimiter);
-app.use('/api/auth/refresh', loginLimiter);
+app.use('/api/auth/refresh', refreshLimiter);
+// Trial signup juga dibatasi (lebih ketat lagi: maks 5/IP/15m di prod)
+const registerLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: isDev ? 50 : 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Terlalu banyak pendaftaran. Coba lagi 15 menit.' },
+});
+app.use('/api/auth/register', registerLimiter);
 
 // Health check
 app.get('/health', (req, res) => {
   res.json({ success: true, data: { status: 'ok', timestamp: new Date().toISOString() } });
 });
+app.get('/api/health', (req, res) => {
+  res.json({ success: true, data: { status: 'ok', timestamp: new Date().toISOString() } });
+});
 
 // Resolve tenant from subdomain or X-Tenant-Slug header on every request
 app.use(tenantResolver);
+
+// Allow URL/query/body to pass branchId as either CUID or human-friendly code.
+// Replaces with the real id so downstream handlers can keep using `branchId` as-is.
+app.use(resolveBranchAliasMiddleware());
 
 // Block all non-public requests for suspended tenants
 // Auth + resolve are exempted so users can still log in and see the suspension message
@@ -105,6 +146,7 @@ initSocket(httpServer);
 
 httpServer.listen(PORT, () => {
   console.log(`BarberOS backend running on port ${PORT} [${process.env.NODE_ENV || 'development'}] (HTTP + Socket.io)`);
+  initRenewalJob();
 });
 
 module.exports = app;

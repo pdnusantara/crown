@@ -23,7 +23,7 @@ async function tenantResolver(req, res, next) {
 
     const tenant = await prisma.tenant.findFirst({
       where: { slug, deletedAt: null },
-      select: { id: true, name: true, slug: true, logo: true, isSuspended: true },
+      select: { id: true, name: true, slug: true, logo: true, timezone: true, isSuspended: true },
     });
 
     req.tenant = tenant || null;

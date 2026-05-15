@@ -18,9 +18,10 @@ export default {
         },
         dark: {
           DEFAULT: '#0A0A0A',
+          bg:      '#0A0A0A',
           surface: '#1A1A1A',
-          card: '#222222',
-          border: '#2A2A2A',
+          card:    '#222222',
+          border:  '#2A2A2A',
         },
         'off-white': '#F5F5F0',
         muted: '#6B7280',

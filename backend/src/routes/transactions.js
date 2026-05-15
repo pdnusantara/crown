@@ -3,38 +3,64 @@ const { z } = require('zod');
 const prisma = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { parsePagination, paginatedResponse } = require('../utils/pagination');
+const { sendTransactionNotification } = require('../services/whatsappService');
+const { requireLicensedBranch } = require('../middleware/requireLicensedBranch');
+const { getIO, branchRoom, tenantRoom, userRoom } = require('../config/socket');
+const { upsertCustomerByPhone } = require('../services/customerService');
+const { buildTenantDateRange, normalizeTimezone, DEFAULT_TZ } = require('../utils/timezone');
 
+// Resolve TZ untuk filter tanggal: super_admin pakai tenant target (kalau ada),
+// non-super pakai tenant sendiri. Default Asia/Jakarta saat tidak tersedia.
+async function resolveTxTz(req) {
+  const tid = req.user.role === 'super_admin' ? req.query.tenantId : req.user.tenantId;
+  if (!tid) return DEFAULT_TZ;
+  const t = await prisma.tenant.findUnique({ where: { id: tid }, select: { timezone: true } });
+  return normalizeTimezone(t?.timezone);
+}
+
+// Catatan Zod: `.optional()` saja TIDAK menerima `null` dari client — hanya
+// `undefined`. Frontend POS mengirim `null` untuk field yang kosong (customerId,
+// shiftId, barberId), jadi semua field opsional di-`nullish()` agar `null`
+// juga diterima dan diperlakukan sama dengan tidak diisi.
 const transactionItemSchema = z.object({
   serviceId: z.string().min(1),
-  barberId: z.string().optional(),
+  barberId: z.string().nullish(),
   name: z.string().min(1),
   price: z.number().int().min(0),
 });
 
 const createTransactionSchema = z.object({
-  tenantId: z.string().optional(),
+  tenantId: z.string().nullish(),
   branchId: z.string().min(1),
-  customerId: z.string().optional(),
-  shiftId: z.string().optional(),
+  customerId: z.string().nullish(),
+  // Snapshot identitas pelanggan — supaya struk dan laporan tetap utuh
+  // bahkan untuk walk-in tanpa registrasi.
+  customerName: z.string().nullish(),
+  customerPhone: z.string().nullish(),
+  shiftId: z.string().nullish(),
+  // Optional: kalau transaksi ini hasil dari pembayaran tiket antrian, kasir
+  // mengirim queueId. Backend akan resolve bookingId dari queue.notes.
+  queueId: z.string().nullish(),
+  bookingId: z.string().nullish(),
   subtotal: z.number().int().min(0),
-  discountType: z.string().optional(),
-  discountValue: z.number().int().min(0).optional(),
-  discountAmount: z.number().int().min(0).optional(),
-  tax: z.number().int().min(0).optional(),
+  discountType: z.string().nullish(),
+  discountValue: z.number().int().min(0).nullish(),
+  discountAmount: z.number().int().min(0).nullish(),
+  tax: z.number().int().min(0).nullish(),
   total: z.number().int().min(0),
-  paymentMethod: z.enum(['cash', 'transfer', 'qris', 'card']).optional(),
-  cashReceived: z.number().int().min(0).optional(),
-  change: z.number().int().optional(),
+  paymentMethod: z.enum(['cash', 'transfer', 'qris', 'card']).nullish(),
+  cashReceived: z.number().int().min(0).nullish(),
+  change: z.number().int().nullish(),
   items: z.array(transactionItemSchema).min(1),
-  loyaltyPointsEarned: z.number().int().min(0).optional(),
-  voucherCode: z.string().optional(),
+  loyaltyPointsEarned: z.number().int().min(0).nullish(),
+  voucherCode: z.string().nullish(),
 });
 
 // GET /api/transactions
-router.get('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir'), async (req, res, next) => {
+router.get('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir', 'barber', 'customer'), async (req, res, next) => {
   try {
     const { page, limit, skip } = parsePagination(req.query);
-    const { branchId, customerId, status, startDate, endDate, shiftId } = req.query;
+    const { branchId, customerId, status, startDate, endDate, shiftId, paymentMethod, barberId, search } = req.query;
 
     const where = {};
 
@@ -44,19 +70,43 @@ router.get('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir'
       where.tenantId = req.query.tenantId;
     }
 
+    // Barbers only see transactions containing their own items
+    if (req.user.role === 'barber') {
+      where.items = { some: { barberId: req.user.id } };
+    }
+
+    // Customers only see their own transactions
+    if (req.user.role === 'customer') {
+      where.customerId = req.user.id;
+    }
+
     if (branchId) where.branchId = branchId;
     if (customerId) where.customerId = customerId;
     if (status) where.status = status;
     if (shiftId) where.shiftId = shiftId;
+    if (paymentMethod) where.paymentMethod = paymentMethod;
+    // Filter berdasarkan barber (admin view): override req.user.role==='barber' yang sudah di-set
+    if (barberId) where.items = { some: { barberId } };
+    if (search) {
+      const s = String(search).trim();
+      where.OR = [
+        { id: { contains: s, mode: 'insensitive' } },
+        { customer: { name: { contains: s, mode: 'insensitive' } } },
+        { customerName: { contains: s, mode: 'insensitive' } },
+        { customerPhone: { contains: s } },
+        { items: { some: { name: { contains: s, mode: 'insensitive' } } } },
+      ];
+    }
+
+    // Filter sumber: 'booking' (transaksi yang berasal dari booking) atau
+    // 'walk_in' (transaksi langsung tanpa booking).
+    const { source } = req.query;
+    if (source === 'booking') where.bookingId = { not: null };
+    else if (source === 'walk_in') where.bookingId = null;
 
     if (startDate || endDate) {
-      where.createdAt = {};
-      if (startDate) where.createdAt.gte = new Date(startDate);
-      if (endDate) {
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-        where.createdAt.lte = end;
-      }
+      const tz = await resolveTxTz(req);
+      where.createdAt = buildTenantDateRange(startDate, endDate, tz);
     }
 
     const [data, total] = await Promise.all([
@@ -80,6 +130,79 @@ router.get('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir'
   }
 });
 
+// GET /api/transactions/summary — agregat sesuai filter (tidak terpengaruh pagination).
+// Berguna agar kartu statistik di halaman tetap akurat saat tabel paginated.
+router.get('/summary', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir', 'barber'), async (req, res, next) => {
+  try {
+    const { branchId, startDate, endDate, status, paymentMethod, barberId } = req.query;
+    const where = {};
+    if (req.user.role !== 'super_admin') {
+      where.tenantId = req.user.tenantId;
+    } else if (req.query.tenantId) {
+      where.tenantId = req.query.tenantId;
+    }
+    if (req.user.role === 'barber') {
+      where.items = { some: { barberId: req.user.id } };
+    }
+    if (req.user.role === 'customer') where.customerId = req.user.id;
+    if (branchId) where.branchId = branchId;
+    if (status) where.status = status;
+    if (paymentMethod) where.paymentMethod = paymentMethod;
+    if (barberId) where.items = { some: { barberId } };
+
+    if (startDate || endDate) {
+      const tz = await resolveTxTz(req);
+      where.createdAt = buildTenantDateRange(startDate, endDate, tz);
+    }
+
+    const [count, totals, byPayment, byStatus] = await Promise.all([
+      prisma.transaction.count({ where }),
+      prisma.transaction.aggregate({
+        where,
+        _sum: { total: true, subtotal: true, discountAmount: true },
+        _avg: { total: true },
+      }),
+      prisma.transaction.groupBy({
+        by: ['paymentMethod'],
+        where,
+        _count: { _all: true },
+        _sum: { total: true },
+      }),
+      prisma.transaction.groupBy({
+        by: ['status'],
+        where,
+        _count: { _all: true },
+      }),
+    ]);
+
+    const paymentBreakdown = byPayment.reduce((acc, row) => {
+      const key = row.paymentMethod || 'unknown';
+      acc[key] = { count: row._count._all, total: row._sum.total || 0 };
+      return acc;
+    }, {});
+    const statusBreakdown = byStatus.reduce((acc, row) => {
+      const key = row.status || 'completed';
+      acc[key] = row._count._all;
+      return acc;
+    }, {});
+
+    res.json({
+      success: true,
+      data: {
+        count,
+        totalRevenue: totals._sum.total || 0,
+        totalSubtotal: totals._sum.subtotal || 0,
+        totalDiscount: totals._sum.discountAmount || 0,
+        avgTicket: Math.round(totals._avg.total || 0),
+        paymentBreakdown,
+        statusBreakdown,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/transactions/:id
 router.get('/:id', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir'), async (req, res, next) => {
   try {
@@ -87,9 +210,15 @@ router.get('/:id', authenticate, requireRole('super_admin', 'tenant_admin', 'kas
       where: { id: req.params.id },
       include: {
         items: { include: { service: { select: { id: true, name: true, category: true } } } },
-        customer: { select: { id: true, name: true, phone: true, loyaltyPoints: true } },
+        customer: { select: { id: true, name: true, phone: true, loyaltyPoints: true, visitCount: true } },
         branch: { select: { id: true, name: true } },
         shift: { select: { id: true, kasirId: true, openedAt: true } },
+        booking: {
+          select: {
+            id: true, date: true, time: true, source: true, status: true,
+            serviceName: true, barberName: true, notes: true, createdAt: true,
+          },
+        },
       },
     });
 
@@ -106,7 +235,7 @@ router.get('/:id', authenticate, requireRole('super_admin', 'tenant_admin', 'kas
 });
 
 // POST /api/transactions
-router.post('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir'), async (req, res, next) => {
+router.post('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir'), requireLicensedBranch(), async (req, res, next) => {
   try {
     const body = createTransactionSchema.parse(req.body);
 
@@ -133,7 +262,85 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir
       }
     }
 
-    const { items, loyaltyPointsEarned = 0, voucherCode, ...txData } = body;
+    let { items, loyaltyPointsEarned = 0, voucherCode, queueId, ...txData } = body;
+
+    // Auto-calc loyalty points bila frontend tidak mengirim eksplisit.
+    // Default: 1 poin per Rp10.000 net (setelah diskon). Hanya berlaku saat
+    // transaksi punya customerId — walk-in tanpa nomor telepon tidak terhitung.
+    // Bisa di-override per-transaksi dengan kirim `loyaltyPointsEarned`.
+    const POINTS_PER_RUPIAH = 10_000; // 1 point per Rp10.000
+    if ((loyaltyPointsEarned == null || loyaltyPointsEarned === 0) && txData.customerId) {
+      const net = Number(txData.total) || 0;
+      loyaltyPointsEarned = Math.max(0, Math.floor(net / POINTS_PER_RUPIAH));
+    }
+
+    // Frontend POS mengirim `null` untuk field yang kosong. Setelah Zod
+    // (.nullish()) field-field itu sudah lolos validasi, tapi Prisma menolak
+    // `null` pada kolom non-nullable yang punya default (paymentMethod,
+    // discountValue, dll). Hapus key yang bernilai null supaya Prisma jatuh
+    // ke default kolom.
+    for (const k of Object.keys(txData)) {
+      if (txData[k] === null) delete txData[k];
+    }
+
+    // Auto-link transaction ke shift yang sedang terbuka — walau frontend
+    // tidak mengirim shiftId. Ini krusial supaya halaman Penutupan Shift bisa
+    // menjumlahkan transaksi yang dibuat di sesi kasir ini.
+    if (!txData.shiftId && req.user.role === 'kasir') {
+      try {
+        const openShift = await prisma.shift.findFirst({
+          where: { branchId: txData.branchId, kasirId: req.user.id, status: 'open' },
+          select: { id: true },
+          orderBy: { openedAt: 'desc' },
+        });
+        if (openShift) txData.shiftId = openShift.id;
+      } catch (_) { /* defensive — never block transaction on this */ }
+    }
+
+    // Resolve bookingId & customer dari queue kalau transaksi datang dari
+    // pembayaran tiket antrian. Berguna agar halaman Transaksi bisa
+    // membedakan pelanggan booking vs walk-in.
+    if (queueId) {
+      try {
+        const q = await prisma.queue.findUnique({
+          where: { id: queueId },
+          select: { customerId: true, customerName: true, customerPhone: true, notes: true, tenantId: true, branchId: true },
+        });
+        if (q && q.tenantId === txData.tenantId) {
+          // Inherit customer info dari queue kalau frontend belum kirim
+          if (!txData.customerId && q.customerId) txData.customerId = q.customerId;
+          if (!txData.customerName && q.customerName) txData.customerName = q.customerName;
+          if (!txData.customerPhone && q.customerPhone) txData.customerPhone = q.customerPhone;
+          // Parse bookingId dari queue.notes (ditanam saat /bookings/:id/check-in)
+          if (!txData.bookingId && q.notes) {
+            try {
+              const meta = JSON.parse(q.notes);
+              if (meta?.bookingId) txData.bookingId = meta.bookingId;
+            } catch { /* notes mungkin format lama, abaikan */ }
+          }
+        }
+      } catch (_) { /* defensive */ }
+    }
+
+    // Auto-upsert customer agar walk-in tanpa registrasi tetap masuk daftar
+    // pelanggan admin. Hanya jalan kalau ada nama+telp tapi belum ada customerId.
+    if (!txData.customerId && txData.customerName && txData.customerPhone) {
+      try {
+        const c = await upsertCustomerByPhone(prisma, {
+          tenantId: txData.tenantId,
+          name: txData.customerName,
+          phone: txData.customerPhone,
+        });
+        if (c?.id) txData.customerId = c.id;
+      } catch (_) { /* never block transaction on customer upsert */ }
+    }
+    const cleanedItems = items.map((it) => {
+      const next = { ...it };
+      for (const k of Object.keys(next)) {
+        if (next[k] === null) delete next[k];
+      }
+      return next;
+    });
 
     // Use Prisma transaction for atomicity
     const result = await prisma.$transaction(async (tx) => {
@@ -142,7 +349,7 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir
         data: {
           ...txData,
           items: {
-            create: items,
+            create: cleanedItems,
           },
         },
         include: {
@@ -175,6 +382,32 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir
     });
 
     res.status(201).json({ success: true, data: result });
+
+    // Emit real-time notification to relevant rooms
+    const io = getIO();
+    if (io) {
+      const barberIds = [...new Set(result.items.map(i => i.barberId).filter(Boolean))];
+      const payload = {
+        id: result.id,
+        tenantId: result.tenantId,
+        branchId: result.branchId,
+        branchName: result.branch?.name || '',
+        total: result.total,
+        paymentMethod: result.paymentMethod,
+        customerName: result.customer?.name || 'Walk-in',
+        itemCount: result.items?.length || 0,
+        barberIds,
+        createdAt: result.createdAt,
+      };
+      // All users in this tenant (admin, kasir, barber) are auto-joined to tenant room;
+      // frontend filters by role/barberId before showing the notification.
+      io.to(tenantRoom(result.tenantId)).emit('transaction:created', payload);
+    }
+
+    // Fire-and-forget WhatsApp notification (MVP Beta).
+    sendTransactionNotification(body.tenantId, result).catch((err) => {
+      console.error('WhatsApp transaction notification failed:', err?.message || err);
+    });
   } catch (err) {
     next(err);
   }

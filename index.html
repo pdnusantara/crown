@@ -1,13 +1,41 @@
 <!doctype html>
-<html lang="en">
+<html lang="id">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BarberOS — Premium Barbershop Management</title>
+    <meta name="theme-color" content="#0a0a0a" />
+
+    <title>SembaPOS — Sistem Manajemen Barbershop Modern</title>
+    <meta name="description" content="Kasir, antrian, booking online, multi-cabang, dan laporan pintar — semua dalam satu aplikasi yang dirancang khusus untuk barbershop. Trial 14 hari gratis." />
+    <meta name="keywords" content="aplikasi barbershop, POS barbershop, manajemen barbershop, kasir barbershop, booking barbershop, antrian barbershop" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="SembaPOS — Sistem Manajemen Barbershop Modern" />
+    <meta property="og:description" content="Kasir, antrian, booking online, multi-cabang, dan laporan pintar — semua dalam satu aplikasi. Trial 14 hari gratis, tanpa kartu kredit." />
+    <meta property="og:url" content="https://sembapos.com" />
+    <meta property="og:site_name" content="SembaPOS" />
+    <meta property="og:locale" content="id_ID" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="SembaPOS — Sistem Manajemen Barbershop Modern" />
+    <meta name="twitter:description" content="Kasir, antrian, booking online, multi-cabang. Trial 14 hari gratis." />
+
+    <link rel="canonical" href="https://sembapos.com" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+    <style>
+      /* Hindari flash putih sebelum React mount: latar gelap default. */
+      html, body { background: #0a0a0a; color: #f5f5f5; }
+      /* Sticky nav offset untuk anchor scroll. */
+      html { scroll-behavior: smooth; }
+      [id] { scroll-margin-top: 80px; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

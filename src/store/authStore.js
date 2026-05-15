@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import api, { setTokens, clearTokens, getAccessToken } from '../lib/api.js'
+import api, { setTokens, clearTokens, getAccessToken, decodeAccessTokenPayload } from '../lib/api.js'
+import { getBranchSlug } from '../utils/branchSlug.js'
 
 const USER_CACHE_KEY = 'barberos_cached_user'
 
@@ -23,10 +24,21 @@ const getRedirectPath = (user) => {
   switch (user.role) {
     case 'super_admin':  return '/super-admin/dashboard'
     case 'tenant_admin': return '/admin/dashboard'
-    case 'kasir':        return user.branchId ? `/${user.branchId}/kasir/pos` : '/login'
+    case 'kasir':        { const slug = getBranchSlug(user); return slug ? `/${slug}/kasir/pos` : '/login' }
     case 'barber':       return '/barber/dashboard'
     case 'customer':     return '/customer/booking'
     default:             return '/login'
+  }
+}
+
+const userFromTokenPayload = (payload) => {
+  if (!payload || !payload.role) return null
+  return {
+    id: payload.id,
+    email: payload.email,
+    role: payload.role,
+    tenantId: payload.tenantId ?? null,
+    branchId: payload.branchId ?? null,
   }
 }
 
@@ -48,21 +60,44 @@ export const useAuthStore = create((set, get) => ({
       set({ isLoading: false, isAuthenticated: false })
       return
     }
+    const tokenUser = userFromTokenPayload(decodeAccessTokenPayload(token))
     const cached = readCachedUser()
     if (cached) {
       // Optimistic restore — UI langsung tampil
       set({ user: cached, isAuthenticated: true, isLoading: false })
+    } else if (tokenUser) {
+      // Fallback saat cache user hilang namun access token masih valid.
+      set({ user: tokenUser, isAuthenticated: true, isLoading: false })
     }
     try {
       const res = await api.get('/auth/me')
       const fresh = res.data.data
       cacheUser(fresh)
       set({ user: fresh, isAuthenticated: true, isLoading: false })
-    } catch {
-      clearTokens()
-      cacheUser(null)
-      set({ user: null, isAuthenticated: false, isLoading: false })
+    } catch (err) {
+      const status = err?.response?.status
+      // Hanya paksa logout saat kredensial memang tidak valid/expired.
+      // Untuk error sementara (429/5xx/network), pertahankan sesi lokal agar reload
+      // tidak melempar user kembali ke login.
+      if (status === 401) {
+        clearTokens()
+        cacheUser(null)
+        set({ user: null, isAuthenticated: false, isLoading: false })
+        return
+      }
+      set((state) => ({
+        user: state.user || cached || tokenUser || null,
+        isAuthenticated: Boolean(state.user || cached || tokenUser),
+        isLoading: false,
+      }))
     }
+  },
+
+  // Set auth langsung dari payload pre-fetched (dipakai self-service register).
+  setAuth: ({ user, accessToken, refreshToken }) => {
+    setTokens(accessToken, refreshToken)
+    cacheUser(user)
+    set({ user, isAuthenticated: true, isLoading: false, error: null })
   },
 
   login: async (email, password) => {
@@ -75,9 +110,17 @@ export const useAuthStore = create((set, get) => ({
       set({ user, isAuthenticated: true, isLoading: false, error: null })
       return { success: true, redirectTo: getRedirectPath(user) }
     } catch (err) {
-      const message = err?.response?.data?.error || 'Email atau password salah'
+      const data = err?.response?.data || {}
+      const message = data.error || 'Email atau password salah'
+      // Domain-mismatch responses include a `redirect` URL → expose to UI so
+      // it can render a "Buka domain yang benar" button instead of just an
+      // opaque error message.
       set({ isLoading: false, error: message })
-      return { success: false }
+      return {
+        success: false,
+        redirect: data.redirect || null,
+        tenantSlug: data.tenantSlug || null,
+      }
     }
   },
 
@@ -91,9 +134,10 @@ export const useAuthStore = create((set, get) => ({
   },
 
   updateProfile: async (data) => {
-    const res = await api.put('/auth/me', data)
+    const res = await api.patch('/auth/me', data)
     cacheUser(res.data.data)
     set({ user: res.data.data })
+    return res.data.data
   },
 
   // Impersonation (super_admin only) — stores original user + switches view.

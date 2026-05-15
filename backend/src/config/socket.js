@@ -98,6 +98,19 @@ function emitQueueEvent(event, queueEntry) {
   }
 }
 
+function emitBookingEvent(event, booking) {
+  if (!io || !booking?.branchId) return;
+  io.to(branchRoom(booking.branchId)).emit(event, booking);
+  if (booking.tenantId) {
+    io.to(tenantRoom(booking.tenantId)).emit(event, booking);
+  }
+  // Kalau booking di-assign ke barber, kirim juga ke personal room
+  // supaya barber yang sedang offline-from-branch tetap dapat notifikasi.
+  if (booking.barberId) {
+    io.to(userRoom(booking.barberId)).emit(event, booking);
+  }
+}
+
 function emitTicketEvent(event, ticket, opts = {}) {
   if (!io || !ticket) return;
   // Broadcast ke pembuat tiket (siapa pun perannya)
@@ -121,6 +134,7 @@ module.exports = {
   initSocket,
   getIO,
   emitQueueEvent,
+  emitBookingEvent,
   emitTicketEvent,
   branchRoom,
   tenantRoom,

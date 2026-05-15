@@ -1,20 +1,29 @@
 import React from 'react'
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
-import { useBookingStore } from '../../store/bookingStore.js'
-import { transactions as seedTransactions } from '../../data/seed.js'
+import { useAuthStore } from '../../store/authStore.js'
+import { useBookings } from '../../hooks/useBookings.js'
+import { useTransactions } from '../../hooks/useTransactions.js'
 import Card from '../../components/ui/Card.jsx'
 import Badge, { getStatusBadge } from '../../components/ui/Badge.jsx'
 import { formatRupiah, formatDate, formatDateTime } from '../../utils/format.js'
 import { Receipt } from 'lucide-react'
 
+const BOOKING_STATUS_LABEL = {
+  pending:    'Menunggu',
+  confirmed:  'Terkonfirmasi',
+  done:       'Selesai',
+  cancelled:  'Dibatalkan',
+}
+
 export default function CustomerHistory() {
   const { t } = useTranslation()
-  const { bookings } = useBookingStore()
-  const myBookings = bookings.filter(b => b.customerId === 'cust-001')
+  const { user } = useAuthStore()
 
-  // Get customer's transactions
-  const myTxns = seedTransactions.filter(t => t.customerId === 'cust-001').slice(0, 10)
+  const { data: bookings = [] } = useBookings({ customerId: user?.id })
+  const { data: transactions = [], isLoading } = useTransactions({ customerId: user?.id })
+
+  const activeBookings = bookings.filter(b => b.status !== 'cancelled' && b.status !== 'done')
 
   return (
     <div className="space-y-6">
@@ -24,21 +33,21 @@ export default function CustomerHistory() {
       </div>
 
       {/* Upcoming bookings */}
-      {myBookings.filter(b => b.status !== 'cancelled').length > 0 && (
+      {activeBookings.length > 0 && (
         <div>
           <h3 className="font-semibold text-off-white mb-3">{t('customer.activeBookings')}</h3>
           <div className="space-y-2">
-            {myBookings.filter(b => b.status !== 'cancelled').map((b, i) => (
+            {activeBookings.map((b, i) => (
               <motion.div key={b.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
                 <Card className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-off-white">{b.services?.join(', ')}</p>
+                      <p className="font-medium text-off-white">{b.serviceName || '—'}</p>
                       <p className="text-sm text-muted">{formatDate(b.date)} • {b.time}</p>
-                      <p className="text-sm text-muted">{b.staffName || t('customer.barberAvailable')}</p>
+                      <p className="text-sm text-muted">{b.barberName || t('customer.barberAvailable')}</p>
                     </div>
                     <Badge variant={getStatusBadge(b.status)}>
-                      {b.status === 'confirmed' ? t('customer.statusConfirmed') : t('customer.statusWaiting')}
+                      {BOOKING_STATUS_LABEL[b.status] || b.status}
                     </Badge>
                   </div>
                 </Card>
@@ -52,24 +61,29 @@ export default function CustomerHistory() {
       <div>
         <h3 className="font-semibold text-off-white mb-3">{t('customer.transactionHistory')}</h3>
         <div className="space-y-2">
-          {myTxns.length === 0 ? (
+          {isLoading ? (
+            [...Array(3)].map((_, i) => <div key={i} className="h-16 rounded-xl bg-dark-card animate-pulse" />)
+          ) : transactions.length === 0 ? (
             <Card className="p-10 text-center">
               <Receipt className="w-10 h-10 text-muted mx-auto mb-3 opacity-40" />
               <p className="text-muted">{t('customer.noTransactions')}</p>
             </Card>
           ) : (
-            myTxns.map((txn, i) => (
+            transactions.slice(0, 10).map((txn, i) => (
               <motion.div key={txn.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
                 <Card className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-medium text-off-white">{txn.services?.[0]?.name || t('customer.serviceFallback')}</p>
+                      <p className="font-medium text-off-white">
+                        {(txn.items || []).map(i => i.name).join(', ') || t('customer.serviceFallback')}
+                      </p>
                       <p className="text-sm text-muted">{formatDateTime(txn.createdAt)}</p>
-                      <p className="text-sm text-muted">{txn.staffName}</p>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-gold">{formatRupiah(txn.total)}</p>
-                      <Badge variant={getStatusBadge(txn.paymentMethod)} className="mt-1">{txn.paymentMethod}</Badge>
+                      <Badge variant={getStatusBadge(txn.paymentMethod)} className="mt-1">
+                        {txn.paymentMethod}
+                      </Badge>
                     </div>
                   </div>
                 </Card>

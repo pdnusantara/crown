@@ -2,6 +2,21 @@ const router = require('express').Router();
 const { z } = require('zod');
 const prisma = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { recordAudit } = require('../utils/auditLog');
+const { getIO, tenantRoom } = require('../config/socket');
+
+// Emit a flag-change notification to:
+//   1. the super-admin `support` room → other admin tabs refresh feature-flags page
+//   2. the affected tenant's room       → tenant UI refreshes feature gates live
+function emitFlagChange(tenantId, flagId) {
+  try {
+    const io = getIO();
+    if (!io) return;
+    const payload = { tenantId, flagId };
+    io.to('support').emit('featureFlag:changed', payload);
+    io.to(tenantRoom(tenantId)).emit('featureFlag:changed', payload);
+  } catch { /* observability — never throw */ }
+}
 
 // Available feature flags — kept in sync with frontend featureFlagStore.js
 const AVAILABLE_FLAGS = [
@@ -90,6 +105,14 @@ async function handlePutTenantFlags(req, res, next) {
       enabled: flagMap[flag.id] ?? false,
     }));
 
+    await recordAudit(req, {
+      action: 'flag.bulk-update',
+      target: `tenant:${tenantId}`,
+      detail: `${tenant.name}: ${flags.length} flag(s) updated`,
+      severity: 'info',
+    });
+    emitFlagChange(tenantId, null);
+
     res.json({ success: true, data: result });
   } catch (err) {
     next(err);
@@ -129,6 +152,14 @@ router.patch('/tenant/:tenantId/:flagId', authenticate, requireRole('super_admin
       create: { tenantId, flagId, enabled },
       update: { enabled },
     });
+
+    await recordAudit(req, {
+      action: 'flag.toggle',
+      target: `tenant:${tenantId}`,
+      detail: `${tenant.name}: ${flagId} ${enabled ? 'enabled' : 'disabled'}`,
+      severity: 'info',
+    });
+    emitFlagChange(tenantId, flagId);
 
     res.json({ success: true, data: flag });
   } catch (err) {

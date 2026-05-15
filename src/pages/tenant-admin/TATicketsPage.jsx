@@ -36,7 +36,8 @@ export default function TATicketsPage() {
   const [sending,        setSending]        = useState(false)
   const [form, setForm] = useState({ subject: '', description: '', category: 'Bug', priority: 'medium' })
 
-  const { data: myTickets = [], isLoading } = useTickets(user?.tenantId)
+  const { data: myTicketsResp, isLoading } = useTickets(user?.tenantId)
+  const myTickets = myTicketsResp?.data || []
   const { data: ticketDetail } = useTicket(selectedId)
   const selectedTicket = ticketDetail || (selectedId ? myTickets.find(t => t.id === selectedId) : null)
   const createTicket = useCreateTicket()

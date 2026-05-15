@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { z } = require('zod');
 const prisma = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { buildTenantDateRange, formatYmdInTz, normalizeTimezone, DEFAULT_TZ } = require('../utils/timezone');
 
 const dateRangeSchema = z.object({
   startDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
@@ -10,12 +11,29 @@ const dateRangeSchema = z.object({
   tenantId: z.string().optional(),
 });
 
-function buildDateRange(startDate, endDate) {
-  const start = new Date(startDate);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(endDate);
-  end.setHours(23, 59, 59, 999);
-  return { gte: start, lte: end };
+// Resolve TZ for the query — if tenantId is provided, look up tenant's timezone.
+async function resolveTenantTz(tenantId) {
+  if (!tenantId) return DEFAULT_TZ;
+  const t = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { timezone: true },
+  });
+  return normalizeTimezone(t?.timezone);
+}
+
+function buildDateRange(startDate, endDate, tz = DEFAULT_TZ) {
+  return buildTenantDateRange(startDate, endDate, tz);
+}
+
+// Resolve branchId aman: kalau dipassing tapi bukan milik tenant ybs → ignore
+// (return null) supaya query tidak nge-leak data lintas tenant.
+async function resolveBranchId(branchId, tenantId) {
+  if (!branchId || !tenantId) return branchId || null;
+  const b = await prisma.branch.findFirst({
+    where: { id: branchId, tenantId, deletedAt: null },
+    select: { id: true },
+  });
+  return b ? branchId : null;
 }
 
 // GET /api/reports/summary - overall summary stats
@@ -25,13 +43,13 @@ router.get('/summary', authenticate, requireRole('super_admin', 'tenant_admin'),
     const now = new Date();
     const startDate = parsed.success ? req.query.startDate : new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const endDate = parsed.success ? req.query.endDate : now.toISOString();
-    const branchId = req.query.branchId;
-
     const tenantId = req.user.role === 'super_admin' ? req.query.tenantId : req.user.tenantId;
+    const branchId = await resolveBranchId(req.query.branchId, tenantId);
+    const tz = await resolveTenantTz(tenantId);
 
     const txWhere = {
       status: 'completed',
-      createdAt: buildDateRange(startDate, endDate),
+      createdAt: buildDateRange(startDate, endDate, tz),
     };
     if (tenantId) txWhere.tenantId = tenantId;
     if (branchId) txWhere.branchId = branchId;
@@ -63,7 +81,7 @@ router.get('/summary', authenticate, requireRole('super_admin', 'tenant_admin'),
       prisma.customer.count({
         where: {
           deletedAt: null,
-          createdAt: buildDateRange(startDate, endDate),
+          createdAt: buildDateRange(startDate, endDate, tz),
           ...(tenantId ? { tenantId } : {}),
         },
       }),
@@ -142,17 +160,18 @@ router.get('/summary', authenticate, requireRole('super_admin', 'tenant_admin'),
   }
 });
 
-// GET /api/reports/daily - daily revenue breakdown
+// GET /api/reports/daily - daily revenue breakdown (grouped by tenant-local day)
 router.get('/daily', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
   try {
-    const branchId = req.query.branchId;
     const tenantId = req.user.role === 'super_admin' ? req.query.tenantId : req.user.tenantId;
+    const branchId = await resolveBranchId(req.query.branchId, tenantId);
+    const tz = await resolveTenantTz(tenantId);
     const startDate = req.query.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const endDate = req.query.endDate || new Date().toISOString();
 
     const txWhere = {
       status: 'completed',
-      createdAt: buildDateRange(startDate, endDate),
+      createdAt: buildDateRange(startDate, endDate, tz),
     };
     if (tenantId) txWhere.tenantId = tenantId;
     if (branchId) txWhere.branchId = branchId;
@@ -163,10 +182,11 @@ router.get('/daily', authenticate, requireRole('super_admin', 'tenant_admin'), a
       orderBy: { createdAt: 'asc' },
     });
 
-    // Group by date
+    // Group by tenant-local YYYY-MM-DD (bukan UTC) supaya transaksi jam 23:30
+    // Asia/Jakarta tidak nyebrang ke "hari berikutnya" UTC.
     const dailyMap = {};
     transactions.forEach((tx) => {
-      const date = tx.createdAt.toISOString().split('T')[0];
+      const date = formatYmdInTz(tx.createdAt, tz);
       if (!dailyMap[date]) {
         dailyMap[date] = { date, revenue: 0, transactions: 0 };
       }
@@ -176,7 +196,7 @@ router.get('/daily', authenticate, requireRole('super_admin', 'tenant_admin'), a
 
     const daily = Object.values(dailyMap).sort((a, b) => a.date.localeCompare(b.date));
 
-    res.json({ success: true, data: daily });
+    res.json({ success: true, data: daily, meta: { timezone: tz } });
   } catch (err) {
     next(err);
   }
@@ -185,14 +205,15 @@ router.get('/daily', authenticate, requireRole('super_admin', 'tenant_admin'), a
 // GET /api/reports/barbers - barber performance report
 router.get('/barbers', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
   try {
-    const branchId = req.query.branchId;
     const tenantId = req.user.role === 'super_admin' ? req.query.tenantId : req.user.tenantId;
+    const branchId = await resolveBranchId(req.query.branchId, tenantId);
+    const tz = await resolveTenantTz(tenantId);
     const startDate = req.query.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const endDate = req.query.endDate || new Date().toISOString();
 
     const txWhere = {
       status: 'completed',
-      createdAt: buildDateRange(startDate, endDate),
+      createdAt: buildDateRange(startDate, endDate, tz),
     };
     if (tenantId) txWhere.tenantId = tenantId;
     if (branchId) txWhere.branchId = branchId;
@@ -248,10 +269,11 @@ router.get('/barbers', authenticate, requireRole('super_admin', 'tenant_admin'),
 router.get('/customers', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
   try {
     const tenantId = req.user.role === 'super_admin' ? req.query.tenantId : req.user.tenantId;
+    const tz = await resolveTenantTz(tenantId);
     const startDate = req.query.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const endDate = req.query.endDate || new Date().toISOString();
 
-    const dateRange = buildDateRange(startDate, endDate);
+    const dateRange = buildDateRange(startDate, endDate, tz);
 
     const [
       topCustomers,
@@ -332,13 +354,14 @@ router.get('/customers', authenticate, requireRole('super_admin', 'tenant_admin'
 router.get('/services', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
   try {
     const tenantId = req.user.role === 'super_admin' ? req.query.tenantId : req.user.tenantId;
-    const branchId = req.query.branchId;
+    const branchId = await resolveBranchId(req.query.branchId, tenantId);
+    const tz = await resolveTenantTz(tenantId);
     const startDate = req.query.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const endDate = req.query.endDate || new Date().toISOString();
 
     const txWhere = {
       status: 'completed',
-      createdAt: buildDateRange(startDate, endDate),
+      createdAt: buildDateRange(startDate, endDate, tz),
     };
     if (tenantId) txWhere.tenantId = tenantId;
     if (branchId) txWhere.branchId = branchId;
@@ -349,6 +372,7 @@ router.get('/services', authenticate, requireRole('super_admin', 'tenant_admin')
       _sum: { price: true },
       _count: { id: true },
       orderBy: { _count: { id: 'desc' } },
+      take: 100,
     });
 
     res.json({

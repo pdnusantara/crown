@@ -13,6 +13,23 @@ export const usePosStore = create(
       cashReceived: 0,
       lastTransaction: null,
       transactions: [],
+      // Barber yang melayani transaksi — satu pilihan untuk semua layanan dalam
+      // 1 transaksi. Persisted supaya kasir tidak ulang pilih tiap transaksi.
+      defaultBarberId: null,
+      defaultBarberName: null,
+
+      // Set barber default + update SEMUA item di cart sekaligus.
+      setDefaultBarber: (barberId, barberName) => {
+        set(state => ({
+          defaultBarberId:   barberId   || null,
+          defaultBarberName: barberName || null,
+          cartItems: state.cartItems.map(item => ({
+            ...item,
+            barberId:   barberId   || null,
+            barberName: barberName || null,
+          })),
+        }))
+      },
 
       // Cart actions
       addToCart: (service) => {
@@ -26,8 +43,8 @@ export const usePosStore = create(
               name: service.name,
               price: service.price,
               duration: service.duration,
-              barberId: null,
-              barberName: null,
+              barberId:   state.defaultBarberId   || null,
+              barberName: state.defaultBarberName || null,
             }]
           }
         })
@@ -57,6 +74,39 @@ export const usePosStore = create(
         })
       },
 
+      // Pre-load a queue item into the cart — called when kasir clicks "Bayar" on a queue ticket
+      loadFromQueue: (queueItem, allServices) => {
+        const cartItems = (queueItem.services || [])
+          .map((svcName, i) => {
+            const svc = allServices.find(s => s.name === svcName)
+            if (!svc) return null
+            return {
+              id: `cart-q-${i}-${Date.now()}`,
+              serviceId: svc.id,
+              name: svc.name,
+              price: svc.price,
+              duration: svc.duration,
+              barberId: queueItem.staffId || null,
+              barberName: queueItem.staffName || null,
+            }
+          })
+          .filter(Boolean)
+
+        set({
+          cartItems,
+          selectedCustomer: queueItem.customerId
+            ? { id: queueItem.customerId, name: queueItem.customerName, phone: queueItem.phone }
+            : null,
+          discountType: 'percentage',
+          discountValue: 0,
+          voucherCode: '',
+          paymentMethod: 'cash',
+          cashReceived: 0,
+          defaultBarberId:   queueItem.staffId   || null,
+          defaultBarberName: queueItem.staffName || null,
+        })
+      },
+
       setSelectedCustomer: (customer) => set({ selectedCustomer: customer }),
 
       setDiscount: (type, value) => set({ discountType: type, discountValue: value }),
@@ -78,17 +128,12 @@ export const usePosStore = create(
         return 0
       },
 
-      getTax: () => {
-        const subtotal = get().getSubtotal()
-        const discount = get().getDiscountAmount()
-        return Math.round((subtotal - discount) * 0.1)
-      },
+      getTax: () => 0,
 
       getTotal: () => {
         const subtotal = get().getSubtotal()
         const discount = get().getDiscountAmount()
-        const tax = get().getTax()
-        return subtotal - discount + tax
+        return subtotal - discount
       },
 
       getChange: () => {
@@ -98,13 +143,21 @@ export const usePosStore = create(
       },
 
       // Complete transaction
-      completeTransaction: async (tenantId, branchId, shiftId = null) => {
+      // opts: { queueId, customerName, customerPhone } — opsional. queueId
+      // dipakai backend untuk auto-link ke booking + auto-upsert customer agar
+      // walk-in dari kasir juga tercatat di /admin/customers.
+      completeTransaction: async (tenantId, branchId, shiftId = null, opts = {}) => {
         const state = get()
         const payload = {
           tenantId,
           branchId,
           shiftId,
+          queueId: opts.queueId || null,
           customerId: state.selectedCustomer?.id || null,
+          // Snapshot nama/telp pelanggan — penting untuk walk-in tanpa
+          // selectedCustomer agar backend bisa upsert ke daftar pelanggan.
+          customerName: state.selectedCustomer?.name || opts.customerName || null,
+          customerPhone: state.selectedCustomer?.phone || opts.customerPhone || null,
           subtotal: state.getSubtotal(),
           discountType: state.discountType,
           discountValue: state.discountValue,

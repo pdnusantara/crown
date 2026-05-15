@@ -1,9 +1,12 @@
+import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../lib/api.js'
+import { getSocket } from '../lib/socket.js'
 
 // Fetch subscription berdasarkan tenantId (bukan subscription.id)
 export function useSubscription(tenantId) {
-  return useQuery({
+  const qc = useQueryClient()
+  const query = useQuery({
     queryKey: ['subscription', tenantId],
     queryFn: async () => {
       const res = await api.get(`/subscriptions/tenant/${tenantId}`)
@@ -16,11 +19,26 @@ export function useSubscription(tenantId) {
       return failureCount < 2
     },
   })
+
+  useEffect(() => {
+    if (!tenantId) return
+    const s = getSocket()
+    const onUpdate = (payload) => {
+      if (!payload || payload.tenantId === tenantId) {
+        qc.invalidateQueries({ queryKey: ['subscription', tenantId] })
+      }
+    }
+    s.on('subscription:updated', onUpdate)
+    return () => { s.off('subscription:updated', onUpdate) }
+  }, [qc, tenantId])
+
+  return query
 }
 
 // List subscriptions — super admin
 export function useSubscriptions(filters = {}) {
-  return useQuery({
+  const qc = useQueryClient()
+  const query = useQuery({
     queryKey: ['subscriptions', filters],
     queryFn: async () => {
       const res = await api.get('/subscriptions', { params: filters })
@@ -28,6 +46,17 @@ export function useSubscriptions(filters = {}) {
       return Array.isArray(raw) ? raw : (raw?.data || [])
     },
   })
+
+  // Realtime sync: backend emit `subscription:any-updated` saat ada
+  // mutation di tab/admin lain → list ini langsung refetch.
+  useEffect(() => {
+    const s = getSocket()
+    const onAny = () => qc.invalidateQueries({ queryKey: ['subscriptions'] })
+    s.on('subscription:any-updated', onAny)
+    return () => { s.off('subscription:any-updated', onAny) }
+  }, [qc])
+
+  return query
 }
 
 // MRR dihitung dari subscription active + overdue
@@ -70,6 +99,25 @@ export function useToggleAutoRenew() {
   })
 }
 
+// Pause subscription — body: { pauseUntil (ISO), reason? }
+export function usePauseSubscription() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ subscriptionId, pauseUntil, reason }) =>
+      api.post(`/subscriptions/${subscriptionId}/pause`, { pauseUntil, reason }).then(r => r.data.data),
+    onSuccess: (data) => invalidate(qc, data?.tenantId),
+  })
+}
+
+export function useResumeSubscription() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ subscriptionId }) =>
+      api.post(`/subscriptions/${subscriptionId}/resume`).then(r => r.data.data),
+    onSuccess: (data) => invalidate(qc, data?.tenantId),
+  })
+}
+
 export function usePayInvoice() {
   const qc = useQueryClient()
   return useMutation({
@@ -88,6 +136,19 @@ export function useCreateSubscription() {
     mutationFn: (data) =>
       api.post('/subscriptions', data).then(r => r.data.data),
     onSuccess: (data) => invalidate(qc, data?.tenantId),
+  })
+}
+
+export function useGrantBranchLicense() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ subscriptionId, note }) =>
+      api.post(`/subscriptions/${subscriptionId}/grant-branch`, { note }).then(r => r.data.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['branches'] })
+      qc.invalidateQueries({ queryKey: ['subscription'] })
+      qc.invalidateQueries({ queryKey: ['subscriptions'] })
+    },
   })
 }
 

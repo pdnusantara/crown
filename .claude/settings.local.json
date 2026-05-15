@@ -29,7 +29,28 @@
       "Bash(node -e \"const { addDays } = require\\('D:/crown/node_modules/date-fns'\\); console.log\\(typeof addDays\\)\")",
       "Bash(npx prisma *)",
       "Bash(node *)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(npx eslint *)",
+      "Bash(npm --prefix /var/www/crown ls eslint)",
+      "Bash(npx --no-install vite build --logLevel error)",
+      "Bash(npx --no-install vite build)",
+      "Bash(lsb_release -a)",
+      "Read(//usr/bin/**)",
+      "Bash(dpkg -l)",
+      "Read(//home/sembapos/.cache/puppeteer/chrome/**)",
+      "Bash(ldd /home/sembapos/.cache/puppeteer/chrome/linux-146.0.7680.31/chrome-linux64/chrome)",
+      "Bash(sudo -n true)",
+      "Bash(echo \"exit:$?\")",
+      "Bash(sudo apt-get *)",
+      "Bash(sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 libatspi2.0-0t64 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libcairo2 libpango-1.0-0 libasound2t64 libdrm2 fonts-liberation)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(/home/sembapos/.cache/puppeteer/chrome/linux-146.0.7680.31/chrome-linux64/chrome --version)",
+      "Bash(pm2 list *)",
+      "Bash(pm2 logs *)",
+      "Bash(grep -nB2 -A30 \"createTransaction.mutate\\\\|api.post.*'/transactions'\" /var/www/crown/src/pages/kasir/POSPage.jsx)",
+      "Bash(pm2 restart *)",
+      "Bash(curl -fsS http://127.0.0.1:3001/api/health)",
+      "Bash(ps -o pid,pcpu,pmem,rss,cmd -ax)"
     ]
   }
 }

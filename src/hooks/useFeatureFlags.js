@@ -1,10 +1,29 @@
+import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../lib/api.js'
 import { ALL_FEATURE_FLAGS } from '../store/featureFlagStore.js'
+import { getSocket } from '../lib/socket.js'
+
+const FLAG_EVENT = 'featureFlag:changed'
+
+function useFlagRealtime() {
+  const qc = useQueryClient()
+  useEffect(() => {
+    const socket = getSocket()
+    const onChange = (payload) => {
+      const tenantId = payload?.tenantId
+      qc.invalidateQueries({ queryKey: ['featureFlags'] })
+      if (tenantId) qc.invalidateQueries({ queryKey: ['featureFlags', tenantId] })
+    }
+    socket.on(FLAG_EVENT, onChange)
+    return () => socket.off(FLAG_EVENT, onChange)
+  }, [qc])
+}
 
 // GET /api/feature-flags/:tenantId
 // Backend returns [{id, label, category, enabled}]; we extract enabled IDs.
 export function useFeatureFlags(tenantId) {
+  useFlagRealtime()
   return useQuery({
     queryKey: ['featureFlags', tenantId],
     queryFn: async () => {

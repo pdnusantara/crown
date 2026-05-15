@@ -35,3 +35,12 @@ export function useDeleteUser() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
   })
 }
+
+// Generate password baru untuk user. Response berisi tempPassword sekali — UI
+// wajib menampilkannya & memberi tombol salin. Tidak ada cara mengambilnya
+// kembali setelah modal ditutup.
+export function useResetUserPassword() {
+  return useMutation({
+    mutationFn: (id) => api.post(`/users/${id}/reset-password`).then(r => r.data.data),
+  })
+}

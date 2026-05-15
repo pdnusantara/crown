@@ -55,10 +55,27 @@ export function useUpdateTenant() {
   })
 }
 
+// Tenant_admin updates own non-sensitive fields (name, contact, tax info).
+// Tidak bisa ubah package / suspend / slug.
+export function useUpdateMyTenant() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data) => api.patch('/tenants/me', data).then(r => normalizeTenant(r.data.data)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['tenants'] }),
+  })
+}
+
 export function useDeleteTenant() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id) => api.delete(`/tenants/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tenants'] }),
+  })
+}
+
+export function useResetTenantPassword() {
+  return useMutation({
+    mutationFn: ({ id, newPassword }) =>
+      api.post(`/tenants/${id}/reset-password`, newPassword ? { newPassword } : {}).then(r => r.data.data),
   })
 }

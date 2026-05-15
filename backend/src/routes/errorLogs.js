@@ -3,6 +3,23 @@ const { z } = require('zod');
 const prisma = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { parsePagination, paginatedResponse } = require('../utils/pagination');
+const { buildTenantDateRange, formatYmdInTz, normalizeTimezone, DEFAULT_TZ } = require('../utils/timezone');
+const { getIO } = require('../config/socket');
+
+// Super-admins all join the 'support' room on connect (see config/socket.js).
+// Reuse it for error-log notifications so the SAErrorLogPage can react live
+// without standing up a dedicated room.
+const SUPER_ADMIN_ROOM = 'support';
+
+function emitErrorEvent(event, payload) {
+  try {
+    const io = getIO();
+    if (!io) return;
+    io.to(SUPER_ADMIN_ROOM).emit(event, payload);
+  } catch {
+    /* swallow — observability shouldn't break the request */
+  }
+}
 
 const createErrorSchema = z.object({
   level:      z.enum(['error', 'warning', 'info']).default('error'),
@@ -25,6 +42,7 @@ router.get('/', authenticate, requireRole('super_admin'), async (req, res, next)
     const { page, limit, skip } = parsePagination(req.query);
     const { level, type, resolved, tenantId, search, from, to } = req.query;
 
+    const tz = normalizeTimezone(req.query.tz || DEFAULT_TZ);
     const where = {};
     if (level)    where.level = level;
     if (type)     where.type  = type;
@@ -32,9 +50,8 @@ router.get('/', authenticate, requireRole('super_admin'), async (req, res, next)
     if (resolved !== undefined && resolved !== '') where.resolved = resolved === 'true';
     if (search)   where.message = { contains: search, mode: 'insensitive' };
     if (from || to) {
-      where.createdAt = {};
-      if (from) where.createdAt.gte = new Date(from);
-      if (to)   where.createdAt.lte = new Date(to);
+      // Accept YYYY-MM-DD as tenant-local boundaries; full ISO datetimes pass-through.
+      where.createdAt = buildTenantDateRange(from, to, tz);
     }
 
     const [data, total] = await Promise.all([
@@ -85,33 +102,45 @@ router.get('/stats', authenticate, requireRole('super_admin'), async (req, res, 
 });
 
 // GET /api/error-logs/stats/trend — error counts per day (last N days)
+// Single-pass aggregation: fetch all rows once, bucket by tenant-day in JS.
+// Cheaper than 3·N sequential count queries and respects tenant timezone.
 router.get('/stats/trend', authenticate, requireRole('super_admin'), async (req, res, next) => {
   try {
     const days = Math.min(parseInt(req.query.days) || 7, 30);
-    const result = [];
+    const tz = normalizeTimezone(req.query.tz || DEFAULT_TZ);
 
+    const buckets = [];
+    const byKey = new Map();
+    const now = Date.now();
     for (let i = days - 1; i >= 0; i--) {
-      const d     = new Date();
-      d.setDate(d.getDate() - i);
-      const start = new Date(d); start.setHours(0, 0, 0, 0);
-      const end   = new Date(d); end.setHours(23, 59, 59, 999);
-
-      const [errors, warnings, info] = await Promise.all([
-        prisma.errorLog.count({ where: { createdAt: { gte: start, lte: end }, level: 'error' } }),
-        prisma.errorLog.count({ where: { createdAt: { gte: start, lte: end }, level: 'warning' } }),
-        prisma.errorLog.count({ where: { createdAt: { gte: start, lte: end }, level: 'info' } }),
-      ]);
-
-      result.push({
-        date:  d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }),
-        errors,
-        warnings,
-        info,
-        total: errors + warnings + info,
-      });
+      const ts = new Date(now - i * 24 * 60 * 60 * 1000);
+      const ymd = formatYmdInTz(ts, tz);
+      const cell = { key: ymd, date: ymd, errors: 0, warnings: 0, info: 0, total: 0 };
+      buckets.push(cell);
+      byKey.set(ymd, cell);
     }
 
-    return res.json({ success: true, data: result });
+    const startUtc = new Date(`${buckets[0].key}T00:00:00.000Z`);
+    startUtc.setUTCDate(startUtc.getUTCDate() - 1);
+    const endUtc = new Date(`${buckets[buckets.length - 1].key}T23:59:59.999Z`);
+    endUtc.setUTCDate(endUtc.getUTCDate() + 1);
+
+    const rows = await prisma.errorLog.findMany({
+      where: { createdAt: { gte: startUtc, lte: endUtc } },
+      select: { level: true, createdAt: true },
+    });
+
+    for (const r of rows) {
+      const ymd = formatYmdInTz(r.createdAt, tz);
+      const cell = byKey.get(ymd);
+      if (!cell) continue;
+      if (r.level === 'error')   cell.errors++;
+      else if (r.level === 'warning') cell.warnings++;
+      else if (r.level === 'info') cell.info++;
+      cell.total = cell.errors + cell.warnings + cell.info;
+    }
+
+    return res.json({ success: true, data: buckets });
   } catch (err) {
     next(err);
   }
@@ -124,6 +153,8 @@ router.post('/', authenticate, async (req, res, next) => {
     const log  = await prisma.errorLog.create({
       data: { ...body, tenantId: req.user?.tenantId || null, userId: req.user?.id || null },
     });
+    // Live broadcast — SAErrorLogPage refetches on receipt.
+    emitErrorEvent('errorLog:created', { id: log.id, level: log.level, type: log.type, tenantId: log.tenantId });
     return res.status(201).json({ success: true, data: log });
   } catch (err) {
     next(err);
@@ -138,6 +169,7 @@ router.patch('/bulk-resolve', authenticate, requireRole('super_admin'), async (r
       where: { id: { in: ids } },
       data:  { resolved: true, resolvedAt: new Date(), resolvedBy: req.user?.name || 'super_admin' },
     });
+    emitErrorEvent('errorLog:resolved', { ids, count: result.count });
     return res.json({ success: true, data: { count: result.count } });
   } catch (err) {
     next(err);
@@ -156,6 +188,7 @@ router.patch('/:id/resolve', authenticate, requireRole('super_admin'), async (re
         resolvedBy: resolvedBy || req.user?.name || 'super_admin',
       },
     });
+    emitErrorEvent('errorLog:resolved', { ids: [log.id], count: 1 });
     return res.json({ success: true, data: log });
   } catch (err) {
     next(err);
@@ -174,6 +207,7 @@ router.delete('/', authenticate, requireRole('super_admin'), async (req, res, ne
       where.createdAt = { lte: cutoff };
     }
     const result = await prisma.errorLog.deleteMany({ where });
+    emitErrorEvent('errorLog:deleted', { deleted: result.count });
     return res.json({ success: true, data: { deleted: result.count } });
   } catch (err) {
     next(err);

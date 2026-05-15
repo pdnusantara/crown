@@ -1,19 +1,59 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import api from '../lib/api.js'
 import { useAuthStore } from '../store/authStore.js'
 
+// Hook utama: paginated. Backend mengembalikan paginatedResponse:
+// { data: [...], total, page, limit, totalPages }
+// — kita expose itu apa adanya supaya pemanggil bisa kontrol pagination UI.
 export function useTransactions(filters = {}) {
   const { user } = useAuthStore()
-  return useQuery({
-    queryKey: ['transactions', user?.tenantId, filters],
+  const tenantId = user?.tenantId
+
+  const query = useQuery({
+    queryKey: ['transactions', 'list', tenantId, filters],
     queryFn: async () => {
       const res = await api.get('/transactions', {
-        params: { tenantId: user?.tenantId, ...filters },
+        params: { tenantId, ...filters },
       })
-      const raw = res.data.data
-      return Array.isArray(raw) ? raw : (raw?.data || [])
+      const raw = res.data?.data
+      if (Array.isArray(raw)) {
+        return { data: raw, total: raw.length, page: 1, limit: raw.length, totalPages: 1 }
+      }
+      return {
+        data: raw?.data || [],
+        total: raw?.total ?? 0,
+        page: raw?.page ?? (Number(filters.page) || 1),
+        limit: raw?.limit ?? (Number(filters.limit) || 20),
+        totalPages: raw?.totalPages ?? 0,
+      }
     },
-    enabled: !!user?.tenantId,
+    enabled: !!tenantId,
+    placeholderData: keepPreviousData,
+    staleTime: 15_000,
+  })
+
+  return {
+    ...query,
+    transactions: query.data?.data || [],
+    total: query.data?.total || 0,
+    page: query.data?.page || 1,
+    limit: query.data?.limit || 20,
+    totalPages: query.data?.totalPages || 0,
+  }
+}
+
+// Single transaction, untuk deep-link ?tx=ID. Mengisi data lengkap (items+service)
+// kalau detail belum ada di list cache.
+export function useTransaction(id) {
+  const { user } = useAuthStore()
+  return useQuery({
+    queryKey: ['transactions', 'detail', user?.tenantId, id],
+    queryFn: async () => {
+      const res = await api.get(`/transactions/${id}`)
+      return res.data?.data
+    },
+    enabled: !!id && !!user?.tenantId,
+    staleTime: 60_000,
   })
 }
 
@@ -22,6 +62,40 @@ export function useCreateTransaction() {
   const { user } = useAuthStore()
   return useMutation({
     mutationFn: (data) => api.post('/transactions', data).then(r => r.data.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions', user?.tenantId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions', 'list', user?.tenantId] }),
   })
+}
+
+// Update status: completed | cancelled | refunded
+export function useUpdateTransactionStatus() {
+  const qc = useQueryClient()
+  const { user } = useAuthStore()
+  return useMutation({
+    mutationFn: ({ id, status }) =>
+      api.patch(`/transactions/${id}/status`, { status }).then(r => r.data.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['transactions', 'list', user?.tenantId] })
+      qc.invalidateQueries({ queryKey: ['transactions', 'detail', user?.tenantId] })
+    },
+  })
+}
+
+// Fetch semua transaksi pada filter saat ini — untuk export CSV.
+// Iterasi paginated agar tidak timeout di tenant besar.
+export async function fetchAllTransactions({ tenantId, ...filters }) {
+  const all = []
+  const limit = 200
+  let page = 1
+  let totalPages = 1
+  while (page <= totalPages && page <= 50 /* safety cap */) {
+    const res = await api.get('/transactions', {
+      params: { tenantId, ...filters, page, limit },
+    })
+    const raw = res.data?.data
+    const items = Array.isArray(raw) ? raw : (raw?.data || [])
+    all.push(...items)
+    totalPages = raw?.totalPages || 1
+    page += 1
+  }
+  return all
 }

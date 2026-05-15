@@ -31,6 +31,17 @@ export function useUpdateBranch() {
   })
 }
 
+export function useBranchLicenseSummary(tenantId) {
+  return useQuery({
+    queryKey: ['branches', 'license', tenantId],
+    queryFn: async () => {
+      const res = await api.get('/branches/license/summary', { params: { tenantId } })
+      return res.data.data
+    },
+    enabled: !!tenantId,
+  })
+}
+
 export function useDeleteBranch() {
   const qc = useQueryClient()
   return useMutation({

@@ -5,28 +5,35 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { ToastProvider } from './components/ui/Toast.jsx'
 import AppLayout from './components/layout/AppLayout.jsx'
 import LoadingScreen from './components/ui/LoadingScreen.jsx'
+import BranchLicenseGate from './components/BranchLicenseGate.jsx'
 import { useAuthStore } from './store/authStore.js'
 import { useThemeStore } from './store/themeStore.js'
+import { getBranchSlug } from './utils/branchSlug.js'
 import { useTenantStore } from './store/tenantStore.js'
 import { usePublicTenantStore } from './store/publicTenantStore.js'
 import { Skeleton } from './components/ui/Skeleton.jsx'
 import { queryClient } from './lib/queryClient.js'
 
 // ── Lazy-loaded pages ───────────────────────────────────────────────────────
-const Login = lazy(() => import('./pages/Login.jsx'))
+const Login         = lazy(() => import('./pages/Login.jsx'))
+const LandingPage   = lazy(() => import('./pages/LandingPage.jsx'))
+const RegisterPage  = lazy(() => import('./pages/RegisterPage.jsx'))
 
 const SAPackagesPage     = lazy(() => import('./pages/super-admin/SAPackagesPage.jsx'))
 const SADashboard        = lazy(() => import('./pages/super-admin/SADashboard.jsx'))
 const SATenantsPage      = lazy(() => import('./pages/super-admin/SATenantsPage.jsx'))
 const SATenantsDetailPage = lazy(() => import('./pages/super-admin/SATenantsDetailPage.jsx'))
-const SABillingPage      = lazy(() => import('./pages/super-admin/SABillingPage.jsx'))
-const SABroadcastPage    = lazy(() => import('./pages/super-admin/SABroadcastPage.jsx'))
+const SABillingPage          = lazy(() => import('./pages/super-admin/SABillingPage.jsx'))
+const SAPaymentSettingsPage  = lazy(() => import('./pages/super-admin/SAPaymentSettingsPage.jsx'))
+const SABroadcastPage        = lazy(() => import('./pages/super-admin/SABroadcastPage.jsx'))
 const SAFeatureFlagsPage = lazy(() => import('./pages/super-admin/SAFeatureFlagsPage.jsx'))
 const SATicketsPage      = lazy(() => import('./pages/super-admin/SATicketsPage.jsx'))
 const SAActivityLogPage  = lazy(() => import('./pages/super-admin/SAActivityLogPage.jsx'))
 const SAUsagePage        = lazy(() => import('./pages/super-admin/SAUsagePage.jsx'))
 const SAProfilePage      = lazy(() => import('./pages/super-admin/SAProfilePage.jsx'))
 const SAErrorLogPage     = lazy(() => import('./pages/super-admin/SAErrorLogPage.jsx'))
+const SAPromotionsPage   = lazy(() => import('./pages/super-admin/SAPromotionsPage.jsx'))
+const SALandingPage      = lazy(() => import('./pages/super-admin/SALandingPage.jsx'))
 
 const TADashboard          = lazy(() => import('./pages/tenant-admin/TADashboard.jsx'))
 const TABranchesPage       = lazy(() => import('./pages/tenant-admin/TABranchesPage.jsx'))
@@ -40,6 +47,7 @@ const TAVouchersPage       = lazy(() => import('./pages/tenant-admin/TAVouchersP
 const TABranchComparisonPage = lazy(() => import('./pages/tenant-admin/TABranchComparisonPage.jsx'))
 const TATicketsPage          = lazy(() => import('./pages/tenant-admin/TATicketsPage.jsx'))
 const TABillingPage          = lazy(() => import('./pages/tenant-admin/TABillingPage.jsx'))
+const TAInvoicePrintPage     = lazy(() => import('./pages/tenant-admin/TAInvoicePrintPage.jsx'))
 const TAWilayahReportPage    = lazy(() => import('./pages/tenant-admin/TAWilayahReportPage.jsx'))
 const TAExpensePage          = lazy(() => import('./pages/tenant-admin/TAExpensePage.jsx'))
 
@@ -56,6 +64,8 @@ const BarberCommission = lazy(() => import('./pages/barber/BarberCommission.jsx'
 const CustomerBooking = lazy(() => import('./pages/customer/CustomerBooking.jsx'))
 const CustomerHistory = lazy(() => import('./pages/customer/CustomerHistory.jsx'))
 const CustomerLoyalty = lazy(() => import('./pages/customer/CustomerLoyalty.jsx'))
+
+const PublicBookingPage = lazy(() => import('./pages/public/PublicBookingPage.jsx'))
 
 // ── Page loading fallback ───────────────────────────────────────────────────
 function PageLoader() {
@@ -78,7 +88,7 @@ function roleHomePath(user) {
   switch (user.role) {
     case 'super_admin':  return '/super-admin/dashboard'
     case 'tenant_admin': return '/admin/dashboard'
-    case 'kasir':        return user.branchId ? `/${user.branchId}/kasir/pos` : '/login'
+    case 'kasir':        { const slug = getBranchSlug(user); return slug ? `/${slug}/kasir/pos` : '/login' }
     case 'barber':       return '/barber/dashboard'
     case 'customer':     return '/customer/booking'
     default:             return '/login'
@@ -91,6 +101,17 @@ function ProtectedRoute({ children, roles }) {
   // Logged in but wrong role — send to their role's home, not /login
   if (roles && !roles.includes(user?.role)) return <Navigate to={roleHomePath(user)} replace />
   return children
+}
+
+// Root redirector — landing untuk apex domain, /book untuk subdomain tenant,
+// dashboard role-nya kalau sudah login.
+function RootRedirector() {
+  const { isAuthenticated, user } = useAuthStore()
+  const { slug: publicSlug, status: publicStatus } = usePublicTenantStore()
+  if (isAuthenticated) return <Navigate to={roleHomePath(user)} replace />
+  // Subdomain tenant (mahkota.sembapos.com) → arahkan langsung ke booking publik
+  if (publicSlug && publicStatus === 'ready') return <Navigate to="/book" replace />
+  return <LandingPage />
 }
 
 // ── 404 ─────────────────────────────────────────────────────────────────────
@@ -220,7 +241,8 @@ export default function App() {
         <AuthInitializer>
         <Suspense fallback={<PageLoader />}>
           <Routes>
-          <Route path="/login" element={<Login />} />
+          <Route path="/login"    element={<Login />} />
+          <Route path="/register" element={<RegisterPage />} />
 
           {/* Super Admin */}
           <Route
@@ -230,9 +252,12 @@ export default function App() {
             <Route path="dashboard"      element={<SADashboard />} />
             <Route path="tenants"        element={<SATenantsPage />} />
             <Route path="tenants/:id"    element={<SATenantsDetailPage />} />
-            <Route path="packages"       element={<SAPackagesPage />} />
-            <Route path="billing"        element={<SABillingPage />} />
-            <Route path="broadcast"      element={<SABroadcastPage />} />
+            <Route path="packages"         element={<SAPackagesPage />} />
+            <Route path="billing"          element={<SABillingPage />} />
+            <Route path="payment-settings" element={<SAPaymentSettingsPage />} />
+            <Route path="promotions"       element={<SAPromotionsPage />} />
+            <Route path="landing"          element={<SALandingPage />} />
+            <Route path="broadcast"        element={<SABroadcastPage />} />
             <Route path="feature-flags"  element={<SAFeatureFlagsPage />} />
             <Route path="tickets"        element={<SATicketsPage />} />
             <Route path="activity-log"   element={<SAActivityLogPage />} />
@@ -259,6 +284,7 @@ export default function App() {
             <Route path="comparison" element={<TABranchComparisonPage />} />
             <Route path="tickets"        element={<TATicketsPage />} />
             <Route path="billing"        element={<TABillingPage />} />
+            <Route path="billing/invoice/:id" element={<TAInvoicePrintPage />} />
             <Route path="wilayah-report" element={<TAWilayahReportPage />} />
             <Route path="expenses"       element={<TAExpensePage />} />
             <Route index element={<Navigate to="dashboard" replace />} />
@@ -267,25 +293,29 @@ export default function App() {
           {/* Kasir */}
           <Route
             path="/:branchId/kasir"
-            element={<ProtectedRoute roles={['kasir']}><AppLayout /></ProtectedRoute>}
+            element={<ProtectedRoute roles={['kasir']}><BranchLicenseGate /></ProtectedRoute>}
           >
-            <Route path="pos"           element={<POSPage />} />
-            <Route path="queue"         element={<QueuePage />} />
-            <Route path="bookings"      element={<BookingsPage />} />
-            <Route path="transactions"  element={<TransactionsPage />} />
-            <Route path="shift-closing" element={<ShiftClosingPage />} />
-            <Route index element={<Navigate to="pos" replace />} />
+            <Route element={<AppLayout />}>
+              <Route path="pos"           element={<POSPage />} />
+              <Route path="queue"         element={<QueuePage />} />
+              <Route path="bookings"      element={<BookingsPage />} />
+              <Route path="transactions"  element={<TransactionsPage />} />
+              <Route path="shift-closing" element={<ShiftClosingPage />} />
+              <Route index element={<Navigate to="pos" replace />} />
+            </Route>
           </Route>
 
           {/* Barber */}
           <Route
             path="/barber"
-            element={<ProtectedRoute roles={['barber']}><AppLayout /></ProtectedRoute>}
+            element={<ProtectedRoute roles={['barber']}><BranchLicenseGate /></ProtectedRoute>}
           >
-            <Route path="dashboard"  element={<BarberDashboard />} />
-            <Route path="queue"      element={<BarberQueue />} />
-            <Route path="commission" element={<BarberCommission />} />
-            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route element={<AppLayout />}>
+              <Route path="dashboard"  element={<BarberDashboard />} />
+              <Route path="queue"      element={<BarberQueue />} />
+              <Route path="commission" element={<BarberCommission />} />
+              <Route index element={<Navigate to="dashboard" replace />} />
+            </Route>
           </Route>
 
           {/* Customer */}
@@ -299,7 +329,12 @@ export default function App() {
             <Route index element={<Navigate to="booking" replace />} />
           </Route>
 
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          {/* Halaman booking publik — tanpa auth, diakses via subdomain atau /book/:slug */}
+          <Route path="/book" element={<PublicBookingPage />} />
+          <Route path="/book/:slug" element={<PublicBookingPage />} />
+
+          {/* Root: tampil landing untuk pengunjung; user yang sudah login dialihkan ke home role-nya. */}
+          <Route path="/" element={<RootRedirector />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         </Suspense>

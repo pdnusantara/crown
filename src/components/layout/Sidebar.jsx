@@ -7,14 +7,15 @@ import {
   Star, TrendingUp, LogOut, Sun, Moon, Search, LogIn, Languages,
   Tag, GitCompare, Megaphone, Flag, MessageSquare, Activity,
   PieChart, UserCircle, DollarSign, Package, ShieldAlert, MapPin,
-  ChevronRight, Wallet,
+  ChevronRight, Wallet, Landmark,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useTenantStore } from '../../store/tenantStore.js'
 import { useThemeStore } from '../../store/themeStore.js'
-import { useTicketStore } from '../../store/ticketStore.js'
+import { useTicketStats } from '../../hooks/useTickets.js'
 import { useSubscriptionStore } from '../../store/subscriptionStore.js'
 import { useErrorLogStats } from '../../hooks/useErrorLogs.js'
+import { getBranchSlug } from '../../utils/branchSlug.js'
 import { useTranslation } from 'react-i18next'
 import Avatar from '../ui/Avatar.jsx'
 
@@ -23,8 +24,11 @@ const navConfig = {
     { labelKey: 'nav.dashboard',    icon: LayoutDashboard, path: '/super-admin/dashboard' },
     { labelKey: 'nav.tenants',      icon: Building2,       path: '/super-admin/tenants' },
     { labelKey: 'nav.packages',     icon: Package,         path: '/super-admin/packages' },
-    { labelKey: 'nav.billing',      icon: DollarSign,      path: '/super-admin/billing' },
-    { labelKey: 'nav.broadcast',    icon: Megaphone,       path: '/super-admin/broadcast' },
+    { labelKey: 'nav.billing',          icon: DollarSign,  path: '/super-admin/billing' },
+    { labelKey: 'nav.paymentSettings',  icon: Landmark,    path: '/super-admin/payment-settings' },
+    { labelKey: 'nav.promotions',       icon: Tag,         path: '/super-admin/promotions' },
+    { labelKey: 'nav.landing',          icon: Megaphone,   path: '/super-admin/landing' },
+    { labelKey: 'nav.broadcast',        icon: Megaphone,   path: '/super-admin/broadcast' },
     { labelKey: 'nav.featureFlags', icon: Flag,            path: '/super-admin/feature-flags' },
     { labelKey: 'nav.tickets',      icon: MessageSquare,   path: '/super-admin/tickets', badge: 'tickets' },
     { labelKey: 'nav.activityLog',  icon: Activity,        path: '/super-admin/activity-log' },
@@ -48,13 +52,16 @@ const navConfig = {
     { labelKey: 'nav.billing',       icon: CreditCard,    path: '/admin/billing' },
     { labelKey: 'nav.settings',      icon: Settings,      path: '/admin/settings' },
   ],
-  kasir: (user) => [
-    { labelKey: 'nav.pos',          icon: CreditCard,    path: `/${user.branchId}/kasir/pos` },
-    { labelKey: 'nav.queue',        icon: ListOrdered,   path: `/${user.branchId}/kasir/queue` },
-    { labelKey: 'nav.booking',      icon: CalendarDays,  path: `/${user.branchId}/kasir/bookings` },
-    { labelKey: 'nav.transactions', icon: Receipt,       path: `/${user.branchId}/kasir/transactions` },
-    { labelKey: 'nav.shiftClose',   icon: LogIn,         path: `/${user.branchId}/kasir/shift-closing` },
-  ],
+  kasir: (user) => {
+    const slug = getBranchSlug(user)
+    return [
+      { labelKey: 'nav.pos',          icon: CreditCard,    path: `/${slug}/kasir/pos` },
+      { labelKey: 'nav.queue',        icon: ListOrdered,   path: `/${slug}/kasir/queue` },
+      { labelKey: 'nav.booking',      icon: CalendarDays,  path: `/${slug}/kasir/bookings` },
+      { labelKey: 'nav.transactions', icon: Receipt,       path: `/${slug}/kasir/transactions` },
+      { labelKey: 'nav.shiftClose',   icon: LogIn,         path: `/${slug}/kasir/shift-closing` },
+    ]
+  },
   barber: () => [
     { labelKey: 'nav.dashboard',  icon: LayoutDashboard, path: '/barber/dashboard' },
     { labelKey: 'nav.queue',      icon: ListOrdered,     path: '/barber/queue' },
@@ -71,13 +78,17 @@ export const Sidebar = ({ collapsed = false, onSearchClick }) => {
   const { user, logout } = useAuthStore()
   const { getTenantById, getLowStockProducts } = useTenantStore()
   const { theme, toggleTheme } = useThemeStore()
-  const { getOpenCount, getByTenant: getTicketsByTenant } = useTicketStore()
   const { getByTenant: getSubscription } = useSubscriptionStore()
   const navigate = useNavigate()
   const { data: errorStats } = useErrorLogStats(user?.role === 'super_admin')
+  // Open-ticket badge counts come from the real /api/tickets/stats endpoint —
+  // super_admin sees platform-wide totals, tenant_admin sees their own scope.
+  // Other roles (barber/kasir) skip the call entirely to avoid 403s.
+  const ticketStatsEnabled = user?.role === 'super_admin' || user?.role === 'tenant_admin'
+  const { data: ticketStats } = useTicketStats({}, ticketStatsEnabled)
   const lowStockCount  = user?.tenantId ? (getLowStockProducts(user.tenantId)?.length || 0) : 0
-  const openTickets    = user?.role === 'super_admin' ? getOpenCount() : 0
-  const tenantOpenTickets = user?.tenantId ? (getTicketsByTenant(user.tenantId)?.filter(t => t.status === 'open').length || 0) : 0
+  const openTickets    = user?.role === 'super_admin' ? (ticketStats?.open || 0) : 0
+  const tenantOpenTickets = user?.role === 'tenant_admin' ? (ticketStats?.open || 0) : 0
   const unresolvedErrors = user?.role === 'super_admin' ? (errorStats?.unresolved || 0) : 0
   const { i18n, t } = useTranslation()
   const toggleLang = () => i18n.changeLanguage(i18n.language === 'id' ? 'en' : 'id')

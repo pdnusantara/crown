@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -31,6 +31,14 @@ function calcTotal(branches, basePrice, maxBranches, addonPrice, addonType) {
   return { extra, addonMonthly, addonOnetime, monthlyTotal: basePrice + addonMonthly }
 }
 
+// Harga tahunan setelah diskon, dibulatkan ke ribuan terdekat — sama dengan
+// formula yang dipakai LandingPage / RegisterPage / TABillingPage agar angka
+// yang dilihat super_admin sama persis dengan yang dilihat pelanggan.
+function annualPrice(monthlyPrice, discountPercent = 17) {
+  const raw = monthlyPrice * 12 * (1 - (discountPercent || 0) / 100)
+  return Math.round(raw / 1000) * 1000
+}
+
 function simRows(maxBranches) {
   const counts = [maxBranches]
   for (let i = 1; i <= 4; i++) counts.push(maxBranches + i)
@@ -40,13 +48,25 @@ function simRows(maxBranches) {
 
 function timeAgo(dateStr) {
   if (!dateStr) return null
-  const days = differenceInDays(new Date(), new Date(dateStr))
+  const target = new Date(dateStr)
+  if (Number.isNaN(target.getTime())) return null
+  const days = differenceInDays(new Date(), target)
+  if (days < 0) return 'baru saja' // server clock skew — never display "-N hari lalu"
   if (days === 0) return 'hari ini'
   if (days === 1) return 'kemarin'
   if (days < 7) return `${days} hari lalu`
   if (days < 30) return `${Math.floor(days / 7)} minggu lalu`
   if (days < 365) return `${Math.floor(days / 30)} bulan lalu`
   return `${Math.floor(days / 365)} tahun lalu`
+}
+
+// Backend stores all monetary/count fields as integers; coerce to a non-negative
+// int so paste/scientific-notation/decimal entry doesn't trip Zod on save.
+function toNonNegativeInt(raw) {
+  if (raw === '' || raw == null) return 0
+  const n = Number(raw)
+  if (!Number.isFinite(n)) return 0
+  return Math.max(0, Math.floor(n))
 }
 
 function deltaColor(delta) {
@@ -72,7 +92,7 @@ function RpInput({ label, value, onChange, hint, error, step = 1000 }) {
         <input
           type="number"
           value={value ?? 0}
-          onChange={e => onChange(e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)))}
+          onChange={e => onChange(toNonNegativeInt(e.target.value))}
           className={`w-full bg-dark-card border rounded-xl pl-9 pr-3 py-2.5 text-sm text-off-white focus:outline-none transition-colors ${error ? 'border-red-400/50 focus:border-red-400' : 'border-dark-border focus:border-gold/50'}`}
           min={0}
           step={step}
@@ -97,8 +117,12 @@ function NumberInput({ label, value, onChange, min = 1, max, hint, error }) {
           type="number"
           value={value ?? min}
           onChange={e => {
-            const v = e.target.value === '' ? min : Number(e.target.value)
-            onChange(Math.max(min, max != null ? Math.min(max, v) : v))
+            const raw = e.target.value
+            if (raw === '') return onChange(min)
+            const n = Number(raw)
+            if (!Number.isFinite(n)) return
+            const clamped = Math.max(min, max != null ? Math.min(max, Math.floor(n)) : Math.floor(n))
+            onChange(clamped)
           }}
           className={`flex-1 bg-dark-card border-y text-center py-2.5 text-sm text-off-white focus:outline-none transition-colors ${error ? 'border-red-400/50' : 'border-dark-border'}`}
           min={min} max={max}
@@ -171,6 +195,11 @@ function BranchSimulator({ basePrice, maxBranches, addonPrice, addonType }) {
 // ── Card Simulator (interactive) ──────────────────────────────────────────────
 function CardSimulator({ basePrice, maxBranches, addonPrice, addonType }) {
   const [branchCount, setBranchCount] = useState(maxBranches)
+  // Re-floor when the package's maxBranches changes (e.g. after an optimistic
+  // update or refetch) so the simulator stays consistent with the new quota.
+  useEffect(() => {
+    setBranchCount(c => (c < maxBranches ? maxBranches : c))
+  }, [maxBranches])
   const { extra, addonMonthly, addonOnetime, monthlyTotal } = calcTotal(branchCount, basePrice, maxBranches, addonPrice, addonType)
   const isMonthly = addonType === 'monthly'
   return (
@@ -216,28 +245,35 @@ function MrrImpact({ originalPrice, newPrice, tenantCount }) {
   const currentMrr = originalPrice * tenantCount
   const newMrr     = newPrice * tenantCount
   const delta      = newMrr - currentMrr
+  const deltaYearly = delta * 12
   if (tenantCount === 0 || originalPrice === newPrice) return null
   return (
     <div className={`p-3 rounded-xl border text-xs ${delta > 0 ? 'bg-green-500/5 border-green-500/20' : 'bg-red-500/5 border-red-500/20'}`}>
-      <p className="text-muted mb-2 font-medium">Dampak perubahan harga</p>
+      <p className="text-muted mb-2 font-medium">Estimasi perubahan MRR (acuan)</p>
       <div className="space-y-1">
-        <div className="flex justify-between">
-          <span className="text-muted">{tenantCount} tenant aktif × harga lama</span>
+        <div className="flex justify-between gap-2">
+          <span className="text-muted">Asumsi {tenantCount} tenant di harga lama</span>
           <span className="text-off-white">{formatRupiah(currentMrr)}/bln</span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-muted">{tenantCount} tenant aktif × harga baru</span>
+        <div className="flex justify-between gap-2">
+          <span className="text-muted">Asumsi {tenantCount} tenant di harga baru</span>
           <span className="text-off-white">{formatRupiah(newMrr)}/bln</span>
         </div>
-        <div className="flex justify-between pt-1 border-t border-dark-border/40 font-semibold">
-          <span className="text-muted">Perubahan MRR</span>
+        <div className="flex justify-between gap-2 pt-1 border-t border-dark-border/40 font-semibold">
+          <span className="text-muted">Selisih bulanan</span>
           <span className={`flex items-center gap-1 ${deltaColor(delta)}`}>
             {delta > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
             {deltaPrefix(delta)}{formatRupiah(Math.abs(delta))}/bln
           </span>
         </div>
+        <div className="flex justify-between gap-2">
+          <span className="text-muted">Selisih tahunan</span>
+          <span className={`font-semibold ${deltaColor(deltaYearly)}`}>
+            {deltaPrefix(deltaYearly)}{formatRupiah(Math.abs(deltaYearly))}/thn
+          </span>
+        </div>
         <p className="text-muted/60 text-[10px] mt-1">
-          * Hanya berlaku untuk subscription baru. Subscription yang sudah ada menggunakan harga saat dibuat.
+          * Hipotetis. Subscription yang sudah berjalan tetap memakai harga saat dibuat — selisih ini hanya berlaku untuk subscription baru.
         </p>
       </div>
     </div>
@@ -248,13 +284,14 @@ function MrrImpact({ originalPrice, newPrice, tenantCount }) {
 function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
   const [tab, setTab] = useState('pricing')
   const [form, setForm] = useState({
-    price:            pkg.price ?? 0,
-    maxBranches:      pkg.maxBranches ?? 1,
-    maxStaff:         pkg.maxStaff ?? 5,
-    branchAddonPrice: pkg.branchAddonPrice ?? 0,
-    branchAddonType:  pkg.branchAddonType ?? 'monthly',
-    description:      pkg.description ?? '',
-    features:         pkg.features ?? [],
+    price:                 pkg.price ?? 0,
+    maxBranches:           pkg.maxBranches ?? 1,
+    maxStaff:              pkg.maxStaff ?? 5,
+    branchAddonPrice:      pkg.branchAddonPrice ?? 0,
+    branchAddonType:       pkg.branchAddonType ?? 'monthly',
+    annualDiscountPercent: pkg.annualDiscountPercent ?? 17,
+    description:           pkg.description ?? '',
+    features:              pkg.features ?? [],
   })
   const [errors, setErrors] = useState({})
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }))
@@ -271,6 +308,7 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
     if (form.maxBranches < 1) err.maxBranches = 'Min 1'
     if (form.maxStaff < 1) err.maxStaff = 'Min 1'
     if (form.branchAddonPrice < 0) err.branchAddonPrice = 'Tidak boleh negatif'
+    if (form.annualDiscountPercent < 0 || form.annualDiscountPercent > 100) err.annualDiscountPercent = '0-100%'
     setErrors(err)
     return Object.keys(err).length === 0
   }
@@ -280,6 +318,7 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
     onSave({
       price: form.price, maxBranches: form.maxBranches, maxStaff: form.maxStaff,
       branchAddonPrice: form.branchAddonPrice, branchAddonType: form.branchAddonType,
+      annualDiscountPercent: form.annualDiscountPercent,
       description: form.description.trim() || null, features: form.features,
     })
   }
@@ -316,22 +355,48 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
               error={errors.price}
             />
 
-            {/* Annual preview */}
-            <div className="p-3 bg-dark-surface rounded-xl border border-dark-border flex items-center gap-4 text-sm">
-              <div>
+            {/* Annual preview — desktop sebaris, mobile stacked */}
+            <div className="p-3 bg-dark-surface rounded-xl border border-dark-border flex flex-wrap items-end gap-4 text-sm">
+              <div className="min-w-0">
                 <p className="text-xs text-muted mb-0.5">Per bulan</p>
                 <p className="font-bold text-off-white">{formatRupiah(form.price)}</p>
               </div>
-              <ArrowRight size={14} className="text-muted flex-shrink-0" />
-              <div>
-                <p className="text-xs text-muted mb-0.5">Per tahun</p>
-                <p className="font-bold text-gold">{formatRupiah(form.price * 12)}</p>
+              <ArrowRight size={14} className="text-muted flex-shrink-0 mb-2 hidden sm:block" />
+              <div className="min-w-0">
+                <p className="text-xs text-muted mb-0.5">Per tahun (setelah diskon)</p>
+                <p className="font-bold text-gold">{formatRupiah(annualPrice(form.price, form.annualDiscountPercent))}</p>
+                {form.annualDiscountPercent > 0 && (
+                  <p className="text-[10px] text-green-400">hemat {form.annualDiscountPercent}% vs Rp{(form.price * 12).toLocaleString('id-ID')}</p>
+                )}
               </div>
-              <div className="ml-auto text-right">
+              <div className="ml-auto text-right min-w-0">
                 <p className="text-xs text-muted mb-0.5">ARR potensial</p>
-                <p className="font-bold text-green-400">{formatRupiah(form.price * 12 * (pkg.tenantCount || 0))}</p>
+                <p className="font-bold text-green-400">{formatRupiah(annualPrice(form.price, form.annualDiscountPercent) * (pkg.tenantCount || 0))}</p>
                 <p className="text-[10px] text-muted/60">{pkg.tenantCount || 0} tenant</p>
               </div>
+            </div>
+
+            {/* Annual discount slider */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs text-muted">Diskon Pembayaran Tahunan</label>
+                <span className="text-xs font-semibold text-gold">{form.annualDiscountPercent}%</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={50}
+                step={1}
+                value={form.annualDiscountPercent}
+                onChange={e => set('annualDiscountPercent', toNonNegativeInt(e.target.value))}
+                className="w-full accent-gold"
+              />
+              <div className="flex justify-between text-[10px] text-muted/60 mt-1">
+                <span>0% (tanpa diskon)</span>
+                <span>17% ≈ 2 bulan gratis</span>
+                <span>50%</span>
+              </div>
+              {errors.annualDiscountPercent && <p className="text-xs text-red-400 mt-1">{errors.annualDiscountPercent}</p>}
             </div>
 
             {/* MRR impact */}
@@ -345,10 +410,11 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
               <label className="block text-xs text-muted mb-1.5">
                 Deskripsi Paket <span className="text-muted/60">(opsional)</span>
               </label>
-              <input
+              <textarea
                 value={form.description}
                 onChange={e => set('description', e.target.value.slice(0, 500))}
-                className="w-full bg-dark-card border border-dark-border rounded-xl px-3 py-2.5 text-sm text-off-white focus:outline-none focus:border-gold/50 transition-colors"
+                rows={2}
+                className="w-full bg-dark-card border border-dark-border rounded-xl px-3 py-2.5 text-sm text-off-white focus:outline-none focus:border-gold/50 transition-colors resize-y"
                 placeholder="Ringkasan singkat tentang paket ini..."
               />
               <p className="text-[10px] text-muted/60 mt-1 text-right">{form.description.length}/500</p>
@@ -384,7 +450,7 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
                   { key: 'onetime', icon: '💳', title: 'Sekali Bayar',     desc: 'Dibayar satu kali saat menambah cabang.' },
                 ].map(opt => (
                   <button key={opt.key} type="button" onClick={() => set('branchAddonType', opt.key)}
-                    className={`p-3.5 rounded-xl border text-left transition-all ${form.branchAddonType === opt.key ? 'border-gold bg-gold/8' : 'border-dark-border hover:border-gold/30'}`}>
+                    className={`p-3.5 rounded-xl border text-left transition-all ${form.branchAddonType === opt.key ? 'border-gold bg-gold/10' : 'border-dark-border hover:border-gold/30'}`}>
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className="text-base">{opt.icon}</span>
                       <span className="text-sm font-medium text-off-white">{opt.title}</span>
@@ -463,13 +529,13 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
             <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
               {FLAG_CATEGORIES.map(cat => (
                 <div key={cat}>
-                  <p className="text-xs text-gold font-semibold mb-1.5 sticky top-0 bg-dark-card py-0.5">{cat}</p>
+                  <p className="text-xs text-gold font-semibold mb-1.5 sticky top-0 bg-dark-surface py-1.5 -mx-1 px-1 z-10">{cat}</p>
                   <div className="grid grid-cols-2 gap-1.5">
                     {ALL_FEATURE_FLAGS.filter(f => f.category === cat).map(flag => {
                       const active = form.features.includes(flag.id)
                       return (
                         <button key={flag.id} type="button" onClick={() => toggleFeature(flag.id)}
-                          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-left transition-all text-xs ${active ? 'border-gold/40 bg-gold/8 text-off-white' : 'border-dark-border text-muted hover:border-dark-border/80'}`}>
+                          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-left transition-all text-xs ${active ? 'border-gold/40 bg-gold/10 text-off-white' : 'border-dark-border text-muted hover:border-dark-border/80'}`}>
                           <div className={`w-3.5 h-3.5 rounded flex-shrink-0 border flex items-center justify-center transition-all ${active ? 'border-gold bg-gold' : 'border-muted'}`}>
                             {active && <Check size={9} className="text-dark" />}
                           </div>
@@ -615,16 +681,16 @@ export default function SAPackagesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
+      {/* Header — wrap di mobile supaya MRR-block tidak menabrak title */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-2xl font-display font-bold gold-text">{t('superAdmin.packages.pageTitle')}</h1>
           <p className="text-muted text-sm mt-1">{t('superAdmin.packages.pageSubtitle')}</p>
         </div>
         {!isLoading && totalMrr > 0 && (
-          <div className="text-right">
+          <div className="sm:text-right flex-shrink-0">
             <p className="text-xs text-muted">Total MRR dari paket</p>
-            <p className="text-lg font-bold text-gold">{formatRupiah(totalMrr)}</p>
+            <p className="text-lg font-bold text-gold break-all">{formatRupiah(totalMrr)}</p>
             <p className="text-xs text-muted/60">{formatRupiah(totalMrr * 12)}/tahun</p>
           </div>
         )}
@@ -686,11 +752,16 @@ export default function SAPackagesPage() {
 
                   {/* Price */}
                   <div className="mb-4">
-                    <div className="flex items-end gap-1.5">
-                      <p className="text-3xl font-bold text-off-white">{formatRupiah(pkg.price)}</p>
+                    <div className="flex items-end gap-1.5 flex-wrap">
+                      <p className="text-3xl font-bold text-off-white break-all">{formatRupiah(pkg.price)}</p>
                       <p className="text-xs text-muted pb-1">/bulan</p>
                     </div>
-                    <p className="text-xs text-muted/60 mt-0.5">{formatRupiah(pkg.price * 12)}/tahun</p>
+                    <p className="text-xs text-muted/60 mt-0.5">
+                      {formatRupiah(annualPrice(pkg.price, pkg.annualDiscountPercent ?? 17))}/tahun
+                      {(pkg.annualDiscountPercent ?? 17) > 0 && (
+                        <span className="ml-1.5 text-green-400">· hemat {pkg.annualDiscountPercent ?? 17}%</span>
+                      )}
+                    </p>
                   </div>
 
                   {/* Quota */}

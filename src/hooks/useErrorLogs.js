@@ -1,19 +1,44 @@
+import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../lib/api.js'
+import { getSocket } from '../lib/socket.js'
+
+// Backend emits these on the `support` room (super-admins).
+const REALTIME_EVENTS = ['errorLog:created', 'errorLog:resolved', 'errorLog:deleted']
+
+function useErrorLogRealtime() {
+  const qc = useQueryClient()
+  useEffect(() => {
+    const socket = getSocket()
+    const invalidate = () => qc.invalidateQueries({ queryKey: ['errorLogs'] })
+    REALTIME_EVENTS.forEach((evt) => socket.on(evt, invalidate))
+    return () => REALTIME_EVENTS.forEach((evt) => socket.off(evt, invalidate))
+  }, [qc])
+}
 
 export function useErrorLogs(filters = {}) {
+  useErrorLogRealtime()
   return useQuery({
     queryKey: ['errorLogs', filters],
     queryFn: async () => {
       const res = await api.get('/error-logs', { params: filters })
-      const raw = res.data.data
-      return Array.isArray(raw) ? raw : (raw?.data || [])
+      // paginatedResponse: { data: [...], total, page, limit, totalPages, meta: {...} }
+      const body = res.data || {}
+      const list = Array.isArray(body.data) ? body.data : []
+      const meta = body.meta || {
+        total:    body.total ?? list.length,
+        page:     body.page ?? 1,
+        limit:    body.limit ?? list.length,
+        totalPages: body.totalPages ?? 1,
+      }
+      return { data: list, meta }
     },
-    refetchInterval: 30_000, // auto-refresh every 30s
+    refetchInterval: 30_000,
   })
 }
 
 export function useErrorLogStats(enabled = true) {
+  useErrorLogRealtime()
   return useQuery({
     queryKey: ['errorLogs', 'stats'],
     queryFn: async () => {
@@ -25,11 +50,11 @@ export function useErrorLogStats(enabled = true) {
   })
 }
 
-export function useErrorLogTrend(days = 7) {
+export function useErrorLogTrend(days = 7, tz) {
   return useQuery({
-    queryKey: ['errorLogs', 'trend', days],
+    queryKey: ['errorLogs', 'trend', days, tz || 'system'],
     queryFn: async () => {
-      const res = await api.get('/error-logs/stats/trend', { params: { days } })
+      const res = await api.get('/error-logs/stats/trend', { params: { days, ...(tz ? { tz } : {}) } })
       return res.data.data
     },
     refetchInterval: 60_000,

@@ -13,3 +13,10 @@ dist
 # Docker
 *.log
 node_modules
+
+# Deploy artifacts (atomic-swap backups)
+.deploy/
+
+# Runtime / persisted server state (do not commit)
+backend/.wwebjs_cache/
+backend/storage/

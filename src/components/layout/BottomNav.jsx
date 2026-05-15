@@ -7,6 +7,7 @@ import {
   Star, TrendingUp,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
+import { getBranchSlug } from '../../utils/branchSlug.js'
 
 const navConfig = {
   super_admin: [
@@ -19,12 +20,15 @@ const navConfig = {
     { labelKey: 'nav.staff',     icon: Building2,       path: '/admin/staff' },
     { labelKey: 'nav.reports',   icon: BarChart3,       path: '/admin/reports' },
   ],
-  kasir: (user) => [
-    { labelKey: 'nav.pos',          icon: CreditCard,    path: `/${user.branchId}/kasir/pos` },
-    { labelKey: 'nav.queue',        icon: ListOrdered,   path: `/${user.branchId}/kasir/queue` },
-    { labelKey: 'nav.booking',      icon: CalendarDays,  path: `/${user.branchId}/kasir/bookings` },
-    { labelKey: 'nav.transactions', icon: Receipt,       path: `/${user.branchId}/kasir/transactions` },
-  ],
+  kasir: (user) => {
+    const slug = getBranchSlug(user)
+    return [
+      { labelKey: 'nav.pos',          icon: CreditCard,    path: `/${slug}/kasir/pos` },
+      { labelKey: 'nav.queue',        icon: ListOrdered,   path: `/${slug}/kasir/queue` },
+      { labelKey: 'nav.booking',      icon: CalendarDays,  path: `/${slug}/kasir/bookings` },
+      { labelKey: 'nav.transactions', icon: Receipt,       path: `/${slug}/kasir/transactions` },
+    ]
+  },
   barber: () => [
     { labelKey: 'nav.dashboard',  icon: LayoutDashboard, path: '/barber/dashboard' },
     { labelKey: 'nav.queue',      icon: ListOrdered,     path: '/barber/queue' },

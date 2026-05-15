@@ -4,6 +4,7 @@ const prisma = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { parsePagination, paginatedResponse } = require('../utils/pagination');
 const { emitTicketEvent } = require('../config/socket');
+const { recordAudit } = require('../utils/auditLog');
 
 const ticketSelect = {
   id: true,
@@ -36,7 +37,7 @@ const updateTicketSchema = z.object({
 router.get('/', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
   try {
     const { page, limit, skip } = parsePagination(req.query);
-    const { status, priority, category } = req.query;
+    const { status, priority, category, search } = req.query;
 
     const where = {};
 
@@ -49,6 +50,12 @@ router.get('/', authenticate, requireRole('super_admin', 'tenant_admin'), async 
     if (status) where.status = status;
     if (priority) where.priority = priority;
     if (category) where.category = { contains: category, mode: 'insensitive' };
+    if (search) {
+      where.OR = [
+        { subject:     { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
 
     const [data, total] = await Promise.all([
       prisma.ticket.findMany({
@@ -62,6 +69,27 @@ router.get('/', authenticate, requireRole('super_admin', 'tenant_admin'), async 
     ]);
 
     res.json({ success: true, data: paginatedResponse(data, total, page, limit) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/tickets/stats — counts per status (sidebar badge & header KPI)
+router.get('/stats', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
+  try {
+    const where = {};
+    if (req.user.role === 'tenant_admin') where.tenantId = req.user.tenantId;
+    else if (req.query.tenantId)          where.tenantId = req.query.tenantId;
+
+    const grouped = await prisma.ticket.groupBy({
+      by: ['status'],
+      where,
+      _count: { _all: true },
+    });
+    const counts = { open: 0, in_progress: 0, resolved: 0 };
+    for (const g of grouped) counts[g.status] = g._count._all;
+    const total = counts.open + counts.in_progress + counts.resolved;
+    res.json({ success: true, data: { ...counts, total } });
   } catch (err) {
     next(err);
   }
@@ -140,6 +168,25 @@ router.patch('/:id', authenticate, requireRole('super_admin'), async (req, res, 
     });
 
     emitTicketEvent('ticket:updated', ticket);
+
+    if (body.status && body.status !== existing.status) {
+      const sevMap = { open: 'warning', in_progress: 'info', resolved: 'success' };
+      await recordAudit(req, {
+        action: `ticket.status.${body.status}`,
+        target: `ticket:${ticket.id}`,
+        detail: `"${ticket.subject}" → ${body.status}`,
+        severity: sevMap[body.status] || 'info',
+      });
+    }
+    if (body.priority && body.priority !== existing.priority) {
+      await recordAudit(req, {
+        action: 'ticket.priority',
+        target: `ticket:${ticket.id}`,
+        detail: `"${ticket.subject}" priority → ${body.priority}`,
+        severity: 'info',
+      });
+    }
+
     res.json({ success: true, data: ticket });
   } catch (err) {
     next(err);
@@ -195,6 +242,15 @@ router.post('/:id/replies', authenticate, requireRole('super_admin', 'tenant_adm
     });
     emitTicketEvent('ticket:replied', fullTicket, { toUserId: ticket.createdById });
 
+    if (isAdmin) {
+      await recordAudit(req, {
+        action: 'ticket.reply',
+        target: `ticket:${req.params.id}`,
+        detail: `Admin replied to "${ticket.subject}"`,
+        severity: 'info',
+      });
+    }
+
     res.status(201).json({ success: true, data: reply });
   } catch (err) {
     next(err);
@@ -208,6 +264,13 @@ router.delete('/:id', authenticate, requireRole('super_admin'), async (req, res,
     if (!existing) return res.status(404).json({ success: false, error: 'Ticket not found' });
 
     await prisma.ticket.delete({ where: { id: req.params.id } });
+
+    await recordAudit(req, {
+      action: 'ticket.delete',
+      target: `ticket:${existing.id}`,
+      detail: `"${existing.subject}"`,
+      severity: 'warning',
+    });
 
     res.json({ success: true, data: { message: 'Ticket deleted successfully' } });
   } catch (err) {

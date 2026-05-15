@@ -1,5 +1,6 @@
 const router = require('express').Router();
 
+const publicRoutes = require('./public');
 const authRoutes = require('./auth');
 const userRoutes = require('./users');
 const tenantRoutes = require('./tenants');
@@ -18,7 +19,15 @@ const broadcastRoutes = require('./broadcasts');
 const shiftRoutes = require('./shifts');
 const reportRoutes = require('./reports');
 const errorLogRoutes = require('./errorLogs');
+const whatsappRoutes = require('./whatsapp');
+const paymentRoutes  = require('./payment');
+const promotionRoutes = require('./promotions');
+const landingRoutes  = require('./landing');
+const superAdminUsageRoutes = require('./superAdminUsage');
+const superAdminAuditLogRoutes = require('./superAdminAuditLog');
+const barberScheduleRoutes = require('./barberSchedules');
 
+router.use('/public', publicRoutes);
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
 router.use('/tenants', tenantRoutes);
@@ -37,5 +46,12 @@ router.use('/broadcasts', broadcastRoutes);
 router.use('/shifts', shiftRoutes);
 router.use('/reports', reportRoutes);
 router.use('/error-logs', errorLogRoutes);
+router.use('/whatsapp', whatsappRoutes);
+router.use('/payment',  paymentRoutes);
+router.use('/promotions', promotionRoutes);
+router.use('/landing',    landingRoutes);
+router.use('/super-admin/usage', superAdminUsageRoutes);
+router.use('/super-admin/audit-log', superAdminAuditLogRoutes);
+router.use('/barber-schedules', barberScheduleRoutes);
 
 module.exports = router;

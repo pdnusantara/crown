@@ -1,0 +1,274 @@
+'use strict';
+
+const cron  = require('node-cron');
+const prisma = require('../config/database');
+const duitku = require('../services/duitkuService');
+
+const BACKEND_URL  = process.env.BACKEND_URL  || 'https://sembapos.com';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://sembapos.com';
+const GRACE_DAYS   = Number(process.env.SUBSCRIPTION_GRACE_DAYS || 7);
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function dayStart(d = new Date()) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function addDays(d, n) {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  return x;
+}
+
+function fmtDate(d) {
+  return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+async function createBroadcast(tenantIds, { title, message, type = 'warning' }) {
+  if (!tenantIds.length) return null;
+  return prisma.broadcast.create({
+    data: {
+      title,
+      message,
+      type,
+      active: true,
+      recipients: { create: tenantIds.map(tenantId => ({ tenantId })) },
+    },
+  });
+}
+
+async function alreadyBroadcastedToday(tenantId, titlePrefix) {
+  const since = dayStart();
+  const found = await prisma.broadcastRecipient.findFirst({
+    where: {
+      tenantId,
+      broadcast: { sentAt: { gte: since }, title: { startsWith: titlePrefix } },
+    },
+  });
+  return !!found;
+}
+
+async function hasPendingOrPaidOrderRecently(subscriptionId) {
+  const since = new Date(Date.now() - 3 * 86400 * 1000);
+  const found = await prisma.paymentOrder.findFirst({
+    where: {
+      subscriptionId,
+      type: 'subscription',
+      status: { in: ['pending', 'success'] },
+      createdAt: { gte: since },
+    },
+  });
+  return !!found;
+}
+
+// Hitung harga sesuai siklus aktif subscription. Untuk annual, gunakan
+// annualDiscountPercent dari paket (default 17%) — sama seperti
+// computeCyclePrice di payment.js.
+async function tryCreateDuitkuOrder(sub) {
+  try {
+    const settings = await duitku.getSettings();
+    if (!settings.active) return null;
+
+    const cycle = sub.billingCycle || 'monthly';
+    const pkg = await prisma.package.findUnique({ where: { name: sub.package } });
+    const monthly = pkg?.price ?? sub.price;
+    const annualDiscPct = pkg?.annualDiscountPercent ?? 17;
+    const amount = cycle === 'annual'
+      ? Math.round((monthly * 12 * (1 - annualDiscPct / 100)) / 1000) * 1000
+      : monthly;
+
+    const merchantOrderId = `CROWN-AUTO-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+
+    const res = await duitku.createInvoice({
+      merchantOrderId,
+      amount,
+      email:          sub.tenant.email,
+      productDetails: `Perpanjang ${sub.package} (${cycle === 'annual' ? 'Tahunan' : 'Bulanan'}) — ${sub.tenant.name}`,
+      callbackUrl:    `${BACKEND_URL}/api/payment/callback`,
+      returnUrl:      `${FRONTEND_URL}/admin/billing?payment=done`,
+      customerName:   sub.tenant.name,
+    });
+
+    await prisma.paymentOrder.create({
+      data: {
+        merchantOrderId,
+        tenantId:       sub.tenantId,
+        subscriptionId: sub.id,
+        type:           'subscription',
+        billingCycle:   cycle,
+        amount,
+        status:         'pending',
+        paymentUrl:     res.paymentUrl,
+        reference:      res.reference || null,
+      },
+    });
+
+    return res.paymentUrl;
+  } catch (err) {
+    console.error(`[RenewalJob] Duitku order error tenant=${sub.tenantId}:`, err.message);
+    return null;
+  }
+}
+
+async function tryWASend(tenantId, text) {
+  try {
+    const wa = require('../services/whatsappService');
+    const settings = await wa.getTenantSettings(tenantId);
+    if (!settings.enabled || !settings.notifyAdminPhone) return false;
+    const result = await wa.sendSystemMessage(tenantId, settings.notifyAdminPhone, text);
+    return result.sent;
+  } catch {
+    return false;
+  }
+}
+
+// ── Core job ───────────────────────────────────────────────────────────────
+
+async function runRenewalJob() {
+  const now = new Date();
+  const log = (...a) => console.log(`[RenewalJob ${now.toISOString()}]`, ...a);
+  log('start');
+
+  // ── 0a. AUTO-EXPIRE pending payment orders (TTL 24h) ───────────────────
+  const orderTtlCutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const expiredOrders = await prisma.paymentOrder.updateMany({
+    where: { status: 'pending', createdAt: { lt: orderTtlCutoff } },
+    data:  { status: 'expired' },
+  });
+  if (expiredOrders.count) log(`Expired ${expiredOrders.count} stale pending orders`);
+
+  // ── 0b. AUTO-RESUME paused subs whose pauseUntil has passed ─────────────
+  const toResume = await prisma.subscription.findMany({
+    where: { status: 'paused', pauseUntil: { lte: now } },
+  });
+  for (const sub of toResume) {
+    const elapsedMs = now.getTime() - new Date(sub.pausedAt || now).getTime();
+    const newEnd = new Date(new Date(sub.endDate).getTime() + Math.max(0, elapsedMs));
+    await prisma.subscription.update({
+      where: { id: sub.id },
+      data:  { status: 'active', endDate: newEnd, pausedAt: null, pauseUntil: null, pauseReason: null },
+    });
+    log(`Resumed paused subscription tenant=${sub.tenantId} new endDate=${newEnd.toISOString()}`);
+  }
+
+  // ── 1. REMINDER D-7, D-3, D-1 ──────────────────────────────────────────
+  for (const days of [7, 3, 1]) {
+    const winStart = dayStart(addDays(now, days));
+    const winEnd   = new Date(winStart.getTime() + 86400_000 - 1);
+
+    const subs = await prisma.subscription.findMany({
+      where: {
+        // Skip 'paused' — tenant sengaja menjeda; jangan kirim reminder.
+        status:  { in: ['active', 'trial'] },
+        endDate: { gte: winStart, lte: winEnd },
+      },
+      include: { tenant: { select: { id: true, name: true, email: true } } },
+    });
+
+    log(`D-${days}: ${subs.length} expiring`);
+
+    for (const sub of subs) {
+      const titlePrefix = `[D-${days}] Langganan`;
+      if (await alreadyBroadcastedToday(sub.tenantId, titlePrefix)) {
+        log(`D-${days}: tenant=${sub.tenantId} skip (already notified today)`);
+        continue;
+      }
+
+      let paymentUrl = null;
+
+      // D-3 autoRenew: pre-create Duitku order so tenant has a direct link
+      if (days === 3 && sub.autoRenew) {
+        if (!(await hasPendingOrPaidOrderRecently(sub.id))) {
+          paymentUrl = await tryCreateDuitkuOrder(sub);
+          if (paymentUrl) log(`D-3: created order tenant=${sub.tenantId}`);
+        }
+      }
+
+      const endStr = fmtDate(sub.endDate);
+      const broadcastMsg = [
+        `Langganan ${sub.package} Anda akan berakhir dalam *${days} hari* (${endStr}).`,
+        sub.autoRenew && paymentUrl
+          ? `Link pembayaran sudah disiapkan. Buka menu Billing untuk melanjutkan.`
+          : `Segera lakukan pembayaran di menu Billing untuk menghindari gangguan layanan.`,
+      ].join('\n\n');
+
+      await createBroadcast([sub.tenantId], {
+        title:   `${titlePrefix} Segera Berakhir`,
+        message: broadcastMsg,
+        type:    days === 1 ? 'error' : 'warning',
+      });
+
+      const waMsg = [
+        `[BarberOS] Pengingat Perpanjang Langganan`,
+        ``,
+        `Halo ${sub.tenant.name},`,
+        `Subscription ${sub.package} Anda akan berakhir dalam ${days} hari (${endStr}).`,
+        paymentUrl
+          ? `\nLink Pembayaran:\n${paymentUrl}`
+          : `\nBuka aplikasi → menu Billing untuk melakukan pembayaran.`,
+      ].join('\n');
+
+      await tryWASend(sub.tenantId, waMsg);
+      log(`D-${days}: notified tenant=${sub.tenantId} (${sub.tenant.name})`);
+    }
+  }
+
+  // ── 2. ACTIVE → OVERDUE (subscription sudah lewat endDate) ─────────────
+  // Tidak menyentuh status 'paused' — tetap paused sampai pauseUntil lewat.
+  const toOverdue = await prisma.subscription.findMany({
+    where: { status: 'active', endDate: { lt: now } },
+    select: { id: true, tenantId: true, package: true },
+  });
+
+  if (toOverdue.length) {
+    await prisma.subscription.updateMany({
+      where: { id: { in: toOverdue.map(s => s.id) } },
+      data:  { status: 'overdue' },
+    });
+    log(`Marked ${toOverdue.length} as overdue`);
+
+    for (const sub of toOverdue) {
+      if (await alreadyBroadcastedToday(sub.tenantId, '[Overdue]')) continue;
+      await createBroadcast([sub.tenantId], {
+        title:   `[Overdue] Langganan Telah Berakhir`,
+        message: [
+          `Subscription ${sub.package} Anda telah melewati tanggal berakhir.`,
+          `Segera lakukan pembayaran. Anda memiliki masa tenggang ${GRACE_DAYS} hari sebelum akun dinonaktifkan.`,
+          `Buka menu Billing untuk membayar.`,
+        ].join('\n\n'),
+        type: 'error',
+      }).catch(() => {});
+    }
+  }
+
+  // ── 3. OVERDUE → EXPIRED (setelah grace period) ─────────────────────────
+  const graceDeadline = new Date(now.getTime() - GRACE_DAYS * 86400_000);
+  const expiredResult = await prisma.subscription.updateMany({
+    where: { status: 'overdue', endDate: { lt: graceDeadline } },
+    data:  { status: 'expired' },
+  });
+
+  if (expiredResult.count) log(`Marked ${expiredResult.count} as expired`);
+
+  log('done');
+  return {
+    timestamp:    now.toISOString(),
+    overdueCount: toOverdue.length,
+    expiredCount: expiredResult.count,
+  };
+}
+
+// ── Init scheduler ─────────────────────────────────────────────────────────
+
+function initRenewalJob() {
+  // Jam 08:00 WIB setiap hari
+  cron.schedule('0 8 * * *', () => {
+    runRenewalJob().catch(err => console.error('[RenewalJob] unhandled error:', err));
+  }, { timezone: 'Asia/Jakarta' });
+
+  console.log('[RenewalJob] Scheduled: daily 08:00 WIB | grace=' + GRACE_DAYS + 'd');
+}
+
+module.exports = { initRenewalJob, runRenewalJob };

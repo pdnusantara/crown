@@ -6,9 +6,14 @@ import TopBar from './TopBar.jsx'
 import BottomNav from './BottomNav.jsx'
 import { CommandPalette } from '../ui/CommandPalette.jsx'
 import { useAuthStore } from '../../store/authStore.js'
+import { useNotificationStore } from '../../store/notificationStore.js'
+import { getSocket, joinBranchRoom, joinTenantRoom, leaveBranchRoom } from '../../lib/socket.js'
+import { getBranchSlug } from '../../utils/branchSlug.js'
+import { useToast } from '../ui/Toast.jsx'
 import { useOnlineStatus } from '../../hooks/useOnlineStatus.js'
 import { useSwipe } from '../../hooks/useSwipe.js'
 import { Download, X, WifiOff, ShieldAlert } from 'lucide-react'
+import { formatRupiah } from '../../utils/format.js'
 
 const useMediaQuery = (query) => {
   const [matches, setMatches] = useState(() =>
@@ -35,12 +40,15 @@ const navConfigs = {
     '/admin/reports',
     '/admin/settings',
   ],
-  kasir: (user) => [
-    `/${user.branchId}/kasir/pos`,
-    `/${user.branchId}/kasir/queue`,
-    `/${user.branchId}/kasir/bookings`,
-    `/${user.branchId}/kasir/transactions`,
-  ],
+  kasir: (user) => {
+    const slug = getBranchSlug(user)
+    return [
+      `/${slug}/kasir/pos`,
+      `/${slug}/kasir/queue`,
+      `/${slug}/kasir/bookings`,
+      `/${slug}/kasir/transactions`,
+    ]
+  },
   barber: () => [
     '/barber/dashboard',
     '/barber/queue',
@@ -98,6 +106,188 @@ export const AppLayout = () => {
     setShowPwaBanner(false)
     localStorage.setItem('pwa-banner-dismissed', '1')
   }
+
+  // Real-time notifications via socket (transactions + queue events)
+  const addNotification = useNotificationStore(s => s.addNotification)
+  const toast = useToast()
+  useEffect(() => {
+    if (!user) return
+    const socket = getSocket()
+
+    // Pastikan socket sudah join room yang relevan supaya notifikasi sampai
+    // walau halaman aktif tidak punya hook queue lokal.
+    if (user.tenantId) joinTenantRoom(user.tenantId)
+    if (user.branchId) joinBranchRoom(user.branchId)
+
+    const handleTransactionCreated = (data) => {
+      const isBarber = user.role === 'barber'
+      if (isBarber && !(data.barberIds || []).includes(user.id)) return
+
+      const title = isBarber ? 'Komisi Baru' : 'Transaksi Baru'
+      const message = isBarber
+        ? `${data.customerName} — ${formatRupiah(data.total)} di ${data.branchName}`
+        : `${data.customerName} — ${formatRupiah(data.total)} via ${data.paymentMethod || 'cash'} (${data.branchName})`
+
+      addNotification({
+        type: 'transaction',
+        title,
+        message,
+        tenantId: data.tenantId,
+        branchId: data.branchId,
+        refId: data.id,
+        severity: 'success',
+      })
+    }
+
+    // Filter relevansi event antrian per role.
+    // - super_admin/tenant_admin: semua event di tenant
+    // - kasir: hanya event di branch mereka
+    // - barber: hanya event yang barberId-nya = user.id (assigned ke mereka)
+    const isRelevantQueueEvent = (entry) => {
+      if (!entry) return false
+      if (user.role === 'barber') return entry.barberId === user.id
+      if (user.role === 'kasir') return entry.branchId === user.branchId
+      // super_admin/tenant_admin: scope ke tenant mereka
+      if (user.tenantId && entry.tenantId && entry.tenantId !== user.tenantId) return false
+      return true
+    }
+
+    const ticketStr = (e) =>
+      e?.queueNumber != null ? `A${String(e.queueNumber).padStart(3, '0')}` : (e?.id || '').slice(-6).toUpperCase()
+
+    const handleQueueCreated = (entry) => {
+      if (!isRelevantQueueEvent(entry)) return
+      const title = '🔔 Antrian Baru'
+      const message = `${ticketStr(entry)} · ${entry.customerName || 'Pelanggan'} masuk antrian`
+      addNotification({
+        type: 'queue', title, message, severity: 'info',
+        tenantId: entry.tenantId, branchId: entry.branchId, refId: entry.id,
+      })
+      toast.info(`${title} — ${message}`, 4000)
+    }
+
+    const STATUS_TEXT = {
+      waiting:     'menunggu',
+      in_progress: 'sedang dilayani',
+      done:        'selesai dilayani',
+      paid:        'sudah membayar',
+      cancelled:   'dibatalkan',
+    }
+
+    // Pakai cache lokal supaya tidak duplikat toast pada update yang
+    // tidak mengubah status (mis. reorder).
+    const statusCache = new Map() // queueId -> last status
+    const handleQueueUpdated = (entry) => {
+      if (!isRelevantQueueEvent(entry)) return
+      const prev = statusCache.get(entry.id)
+      statusCache.set(entry.id, entry.status)
+      if (prev === entry.status) return
+      const label = STATUS_TEXT[entry.status] || entry.status
+      const title = entry.status === 'paid' ? '💰 Pembayaran Selesai'
+        : entry.status === 'in_progress' ? '✂️ Mulai Dilayani'
+        : entry.status === 'done' ? '✅ Layanan Selesai'
+        : '📌 Status Antrian'
+      const message = `${ticketStr(entry)} · ${entry.customerName || 'Pelanggan'} ${label}`
+      addNotification({
+        type: 'queue', title, message,
+        severity: entry.status === 'paid' ? 'success' : 'info',
+        tenantId: entry.tenantId, branchId: entry.branchId, refId: entry.id,
+      })
+      const variant = entry.status === 'paid' ? 'success' : entry.status === 'cancelled' ? 'warning' : 'info'
+      toast[variant](`${title} — ${message}`, 4000)
+    }
+
+    const handleQueueDeleted = (entry) => {
+      if (!isRelevantQueueEvent(entry)) return
+      const title = '⚠️ Antrian Dibatalkan'
+      const message = `${ticketStr(entry)} · ${entry.customerName || 'Pelanggan'}`
+      addNotification({
+        type: 'queue', title, message, severity: 'warning',
+        tenantId: entry.tenantId, branchId: entry.branchId, refId: entry.id,
+      })
+      toast.warning(`${title} — ${message}`, 4000)
+    }
+
+    // ── Booking lifecycle ──────────────────────────────────────────────────
+    // Tujuan: kasir & barber yang ditugaskan dapat notifikasi saat ada booking
+    // baru, status berubah, atau booking dibatalkan.
+    const isRelevantBookingEvent = (b) => {
+      if (!b) return false
+      if (user.role === 'barber') return b.barberId === user.id
+      if (user.role === 'kasir') return b.branchId === user.branchId
+      if (user.tenantId && b.tenantId && b.tenantId !== user.tenantId) return false
+      return true
+    }
+    const bookingIdShort = (b) => `#${(b?.id || '').slice(-6).toUpperCase()}`
+    const bookingWhen = (b) => {
+      if (!b?.date) return ''
+      try {
+        const [y, m, d] = String(b.date).split('-').map(Number)
+        const dd = String(d).padStart(2, '0')
+        const mm = String(m).padStart(2, '0')
+        return `${dd}/${mm} ${b.time || ''}`.trim()
+      } catch { return `${b.date} ${b.time || ''}` }
+    }
+
+    const handleBookingCreated = (b) => {
+      if (!isRelevantBookingEvent(b)) return
+      const title = '📅 Booking Baru'
+      const message = `${b.customerName || 'Pelanggan'} — ${b.serviceName || 'layanan'} (${bookingWhen(b)}) ${bookingIdShort(b)}`
+      addNotification({
+        type: 'booking', title, message, severity: 'info',
+        tenantId: b.tenantId, branchId: b.branchId, refId: b.id,
+      })
+      toast.info(`${title} — ${b.customerName}`, 4000)
+    }
+
+    const BOOKING_STATUS_TEXT = {
+      pending:     'menunggu konfirmasi',
+      confirmed:   'dikonfirmasi',
+      in_progress: 'masuk antrian',
+      done:        'selesai',
+      cancelled:   'dibatalkan',
+    }
+    const bookingStatusCache = new Map()
+    const handleBookingUpdated = (b) => {
+      if (!isRelevantBookingEvent(b)) return
+      const prev = bookingStatusCache.get(b.id)
+      bookingStatusCache.set(b.id, b.status)
+      if (prev === b.status) return
+      const label = BOOKING_STATUS_TEXT[b.status] || b.status
+      const title = b.status === 'cancelled' ? '⚠️ Booking Dibatalkan'
+        : b.status === 'confirmed' ? '✅ Booking Dikonfirmasi'
+        : b.status === 'in_progress' ? '🚪 Booking Check-in'
+        : b.status === 'done' ? '✨ Booking Selesai'
+        : '📌 Status Booking'
+      const message = `${b.customerName || 'Pelanggan'} ${label} ${bookingIdShort(b)}`
+      addNotification({
+        type: 'booking', title, message,
+        severity: b.status === 'cancelled' ? 'warning' : b.status === 'done' ? 'success' : 'info',
+        tenantId: b.tenantId, branchId: b.branchId, refId: b.id,
+      })
+      const variant = b.status === 'cancelled' ? 'warning'
+        : b.status === 'confirmed' || b.status === 'done' ? 'success'
+        : 'info'
+      toast[variant](`${title} — ${b.customerName}`, 3500)
+    }
+
+    socket.on('transaction:created', handleTransactionCreated)
+    socket.on('queue:created', handleQueueCreated)
+    socket.on('queue:updated', handleQueueUpdated)
+    socket.on('queue:deleted', handleQueueDeleted)
+    socket.on('booking:created', handleBookingCreated)
+    socket.on('booking:updated', handleBookingUpdated)
+    return () => {
+      socket.off('transaction:created', handleTransactionCreated)
+      socket.off('queue:created', handleQueueCreated)
+      socket.off('queue:updated', handleQueueUpdated)
+      socket.off('queue:deleted', handleQueueDeleted)
+      socket.off('booking:created', handleBookingCreated)
+      socket.off('booking:updated', handleBookingUpdated)
+      // Tidak otomatis leaveBranchRoom — biarkan socket tetap di room
+      // sampai user logout (auth:logout listener di socket.js akan close).
+    }
+  }, [user, addNotification, toast])
 
   // Swipe navigation
   const getNavRoutes = () => {

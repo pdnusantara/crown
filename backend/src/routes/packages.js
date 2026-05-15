@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { z } = require('zod');
 const prisma = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { getIO } = require('../config/socket');
 
 const packageSelect = {
   name: true,
@@ -10,6 +11,10 @@ const packageSelect = {
   maxStaff: true,
   branchAddonPrice: true,
   branchAddonType: true,
+  // Diskon tahunan (% dari 12×harga) — dipakai LandingPage / RegisterPage /
+  // TABillingPage / payment.js / renewal job. Wajib ada di response supaya
+  // semua call site tidak fallback ke 17 hardcoded.
+  annualDiscountPercent: true,
   description: true,
   features: true,
   updatedAt: true,
@@ -18,13 +23,14 @@ const packageSelect = {
 const packageNameSchema = z.enum(['Basic', 'Pro', 'Enterprise']);
 
 const updatePackageSchema = z.object({
-  price:            z.number().int().min(0).max(999_999_999).optional(),
-  maxBranches:      z.number().int().min(1).max(9999).optional(),
-  maxStaff:         z.number().int().min(1).max(9999).optional(),
-  branchAddonPrice: z.number().int().min(0).max(999_999_999).optional(),
-  branchAddonType:  z.enum(['monthly', 'onetime']).optional(),
-  description:      z.string().max(500).nullable().optional(),
-  features:         z.array(z.string()).max(100).optional(),
+  price:                 z.number().int().min(0).max(999_999_999).optional(),
+  maxBranches:           z.number().int().min(1).max(9999).optional(),
+  maxStaff:              z.number().int().min(1).max(9999).optional(),
+  branchAddonPrice:      z.number().int().min(0).max(999_999_999).optional(),
+  branchAddonType:       z.enum(['monthly', 'onetime']).optional(),
+  annualDiscountPercent: z.number().int().min(0).max(100).optional(),
+  description:           z.string().max(500).nullable().optional(),
+  features:              z.array(z.string()).max(100).optional(),
 }).strict();
 
 // GET /api/packages — list all packages with live tenant counts
@@ -81,11 +87,19 @@ router.put('/:name', authenticate, requireRole('super_admin'), async (req, res, 
         maxStaff: body.maxStaff ?? 5,
         branchAddonPrice: body.branchAddonPrice ?? 0,
         branchAddonType: body.branchAddonType ?? 'monthly',
+        annualDiscountPercent: body.annualDiscountPercent ?? 17,
         description: body.description ?? null,
         features: body.features ?? [],
       },
       select: packageSelect,
     });
+
+    // Broadcast supaya halaman pricing/billing yang sedang terbuka di tenant
+    // langsung sinkron tanpa nunggu refetch periodik.
+    const io = getIO();
+    if (io) {
+      io.emit('package:updated', { name: pkg.name, package: pkg });
+    }
 
     res.json({ success: true, data: pkg });
   } catch (err) {
