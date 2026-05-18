@@ -22,10 +22,16 @@ function normalizePhone(phone) {
  * @param {string} args.phone
  * @returns {Promise<{ id: string, name: string, phone: string, created: boolean }>}
  */
-async function upsertCustomerByPhone(client, { tenantId, name, phone }) {
+// Alamat dianggap "berisi wilayah" kalau minimal kecamatan/kabupaten terisi.
+function hasWilayah(addr) {
+  return !!(addr && typeof addr === 'object' && (addr.kecamatanId || addr.kabupatenId));
+}
+
+async function upsertCustomerByPhone(client, { tenantId, name, phone, address }) {
   if (!tenantId || !phone || !name) return null;
   const normalized = normalizePhone(phone);
   if (!normalized) return null;
+  const incomingAddr = hasWilayah(address) ? address : null;
 
   // Coba cari yang phone-nya match (baik raw atau normalized) supaya
   // tidak duplikat dengan record lama yang masih pakai format +62/62/0.
@@ -38,20 +44,24 @@ async function upsertCustomerByPhone(client, { tenantId, name, phone }) {
         { phone: normalized },
       ],
     },
-    select: { id: true, name: true, phone: true },
+    select: { id: true, name: true, phone: true, address: true },
   });
 
   if (existing) {
+    const data = {};
     // Kalau sebelumnya cuma "Walk-in" / nama generik tapi sekarang ada nama
     // lebih bagus, update agar admin lihat info terbaru.
     if (name && existing.name && existing.name.toLowerCase() === 'walk-in' && name.trim() && name.trim().toLowerCase() !== 'walk-in') {
-      await client.customer.update({
-        where: { id: existing.id },
-        data: { name: name.trim() },
-      });
-      return { ...existing, name: name.trim(), created: false };
+      data.name = name.trim();
     }
-    return { ...existing, created: false };
+    // Isi wilayah HANYA kalau pelanggan belum punya — jangan timpa data lama.
+    if (incomingAddr && !hasWilayah(existing.address)) {
+      data.address = incomingAddr;
+    }
+    if (Object.keys(data).length > 0) {
+      await client.customer.update({ where: { id: existing.id }, data });
+    }
+    return { ...existing, ...data, created: false };
   }
 
   const created = await client.customer.create({
@@ -59,6 +69,7 @@ async function upsertCustomerByPhone(client, { tenantId, name, phone }) {
       tenantId,
       name: name.trim() || 'Pelanggan',
       phone: normalized,
+      ...(incomingAddr ? { address: incomingAddr } : {}),
     },
     select: { id: true, name: true, phone: true },
   });

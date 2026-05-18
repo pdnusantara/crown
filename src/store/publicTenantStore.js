@@ -13,6 +13,7 @@ export const usePublicTenantStore = create((set) => ({
   address: null,
   phone: null,
   bookingPage: null, // { tagline, description, heroImage, gallery, … }
+  wilayah: null,     // { provinsiId, provinsi, kabupatenId, kabupaten }
   status: 'idle',
 
   resolve: async () => {
@@ -39,6 +40,7 @@ export const usePublicTenantStore = create((set) => ({
         address: info.address || null,
         phone: info.phone || null,
         bookingPage: info.bookingPage || null,
+        wilayah: info.wilayah || null,
         slug,
       })
     } catch {

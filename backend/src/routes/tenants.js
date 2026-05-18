@@ -37,6 +37,7 @@ const tenantSelect = {
   taxAddress: true,
   timezone: true,
   bookingPage: true,
+  wilayah: true,
   isSuspended: true,
   createdAt: true,
   updatedAt: true,
@@ -341,6 +342,15 @@ const bookingPageSchema = z.object({
   })).max(20).optional(),
 }).strict().nullish();
 
+// Wilayah fokus toko — provinsi & kabupaten/kota acuan. Kecamatan & desa
+// tidak disimpan di sini; itu per-pelanggan.
+const wilayahSchema = z.object({
+  provinsiId:  z.string().max(10).nullish(),
+  provinsi:    z.string().max(100).nullish(),
+  kabupatenId: z.string().max(10).nullish(),
+  kabupaten:   z.string().max(120).nullish(),
+}).strict().nullish();
+
 const selfUpdateSchema = z.object({
   name:        z.string().min(1).max(255).optional(),
   phone:       z.string().max(50).nullish(),
@@ -351,6 +361,7 @@ const selfUpdateSchema = z.object({
   taxAddress:  z.string().max(500).nullish(),
   timezone:    tzSchema.optional(),
   bookingPage: bookingPageSchema,
+  wilayah:     wilayahSchema,
 });
 router.patch('/me', authenticate, requireRole('tenant_admin', 'super_admin'), async (req, res, next) => {
   try {

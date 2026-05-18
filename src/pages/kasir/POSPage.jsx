@@ -28,6 +28,7 @@ import { useCustomers, useCreateCustomer } from '../../hooks/useCustomers.js'
 import { useSubmitBarberRatingsBatch } from '../../hooks/useBarberRatings.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import { StarRating } from '../../components/ui/StarRating.jsx'
+import WilayahPicker from '../../components/WilayahPicker.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Modal from '../../components/ui/Modal.jsx'
 import Input from '../../components/ui/Input.jsx'
@@ -448,6 +449,8 @@ function POSPageInner() {
   const [customerSearch, setCustomerSearch] = useState('')
   const [customerSearchDeb, setCustomerSearchDeb] = useState('')
   const [newCustomerForm, setNewCustomerForm] = useState({ name: '', phone: '' })
+  // Wilayah pelanggan baru (kecamatan + desa) — opsional, dalam kabupaten toko.
+  const [newCustWilayah, setNewCustWilayah] = useState({})
   const [showNewCustForm, setShowNewCustForm] = useState(false)
   const [discountInput, setDiscountInput] = useState({ type: 'percentage', value: '' })
   const [discountTab, setDiscountTab] = useState('manual')
@@ -655,11 +658,25 @@ function POSPageInner() {
   const handleAddNewCustomer = async () => {
     if (!newCustomerForm.name || !newCustomerForm.phone) return toast.error(t('pos.fillNameAndPhone'))
     try {
-      const newCust = await createCustomer.mutateAsync({ ...newCustomerForm })
+      // Gabung wilayah toko (provinsi+kabupaten) + pilihan kasir (kecamatan+desa)
+      // jadi address lengkap. Hanya disertakan kalau kecamatan dipilih.
+      const tw = user?.tenant?.wilayah
+      const address = (tw?.kabupatenId && newCustWilayah.kecamatanId)
+        ? {
+            provinsiId: tw.provinsiId, provinsi: tw.provinsi,
+            kabupatenId: tw.kabupatenId, kabupaten: tw.kabupaten,
+            ...newCustWilayah,
+          }
+        : undefined
+      const newCust = await createCustomer.mutateAsync({
+        ...newCustomerForm,
+        ...(address ? { address } : {}),
+      })
       posStore.setSelectedCustomer(newCust)
       setShowCustomerModal(false)
       setShowNewCustForm(false)
       setNewCustomerForm({ name: '', phone: '' })
+      setNewCustWilayah({})
       toast.success(t('pos.newCustomerAdded'))
     } catch (err) {
       toast.error(err?.response?.data?.message || t('pos.addCustomerFailed'))
@@ -1505,6 +1522,13 @@ function POSPageInner() {
                   onChange={e => setNewCustomerForm(f => ({ ...f, phone: e.target.value }))}
                   placeholder={t('pos.customerPhonePlaceholder')}
                 />
+                {user?.tenant?.wilayah?.kabupatenId && (
+                  <WilayahPicker
+                    kabupatenId={user.tenant.wilayah.kabupatenId}
+                    value={newCustWilayah}
+                    onChange={setNewCustWilayah}
+                  />
+                )}
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" fullWidth onClick={() => setShowNewCustForm(false)}>
                     {t('common.cancel')}

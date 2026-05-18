@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -10,6 +10,7 @@ import {
   Building2, Home, Sparkles, ArrowUpRight, ArrowDownRight, Minus,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
+import api from '../../lib/api.js'
 import { useWilayahReport } from '../../hooks/useWilayahReport.js'
 import { useProvinces, useRegencies } from '../../hooks/useWilayah.js'
 import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
@@ -31,20 +32,7 @@ const BAR_COLORS = [
   '#A07830', '#8C6820', '#705018', '#BFA060', '#D9C090',
 ]
 
-const CONFIG_KEY = (tenantId) => `wilayah_config_${tenantId}`
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function loadConfig(tenantId) {
-  try {
-    const raw = localStorage.getItem(CONFIG_KEY(tenantId))
-    return raw ? JSON.parse(raw) : null
-  } catch { return null }
-}
-
-function saveConfig(tenantId, config) {
-  localStorage.setItem(CONFIG_KEY(tenantId), JSON.stringify(config))
-}
-
 function pctChange(cur, prev) {
   if (!prev || prev === 0) return null
   if (typeof cur !== 'number') return null
@@ -101,10 +89,15 @@ function StatCard({ icon: Icon, label, value, prev, changeValue, color = 'text-g
 }
 
 // ── Config Panel ──────────────────────────────────────────────────────────────
-function ConfigPanel({ tenantId, initial, onSave, onCancel }) {
+// Wilayah fokus toko disimpan SERVER-SIDE (Tenant.wilayah) — dipakai bersama
+// oleh laporan ini, pemilih kecamatan di kasir, dan halaman booking.
+function ConfigPanel({ initial, onSaved, onCancel }) {
   const { data: provinces = [] } = useProvinces()
+  const patchTenant = useAuthStore(s => s.patchTenant)
+  const toast = useToast()
   const [provinsiId, setProvinsiId]   = useState(initial?.provinsiId || '')
   const [kabupatenId, setKabupatenId] = useState(initial?.kabupatenId || '')
+  const [saving, setSaving]           = useState(false)
   const { data: regencies = [] } = useRegencies(provinsiId)
 
   function handleProvinsi(e) {
@@ -112,13 +105,22 @@ function ConfigPanel({ tenantId, initial, onSave, onCancel }) {
     setKabupatenId('')
   }
 
-  function handleSave() {
-    if (!kabupatenId || !provinsiId) return
+  async function handleSave() {
+    if (!kabupatenId || !provinsiId || saving) return
     const prov = provinces.find(p => p.id === provinsiId)
     const kab  = regencies.find(r => r.id === kabupatenId)
     const cfg  = { provinsiId, provinsi: prov?.name || '', kabupatenId, kabupaten: kab?.name || '' }
-    saveConfig(tenantId, cfg)
-    onSave(cfg)
+    setSaving(true)
+    try {
+      await api.patch('/tenants/me', { wilayah: cfg })
+      patchTenant({ wilayah: cfg })
+      toast.success('Wilayah toko disimpan')
+      onSaved(cfg)
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal menyimpan wilayah toko')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -132,7 +134,7 @@ function ConfigPanel({ tenantId, initial, onSave, onCancel }) {
             {initial ? 'Ganti Kabupaten/Kota' : 'Pilih Kabupaten/Kota Fokus'}
           </h3>
           <p className="text-xs text-muted mt-0.5">
-            Laporan akan menampilkan kunjungan per kecamatan dan desa dalam area ini
+            Acuan wilayah toko — dipakai laporan ini sekaligus pemilih kecamatan di kasir & booking
           </p>
         </div>
       </div>
@@ -172,13 +174,13 @@ function ConfigPanel({ tenantId, initial, onSave, onCancel }) {
       <div className="flex items-center gap-2">
         <Button
           onClick={handleSave}
-          disabled={!kabupatenId}
+          disabled={!kabupatenId || saving}
           className="flex-1 sm:flex-none"
         >
-          {initial ? 'Simpan Perubahan' : 'Mulai Analisis'}
+          {saving ? 'Menyimpan…' : initial ? 'Simpan Perubahan' : 'Mulai Analisis'}
         </Button>
         {onCancel && (
-          <Button variant="secondary" onClick={onCancel}>Batal</Button>
+          <Button variant="secondary" onClick={onCancel} disabled={saving}>Batal</Button>
         )}
       </div>
     </Card>
@@ -450,18 +452,17 @@ function EmptyData({ kabupaten }) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function TAWilayahReportPage() {
   const { user } = useAuthStore()
-  const tenantId = user?.tenantId
   const toast = useToast()
   const chart = useChartTheme()
 
-  const [config, setConfig]           = useState(() => loadConfig(tenantId))
+  // Wilayah fokus toko dibaca dari sesi (Tenant.wilayah) — server-side, jadi
+  // konsisten lintas-perangkat & dipakai bersama kasir/booking.
+  const wilayah = user?.tenant?.wilayah
+  const config = wilayah?.kabupatenId ? wilayah : null
+
   const [period, setPeriod]           = useState('30d')
   const [showConfig, setShowConfig]   = useState(false)
   const [expandedKec, setExpandedKec] = useState(null)
-
-  useEffect(() => {
-    setConfig(loadConfig(tenantId))
-  }, [tenantId])
 
   const { data, isLoading, isError, refetch } = useWilayahReport({
     kabupatenId: config?.kabupatenId,
@@ -483,8 +484,9 @@ export default function TAWilayahReportPage() {
     [byKecamatan]
   )
 
-  function handleConfigSave(cfg) {
-    setConfig(cfg)
+  // Config sudah tersimpan server-side oleh ConfigPanel & ter-merge ke sesi
+  // (patchTenant) — di sini cukup tutup panel & reset ekspansi.
+  function handleConfigSave() {
     setShowConfig(false)
     setExpandedKec(null)
   }
@@ -538,12 +540,13 @@ export default function TAWilayahReportPage() {
             <div className="text-sm">
               <p className="font-medium text-off-white mb-1">Konfigurasi Sekali, Pakai Selamanya</p>
               <p className="text-muted">
-                Pilih kabupaten/kota fokus. Laporan akan menampilkan breakdown kecamatan dan desa secara otomatis.
-                Konfigurasi ini tersimpan di browser dan bisa diubah kapanpun.
+                Pilih kabupaten/kota fokus. Laporan menampilkan breakdown kecamatan dan desa otomatis.
+                Wilayah ini tersimpan di akun toko — sekaligus jadi acuan pemilih kecamatan saat kasir
+                & pelanggan booking mengisi data. Bisa diubah kapan pun.
               </p>
             </div>
           </div>
-          <ConfigPanel tenantId={tenantId} initial={null} onSave={handleConfigSave} />
+          <ConfigPanel initial={null} onSaved={handleConfigSave} />
         </div>
       </div>
     )
@@ -596,9 +599,8 @@ export default function TAWilayahReportPage() {
         {showConfig && (
           <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
             <ConfigPanel
-              tenantId={tenantId}
               initial={config}
-              onSave={handleConfigSave}
+              onSaved={handleConfigSave}
               onCancel={() => setShowConfig(false)}
             />
           </motion.div>

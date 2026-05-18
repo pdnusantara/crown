@@ -140,6 +140,17 @@ export const useAuthStore = create((set, get) => ({
     return res.data.data
   },
 
+  // Merge sebagian data tenant ke sesi (mis. wilayah toko yang baru disetel)
+  // agar halaman lain langsung konsisten tanpa perlu login ulang.
+  patchTenant: (partial) => {
+    set(state => {
+      if (!state.user) return {}
+      const next = { ...state.user, tenant: { ...(state.user.tenant || {}), ...partial } }
+      cacheUser(next)
+      return { user: next }
+    })
+  },
+
   // Impersonation (super_admin only) — stores original user + switches view.
   // Does NOT touch the access token — all API calls continue to use the
   // super_admin token on the backend (which already has full access).

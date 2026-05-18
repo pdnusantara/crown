@@ -401,7 +401,7 @@ router.get('/me', authenticate, async (req, res, next) => {
         branchId: true,
         isActive: true,
         createdAt: true,
-        tenant: { select: { id: true, name: true, logo: true, timezone: true } },
+        tenant: { select: { id: true, name: true, logo: true, timezone: true, wilayah: true } },
         branch: { select: { id: true, code: true, name: true } },
       },
     });
@@ -455,7 +455,7 @@ router.patch('/me', authenticate, async (req, res, next) => {
       select: {
         id: true, email: true, name: true, role: true, phone: true, photo: true,
         commissionRate: true, tenantId: true, branchId: true, isActive: true, createdAt: true,
-        tenant: { select: { id: true, name: true, logo: true, timezone: true } },
+        tenant: { select: { id: true, name: true, logo: true, timezone: true, wilayah: true } },
         branch: { select: { id: true, code: true, name: true } },
       },
     });

@@ -38,7 +38,7 @@ router.get('/info', requireTenant, async (req, res, next) => {
       where: { id: req.tenant.id },
       select: {
         name: true, slug: true, logo: true, address: true, phone: true,
-        bookingPage: true,
+        bookingPage: true, wilayah: true,
       },
     });
     if (!full) return res.status(404).json({ success: false, error: 'Tenant tidak ditemukan' });
@@ -51,6 +51,7 @@ router.get('/info', requireTenant, async (req, res, next) => {
         address:     full.address || null,
         phone:       full.phone || null,
         bookingPage: full.bookingPage || null,
+        wilayah:     full.wilayah || null,
       },
     });
   } catch (err) { next(err); }
@@ -154,6 +155,17 @@ const publicBookingSchema = z.object({
   date:          z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal tidak valid'),
   time:          z.string().regex(/^\d{2}:\d{2}$/, 'Format waktu tidak valid'),
   notes:         z.string().max(300).optional(),
+  // Alamat wilayah pelanggan (opsional) — kecamatan & desa dalam kabupaten toko.
+  address:       z.object({
+    provinsiId:  z.string().max(10).optional(),
+    provinsi:    z.string().max(100).optional(),
+    kabupatenId: z.string().max(10).optional(),
+    kabupaten:   z.string().max(120).optional(),
+    kecamatanId: z.string().max(10).optional(),
+    kecamatan:   z.string().max(120).optional(),
+    kelurahanId: z.string().max(15).optional(),
+    kelurahan:   z.string().max(120).optional(),
+  }).optional(),
 });
 
 // GET /api/public/availability — return slot waktu yang SUDAH di-booking utk
@@ -360,6 +372,7 @@ router.post('/bookings', requireTenant, async (req, res, next) => {
         tenantId: req.tenant.id,
         name: body.customerName,
         phone: body.customerPhone,
+        address: body.address,
       });
       if (c?.id) customerId = c.id;
     } catch (_) { /* upsert is best-effort, jangan blokir booking */ }

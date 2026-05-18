@@ -6,6 +6,7 @@ import {
   Sparkles, AlertCircle,
 } from 'lucide-react'
 import publicApi from '../../lib/publicApi.js'
+import WilayahPicker from '../../components/WilayahPicker.jsx'
 import { usePublicTenantStore } from '../../store/publicTenantStore.js'
 import { getTenantSlug } from '../../lib/tenantSlug.js'
 import {
@@ -105,7 +106,7 @@ export default function PublicBookingPage() {
 function PublicBookingPageInner() {
   const {
     name: tenantName, logo: tenantLogo, status: tenantStatus,
-    timezone: tenantTz, bookingPage, resolve,
+    timezone: tenantTz, bookingPage, wilayah: tenantWilayah, resolve,
   } = usePublicTenantStore()
   const bp = bookingPage || {}
   const accent = bp.primaryColor || '#C9A84C'
@@ -125,7 +126,7 @@ function PublicBookingPageInner() {
   const [selected, setSelected] = useState({
     branch: null, service: null, barber: null, date: null, time: null,
   })
-  const [form, setForm] = useState({ name: '', phone: '', notes: '' })
+  const [form, setForm] = useState({ name: '', phone: '', notes: '', wilayah: {} })
   const [formError, setFormError] = useState({})
   const [shake, setShake] = useState({})  // { key: timestamp }
 
@@ -297,12 +298,23 @@ function PublicBookingPageInner() {
     if (!validateForm()) return
     setSubmitting(true); setError(null)
     try {
+      // Alamat wilayah pelanggan — gabung wilayah toko + pilihan pelanggan.
+      // Hanya dikirim kalau kecamatan dipilih.
+      const wl = form.wilayah || {}
+      const address = (tenantWilayah?.kabupatenId && wl.kecamatanId)
+        ? {
+            provinsiId: tenantWilayah.provinsiId, provinsi: tenantWilayah.provinsi,
+            kabupatenId: tenantWilayah.kabupatenId, kabupaten: tenantWilayah.kabupaten,
+            ...wl,
+          }
+        : undefined
       const res = await publicApi.post('/public/bookings', {
         branchId: selected.branch.id, serviceId: selected.service.id,
         barberId: selected.barber?.id,
         customerName: form.name.trim(), customerPhone: form.phone.trim(),
         date: format(selected.date, 'yyyy-MM-dd'), time: selected.time,
         notes: form.notes.trim() || undefined,
+        ...(address ? { address } : {}),
       })
       setBooking(res.data.data)
       setStep(3)
@@ -315,7 +327,7 @@ function PublicBookingPageInner() {
   const resetAll = () => {
     setStep(0)
     setSelected(s => ({ branch: branches[0] || null, service: null, barber: null, date: null, time: null }))
-    setForm({ name: '', phone: '', notes: '' })
+    setForm({ name: '', phone: '', notes: '', wilayah: {} })
     setFormError({}); setBooking(null); setError(null)
   }
 
@@ -1401,6 +1413,20 @@ function Step3Confirm({ tenantName, selected, form, formError, setForm, accent, 
               value={form.name} onChange={v => setForm(f => ({ ...f, name: v }))} error={formError.name} />
             <Field label="WhatsApp / HP" icon={Phone} type="tel" placeholder="08xxxxxxxxxx"
               value={form.phone} onChange={v => setForm(f => ({ ...f, phone: v }))} error={formError.phone} />
+            {tenantWilayah?.kabupatenId && (
+              <div>
+                <label className="bk-label block mb-1.5">
+                  Wilayah <span style={{ color: 'var(--bk-text-muted)' }}>(opsional)</span>
+                </label>
+                <WilayahPicker
+                  kabupatenId={tenantWilayah.kabupatenId}
+                  value={form.wilayah}
+                  onChange={w => setForm(f => ({ ...f, wilayah: w }))}
+                  selectClassName="bk-input"
+                  labelClassName="bk-label block mb-1 text-[11px]"
+                />
+              </div>
+            )}
           </div>
         </div>
 

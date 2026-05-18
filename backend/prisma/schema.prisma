@@ -154,6 +154,9 @@ model Tenant {
   // JSON agar field-field marketing (tagline, hero image, gallery, sosmed)
   // bisa diperluas tanpa migrasi schema setiap kali.
   bookingPage  Json?
+  // Wilayah fokus toko { provinsiId, provinsi, kabupatenId, kabupaten } —
+  // acuan Laporan Wilayah & pemilih kecamatan/desa di kasir & booking.
+  wilayah      Json?
   isSuspended  Boolean  @default(false)
   deletedAt    DateTime?
   createdAt    DateTime @default(now())
