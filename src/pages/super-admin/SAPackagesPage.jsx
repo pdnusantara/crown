@@ -671,8 +671,13 @@ export default function SAPackagesPage() {
 
   const handleSave = async (name, payload) => {
     try {
-      await updatePackage.mutateAsync({ name, ...payload })
-      toast.success(t('superAdmin.packages.toastUpdated', { name }))
+      const res = await updatePackage.mutateAsync({ name, ...payload })
+      const affected = res?.propagation?.affectedTenants || 0
+      if (affected > 0) {
+        toast.success(`Paket ${name} diperbarui · fitur ${affected} tenant ikut disinkronkan`)
+      } else {
+        toast.success(t('superAdmin.packages.toastUpdated', { name }))
+      }
       setEditing(null)
     } catch (err) {
       toast.error(err?.response?.data?.error || t('common.saveFailed'))

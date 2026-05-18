@@ -3,6 +3,7 @@ const { z }    = require('zod');
 const prisma   = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const duitku   = require('../services/duitkuService');
+const { invalidateSubscriptionCache } = require('../middleware/enforceSubscription');
 
 const BACKEND_URL  = process.env.BACKEND_URL  || process.env.FRONTEND_URL?.replace(/\/$/, '') || 'https://sembapos.com';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://sembapos.com';
@@ -545,6 +546,10 @@ router.post('/callback', async (req, res) => {
           ]);
         }
       }
+
+      // Langganan baru saja aktif kembali — buang cache enforce agar operasi
+      // tulis tenant langsung terbuka tanpa menunggu TTL.
+      invalidateSubscriptionCache(order.tenantId);
 
       await logBilling(null, 'duitku', 'order.success', `order:${merchantOrderId}`,
         `type=${order.type} amount=${order.amount}`);

@@ -6,14 +6,19 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import {
   DollarSign, Receipt, UserPlus, ArrowUpRight, ArrowDownRight,
   Crown, Minus, CalendarDays, Users, BarChart3, MapPin, Tag, Clock,
-  TrendingUp, Zap, Building2, Sparkles, X, ArrowRight,
+  TrendingUp, Zap, Building2, Sparkles, X, ArrowRight, Star,
+  CheckCircle2, Circle, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useSubscription } from '../../hooks/useSubscription.js'
 import { useBranches } from '../../hooks/useBranches.js'
 import { useUsers } from '../../hooks/useUsers.js'
+import { useServices } from '../../hooks/useServices.js'
+import { useTransactions } from '../../hooks/useTransactions.js'
 import { useReportSummary, useYesterdayStats, useDailyReport, useBarberReport, useServiceReport } from '../../hooks/useReports.js'
 import { useActiveShift } from '../../hooks/useShifts.js'
+import { useBarberRatingStats } from '../../hooks/useBarberRatings.js'
+import { useIsFeatureEnabled } from '../../hooks/useFeatureFlags.js'
 import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
 import Avatar from '../../components/ui/Avatar.jsx'
 import Badge from '../../components/ui/Badge.jsx'
@@ -273,6 +278,8 @@ export default function TADashboard() {
   const { data: dailyData  = []                     } = useDailyReport(tenantId, 7)
   const { data: barberReport = []                   } = useBarberReport(tenantId)
   const { data: serviceReport = []                  } = useServiceReport(tenantId)
+  const barberRatingEnabled = useIsFeatureEnabled(tenantId, 'barber_rating')
+  const { data: ratingStats } = useBarberRatingStats({ days: 7 })
 
   // ── Flatten summary data ─────────────────────────────────────────────────
   const today = todayRaw?.summary  ?? {}
@@ -319,6 +326,7 @@ export default function TADashboard() {
     <div className="space-y-6">
 
       <WelcomeBanner />
+      <SetupChecklist tenantId={tenantId} />
       <TrialBanner tenantId={tenantId} />
 
       {/* Greeting header */}
@@ -527,6 +535,74 @@ export default function TADashboard() {
           </div>
         )}
       </motion.div>
+
+      {/* Rating Barber — compact summary tile with link to dedicated page */}
+      {barberRatingEnabled && (
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}>
+          <button
+            type="button"
+            onClick={() => navigate('/admin/ratings')}
+            className="w-full text-left group"
+            aria-label="Kelola rating barber"
+          >
+            <Card className="p-4 sm:p-5 hover:border-gold/40 transition-colors">
+              <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gold/10 border border-gold/30 flex items-center justify-center text-gold flex-shrink-0">
+                  <Star className="w-5 h-5 fill-gold" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-off-white inline-flex items-center gap-2 text-sm sm:text-base">
+                    Rating Barber
+                    <span className="text-[10px] sm:text-[11px] font-normal text-muted">(7 hari)</span>
+                  </p>
+                  <p className="text-xs text-muted mt-0.5 truncate">
+                    {!ratingStats || ratingStats.totalRatings === 0
+                      ? 'Belum ada rating · klik untuk lihat detail'
+                      : `${ratingStats.avgRating?.toFixed(1) || '–'} ★ · ${ratingStats.totalRatings} review${
+                          ratingStats.kpi?.pendingPublishCount > 0
+                            ? ` · ${ratingStats.kpi.pendingPublishCount} menunggu moderasi`
+                            : ''
+                        }${
+                          ratingStats.kpi?.lowRatingCount > 0
+                            ? ` · ${ratingStats.kpi.lowRatingCount} komplain`
+                            : ''
+                        }`}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+                  {ratingStats?.totalRatings > 0 && (
+                    <>
+                      <div className="text-right">
+                        <p className="text-[10px] uppercase tracking-wide text-muted">Avg</p>
+                        <p className="text-lg font-bold text-gold tabular-nums">
+                          {ratingStats.avgRating?.toFixed(1) || '–'}
+                        </p>
+                      </div>
+                      {ratingStats.kpi?.pendingPublishCount > 0 && (
+                        <div className="text-right">
+                          <p className="text-[10px] uppercase tracking-wide text-muted">Pending</p>
+                          <p className="text-lg font-bold text-amber-300 tabular-nums">
+                            {ratingStats.kpi.pendingPublishCount}
+                          </p>
+                        </div>
+                      )}
+                      {ratingStats.kpi?.lowRatingCount > 0 && (
+                        <div className="text-right">
+                          <p className="text-[10px] uppercase tracking-wide text-muted">Komplain</p>
+                          <p className="text-lg font-bold text-red-400 tabular-nums">
+                            {ratingStats.kpi.lowRatingCount}
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  <ArrowRight className="w-4 h-4 text-muted group-hover:text-gold transition-colors" />
+                </div>
+              </div>
+            </Card>
+          </button>
+        </motion.div>
+      )}
     </div>
   )
 }
@@ -575,6 +651,152 @@ function TrialBanner({ tenantId }) {
   )
 }
 
+// ── Setup checklist — panduan onboarding toko baru ───────────────────────────
+// Auto-cek tiap langkah dari data nyata; hilang sendiri saat semua selesai.
+function SetupChecklist({ tenantId }) {
+  const navigate = useNavigate()
+  const { data: branches = [], isLoading: lb } = useBranches(tenantId)
+  const { data: staff = [],    isLoading: lu } = useUsers({ tenantId })
+  const { total: serviceCount, isLoading: ls } = useServices({ limit: 1 })
+  const { total: txCount,      isLoading: lt } = useTransactions({ limit: 1 })
+
+  const storageKey = `setup-checklist-collapsed:${tenantId || 'x'}`
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem(storageKey) === '1' } catch { return false }
+  })
+  const toggle = () => {
+    setCollapsed(c => {
+      const next = !c
+      try { localStorage.setItem(storageKey, next ? '1' : '0') } catch { /* ignore */ }
+      return next
+    })
+  }
+
+  const staffCount = useMemo(
+    () => staff.filter(u => u.role === 'kasir' || u.role === 'barber').length,
+    [staff],
+  )
+
+  const loading = lb || lu || ls || lt
+
+  const steps = [
+    { id: 'branch',  icon: Building2, done: branches.length > 0,
+      label: 'Tambah cabang pertama',
+      desc:  'Tentukan nama, alamat, dan jam buka cabang Anda.',
+      to: '/admin/branches' },
+    { id: 'service', icon: Tag, done: serviceCount > 0,
+      label: 'Buat daftar layanan',
+      desc:  'Potong rambut, cuci, cukur — lengkapi harga & durasi.',
+      to: '/admin/services' },
+    { id: 'staff',   icon: Users, done: staffCount > 0,
+      label: 'Tambah kasir & barber',
+      desc:  'Buat akun login untuk staf yang melayani transaksi.',
+      to: '/admin/staff' },
+    { id: 'tx',      icon: Receipt, done: txCount > 0,
+      label: 'Catat transaksi pertama',
+      desc:  'Lewat akun kasir di menu POS — tanda toko sudah aktif.',
+      to: null },
+  ]
+
+  // Jangan flash sebelum data siap.
+  if (loading) return null
+
+  const doneCount = steps.filter(s => s.done).length
+  // Semua langkah beres → onboarding selesai, checklist hilang sendiri.
+  if (doneCount === steps.length) return null
+
+  const pct = Math.round((doneCount / steps.length) * 100)
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-2xl bg-gradient-to-br from-gold/10 via-amber-500/5 to-transparent border border-gold/30 overflow-hidden"
+    >
+      <button
+        onClick={toggle}
+        aria-expanded={!collapsed}
+        className="w-full flex items-center gap-3 p-4 sm:p-5 text-left"
+      >
+        <div className="w-10 h-10 rounded-xl bg-gold/20 border border-gold/30 flex items-center justify-center flex-shrink-0">
+          <Sparkles className="text-gold" size={18} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-display text-base sm:text-lg font-bold text-off-white">
+            Persiapan Toko
+          </h3>
+          <p className="text-xs text-muted mt-0.5">
+            {doneCount} dari {steps.length} langkah selesai — lengkapi agar toko siap dipakai.
+          </p>
+        </div>
+        <span className="text-sm font-bold text-gold flex-shrink-0">{pct}%</span>
+        {collapsed
+          ? <ChevronDown size={18} className="text-muted flex-shrink-0" />
+          : <ChevronUp size={18} className="text-muted flex-shrink-0" />}
+      </button>
+
+      <div className="px-4 sm:px-5">
+        <div className="h-1.5 rounded-full bg-dark-card overflow-hidden">
+          <motion.div
+            className="h-full rounded-full bg-gold"
+            initial={false}
+            animate={{ width: `${pct}%` }}
+            transition={{ duration: 0.4 }}
+          />
+        </div>
+      </div>
+
+      {!collapsed && (
+        <div className="p-3 sm:p-4 space-y-2">
+          {steps.map((step, i) => {
+            const Icon = step.icon
+            return (
+              <div
+                key={step.id}
+                className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
+                  step.done
+                    ? 'bg-green-500/5 border-green-500/20'
+                    : 'bg-dark-card border-dark-border'
+                }`}
+              >
+                <span className="flex-shrink-0">
+                  {step.done
+                    ? <CheckCircle2 size={20} className="text-green-400" />
+                    : <Circle size={20} className="text-muted" />}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <Icon size={13} className={step.done ? 'text-green-400' : 'text-gold'} />
+                    <p className={`text-sm font-semibold ${step.done ? 'text-muted line-through' : 'text-off-white'}`}>
+                      {i + 1}. {step.label}
+                    </p>
+                  </div>
+                  <p className="text-xs text-muted mt-0.5">{step.desc}</p>
+                </div>
+                {!step.done && step.to && (
+                  <button
+                    onClick={() => navigate(step.to)}
+                    className="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gold text-dark text-xs font-semibold hover:bg-gold/90 transition-colors"
+                  >
+                    Buka <ArrowRight size={12} />
+                  </button>
+                )}
+              </div>
+            )
+          })}
+          <button
+            onClick={() => navigate('/admin/bantuan')}
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs font-medium text-muted hover:text-off-white hover:border-gold/30 transition-colors"
+          >
+            Butuh panduan lengkap? Buka Pusat Bantuan
+            <ArrowRight size={12} />
+          </button>
+        </div>
+      )}
+    </motion.div>
+  )
+}
+
 // ── Welcome banner (muncul saat redirect dari /register) ─────────────────────
 function WelcomeBanner() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -611,15 +833,11 @@ function WelcomeBanner() {
           <h3 className="font-display text-lg font-bold text-off-white mb-1">
             Selamat datang di SembaPOS! 🎉
           </h3>
-          <p className="text-sm text-muted mb-3">
-            Trial 14 hari Anda sudah aktif. Berikut langkah cepat untuk memulai:
+          <p className="text-sm text-muted mb-4">
+            Trial 14 hari Anda sudah aktif. Ikuti checklist{' '}
+            <strong className="text-off-white">"Persiapan Toko"</strong> di bawah —
+            tiap langkah otomatis tercentang saat selesai.
           </p>
-          <ol className="text-sm text-off-white/90 space-y-1.5 mb-4 list-decimal list-inside">
-            <li>Tambah <strong>cabang</strong> pertama → tentukan jam buka & tutup.</li>
-            <li>Buat daftar <strong>layanan</strong> (potong rambut, cuci, dll) dengan harga & durasi.</li>
-            <li>Tambah <strong>staf</strong> (kasir & barber) dengan akses login masing-masing.</li>
-            <li>Atur <strong>WhatsApp</strong> di Settings supaya notifikasi otomatis terkirim.</li>
-          </ol>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => { dismiss(); navigate('/admin/branches') }}

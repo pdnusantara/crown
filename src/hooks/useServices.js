@@ -10,10 +10,13 @@ export function useServices(filters = {}) {
   const { user } = useAuthStore()
   const tenantId = user?.tenantId
 
+  // `enabled` adalah opsi gating, bukan parameter API — jangan ikut dikirim.
+  const { enabled: enabledOpt, ...restFilters } = filters
+
   // Default ke limit besar bila pemanggil tidak menentukan pagination —
   // halaman lama (POS, Bookings, Queue) butuh seluruh layanan untuk picker.
   // Halaman admin (TAServicesPage) override dengan page/limit eksplisit.
-  const params = { tenantId, ...filters }
+  const params = { tenantId, ...restFilters }
   if (params.limit == null && params.page == null) params.limit = 500
 
   const query = useQuery({
@@ -34,7 +37,7 @@ export function useServices(filters = {}) {
         totalPages: raw?.totalPages ?? 0,
       }
     },
-    enabled: !!tenantId,
+    enabled: !!tenantId && enabledOpt !== false,
     placeholderData: keepPreviousData,
     staleTime: 30_000,
   })

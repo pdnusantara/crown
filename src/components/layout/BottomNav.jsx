@@ -1,18 +1,21 @@
 import React from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   LayoutDashboard, Building2, BarChart3, Settings,
   CreditCard, ListOrdered, CalendarDays, Receipt,
-  Star, TrendingUp,
+  Star, TrendingUp, DollarSign, MessageSquare, Menu,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
+import { useTicketStats } from '../../hooks/useTickets.js'
 import { getBranchSlug } from '../../utils/branchSlug.js'
 
 const navConfig = {
   super_admin: [
     { labelKey: 'nav.dashboard', icon: LayoutDashboard, path: '/super-admin/dashboard' },
     { labelKey: 'nav.tenants',   icon: Building2,       path: '/super-admin/tenants' },
+    { labelKey: 'nav.billing',   icon: DollarSign,      path: '/super-admin/billing' },
+    { labelKey: 'nav.tickets',   icon: MessageSquare,   path: '/super-admin/tickets', badge: 'tickets' },
   ],
   tenant_admin: () => [
     { labelKey: 'nav.dashboard', icon: LayoutDashboard, path: '/admin/dashboard' },
@@ -41,42 +44,87 @@ const navConfig = {
   ],
 }
 
-export const BottomNav = () => {
+// Peran yang sidebar-nya jauh lebih panjang dari bottom bar — beri tab "Lainnya"
+// agar seluruh menu tetap terjangkau di mobile tanpa membuka hamburger TopBar.
+const ROLES_WITH_MORE = ['super_admin', 'tenant_admin', 'kasir']
+
+// Kerangka satu tab — dipakai NavLink (rute) maupun tombol "Lainnya".
+function TabIcon({ icon: Icon, active, badge }) {
+  return (
+    <div className={`relative p-1.5 rounded-xl transition-all ${active ? 'bg-gold/15' : ''}`}>
+      <Icon className="w-5 h-5" />
+      {active && (
+        <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-gold rounded-full" />
+      )}
+      {badge > 0 && (
+        <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
+    </div>
+  )
+}
+
+export const BottomNav = ({ onMoreClick }) => {
   const { user } = useAuthStore()
   const { t } = useTranslation()
+  const location = useLocation()
+
+  // Badge jumlah tiket terbuka — hanya super_admin & tenant_admin yang punya
+  // endpoint /tickets/stats; peran lain skip agar tidak memicu 403.
+  const ticketStatsEnabled = user?.role === 'super_admin' || user?.role === 'tenant_admin'
+  const { data: ticketStats } = useTicketStats({}, ticketStatsEnabled)
+
   if (!user) return null
 
   const config = navConfig[user.role]
   const navItems = typeof config === 'function' ? config(user) : config || []
+  const showMore = ROLES_WITH_MORE.includes(user.role) && typeof onMoreClick === 'function'
+
+  const openTickets = ticketStatsEnabled ? (ticketStats?.open || 0) : 0
+  const badgeFor = (item) => (item.badge === 'tickets' ? openTickets : 0)
+
+  // "Lainnya" tersorot saat halaman aktif tidak termasuk salah satu tab utama.
+  const inMore = showMore && !navItems.some(i => location.pathname.startsWith(i.path))
+
+  const tabClass = (active) => `
+    flex-1 min-w-0 flex flex-col items-center gap-0.5 py-2 px-1 rounded-xl transition-all
+    ${active ? 'text-gold' : 'text-muted hover:text-off-white'}
+  `
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 bg-dark-surface border-t border-dark-border">
-      <div className="flex items-center justify-around px-2 py-1 pb-safe">
+      <div className="flex items-stretch justify-around px-1 py-1 pb-safe">
         {navItems.map(item => (
           <NavLink
             key={item.path}
             to={item.path}
-            className={({ isActive }) => `
-              flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all
-              ${isActive
-                ? 'text-gold'
-                : 'text-muted hover:text-off-white'
-              }
-            `}
+            className={({ isActive }) => tabClass(isActive)}
           >
             {({ isActive }) => (
               <>
-                <div className={`relative p-1.5 rounded-xl transition-all ${isActive ? 'bg-gold/15' : ''}`}>
-                  <item.icon className="w-5 h-5" />
-                  {isActive && (
-                    <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-gold rounded-full" />
-                  )}
-                </div>
-                <span className="text-xs font-medium">{t(item.labelKey)}</span>
+                <TabIcon icon={item.icon} active={isActive} badge={badgeFor(item)} />
+                <span className="text-[11px] font-medium truncate max-w-full">
+                  {t(item.labelKey)}
+                </span>
               </>
             )}
           </NavLink>
         ))}
+
+        {showMore && (
+          <button
+            type="button"
+            onClick={onMoreClick}
+            aria-label={t('common.more')}
+            className={tabClass(inMore)}
+          >
+            <TabIcon icon={Menu} active={inMore} badge={0} />
+            <span className="text-[11px] font-medium truncate max-w-full">
+              {t('common.more')}
+            </span>
+          </button>
+        )}
       </div>
     </nav>
   )

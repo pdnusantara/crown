@@ -601,27 +601,120 @@ router.post('/bulk-delete', authenticate, requireRole('super_admin', 'tenant_adm
 });
 
 // PATCH /api/customers/:id/loyalty
+// Body: { points: int, reason?: string }
+// Adjust manual oleh admin. Negative untuk kurangi, positive untuk tambah.
+// Saldo tidak bisa < 0 (di-clamp). Setiap operasi tercatat di PointHistory
+// dengan delta nyata (setelah clamp) supaya saldo & ledger selalu konsisten.
 router.patch('/:id/loyalty', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir'), async (req, res, next) => {
   try {
-    const { points } = z.object({ points: z.number().int() }).parse(req.body);
+    const { points, reason } = z.object({
+      points: z.number().int(),
+      reason: z.string().trim().max(200).optional().nullable(),
+    }).parse(req.body);
+
     const existing = await prisma.customer.findFirst({ where: { id: req.params.id, deletedAt: null } });
     if (!existing) return res.status(404).json({ success: false, error: 'Customer not found' });
     if (req.user.role !== 'super_admin' && existing.tenantId !== req.user.tenantId) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
-    const customer = await prisma.customer.update({
-      where: { id: req.params.id },
-      data:  { loyaltyPoints: Math.max(0, existing.loyaltyPoints + points) },
-      select: customerSelect,
+
+    const newBalance = Math.max(0, existing.loyaltyPoints + points);
+    const realDelta  = newBalance - existing.loyaltyPoints; // delta actual setelah clamp
+
+    // Atomic: update saldo + tulis ledger dalam 1 transaksi
+    const customer = await prisma.$transaction(async (tx) => {
+      const c = await tx.customer.update({
+        where: { id: req.params.id },
+        data:  { loyaltyPoints: newBalance },
+        select: customerSelect,
+      });
+      // Skip ledger kalau delta 0 (mis. user input -100 padahal saldo 0)
+      if (realDelta !== 0) {
+        await tx.pointHistory.create({
+          data: {
+            tenantId: existing.tenantId,
+            customerId: existing.id,
+            delta: realDelta,
+            balanceAfter: newBalance,
+            type: 'adjust',
+            refType: 'admin',
+            refId: req.user.id,
+            reason: reason || null,
+            actorId: req.user.id,
+          },
+        });
+      }
+      return c;
     });
+
     emitCustomer('customer:updated', customer);
     recordAudit(req, {
       action: 'customer.loyalty',
       target: `customer:${customer.id}`,
-      detail: `${points > 0 ? '+' : ''}${points} pts → ${customer.name} (now ${customer.loyaltyPoints})`,
+      detail: `${realDelta > 0 ? '+' : ''}${realDelta} pts → ${customer.name} (now ${customer.loyaltyPoints})${reason ? ` — reason: ${reason}` : ''}`,
       severity: 'info',
     });
     res.json({ success: true, data: customer });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/customers/:id/point-history
+// Pagination cursor-based, default limit 50.
+router.get('/:id/point-history', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir'), async (req, res, next) => {
+  try {
+    const customer = await prisma.customer.findFirst({
+      where: { id: req.params.id, deletedAt: null },
+      select: { id: true, tenantId: true, name: true, loyaltyPoints: true },
+    });
+    if (!customer) return res.status(404).json({ success: false, error: 'Customer not found' });
+    if (req.user.role !== 'super_admin' && customer.tenantId !== req.user.tenantId) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    const limit  = Math.min(Number(req.query.limit) || 50, 200);
+    const cursor = req.query.cursor || undefined;
+
+    const items = await prisma.pointHistory.findMany({
+      where: { customerId: customer.id },
+      orderBy: { createdAt: 'desc' },
+      take: limit + 1,
+      ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
+    });
+
+    // Enrich dengan info aktor (untuk type adjust) & transaksi (untuk type earn)
+    const actorIds = [...new Set(items.filter(i => i.actorId).map(i => i.actorId))];
+    const txIds    = [...new Set(items.filter(i => i.refType === 'transaction' && i.refId).map(i => i.refId))];
+
+    const [actors, txs] = await Promise.all([
+      actorIds.length
+        ? prisma.user.findMany({ where: { id: { in: actorIds } }, select: { id: true, name: true } })
+        : [],
+      txIds.length
+        ? prisma.transaction.findMany({ where: { id: { in: txIds } }, select: { id: true, total: true, createdAt: true } })
+        : [],
+    ]);
+    const actorMap = Object.fromEntries(actors.map(a => [a.id, a.name]));
+    const txMap    = Object.fromEntries(txs.map(t => [t.id, t]));
+
+    const hasMore = items.length > limit;
+    const slice   = hasMore ? items.slice(0, limit) : items;
+    const enriched = slice.map(i => ({
+      ...i,
+      actorName: i.actorId ? (actorMap[i.actorId] || null) : null,
+      transaction: i.refType === 'transaction' && i.refId ? (txMap[i.refId] || null) : null,
+    }));
+
+    res.json({
+      success: true,
+      data: enriched,
+      meta: {
+        balance: customer.loyaltyPoints,
+        hasMore,
+        nextCursor: hasMore ? slice[slice.length - 1].id : null,
+      },
+    });
   } catch (err) {
     next(err);
   }

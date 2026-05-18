@@ -5,7 +5,8 @@ import { useAuthStore } from '../store/authStore.js'
 import { getSocket, joinBranchRoom, leaveBranchRoom } from '../lib/socket.js'
 
 export function useActiveShift(branchId) {
-  return useQuery({
+  const qc = useQueryClient()
+  const query = useQuery({
     queryKey: ['shifts', 'active', branchId],
     queryFn: async () => {
       const res = await api.get('/shifts/active', { params: { branchId } })
@@ -14,20 +15,46 @@ export function useActiveShift(branchId) {
     enabled: !!branchId,
     refetchInterval: 30_000,
   })
+
+  // Realtime: shift ditutup dari device lain (kasir login ganda) → langsung
+  // sinkron tanpa menunggu polling 30s.
+  useEffect(() => {
+    if (!branchId) return
+    const socket = getSocket()
+    joinBranchRoom(branchId)
+    const refresh = () => {
+      qc.invalidateQueries({ queryKey: ['shifts', 'active', branchId] })
+      qc.invalidateQueries({ queryKey: ['shifts'] })
+    }
+    socket.on('shift:closed', refresh)
+    socket.on('shift:opened', refresh)
+    socket.on('connect', refresh)
+    return () => {
+      socket.off('shift:closed', refresh)
+      socket.off('shift:opened', refresh)
+      socket.off('connect', refresh)
+      leaveBranchRoom(branchId)
+    }
+  }, [branchId, qc])
+
+  return query
 }
 
 /**
  * useShifts — list shifts dengan pagination meta.
+ * `enabled` adalah opsi gating (tidak diteruskan sebagai param API).
  */
 export function useShifts(filters = {}) {
+  const { enabled, ...params } = filters
   return useQuery({
-    queryKey: ['shifts', filters],
+    queryKey: ['shifts', params],
     queryFn: async () => {
-      const res = await api.get('/shifts', { params: filters })
+      const res = await api.get('/shifts', { params })
       const raw = res.data.data
       if (Array.isArray(raw)) return { data: raw, meta: null }
       return { data: raw?.data || [], meta: raw?.meta || null }
     },
+    enabled: enabled !== false,
     keepPreviousData: true,
   })
 }

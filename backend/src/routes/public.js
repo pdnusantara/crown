@@ -81,6 +81,9 @@ router.get('/services', requireTenant, async (req, res, next) => {
 });
 
 // GET /api/public/barbers?branchId=xxx
+// Mengembalikan barber aktif + agregat rating (avg & count) supaya UI /book
+// bisa menampilkan skor bintang per barber. Agregat dihitung via 1x groupBy
+// (anti N+1) dan tenant-scoped.
 router.get('/barbers', requireTenant, async (req, res, next) => {
   try {
     const where = { tenantId: req.tenant.id, role: 'barber', isActive: true, deletedAt: null };
@@ -90,14 +93,62 @@ router.get('/barbers', requireTenant, async (req, res, next) => {
       select: { id: true, name: true, photo: true },
       orderBy: { name: 'asc' },
     });
-    res.json({ success: true, data: barbers });
+
+    // Agregat rating per barber — single groupBy, tenant-scoped.
+    let ratingMap = {};
+    const barberIds = barbers.map((b) => b.id);
+    if (barberIds.length) {
+      const agg = await prisma.barberRating.groupBy({
+        by: ['barberId'],
+        where: { tenantId: req.tenant.id, barberId: { in: barberIds } },
+        _avg: { rating: true },
+        _count: { rating: true },
+      });
+      ratingMap = agg.reduce((m, r) => {
+        m[r.barberId] = {
+          avgRating: r._avg.rating != null ? Math.round(r._avg.rating * 10) / 10 : null,
+          ratingCount: r._count.rating || 0,
+        };
+        return m;
+      }, {});
+    }
+
+    const data = barbers.map((b) => ({
+      ...b,
+      avgRating:   ratingMap[b.id]?.avgRating   ?? null,
+      ratingCount: ratingMap[b.id]?.ratingCount ?? 0,
+    }));
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
+
+// GET /api/public/testimonials — testimoni published untuk /book landing.
+// Default limit 6, max 20. Hanya yang publishStatus='published'.
+router.get('/testimonials', requireTenant, async (req, res, next) => {
+  try {
+    const limit = Math.min(Number(req.query.limit) || 6, 20);
+    const items = await prisma.barberRating.findMany({
+      where: {
+        tenantId: req.tenant.id,
+        publishStatus: 'published',
+        comment: { not: null },
+      },
+      orderBy: { publishedAt: 'desc' },
+      take: limit,
+      select: {
+        id: true, rating: true, comment: true, publishedAt: true,
+        barber: { select: { name: true, photo: true } },
+      },
+    });
+    // Anonimisasi customer name (sengaja tidak include customerId/customerName)
+    res.json({ success: true, data: items });
   } catch (err) { next(err); }
 });
 
 const publicBookingSchema = z.object({
   branchId:      z.string().min(1, 'Cabang wajib dipilih'),
   serviceId:     z.string().min(1, 'Layanan wajib dipilih'),
-  barberId:      z.string().optional(),
+  barberId:      z.string().min(1, 'Barber wajib dipilih'),
   customerName:  z.string().min(2, 'Nama minimal 2 karakter'),
   customerPhone: z.string().min(8, 'Nomor HP tidak valid').max(15),
   date:          z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal tidak valid'),
@@ -251,16 +302,19 @@ router.post('/bookings', requireTenant, async (req, res, next) => {
     });
     if (!service) return res.status(400).json({ success: false, error: 'Layanan tidak ditemukan' });
 
-    let barberName = null;
-    let barberId = body.barberId || null;
-    if (barberId) {
-      const barber = await prisma.user.findFirst({
-        where: { id: barberId, tenantId: req.tenant.id, role: 'barber', isActive: true, deletedAt: null },
-        select: { name: true },
+    // Barber wajib dipilih — validasi milik tenant & masih aktif.
+    const barberId = body.barberId;
+    const barber = await prisma.user.findFirst({
+      where: { id: barberId, tenantId: req.tenant.id, role: 'barber', isActive: true, deletedAt: null },
+      select: { name: true },
+    });
+    if (!barber) {
+      return res.status(400).json({
+        success: false,
+        error: 'Barber tidak ditemukan atau tidak aktif. Silakan pilih barber lain.',
       });
-      if (barber) barberName = barber.name;
-      else barberId = null;
     }
+    const barberName = barber.name;
 
     // Atomic conflict check: refuse if an active booking overlaps the requested
     // slot. Without this, two customers racing on the same slot could both

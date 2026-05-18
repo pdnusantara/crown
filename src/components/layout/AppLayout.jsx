@@ -430,7 +430,7 @@ export const AppLayout = () => {
         </div>
 
         {/* Mobile Bottom Navigation */}
-        {!isDesktop && <BottomNav />}
+        {!isDesktop && <BottomNav onMoreClick={() => setMobileSidebarOpen(true)} />}
       </div>
 
       {/* Command Palette */}

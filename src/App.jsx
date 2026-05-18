@@ -6,6 +6,8 @@ import { ToastProvider } from './components/ui/Toast.jsx'
 import AppLayout from './components/layout/AppLayout.jsx'
 import LoadingScreen from './components/ui/LoadingScreen.jsx'
 import BranchLicenseGate from './components/BranchLicenseGate.jsx'
+import SubscriptionGate from './components/SubscriptionGate.jsx'
+import StaffSubscriptionGate from './components/StaffSubscriptionGate.jsx'
 import { useAuthStore } from './store/authStore.js'
 import { useThemeStore } from './store/themeStore.js'
 import { getBranchSlug } from './utils/branchSlug.js'
@@ -50,12 +52,15 @@ const TABillingPage          = lazy(() => import('./pages/tenant-admin/TABilling
 const TAInvoicePrintPage     = lazy(() => import('./pages/tenant-admin/TAInvoicePrintPage.jsx'))
 const TAWilayahReportPage    = lazy(() => import('./pages/tenant-admin/TAWilayahReportPage.jsx'))
 const TAExpensePage          = lazy(() => import('./pages/tenant-admin/TAExpensePage.jsx'))
+const TARatingsPage          = lazy(() => import('./pages/tenant-admin/TARatingsPage.jsx'))
+const TAHelpPage             = lazy(() => import('./pages/tenant-admin/TAHelpPage.jsx'))
 
 const POSPage          = lazy(() => import('./pages/kasir/POSPage.jsx'))
 const QueuePage        = lazy(() => import('./pages/kasir/QueuePage.jsx'))
 const BookingsPage     = lazy(() => import('./pages/kasir/BookingsPage.jsx'))
 const TransactionsPage = lazy(() => import('./pages/kasir/TransactionsPage.jsx'))
 const ShiftClosingPage = lazy(() => import('./pages/kasir/ShiftClosingPage.jsx'))
+const KasirHelpPage    = lazy(() => import('./pages/kasir/HelpPage.jsx'))
 
 const BarberDashboard  = lazy(() => import('./pages/barber/BarberDashboard.jsx'))
 const BarberQueue      = lazy(() => import('./pages/barber/BarberQueue.jsx'))
@@ -272,21 +277,27 @@ export default function App() {
             path="/admin"
             element={<ProtectedRoute roles={['tenant_admin']}><AppLayout /></ProtectedRoute>}
           >
-            <Route path="dashboard"  element={<TADashboard />} />
-            <Route path="branches"   element={<TABranchesPage />} />
-            <Route path="services"   element={<TAServicesPage />} />
-            <Route path="staff"      element={<TAStaffPage />} />
-            <Route path="customers"  element={<TACustomersPage />} />
-            <Route path="reports"    element={<TAReportsPage />} />
-            <Route path="settings"   element={<TASettingsPage />} />
-            <Route path="schedule"   element={<TASchedulePage />} />
-            <Route path="vouchers"   element={<TAVouchersPage />} />
-            <Route path="comparison" element={<TABranchComparisonPage />} />
-            <Route path="tickets"        element={<TATicketsPage />} />
-            <Route path="billing"        element={<TABillingPage />} />
-            <Route path="billing/invoice/:id" element={<TAInvoicePrintPage />} />
-            <Route path="wilayah-report" element={<TAWilayahReportPage />} />
-            <Route path="expenses"       element={<TAExpensePage />} />
+            {/* SubscriptionGate: saat langganan berakhir, semua halaman /admin
+                dikunci ke /admin/billing sampai dibayar. */}
+            <Route element={<SubscriptionGate />}>
+              <Route path="dashboard"  element={<TADashboard />} />
+              <Route path="branches"   element={<TABranchesPage />} />
+              <Route path="services"   element={<TAServicesPage />} />
+              <Route path="staff"      element={<TAStaffPage />} />
+              <Route path="customers"  element={<TACustomersPage />} />
+              <Route path="reports"    element={<TAReportsPage />} />
+              <Route path="settings"   element={<TASettingsPage />} />
+              <Route path="schedule"   element={<TASchedulePage />} />
+              <Route path="vouchers"   element={<TAVouchersPage />} />
+              <Route path="comparison" element={<TABranchComparisonPage />} />
+              <Route path="tickets"        element={<TATicketsPage />} />
+              <Route path="billing"        element={<TABillingPage />} />
+              <Route path="billing/invoice/:id" element={<TAInvoicePrintPage />} />
+              <Route path="wilayah-report" element={<TAWilayahReportPage />} />
+              <Route path="expenses"       element={<TAExpensePage />} />
+              <Route path="ratings"        element={<TARatingsPage />} />
+              <Route path="bantuan"        element={<TAHelpPage />} />
+            </Route>
             <Route index element={<Navigate to="dashboard" replace />} />
           </Route>
 
@@ -295,13 +306,17 @@ export default function App() {
             path="/:branchId/kasir"
             element={<ProtectedRoute roles={['kasir']}><BranchLicenseGate /></ProtectedRoute>}
           >
-            <Route element={<AppLayout />}>
-              <Route path="pos"           element={<POSPage />} />
-              <Route path="queue"         element={<QueuePage />} />
-              <Route path="bookings"      element={<BookingsPage />} />
-              <Route path="transactions"  element={<TransactionsPage />} />
-              <Route path="shift-closing" element={<ShiftClosingPage />} />
-              <Route index element={<Navigate to="pos" replace />} />
+            {/* StaffSubscriptionGate: blokir total saat langganan toko berakhir. */}
+            <Route element={<StaffSubscriptionGate />}>
+              <Route element={<AppLayout />}>
+                <Route path="pos"           element={<POSPage />} />
+                <Route path="queue"         element={<QueuePage />} />
+                <Route path="bookings"      element={<BookingsPage />} />
+                <Route path="transactions"  element={<TransactionsPage />} />
+                <Route path="shift-closing" element={<ShiftClosingPage />} />
+                <Route path="bantuan"       element={<KasirHelpPage />} />
+                <Route index element={<Navigate to="pos" replace />} />
+              </Route>
             </Route>
           </Route>
 
@@ -310,11 +325,14 @@ export default function App() {
             path="/barber"
             element={<ProtectedRoute roles={['barber']}><BranchLicenseGate /></ProtectedRoute>}
           >
-            <Route element={<AppLayout />}>
-              <Route path="dashboard"  element={<BarberDashboard />} />
-              <Route path="queue"      element={<BarberQueue />} />
-              <Route path="commission" element={<BarberCommission />} />
-              <Route index element={<Navigate to="dashboard" replace />} />
+            {/* StaffSubscriptionGate: blokir total saat langganan toko berakhir. */}
+            <Route element={<StaffSubscriptionGate />}>
+              <Route element={<AppLayout />}>
+                <Route path="dashboard"  element={<BarberDashboard />} />
+                <Route path="queue"      element={<BarberQueue />} />
+                <Route path="commission" element={<BarberCommission />} />
+                <Route index element={<Navigate to="dashboard" replace />} />
+              </Route>
             </Route>
           </Route>
 

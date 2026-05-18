@@ -7,7 +7,7 @@ import {
   Star, TrendingUp, LogOut, Sun, Moon, Search, LogIn, Languages,
   Tag, GitCompare, Megaphone, Flag, MessageSquare, Activity,
   PieChart, UserCircle, DollarSign, Package, ShieldAlert, MapPin,
-  ChevronRight, Wallet, Landmark,
+  ChevronRight, Wallet, Landmark, LifeBuoy,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useTenantStore } from '../../store/tenantStore.js'
@@ -48,9 +48,11 @@ const navConfig = {
     { labelKey: 'nav.comparison',    icon: GitCompare,    path: '/admin/comparison' },
     { labelKey: 'nav.wilayahReport', icon: MapPin,        path: '/admin/wilayah-report' },
     { labelKey: 'nav.expenses',      icon: Wallet,        path: '/admin/expenses' },
+    { labelKey: 'nav.ratings',       icon: Star,          path: '/admin/ratings' },
     { labelKey: 'nav.tickets',       icon: MessageSquare, path: '/admin/tickets', badge: 'ta_tickets' },
     { labelKey: 'nav.billing',       icon: CreditCard,    path: '/admin/billing' },
     { labelKey: 'nav.settings',      icon: Settings,      path: '/admin/settings' },
+    { labelKey: 'nav.help',          icon: LifeBuoy,      path: '/admin/bantuan' },
   ],
   kasir: (user) => {
     const slug = getBranchSlug(user)
@@ -60,6 +62,7 @@ const navConfig = {
       { labelKey: 'nav.booking',      icon: CalendarDays,  path: `/${slug}/kasir/bookings` },
       { labelKey: 'nav.transactions', icon: Receipt,       path: `/${slug}/kasir/transactions` },
       { labelKey: 'nav.shiftClose',   icon: LogIn,         path: `/${slug}/kasir/shift-closing` },
+      { labelKey: 'nav.help',         icon: LifeBuoy,      path: `/${slug}/kasir/bantuan` },
     ]
   },
   barber: () => [

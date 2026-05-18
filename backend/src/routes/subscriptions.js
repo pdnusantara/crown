@@ -4,6 +4,7 @@ const prisma = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { parsePagination, paginatedResponse } = require('../utils/pagination');
 const { getIO, tenantRoom } = require('../config/socket');
+const { syncTenantFlagsToPackage } = require('../services/featureFlagSync');
 
 function emitSubChange(action, subscription) {
   if (!subscription) return;
@@ -105,6 +106,10 @@ router.get('/', authenticate, requireRole('super_admin', 'tenant_admin'), async 
     const { status, package: pkg } = req.query;
 
     const where = {};
+
+    // Sembunyikan langganan milik tenant yang sudah di-soft-delete — tanpa ini
+    // tenant yang sudah dihapus tetap muncul di halaman billing super-admin.
+    where.tenant = { deletedAt: null };
 
     if (req.user.role === 'tenant_admin') {
       where.tenantId = req.user.tenantId;
@@ -312,6 +317,16 @@ router.patch('/:id/upgrade', authenticate, requireRole('super_admin'), async (re
 
     await logBilling(req.user.id, req.user.name, 'upgrade.manual', `subscription:${req.params.id}`,
       `${existing.package} → ${packageName} price=${price}`);
+
+    // Pindah paket → sinkronkan feature flag tenant ke feature-set paket baru,
+    // supaya fitur ikut aktif/nonaktif sesuai tier langganan.
+    if (packageName !== existing.package) {
+      try {
+        await syncTenantFlagsToPackage(existing.tenantId, packageName);
+      } catch (e) {
+        console.warn('[upgrade] syncTenantFlagsToPackage gagal:', e?.message || e);
+      }
+    }
 
     emitSubChange('upgrade', updated);
     res.json({ success: true, data: updated });

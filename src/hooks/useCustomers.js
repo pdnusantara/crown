@@ -34,9 +34,12 @@ export function useCustomers(filters = {}) {
   const tenantId = user?.tenantId
   useCustomerRealtime(tenantId)
 
+  // `enabled` adalah opsi gating query — JANGAN diteruskan sebagai param API.
+  const { enabled: enabledOpt, ...apiFilters } = filters
+
   // Default ke limit besar bila tanpa pagination — caller lama (mis. POSPage
   // lookup) butuh seluruh data; halaman admin override eksplisit.
-  const params = { tenantId, ...filters }
+  const params = { tenantId, ...apiFilters }
   if (params.limit == null && params.page == null) params.limit = 1000
 
   const query = useQuery({
@@ -55,7 +58,7 @@ export function useCustomers(filters = {}) {
         totalPages: raw?.totalPages ?? 0,
       }
     },
-    enabled: !!tenantId,
+    enabled: !!tenantId && enabledOpt !== false,
     placeholderData: keepPreviousData,
     staleTime: 30_000,
   })
@@ -190,10 +193,34 @@ export function useUpdateLoyalty() {
   const qc = useQueryClient()
   const { user } = useAuthStore()
   return useMutation({
-    mutationFn: ({ id, points }) => api.patch(`/customers/${id}/loyalty`, { points }).then(r => r.data?.data),
+    mutationFn: ({ id, points, reason }) =>
+      api.patch(`/customers/${id}/loyalty`, { points, reason }).then(r => r.data?.data),
     onSuccess: (_data, vars) => {
       invalidateAll(qc, user?.tenantId)
-      if (vars?.id) qc.invalidateQueries({ queryKey: ['customers', 'detail', user?.tenantId, vars.id] })
+      if (vars?.id) {
+        qc.invalidateQueries({ queryKey: ['customers', 'detail', user?.tenantId, vars.id] })
+        qc.invalidateQueries({ queryKey: ['customers', 'point-history', vars.id] })
+      }
     },
+  })
+}
+
+/**
+ * Riwayat pergerakan poin loyalitas untuk satu customer.
+ * Pagination cursor-based: meta.nextCursor → kirim ke kueri berikutnya.
+ */
+export function usePointHistory(customerId, { limit = 50 } = {}) {
+  const { user } = useAuthStore()
+  return useQuery({
+    queryKey: ['customers', 'point-history', customerId, { limit }],
+    queryFn: async () => {
+      const res = await api.get(`/customers/${customerId}/point-history`, { params: { limit } })
+      return {
+        items: res.data?.data || [],
+        meta:  res.data?.meta || { balance: 0, hasMore: false, nextCursor: null },
+      }
+    },
+    enabled: !!customerId && !!user?.tenantId,
+    staleTime: 15_000,
   })
 }

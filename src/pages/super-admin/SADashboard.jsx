@@ -85,13 +85,13 @@ function ChartTooltip({ active, payload, label, formatter }) {
 function KpiCard({ label, value, sub, icon: Icon, iconColor = 'text-gold', delta, delay = 0, onClick }) {
   return (
     <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}>
-      <Card className={`p-4 ${onClick ? 'cursor-pointer hover:border-gold/30 transition-colors' : ''}`} onClick={onClick}>
-        <div className="flex items-start justify-between mb-2">
-          <p className="text-xs text-muted leading-tight">{label}</p>
-          <Icon size={15} className={iconColor} />
+      <Card className={`p-3.5 sm:p-4 h-full ${onClick ? 'cursor-pointer hover:border-gold/30 transition-colors' : ''}`} onClick={onClick}>
+        <div className="flex items-start justify-between gap-1.5 mb-1.5 sm:mb-2">
+          <p className="text-[11px] sm:text-xs text-muted leading-tight">{label}</p>
+          <Icon size={15} className={`${iconColor} flex-shrink-0`} />
         </div>
-        <p className="text-2xl font-bold text-off-white tabular-nums">{value}</p>
-        {sub && <p className="text-xs text-muted mt-0.5">{sub}</p>}
+        <p className="text-lg sm:text-2xl font-bold text-off-white tabular-nums truncate">{value}</p>
+        {sub && <p className="text-[11px] sm:text-xs text-muted mt-0.5 truncate">{sub}</p>}
         {delta != null && (
           <div className={`flex items-center gap-1 mt-1 text-xs font-medium ${delta >= 0 ? 'text-green-400' : 'text-red-400'}`}>
             {delta >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
@@ -249,15 +249,15 @@ export default function SADashboard() {
   // ── Loading ───────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-5 sm:space-y-6">
         <div>
           <div className="h-7 w-48 bg-dark-card animate-pulse rounded-lg mb-2" />
           <div className="h-4 w-72 bg-dark-card animate-pulse rounded-lg" />
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
           {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-24 bg-dark-card animate-pulse rounded-2xl" />)}
         </div>
-        <div className="grid lg:grid-cols-2 gap-6">
+        <div className="grid lg:grid-cols-2 gap-5 sm:gap-6">
           <div className="h-64 bg-dark-card animate-pulse rounded-2xl" />
           <div className="h-64 bg-dark-card animate-pulse rounded-2xl" />
         </div>
@@ -266,31 +266,34 @@ export default function SADashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold text-off-white">{t('superAdmin.dashboard.title')}</h1>
-          <p className="text-muted text-sm mt-1">{t('superAdmin.dashboard.subtitle')}</p>
+          <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white">{t('superAdmin.dashboard.title')}</h1>
+          <p className="text-muted text-xs sm:text-sm mt-0.5 sm:mt-1">{t('superAdmin.dashboard.subtitle')}</p>
         </div>
-        <div className="flex gap-4 sm:gap-6">
+        <div className="grid grid-cols-3 gap-2 sm:flex sm:gap-6">
           {[
             { icon: Building2, label: 'Cabang',    value: metrics.totalBranches },
             { icon: Users,     label: 'Total Staf', value: metrics.totalStaff },
             { icon: TrendingUp,label: 'Rev MTD',    value: `${(metrics.totalRevenue / 1_000_000).toFixed(1)}M` },
           ].map(s => (
-            <div key={s.label} className="text-right">
-              <p className="text-xs text-muted flex items-center gap-1 justify-end">
-                <s.icon size={11} />{s.label}
+            <div
+              key={s.label}
+              className="bg-dark-card border border-dark-border rounded-xl px-3 py-2 sm:bg-transparent sm:border-0 sm:rounded-none sm:px-0 sm:py-0 sm:text-right"
+            >
+              <p className="text-[11px] text-muted flex items-center gap-1 sm:justify-end">
+                <s.icon size={11} className="flex-shrink-0" />{s.label}
               </p>
-              <p className="text-base font-bold text-off-white">{s.value}</p>
+              <p className="text-sm sm:text-base font-bold text-off-white mt-0.5 tabular-nums truncate">{s.value}</p>
             </div>
           ))}
         </div>
       </div>
 
       {/* KPI Row */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
         <KpiCard label="Total Tenant"   value={metrics.total}        icon={Building2}    iconColor="text-off-white" delta={metrics.newThisMonth} delay={0}    onClick={() => navigate('/super-admin/tenants')} />
         <KpiCard label="MRR"            value={formatRupiah(metrics.mrr)}  icon={DollarSign}   iconColor="text-gold"    sub={`${formatRupiah(metrics.arr)}/tahun`} delay={0.04} />
         <KpiCard label="Sub Aktif"      value={metrics.activeCount}   icon={CheckCircle}  iconColor="text-green-400" delay={0.08} onClick={() => navigate('/super-admin/billing')} />
@@ -323,14 +326,14 @@ export default function SADashboard() {
                   const sub  = tenant.subscription
                   const days = sub?.endDate ? differenceInDays(new Date(sub.endDate), new Date()) : null
                   return (
-                    <div key={tenant.id} className="flex items-center justify-between p-3 bg-dark-card rounded-xl border border-amber-400/20">
-                      <div className="flex items-center gap-3">
+                    <div key={tenant.id} className="flex items-center justify-between gap-2 p-3 bg-dark-card rounded-xl border border-amber-400/20">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="w-8 h-8 rounded-lg bg-amber-400/10 flex items-center justify-center flex-shrink-0">
                           <span className="text-amber-400 font-bold text-xs">{tenant.name[0]}</span>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium text-off-white">{tenant.name}</p>
-                          <p className="text-xs text-muted">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-off-white truncate">{tenant.name}</p>
+                          <p className="text-xs text-muted truncate">
                             {sub?.status === 'overdue'
                               ? t('superAdmin.dashboard.subscriptionOverdue')
                               : days !== null ? t('superAdmin.dashboard.endsInDays', { days }) : '—'
@@ -338,7 +341,7 @@ export default function SADashboard() {
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         {tenant.package && (
                           <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full border"
                             style={{ color: PKG_COLOR[tenant.package], borderColor: PKG_COLOR[tenant.package] + '40', background: PKG_COLOR[tenant.package] + '15' }}>
@@ -361,7 +364,7 @@ export default function SADashboard() {
       )}
 
       {/* Charts Row */}
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid lg:grid-cols-2 gap-5 sm:gap-6">
         {/* Tenant Growth */}
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}>
           <Card className="flex flex-col">
@@ -436,7 +439,7 @@ export default function SADashboard() {
       </div>
 
       {/* Package Distribution + Status Distribution */}
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid lg:grid-cols-2 gap-5 sm:gap-6">
         {/* Package Distribution */}
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <Card>
@@ -537,7 +540,7 @@ export default function SADashboard() {
       </div>
 
       {/* Health Scores + Tenant Table */}
-      <div className="grid lg:grid-cols-5 gap-6">
+      <div className="grid lg:grid-cols-5 gap-5 sm:gap-6">
         {/* Health Scores */}
         <motion.div className="lg:col-span-2" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.34 }}>
           <Card className="h-full">
@@ -584,7 +587,7 @@ export default function SADashboard() {
               </div>
             </CardHeader>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[460px] text-sm">
                 <thead>
                   <tr className="border-b border-dark-border text-[10px] text-muted uppercase">
                     <th className="px-3 py-2.5 text-left">Tenant</th>
@@ -653,7 +656,7 @@ export default function SADashboard() {
       </div>
 
       {/* Recently Joined + Quick Actions */}
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid lg:grid-cols-2 gap-5 sm:gap-6">
         {/* Recently Joined */}
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }}>
           <Card>

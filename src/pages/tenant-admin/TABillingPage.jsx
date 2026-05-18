@@ -239,6 +239,21 @@ export default function TABillingPage() {
         <p className="text-muted text-sm mt-1">{t('tenantAdmin.billing.pageSubtitle')}</p>
       </div>
 
+      {/* Akses terkunci — langganan berakhir, dialihkan paksa ke Billing */}
+      {searchParams.get('locked') === '1' && (
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+          className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl">
+          <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-red-300">Langganan berakhir — akses dikunci</p>
+            <p className="text-xs text-muted mt-0.5">
+              Menu lain tidak bisa dibuka sampai langganan diperpanjang. Pilih paket di bawah
+              dan selesaikan pembayaran untuk mengaktifkan kembali toko Anda.
+            </p>
+          </div>
+        </motion.div>
+      )}
+
       {/* Payment success */}
       {paymentSuccess && (
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}

@@ -40,7 +40,13 @@ export function usePackages() {
 export function useUpdatePackage() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ name, ...data }) => api.put(`/packages/${name}`, data).then(r => r.data.data),
+    // Kembalikan envelope { pkg, propagation } — `propagation` memberi tahu
+    // berapa tenant yang flag fiturnya ikut tersinkron oleh perubahan ini.
+    mutationFn: ({ name, ...data }) =>
+      api.put(`/packages/${name}`, data).then(r => ({
+        pkg: r.data.data,
+        propagation: r.data.propagation || null,
+      })),
     // Optimistic update — UI langsung tampil perubahan
     onMutate: async ({ name, ...patch }) => {
       await qc.cancelQueries({ queryKey: ['packages'] })
@@ -54,6 +60,10 @@ export function useUpdatePackage() {
     onError: (_err, _vars, ctx) => {
       if (ctx?.prev) qc.setQueryData(['packages'], ctx.prev)
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ['packages'] }),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['packages'] })
+      // Flag fitur tenant ikut berubah → segarkan cache feature-flags.
+      qc.invalidateQueries({ queryKey: ['featureFlags'] })
+    },
   })
 }

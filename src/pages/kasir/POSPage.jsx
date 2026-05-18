@@ -3,11 +3,11 @@ import { useTranslation } from 'react-i18next'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Search, Plus, X, User, Printer, CheckCircle, ChevronDown, Tag, Trash2,
+  Search, Plus, X, User, Printer, CheckCircle, Check, ChevronDown, Tag, Trash2,
   MessageCircle, AlertCircle, Clock, Scissors, Star, ListOrdered, ShoppingCart,
-  Banknote, RotateCcw, ArrowDown, Wallet,
+  Banknote, RotateCcw, ArrowDown, Wallet, Crown,
 } from 'lucide-react'
-import { format, formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow } from 'date-fns'
 import { id as idLocale, enUS as enLocale } from 'date-fns/locale'
 import { useAuthStore } from '../../store/authStore.js'
 import { useTenantStore } from '../../store/tenantStore.js'
@@ -18,37 +18,70 @@ import { usePublicTenantStore } from '../../store/publicTenantStore.js'
 import { useValidateVoucher, useRedeemVoucher } from '../../hooks/useVouchers.js'
 import { useIsFeatureEnabled } from '../../hooks/useFeatureFlags.js'
 import { getBranchSlug } from '../../utils/branchSlug.js'
+import { MIN_REDEEM_POINTS, MAX_REDEEM_PERCENT, RUPIAH_PER_POINT, maxRedeemablePoints, calcRedeemValue } from '../../utils/loyalty.js'
+import { formatDateTimeInTz, formatInTenantTz } from '../../utils/timezone.js'
 import { useShiftStore } from '../../store/shiftStore.js'
 import { useActiveShift } from '../../hooks/useShifts.js'
 import { useServices } from '../../hooks/useServices.js'
 import { useUsers } from '../../hooks/useUsers.js'
 import { useCustomers, useCreateCustomer } from '../../hooks/useCustomers.js'
+import { useSubmitBarberRatingsBatch } from '../../hooks/useBarberRatings.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import { StarRating } from '../../components/ui/StarRating.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Modal from '../../components/ui/Modal.jsx'
 import Input from '../../components/ui/Input.jsx'
-import Badge from '../../components/ui/Badge.jsx'
 import ErrorBoundary from '../../components/ui/ErrorBoundary.jsx'
 import { formatRupiah } from '../../utils/format.js'
 
-function CustomerHistorySnippet({ customer }) {
+// Rumus earn sama dengan backend (`backend/src/routes/transactions.js`):
+// 1 poin per Rp10.000 dari `total` (setelah diskon).
+const POINTS_PER_RUPIAH = 10_000
+const calcPointsEarn = (total) => Math.max(0, Math.floor((Number(total) || 0) / POINTS_PER_RUPIAH))
+
+// Segmen RFM time-aware — mirror `classifySegment` di backend (customers.js).
+const SEGMENT_THRESHOLDS = { vipMinVisits: 10, loyalMinVisits: 3, atRiskMinDays: 90, lostMinDays: 180 }
+const classifyCustomerSegment = (visitCount = 0, lastVisitAt = null) => {
+  if (!visitCount || visitCount <= 0) return 'never'
+  if (!lastVisitAt) return 'never'
+  const daysSince = (Date.now() - new Date(lastVisitAt).getTime()) / 86_400_000
+  if (daysSince > SEGMENT_THRESHOLDS.lostMinDays)   return 'lost'
+  if (daysSince > SEGMENT_THRESHOLDS.atRiskMinDays) return 'atRisk'
+  if (visitCount >= SEGMENT_THRESHOLDS.vipMinVisits)   return 'vip'
+  if (visitCount >= SEGMENT_THRESHOLDS.loyalMinVisits) return 'loyal'
+  return 'new'
+}
+// Skema warna badge per-segmen untuk loyalty card.
+const SEGMENT_META = {
+  vip:    { key: 'pos.segVip',    cls: 'text-gold bg-gold/15 border-gold/40' },
+  loyal:  { key: 'pos.segLoyal',  cls: 'text-blue-300 bg-blue-400/10 border-blue-400/30' },
+  new:    { key: 'pos.segNew',    cls: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/30' },
+  atRisk: { key: 'pos.segAtRisk', cls: 'text-amber-300 bg-amber-500/10 border-amber-500/30' },
+  lost:   { key: 'pos.segLost',   cls: 'text-red-300 bg-red-500/10 border-red-500/30' },
+  never:  { key: 'pos.segNever',  cls: 'text-muted bg-dark-surface border-dark-border' },
+}
+
+function CustomerHistorySnippet({ customer, transactionTotal = 0 }) {
   const { t, i18n } = useTranslation()
   const dateLocale = i18n.language?.startsWith('en') ? enLocale : idLocale
 
   // Real data from /api/customers — no localStorage scan
-  const visits = customer.visitCount || 0
-  const points = customer.loyaltyPoints || 0
-  const lastVisitLabel = customer.lastVisit
-    ? formatDistanceToNow(new Date(customer.lastVisit), { addSuffix: true, locale: dateLocale })
+  const visits      = customer.visitCount || 0
+  const points      = customer.loyaltyPoints || 0
+  const lastVisitAt = customer.lastVisitAt || customer.lastVisit || null
+  const lastVisitLabel = lastVisitAt
+    ? formatDistanceToNow(new Date(lastVisitAt), { addSuffix: true, locale: dateLocale })
+    : null
+  const memberSinceLabel = customer.createdAt
+    ? formatInTenantTz(customer.createdAt, { month: 'short', year: 'numeric' })
     : null
 
-  const segment = customer.segment || 'Regular'
-  const segmentColor = segment === 'VIP' || segment === 'vip'
-    ? 'text-gold bg-gold/10 border-gold/30'
-    : segment === 'Regular' || segment === 'loyal'
-      ? 'text-blue-400 bg-blue-400/10 border-blue-400/30'
-      : 'text-muted bg-dark-surface border-dark-border'
+  const pointsToEarn = calcPointsEarn(transactionTotal)
+
+  const segment = classifyCustomerSegment(visits, lastVisitAt)
+  const segMeta = SEGMENT_META[segment] || SEGMENT_META.never
+
+  const metaLabel = lastVisitLabel || (memberSinceLabel ? t('pos.memberSince', { date: memberSinceLabel }) : null)
 
   return (
     <motion.div
@@ -58,29 +91,53 @@ function CustomerHistorySnippet({ customer }) {
       transition={{ duration: 0.2 }}
       className="overflow-hidden"
     >
-      <div className="px-3 py-2.5 bg-dark-surface/60 border border-dark-border rounded-xl border-l-2 border-l-gold/60 space-y-1.5">
-        <div className="flex items-center gap-3 text-xs text-muted flex-wrap">
-          {lastVisitLabel && (
-            <span className="flex items-center gap-1 truncate">
-              <Clock size={11} className="text-gold/70 flex-shrink-0" />
-              <span className="truncate">{lastVisitLabel}</span>
-            </span>
-          )}
-          <span className="flex items-center gap-1 whitespace-nowrap">
-            <Scissors size={11} className="text-gold/70" />
+      {/* Kartu member digital — kompak: tinggi ~2 baris (+1 baris preview poin) */}
+      <div className="relative overflow-hidden rounded-xl border border-gold/30 bg-dark-card px-3 py-2.5">
+        {/* Aksen emas — pakai overlay transparan, bukan gradient warna-dark
+            (gradient stop `to-dark-card` tidak ikut light-mode override). */}
+        <div className="pointer-events-none absolute inset-0 bg-gold/[0.06]" />
+        <div className="pointer-events-none absolute -right-5 -top-8 h-20 w-20 rounded-full bg-gold/15 blur-2xl" />
+
+        {/* Baris 1: label kartu + badge segmen */}
+        <div className="relative flex items-center justify-between gap-2">
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-gold">
+            <Star size={10} className="fill-gold text-gold flex-shrink-0" />
+            {t('pos.loyaltyCardLabel')}
+          </span>
+          <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border font-semibold uppercase tracking-wide flex-shrink-0 ${segMeta.cls}`}>
+            {segment === 'vip' && <Crown size={9} className="fill-current" />}
+            {t(segMeta.key)}
+          </span>
+        </div>
+
+        {/* Baris 2: saldo poin (fokus) + meta kunjungan inline */}
+        <div className="relative mt-1 flex items-baseline gap-x-2.5 gap-y-0.5 flex-wrap">
+          <span className="text-lg font-bold text-gold leading-none tabular-nums">
+            {points.toLocaleString('id-ID')}
+            <span className="text-[10px] font-medium text-muted ml-1">{t('pos.pointsUnit')}</span>
+          </span>
+          <span className="inline-flex items-center gap-1 text-[11px] text-muted whitespace-nowrap">
+            <Scissors size={10} className="text-gold/70 flex-shrink-0" />
             {t('pos.visitsCount', { count: visits })}
           </span>
-          <span className="flex items-center gap-1 whitespace-nowrap">
-            <Star size={11} className="text-gold/70" />
-            {t('pos.pointsShort', { count: points })}
-          </span>
+          {metaLabel && (
+            <span className="inline-flex items-center gap-1 text-[11px] text-muted min-w-0">
+              <Clock size={10} className="text-gold/70 flex-shrink-0" />
+              <span className="truncate">{metaLabel}</span>
+            </span>
+          )}
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] text-muted italic">{t('pos.noServiceHistory')}</span>
-          <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded-md border font-medium ${segmentColor}`}>
-            {segment}
-          </span>
-        </div>
+
+        {/* Baris 3 (opsional): preview poin dari transaksi berjalan */}
+        {pointsToEarn > 0 && (
+          <div className="relative mt-2 flex items-center justify-between gap-2 text-[10px] px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30">
+            <span className="text-emerald-300 inline-flex items-center gap-1 font-medium">
+              <Star size={9} className="fill-emerald-300 flex-shrink-0" />
+              {t('pos.pointsEarnPreview', { points: pointsToEarn })}
+            </span>
+            <span className="text-emerald-300 whitespace-nowrap">{t('pos.pointsEarnRule')}</span>
+          </div>
+        )}
       </div>
     </motion.div>
   )
@@ -331,8 +388,7 @@ const CATEGORIES = [
 ]
 
 function POSPageInner() {
-  const { t, i18n } = useTranslation()
-  const dateLocale = i18n.language?.startsWith('en') ? enLocale : idLocale
+  const { t } = useTranslation()
 
   const methodLabel = (m) => {
     switch (m) {
@@ -348,13 +404,18 @@ function POSPageInner() {
   const navigate = useNavigate()
   const queueId = searchParams.get('queueId')
   const { user } = useAuthStore()
-  const { rateBarber } = useTenantStore()
+  const submitRatingsMut = useSubmitBarberRatingsBatch()
   const posStore = usePosStore()
   const validateVoucherMut = useValidateVoucher()
   const redeemVoucherMut   = useRedeemVoucher()
   const { currentShift, addTransaction: addShiftTransaction } = useShiftStore()
   const { data: apiActiveShift } = useActiveShift(user?.branchId)
-  const { data: services = [] } = useServices({ isActive: 'true' })
+  const {
+    data: services = [],
+    isLoading: servicesLoading,
+    isError: servicesError,
+    refetch: refetchServices,
+  } = useServices({ isActive: 'true' })
   const { data: barbers = [] } = useUsers({ branchId: user?.branchId, role: 'barber' })
   const { data: branches = [] } = useBranches(user?.tenantId)
   const createCustomer = useCreateCustomer()
@@ -390,6 +451,8 @@ function POSPageInner() {
   const [pendingVoucherId, setPendingVoucherId] = useState(null)
   const [processing, setProcessing] = useState(false)
   const [barberRatings, setBarberRatings] = useState({})
+  const [barberComments, setBarberComments] = useState({})
+  const [ratingsSubmitted, setRatingsSubmitted] = useState(false)
   const [showDraftBanner, setShowDraftBanner] = useState(false)
   const [draft, setDraft] = useState(null)
   const [showCartSheet, setShowCartSheet] = useState(false)
@@ -405,9 +468,11 @@ function POSPageInner() {
     return () => clearTimeout(id)
   }, [customerSearch])
 
-  // Server-side customer search; only fetch when modal is open (idle limit 1000 if closed default load)
-  const { data: customerPage } = useCustomers({
+  // Server-side customer search — hanya fetch saat modal pelanggan terbuka
+  // supaya tidak ada request idle yang sia-sia di latar belakang.
+  const { data: customerPage, isFetching: customersFetching } = useCustomers({
     page: 1, limit: 20,
+    enabled: showCustomerModal,
     ...(customerSearchDeb ? { search: customerSearchDeb } : {}),
   })
   const customers = customerPage?.data || customerPage || []
@@ -548,8 +613,11 @@ function POSPageInner() {
       if (barberRatingEnabled) {
         const barberIds = [...new Set(posStore.cartItems.map(i => i.barberId).filter(Boolean))]
         const initRatings = {}
-        barberIds.forEach(id => { initRatings[id] = 0 })
+        const initComments = {}
+        barberIds.forEach(id => { initRatings[id] = 0; initComments[id] = '' })
         setBarberRatings(initRatings)
+        setBarberComments(initComments)
+        setRatingsSubmitted(false)
       }
       toast.success(t('pos.transactionSuccess'))
     } catch (err) {
@@ -564,6 +632,8 @@ function POSPageInner() {
     setShowReceiptModal(false)
     setDiscountInput({ type: 'percentage', value: '' })
     setBarberRatings({})
+    setBarberComments({})
+    setRatingsSubmitted(false)
     if (queueId) navigate(`/${getBranchSlug(user)}/kasir/queue`)
   }
 
@@ -587,20 +657,43 @@ function POSPageInner() {
     }
   }
 
-  const handleSubmitRatings = () => {
-    let count = 0
-    Object.entries(barberRatings).forEach(([barberId, rating]) => {
-      if (rating > 0) { rateBarber(barberId, rating); count++ }
-    })
-    if (count > 0) toast.success(t('pos.ratingsSent', { count }))
-    handleNewTransaction()
+  const handleSubmitRatings = async () => {
+    const txId = posStore.lastTransaction?.id
+    const ratings = Object.entries(barberRatings)
+      .filter(([, rating]) => rating > 0)
+      .map(([barberId, rating]) => ({
+        barberId,
+        rating,
+        comment: (barberComments[barberId] || '').trim() || null,
+      }))
+    if (ratings.length === 0) {
+      // Tidak ada rating yang diisi — anggap user skip
+      handleNewTransaction()
+      return
+    }
+    try {
+      const res = await submitRatingsMut.mutateAsync({
+        transactionId: txId || null,
+        ratings,
+      })
+      const created = res?.meta?.created ?? ratings.length
+      const skipped = res?.meta?.skipped ?? 0
+      if (created > 0) toast.success(t('pos.ratingsSent', { count: created }))
+      if (skipped > 0) toast.error(t('pos.ratingsDuplicate', { count: skipped }))
+      setRatingsSubmitted(true)
+      handleNewTransaction()
+    } catch (err) {
+      toast.error(err?.response?.data?.error || t('pos.ratingsSubmitFailed'))
+    }
   }
 
   const lastTxn = posStore.lastTransaction
 
   // ─── Cart panel (extracted so we can reuse for desktop side + mobile sheet) ──
   const cartPanel = (
-    <>
+    <div className="flex flex-col flex-1 min-h-0">
+      {/* ── FIXED TOP: pelanggan & barber — selalu terlihat, tidak ikut ter-scroll ── */}
+      <div className="flex-shrink-0 space-y-3">
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-semibold text-off-white">{t('pos.cart')}</h3>
         {isMobile && (
@@ -634,7 +727,10 @@ function POSPageInner() {
 
       <AnimatePresence>
         {posStore.selectedCustomer && (
-          <CustomerHistorySnippet customer={posStore.selectedCustomer} />
+          <CustomerHistorySnippet
+            customer={posStore.selectedCustomer}
+            transactionTotal={posStore.getTotal()}
+          />
         )}
       </AnimatePresence>
 
@@ -660,8 +756,11 @@ function POSPageInner() {
           </p>
         )}
       </div>
+      </div>
 
-      <div className="flex-1 space-y-2 min-h-[80px]">
+      {/* ── SCROLLABLE MIDDLE: keranjang, diskon, poin, ringkasan, metode bayar ── */}
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-3 mt-3">
+      <div className="space-y-2 min-h-[80px]">
         {posStore.cartItems.length === 0 ? (
           <div className="text-center py-8 text-muted">
             <ShoppingCart size={32} className="mx-auto mb-2 opacity-50" />
@@ -777,16 +876,112 @@ function POSPageInner() {
         )}
       </div>
 
+      {/* Redeem Points — hanya muncul saat customer dipilih + punya saldo cukup + ada item di cart */}
+      {posStore.selectedCustomer && (posStore.selectedCustomer.loyaltyPoints || 0) >= MIN_REDEEM_POINTS && posStore.getSubtotal() > 0 && (
+        <div className="border-t border-dark-border pt-3">
+          <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+            <span className="text-xs font-semibold text-off-white inline-flex items-center gap-1.5">
+              <Star size={12} className="text-gold fill-gold" />
+              {t('pos.redeemPointsTitle')}
+            </span>
+            <span className="text-[10px] text-muted tabular-nums">
+              {t('pos.balanceLabel', { balance: (posStore.selectedCustomer.loyaltyPoints || 0).toLocaleString('id-ID') })}
+            </span>
+          </div>
+          {(() => {
+            const balance  = posStore.selectedCustomer.loyaltyPoints || 0
+            const subtotal = posStore.getSubtotal()
+            const cap      = maxRedeemablePoints({ balance, subtotal })
+            const current  = posStore.pointsToRedeem || 0
+            const discount = calcRedeemValue(current)
+            return (
+              <div className="space-y-2">
+                <div className="flex gap-2 items-center flex-wrap">
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={cap}
+                    step={1}
+                    value={current || ''}
+                    onChange={e => posStore.setPointsToRedeem(Number(e.target.value) || 0)}
+                    placeholder="0"
+                    className="flex-1 min-w-0 bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl px-3 py-2 text-xs outline-none focus:border-gold/60 tabular-nums"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => posStore.setPointsToRedeem(cap)}
+                    disabled={cap === 0}
+                    className="px-2.5 py-2 bg-gold/10 border border-gold/20 text-gold rounded-xl text-[11px] font-medium hover:bg-gold/20 disabled:opacity-40 whitespace-nowrap"
+                  >
+                    {t('pos.redeemMax', { max: cap })}
+                  </button>
+                  {current > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => posStore.setPointsToRedeem(0)}
+                      className="px-2 py-2 bg-dark-card border border-dark-border text-muted rounded-xl text-[11px] hover:text-off-white"
+                      aria-label={t('pos.redeemClear')}
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-1 flex-wrap">
+                  {[10, 25, 50, 100].filter(n => n <= cap).map(n => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => posStore.setPointsToRedeem(n)}
+                      className={`px-2 py-0.5 rounded-md text-[11px] tabular-nums border transition-colors ${
+                        current === n
+                          ? 'bg-gold/30 border-gold text-gold'
+                          : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20'
+                      }`}
+                    >
+                      {n} pt
+                    </button>
+                  ))}
+                </div>
+                {current > 0 ? (
+                  <div className="flex justify-between items-center text-[11px] px-2 py-1.5 rounded-md bg-emerald-500/10 border border-emerald-500/30">
+                    <span className="text-emerald-300">
+                      {t('pos.redeemActive', { points: current })}
+                    </span>
+                    <span className="text-emerald-300 font-semibold tabular-nums">
+                      −{formatRupiah(discount)}
+                    </span>
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-muted leading-relaxed">
+                    {t('pos.redeemHint', { rate: RUPIAH_PER_POINT.toLocaleString('id-ID'), max: MAX_REDEEM_PERCENT })}
+                  </p>
+                )}
+              </div>
+            )
+          })()}
+        </div>
+      )}
+
       {/* Summary */}
       <div className="border-t border-dark-border pt-3 space-y-2 text-sm">
         <div className="flex justify-between text-muted">
           <span>{t('pos.subtotal')}</span>
           <span className="tabular-nums">{formatRupiah(posStore.getSubtotal())}</span>
         </div>
-        {posStore.getDiscountAmount() > 0 && (
+        {posStore.getManualDiscountAmount() > 0 && (
           <div className="flex justify-between text-green-400">
             <span>{t('pos.discount')}</span>
-            <span className="tabular-nums">-{formatRupiah(posStore.getDiscountAmount())}</span>
+            <span className="tabular-nums">-{formatRupiah(posStore.getManualDiscountAmount())}</span>
+          </div>
+        )}
+        {posStore.getPointsDiscountAmount() > 0 && (
+          <div className="flex justify-between text-emerald-300">
+            <span className="inline-flex items-center gap-1">
+              <Star size={11} className="fill-emerald-300" />
+              {t('pos.pointsDiscount', { points: posStore.pointsToRedeem })}
+            </span>
+            <span className="tabular-nums">-{formatRupiah(posStore.getPointsDiscountAmount())}</span>
           </div>
         )}
         <div className="flex justify-between font-bold text-base text-off-white border-t border-dark-border pt-2">
@@ -809,16 +1004,19 @@ function POSPageInner() {
           </button>
         ))}
       </div>
+      </div>
 
+      {/* ── FIXED BOTTOM: tombol bayar — selalu terlihat tanpa perlu scroll ── */}
+      <div className="flex-shrink-0 pt-3 mt-1 border-t border-dark-border">
       <Button
         fullWidth size="lg"
         disabled={posStore.cartItems.length === 0}
         onClick={() => setShowPayModal(true)}
-        className="mt-2"
       >
         {t('pos.payAmount', { amount: formatRupiah(posStore.getTotal()) })}
       </Button>
-    </>
+      </div>
+    </div>
   )
 
   return (
@@ -886,45 +1084,88 @@ function POSPageInner() {
           ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-3">
+        {/* pb besar di mobile supaya kartu terakhir tidak ketutup bar keranjang mengambang */}
+        <div className="flex-1 overflow-y-auto pb-28 lg:pb-0">
+          {servicesLoading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5" aria-hidden="true">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} className="p-3 rounded-xl border border-dark-border bg-dark-card animate-pulse">
+                  <div className="w-7 h-7 rounded-lg bg-dark-surface mb-1.5" />
+                  <div className="h-3 w-3/4 rounded bg-dark-surface mb-1.5" />
+                  <div className="h-3 w-1/2 rounded bg-dark-surface" />
+                </div>
+              ))}
+            </div>
+          ) : servicesError ? (
+            <div className="flex flex-col items-center justify-center text-center py-16 text-muted">
+              <AlertCircle size={32} className="mb-2 text-red-400" />
+              <p className="text-sm">{t('pos.servicesError')}</p>
+              <button
+                onClick={() => refetchServices()}
+                className="mt-3 px-4 py-1.5 rounded-lg bg-gold/10 border border-gold/30 text-gold text-xs font-medium hover:bg-gold/20 transition-colors inline-flex items-center gap-1.5"
+              >
+                <RotateCcw size={12} /> {t('common.retry')}
+              </button>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center text-center py-16 text-muted">
+              <Search size={32} className="mb-2 opacity-50" />
+              <p className="text-sm font-medium text-off-white">{t('pos.servicesEmpty')}</p>
+              <p className="text-xs mt-1">{t('pos.servicesEmptyHint')}</p>
+            </div>
+          ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5">
             {filtered.map(svc => {
               const inCart = posStore.cartItems.some(item => item.serviceId === svc.id)
               return (
                 <button
                   key={svc.id}
                   onClick={() => handleAddToCart(svc)}
-                  className={`p-4 rounded-2xl border text-left transition-all ${
+                  className={`relative p-3 rounded-xl border text-left transition-all ${
                     inCart ? 'bg-gold/10 border-gold/40' : 'bg-dark-card border-dark-border hover:border-gold/30 hover:bg-dark-surface'
                   }`}
                 >
-                  <div className="text-2xl mb-2">{svc.icon}</div>
-                  <p className="font-medium text-sm text-off-white leading-tight mb-1 truncate">{svc.name}</p>
+                  {inCart && (
+                    <span className="absolute top-1.5 right-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-gold text-dark">
+                      <Check size={11} strokeWidth={3} />
+                    </span>
+                  )}
+                  <div className="text-xl mb-1.5 leading-none">{svc.icon}</div>
+                  <p className="font-medium text-[13px] text-off-white leading-tight mb-0.5 line-clamp-2 min-h-[2.2em]">{svc.name}</p>
                   <p className="text-gold font-semibold text-sm tabular-nums">{formatRupiah(svc.price)}</p>
-                  <p className="text-xs text-muted mt-0.5">{svc.duration} {t('pos.minutesShort')}</p>
-                  {inCart && <span className="text-xs text-gold mt-1 block">✓ {t('pos.inCart')}</span>}
+                  <p className="text-[11px] text-muted mt-0.5">{svc.duration} {t('pos.minutesShort')}</p>
                 </button>
               )
             })}
           </div>
+          )}
         </div>
       </div>
 
-      {/* RIGHT: Cart — desktop sidebar */}
-      <div className="hidden lg:flex w-full lg:w-[340px] xl:w-[380px] flex-shrink-0 flex-col gap-3 bg-dark-surface border border-dark-border rounded-2xl p-4 max-h-full overflow-y-auto">
+      {/* RIGHT: Cart — desktop sidebar (lebih lebar agar tidak sesak) */}
+      <div className="hidden lg:flex w-full lg:w-[400px] xl:w-[440px] flex-shrink-0 flex-col bg-dark-surface border border-dark-border rounded-2xl p-5 h-full overflow-hidden">
         {cartPanel}
       </div>
 
-      {/* Mobile floating cart button (FAB) */}
-      <button
-        onClick={() => setShowCartSheet(true)}
-        className="lg:hidden fixed bottom-4 right-4 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-gold text-dark font-semibold shadow-xl hover:scale-105 transition-transform"
-        aria-label={t('pos.openCart')}
-      >
-        <ShoppingCart size={18} />
-        <span className="text-sm">{t('pos.viewCart', { count: posStore.cartItems.length })}</span>
-        <span className="tabular-nums text-sm font-bold">{formatRupiah(posStore.getTotal())}</span>
-      </button>
+      {/* Mobile cart bar — mengambang DI ATAS BottomNav (nav ~80px), full-width */}
+      {!showCartSheet && (
+        <button
+          onClick={() => setShowCartSheet(true)}
+          className="lg:hidden fixed left-3 right-3 bottom-[5.75rem] z-40 flex items-center gap-3 px-4 py-3 rounded-2xl bg-gold text-dark font-semibold shadow-2xl active:scale-[0.98] transition-transform"
+          aria-label={t('pos.openCart')}
+        >
+          <span className="relative flex-shrink-0">
+            <ShoppingCart size={20} />
+            {posStore.cartItems.length > 0 && (
+              <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-dark text-gold text-[10px] font-bold flex items-center justify-center tabular-nums">
+                {posStore.cartItems.length}
+              </span>
+            )}
+          </span>
+          <span className="text-sm flex-1 text-left truncate">{t('pos.viewCart', { count: posStore.cartItems.length })}</span>
+          <span className="tabular-nums text-sm font-bold flex-shrink-0">{formatRupiah(posStore.getTotal())}</span>
+        </button>
+      )}
 
       {/* Mobile cart bottom sheet */}
       <AnimatePresence>
@@ -944,14 +1185,12 @@ function POSPageInner() {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="lg:hidden fixed inset-x-0 bottom-0 z-50 bg-dark-surface border-t border-dark-border rounded-t-3xl px-4 pt-3 pb-4 max-h-[90vh] overflow-y-auto"
+              className="lg:hidden fixed inset-x-0 bottom-0 z-50 flex flex-col bg-dark-surface border-t border-dark-border rounded-t-3xl px-4 pt-3 pb-4 h-[85vh]"
             >
-              <div className="flex justify-center pb-2">
+              <div className="flex justify-center pb-2 flex-shrink-0">
                 <div className="w-10 h-1 rounded-full bg-dark-border" />
               </div>
-              <div className="space-y-3">
-                {cartPanel}
-              </div>
+              {cartPanel}
             </motion.div>
           </>
         )}
@@ -1001,7 +1240,7 @@ function POSPageInner() {
                 </div>
                 <div className="flex justify-between">
                   <span>{t('pos.receiptDate')}</span>
-                  <span>{format(new Date(lastTxn.createdAt), 'dd/MM/yyyy HH:mm', { locale: dateLocale })}</span>
+                  <span>{formatDateTimeInTz(lastTxn.createdAt)}</span>
                 </div>
                 {lastTxn.customerName && lastTxn.customerName !== 'Walk-in Customer' && (
                   <div className="flex justify-between gap-3">
@@ -1040,6 +1279,12 @@ function POSPageInner() {
                     <span className="tabular-nums">-{formatRupiah(lastTxn.discountAmount)}</span>
                   </div>
                 )}
+                {lastTxn.pointsRedeemed > 0 && (
+                  <div className="flex justify-between text-gray-600 italic text-[10px]">
+                    <span>{t('pos.receiptPointsRedeemed', { points: lastTxn.pointsRedeemed })}</span>
+                    <span className="tabular-nums">-{formatRupiah(calcRedeemValue(lastTxn.pointsRedeemed))}</span>
+                  </div>
+                )}
                 <div className="flex justify-between font-bold text-sm text-gray-900 border-t border-gray-200 pt-1 mt-1">
                   <span>{t('pos.receiptTotalUpper')}</span>
                   <span className="tabular-nums">{formatRupiah(lastTxn.total)}</span>
@@ -1068,29 +1313,60 @@ function POSPageInner() {
             </div>
           )}
 
-          {/* Barber Rating */}
-          {barberRatingEnabled && Object.keys(barberRatings).length > 0 && (
-            <div className="p-4 bg-dark-card border border-dark-border rounded-xl">
-              <p className="font-semibold text-off-white text-sm mb-3">{t('pos.rateBarber')}</p>
+          {/* Barber Rating — submit ke /api/barber-ratings/batch */}
+          {barberRatingEnabled && !ratingsSubmitted && Object.keys(barberRatings).length > 0 && (
+            <div className="p-4 bg-dark-card border border-dark-border rounded-xl space-y-3">
+              <div>
+                <p className="font-semibold text-off-white text-sm">{t('pos.rateBarber')}</p>
+                <p className="text-[11px] text-muted mt-0.5">{t('pos.rateBarberHint')}</p>
+              </div>
               <div className="space-y-3">
                 {Object.keys(barberRatings).map(barberId => {
                   const barber = barbers.find(b => b.id === barberId)
                   if (!barber) return null
+                  const rating = barberRatings[barberId] || 0
                   return (
-                    <div key={barberId} className="flex items-center justify-between gap-3">
-                      <span className="text-sm text-off-white truncate">{barber.name}</span>
-                      <StarRating
-                        value={barberRatings[barberId]}
-                        onChange={rating => setBarberRatings(r => ({ ...r, [barberId]: rating }))}
-                        size={18}
-                      />
+                    <div key={barberId} className="p-3 bg-dark-surface/60 border border-dark-border rounded-lg space-y-2">
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <span className="text-sm text-off-white font-medium truncate flex-1 min-w-0">{barber.name}</span>
+                        <StarRating
+                          value={rating}
+                          onChange={r => setBarberRatings(rs => ({ ...rs, [barberId]: r }))}
+                          size={22}
+                        />
+                      </div>
+                      {rating > 0 && (
+                        <input
+                          type="text"
+                          maxLength={200}
+                          value={barberComments[barberId] || ''}
+                          onChange={e => setBarberComments(c => ({ ...c, [barberId]: e.target.value }))}
+                          placeholder={t('pos.ratingCommentPlaceholder')}
+                          className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold/60"
+                        />
+                      )}
                     </div>
                   )
                 })}
               </div>
-              <Button variant="secondary" fullWidth className="mt-3" onClick={handleSubmitRatings}>
-                {t('pos.submitRating')}
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" fullWidth onClick={() => { setRatingsSubmitted(true); handleNewTransaction() }} disabled={submitRatingsMut.isPending}>
+                  {t('pos.ratingSkip')}
+                </Button>
+                <Button
+                  fullWidth
+                  onClick={handleSubmitRatings}
+                  loading={submitRatingsMut.isPending}
+                  disabled={Object.values(barberRatings).every(v => !v)}
+                >
+                  {t('pos.submitRating')}
+                </Button>
+              </div>
+            </div>
+          )}
+          {ratingsSubmitted && Object.keys(barberRatings).length > 0 && (
+            <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-center text-sm text-emerald-300 inline-flex items-center justify-center gap-2">
+              <Check className="w-4 h-4" /> {t('pos.ratingsSentBanner')}
             </div>
           )}
 
@@ -1108,10 +1384,11 @@ function POSPageInner() {
                 const msg = `*${headerLine}*\n` +
                   (branchAddr ? `${branchAddr}\n` : '') +
                   `\n${t('pos.receiptNo')}: #${lastTxn.id.slice(-8).toUpperCase()}\n` +
-                  `${t('pos.receiptDate')}: ${format(new Date(lastTxn.createdAt), 'dd MMM yyyy HH:mm', { locale: dateLocale })}\n\n` +
+                  `${t('pos.receiptDate')}: ${formatDateTimeInTz(lastTxn.createdAt)}\n\n` +
                   `*${t('pos.waItemsHeader')}*\n${items}\n\n` +
                   `${t('pos.receiptSubtotal')}: ${formatRupiah(lastTxn.subtotal)}\n` +
                   (lastTxn.discountAmount > 0 ? `${t('pos.receiptDiscount')}: -${formatRupiah(lastTxn.discountAmount)}\n` : '') +
+                  (lastTxn.pointsRedeemed > 0 ? `${t('pos.receiptPointsRedeemed', { points: lastTxn.pointsRedeemed })}: -${formatRupiah(calcRedeemValue(lastTxn.pointsRedeemed))}\n` : '') +
                   `*TOTAL: ${formatRupiah(lastTxn.total)}*\n` +
                   `${t('pos.receiptPaymentRow')}: ${methodLabel(lastTxn.paymentMethod)}\n\n` +
                   `${t('pos.receiptThanksLong')} 🙏`
@@ -1145,10 +1422,26 @@ function POSPageInner() {
             icon={Search}
           />
           <div className="max-h-60 overflow-y-auto space-y-2">
-            {customers.length === 0 ? (
-              <p className="text-center text-xs text-muted py-6">{t('pos.noCustomersFound')}</p>
+            {customersFetching && customers.length === 0 ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 p-3 bg-dark-card rounded-xl border border-dark-border animate-pulse">
+                  <div className="w-8 h-8 rounded-full bg-dark-surface flex-shrink-0" />
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <div className="h-3.5 w-1/3 rounded bg-dark-surface" />
+                    <div className="h-3 w-2/3 rounded bg-dark-surface" />
+                  </div>
+                </div>
+              ))
+            ) : customers.length === 0 ? (
+              <div className="flex flex-col items-center justify-center text-center py-8 text-muted">
+                <User size={28} className="mb-2 opacity-50" />
+                <p className="text-xs">{t('pos.noCustomersFound')}</p>
+              </div>
             ) : (
-              customers.map(c => (
+              customers.map(c => {
+                const seg = classifyCustomerSegment(c.visitCount, c.lastVisitAt)
+                const segMeta = SEGMENT_META[seg]
+                return (
                 <button
                   key={c.id}
                   onClick={() => handleSelectCustomer(c)}
@@ -1157,17 +1450,18 @@ function POSPageInner() {
                   <div className="w-8 h-8 rounded-full bg-gold/10 flex items-center justify-center text-gold font-bold text-sm flex-shrink-0">
                     {c.name?.[0]?.toUpperCase() || '?'}
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-off-white truncate">{c.name}</p>
                     <p className="text-xs text-muted truncate">{c.phone} · {t('pos.loyaltyPointsShort', { points: c.loyaltyPoints || 0 })}</p>
                   </div>
-                  {c.segment && (
-                    <Badge variant={c.segment === 'VIP' || c.segment === 'vip' ? 'gold' : 'muted'} className="ml-auto flex-shrink-0">
-                      {c.segment}
-                    </Badge>
+                  {seg !== 'never' && (
+                    <span className={`ml-auto flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded-full border font-semibold uppercase tracking-wide ${segMeta.cls}`}>
+                      {t(segMeta.key)}
+                    </span>
                   )}
                 </button>
-              ))
+                )
+              })
             )}
           </div>
           <div className="border-t border-dark-border pt-3">

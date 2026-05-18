@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { calcRedeemValue, maxRedeemablePoints, validateRedeem } from '../utils/loyalty.js'
 
 export const usePosStore = create(
   persist(
@@ -9,6 +10,7 @@ export const usePosStore = create(
       discountType: 'percentage', // 'percentage' | 'flat' | 'voucher'
       discountValue: 0,
       voucherCode: '',
+      pointsToRedeem: 0, // poin yang akan ditukar pada transaksi ini
       paymentMethod: 'cash',
       cashReceived: 0,
       lastTransaction: null,
@@ -52,6 +54,8 @@ export const usePosStore = create(
 
       removeFromCart: (itemId) => {
         set(state => ({ cartItems: state.cartItems.filter(item => item.id !== itemId) }))
+        // Clamp redeem points kalau subtotal jadi lebih kecil dari yang ditukar
+        get().setPointsToRedeem(get().pointsToRedeem)
       },
 
       updateCartItemBarber: (itemId, barberId, barberName) => {
@@ -69,6 +73,7 @@ export const usePosStore = create(
           discountType: 'percentage',
           discountValue: 0,
           voucherCode: '',
+          pointsToRedeem: 0,
           paymentMethod: 'cash',
           cashReceived: 0,
         })
@@ -107,7 +112,7 @@ export const usePosStore = create(
         })
       },
 
-      setSelectedCustomer: (customer) => set({ selectedCustomer: customer }),
+      setSelectedCustomer: (customer) => set({ selectedCustomer: customer, pointsToRedeem: 0 }),
 
       setDiscount: (type, value) => set({ discountType: type, discountValue: value }),
 
@@ -117,10 +122,35 @@ export const usePosStore = create(
 
       setCashReceived: (amount) => set({ cashReceived: amount }),
 
+      /**
+       * Set jumlah poin yang akan ditukar.
+       * Auto-clamp ke `maxRedeemablePoints` berdasarkan saldo customer & subtotal.
+       * Kalau customer belum dipilih atau saldo tidak cukup → di-reset ke 0.
+       */
+      setPointsToRedeem: (points) => {
+        const { selectedCustomer } = get()
+        const subtotal = get().getSubtotal()
+        const balance  = selectedCustomer?.loyaltyPoints || 0
+        const requested = Math.max(0, Math.floor(Number(points) || 0))
+        const cap = maxRedeemablePoints({ balance, subtotal })
+        set({ pointsToRedeem: Math.min(requested, cap) })
+      },
+
+      /** Validasi sisi client — pesan error string atau null. */
+      getRedeemError: () => {
+        const { selectedCustomer, pointsToRedeem } = get()
+        return validateRedeem({
+          points: pointsToRedeem,
+          balance: selectedCustomer?.loyaltyPoints || 0,
+          subtotal: get().getSubtotal(),
+        })
+      },
+
       // Calculations
       getSubtotal: () => get().cartItems.reduce((sum, item) => sum + item.price, 0),
 
-      getDiscountAmount: () => {
+      // Diskon dari discount manual/persentase/flat — terpisah dari diskon poin.
+      getManualDiscountAmount: () => {
         const subtotal = get().getSubtotal()
         const { discountType, discountValue } = get()
         if (discountType === 'percentage') return Math.round(subtotal * discountValue / 100)
@@ -128,12 +158,26 @@ export const usePosStore = create(
         return 0
       },
 
+      /** Nilai rupiah diskon dari poin yang ditukar. */
+      getPointsDiscountAmount: () => calcRedeemValue(get().pointsToRedeem),
+
+      /**
+       * Total diskon (manual + poin), capped agar tidak melebihi subtotal.
+       * Ini yang dikirim sebagai `discountAmount` ke backend.
+       */
+      getDiscountAmount: () => {
+        const subtotal = get().getSubtotal()
+        const manual = get().getManualDiscountAmount()
+        const points = get().getPointsDiscountAmount()
+        return Math.min(subtotal, manual + points)
+      },
+
       getTax: () => 0,
 
       getTotal: () => {
         const subtotal = get().getSubtotal()
         const discount = get().getDiscountAmount()
-        return subtotal - discount
+        return Math.max(0, subtotal - discount)
       },
 
       getChange: () => {
@@ -161,6 +205,8 @@ export const usePosStore = create(
           subtotal: state.getSubtotal(),
           discountType: state.discountType,
           discountValue: state.discountValue,
+          discountAmount: state.getDiscountAmount(),
+          pointsRedeemed: state.pointsToRedeem || 0,
           tax: state.getTax(),
           total: state.getTotal(),
           paymentMethod: state.paymentMethod,

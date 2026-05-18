@@ -85,10 +85,29 @@ router.get('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir'
   }
 });
 
+// Pastikan branchId milik tenant pemanggil — defense-in-depth selain cek lisensi.
+async function assertBranchOwnership(req, branchId) {
+  if (req.user.role === 'super_admin') return true;
+  const branch = await prisma.branch.findUnique({
+    where: { id: branchId },
+    select: { tenantId: true },
+  });
+  if (!branch || branch.tenantId !== req.user.tenantId) return false;
+  if (req.user.role === 'kasir' && req.user.branchId && branchId !== req.user.branchId) return false;
+  return true;
+}
+
 // GET /api/shifts/active - shift terbuka untuk kasir + branch saat ini
 router.get('/active', authenticate, requireRole('kasir', 'tenant_admin', 'super_admin'), async (req, res, next) => {
   try {
     const where = { status: 'open' };
+    // Tenant scope WAJIB — tanpa ini tenant_admin bisa query cabang tenant lain
+    // dengan menebak ?branchId=.
+    if (req.user.role !== 'super_admin') {
+      where.branch = { tenantId: req.user.tenantId };
+    } else if (req.query.tenantId) {
+      where.branch = { tenantId: req.query.tenantId };
+    }
     if (req.user.role === 'kasir') {
       where.kasirId = req.user.id;
       if (req.user.branchId) where.branchId = req.user.branchId;
@@ -302,6 +321,10 @@ router.post('/open', authenticate, requireRole('kasir', 'tenant_admin', 'super_a
   try {
     const body = openShiftSchema.parse(req.body);
 
+    if (!(await assertBranchOwnership(req, body.branchId))) {
+      return res.status(403).json({ success: false, error: 'Cabang tidak valid untuk akun ini' });
+    }
+
     const existing = await prisma.shift.findFirst({
       where: { branchId: body.branchId, kasirId: req.user.id, status: 'open' },
       include: { branch: { select: { id: true, name: true } } },
@@ -333,6 +356,10 @@ router.post('/open', authenticate, requireRole('kasir', 'tenant_admin', 'super_a
 router.post('/', authenticate, requireRole('kasir', 'tenant_admin', 'super_admin'), requireLicensedBranch(), async (req, res, next) => {
   try {
     const body = openShiftSchema.parse(req.body);
+
+    if (!(await assertBranchOwnership(req, body.branchId))) {
+      return res.status(403).json({ success: false, error: 'Cabang tidak valid untuk akun ini' });
+    }
 
     const existing = await prisma.shift.findFirst({
       where: { branchId: body.branchId, kasirId: req.user.id, status: 'open' },

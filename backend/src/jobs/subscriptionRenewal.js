@@ -141,7 +141,7 @@ async function runRenewalJob() {
 
   // ── 0b. AUTO-RESUME paused subs whose pauseUntil has passed ─────────────
   const toResume = await prisma.subscription.findMany({
-    where: { status: 'paused', pauseUntil: { lte: now } },
+    where: { status: 'paused', pauseUntil: { lte: now }, tenant: { deletedAt: null } },
   });
   for (const sub of toResume) {
     const elapsedMs = now.getTime() - new Date(sub.pausedAt || now).getTime();
@@ -163,6 +163,8 @@ async function runRenewalJob() {
         // Skip 'paused' — tenant sengaja menjeda; jangan kirim reminder.
         status:  { in: ['active', 'trial'] },
         endDate: { gte: winStart, lte: winEnd },
+        // Tenant terhapus tidak boleh dapat reminder / dibuatkan order Duitku.
+        tenant:  { deletedAt: null },
       },
       include: { tenant: { select: { id: true, name: true, email: true } } },
     });
@@ -218,7 +220,7 @@ async function runRenewalJob() {
   // ── 2. ACTIVE → OVERDUE (subscription sudah lewat endDate) ─────────────
   // Tidak menyentuh status 'paused' — tetap paused sampai pauseUntil lewat.
   const toOverdue = await prisma.subscription.findMany({
-    where: { status: 'active', endDate: { lt: now } },
+    where: { status: 'active', endDate: { lt: now }, tenant: { deletedAt: null } },
     select: { id: true, tenantId: true, package: true },
   });
 
@@ -243,10 +245,38 @@ async function runRenewalJob() {
     }
   }
 
+  // ── 2b. TRIAL → EXPIRED (trial tidak dapat grace; langsung nonaktif) ────
+  // Trial yang lewat endDate langsung expired — beda dari pelanggan berbayar
+  // yang masih mendapat masa tenggang GRACE_DAYS lewat status 'overdue'.
+  const trialToExpire = await prisma.subscription.findMany({
+    where: { status: 'trial', endDate: { lt: now }, tenant: { deletedAt: null } },
+    select: { id: true, tenantId: true, package: true },
+  });
+
+  if (trialToExpire.length) {
+    await prisma.subscription.updateMany({
+      where: { id: { in: trialToExpire.map(s => s.id) } },
+      data:  { status: 'expired' },
+    });
+    log(`Marked ${trialToExpire.length} trial(s) as expired`);
+
+    for (const sub of trialToExpire) {
+      if (await alreadyBroadcastedToday(sub.tenantId, '[Trial]')) continue;
+      await createBroadcast([sub.tenantId], {
+        title:   `[Trial] Masa Coba Telah Berakhir`,
+        message: [
+          `Masa trial ${sub.package} Anda telah berakhir.`,
+          `Pilih paket berlangganan di menu Billing untuk mengaktifkan kembali toko Anda.`,
+        ].join('\n\n'),
+        type: 'error',
+      }).catch(() => {});
+    }
+  }
+
   // ── 3. OVERDUE → EXPIRED (setelah grace period) ─────────────────────────
   const graceDeadline = new Date(now.getTime() - GRACE_DAYS * 86400_000);
   const expiredResult = await prisma.subscription.updateMany({
-    where: { status: 'overdue', endDate: { lt: graceDeadline } },
+    where: { status: 'overdue', endDate: { lt: graceDeadline }, tenant: { deletedAt: null } },
     data:  { status: 'expired' },
   });
 
@@ -254,9 +284,10 @@ async function runRenewalJob() {
 
   log('done');
   return {
-    timestamp:    now.toISOString(),
-    overdueCount: toOverdue.length,
-    expiredCount: expiredResult.count,
+    timestamp:         now.toISOString(),
+    overdueCount:      toOverdue.length,
+    trialExpiredCount: trialToExpire.length,
+    expiredCount:      expiredResult.count,
   };
 }
 

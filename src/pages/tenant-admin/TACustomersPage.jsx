@@ -10,7 +10,7 @@ import {
 import {
   useCustomers, useCustomer, useCustomerStats,
   useCreateCustomer, useUpdateCustomer, useDeleteCustomer, useUpdateLoyalty,
-  useExportCustomers, useBulkDeleteCustomers,
+  useExportCustomers, useBulkDeleteCustomers, usePointHistory,
 } from '../../hooks/useCustomers.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import { WilayahSelect } from '../../components/WilayahSelect.jsx'
@@ -315,19 +315,160 @@ function CustomerTableRow({ customer, onOpen, onEdit, onDelete, selected, onTogg
   )
 }
 
+// Preset alasan untuk manual adjust — admin pilih dropdown atau tulis sendiri.
+const ADJUST_REASON_PRESETS = {
+  add: [
+    'Hadiah ulang tahun',
+    'Kompensasi keluhan layanan',
+    'Bonus referral',
+    'Promo kampanye khusus',
+    'Koreksi sistem (poin hilang)',
+  ],
+  deduct: [
+    'Tukar reward / hadiah',
+    'Koreksi sistem (poin double)',
+    'Pelanggaran syarat & ketentuan',
+    'Refund transaksi',
+    'Pemindahan ke akun lain',
+  ],
+}
+
+const POINT_TYPE_STYLE = {
+  earn:   { bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', text: 'text-emerald-300', label: 'Earn' },
+  adjust: { bg: 'bg-amber-500/10',   border: 'border-amber-500/30',   text: 'text-amber-300',   label: 'Adjust' },
+  redeem: { bg: 'bg-red-500/10',     border: 'border-red-500/30',     text: 'text-red-300',     label: 'Redeem' },
+  expire: { bg: 'bg-gray-500/10',    border: 'border-gray-500/30',    text: 'text-gray-300',    label: 'Expire' },
+}
+
+// ─── Adjust Points Modal — wajib alasan ────────────────────────────────────
+function AdjustPointsModal({ open, onClose, customer, presetDelta, onConfirm, loading }) {
+  const [delta, setDelta] = useState(presetDelta ?? 0)
+  const [reasonPreset, setReasonPreset] = useState('')
+  const [reasonCustom, setReasonCustom] = useState('')
+
+  useEffect(() => {
+    if (open) {
+      setDelta(presetDelta ?? 0)
+      setReasonPreset('')
+      setReasonCustom('')
+    }
+  }, [open, presetDelta])
+
+  const isAdd = delta > 0
+  const presets = isAdd ? ADJUST_REASON_PRESETS.add : ADJUST_REASON_PRESETS.deduct
+  const finalReason = reasonCustom.trim() || reasonPreset
+  const canApply = delta !== 0 && finalReason && !loading
+
+  return (
+    <Modal isOpen={open} onClose={onClose} title="Penyesuaian Poin Manual" size="md">
+      {!customer ? null : (
+        <div className="space-y-4">
+          <div className="p-3 rounded-xl bg-dark-card border border-dark-border">
+            <p className="text-xs text-muted">Pelanggan</p>
+            <p className="text-sm text-off-white font-medium">{customer.name}</p>
+            <p className="text-xs text-muted mt-1">
+              Saldo saat ini: <span className="text-gold font-semibold tabular-nums">{(customer.loyaltyPoints || 0).toLocaleString('id-ID')}</span> poin
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-muted mb-1.5">Jumlah Poin</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                value={delta}
+                onChange={e => setDelta(Number(e.target.value) || 0)}
+                placeholder="±poin"
+                className="flex-1 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm text-center outline-none focus:border-gold/60 tabular-nums"
+              />
+            </div>
+            <div className="flex gap-1.5 mt-2 flex-wrap">
+              {[-50, -10, -5, +5, +10, +25, +50, +100].map(n => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setDelta(n)}
+                  className={`px-2 py-1 rounded-md text-xs tabular-nums border transition-colors ${
+                    delta === n
+                      ? (n > 0 ? 'bg-emerald-500/30 border-emerald-500 text-emerald-200' : 'bg-red-500/30 border-red-500 text-red-200')
+                      : (n > 0 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20' : 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20')
+                  }`}
+                >
+                  {n > 0 ? `+${n}` : n}
+                </button>
+              ))}
+            </div>
+            {delta !== 0 && (
+              <p className="text-[11px] text-muted mt-1.5">
+                Saldo setelah: <span className="text-gold font-semibold tabular-nums">{Math.max(0, (customer.loyaltyPoints || 0) + delta).toLocaleString('id-ID')}</span> poin
+                {customer.loyaltyPoints + delta < 0 && (
+                  <span className="text-amber-400 ml-1.5">(akan ditahan di 0)</span>
+                )}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-muted mb-1.5">Alasan <span className="text-red-400">*</span></label>
+            <select
+              value={reasonPreset}
+              onChange={e => { setReasonPreset(e.target.value); setReasonCustom('') }}
+              disabled={delta === 0}
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60 disabled:opacity-50"
+            >
+              <option value="">— Pilih alasan {isAdd ? 'penambahan' : 'pengurangan'} —</option>
+              {presets.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+            <input
+              type="text"
+              value={reasonCustom}
+              onChange={e => { setReasonCustom(e.target.value); if (e.target.value) setReasonPreset('') }}
+              placeholder="Atau tulis alasan sendiri…"
+              maxLength={200}
+              disabled={delta === 0}
+              className="w-full mt-2 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60 placeholder-muted disabled:opacity-50"
+            />
+            <p className="text-[10px] text-muted mt-1">Alasan tercatat di riwayat poin & audit log.</p>
+          </div>
+
+          <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
+            <Button variant="outline" fullWidth onClick={onClose} disabled={loading}>Batal</Button>
+            <Button
+              fullWidth
+              variant={isAdd ? 'primary' : 'danger'}
+              onClick={() => onConfirm({ delta, reason: finalReason })}
+              disabled={!canApply}
+              loading={loading}
+            >
+              {isAdd ? `Tambah ${delta} poin` : `Kurangi ${Math.abs(delta)} poin`}
+            </Button>
+          </div>
+        </div>
+      )}
+    </Modal>
+  )
+}
+
 // ─── Customer Detail Drawer ─────────────────────────────────────────────────
 function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
   const { data: customer, isLoading } = useCustomer(customerId)
+  const { data: historyData, isLoading: historyLoading } = usePointHistory(customerId, { limit: 50 })
   const updateLoyalty = useUpdateLoyalty()
   const toast = useToast()
-  const [pointsDelta, setPointsDelta] = useState('')
+  const [adjustPreset, setAdjustPreset] = useState(null) // null | number
+  const [adjustOpen, setAdjustOpen]     = useState(false)
 
-  const adjustPoints = async (delta) => {
-    if (!customer || !delta) return
+  const openAdjust = (preset = 0) => {
+    setAdjustPreset(preset)
+    setAdjustOpen(true)
+  }
+
+  const submitAdjust = async ({ delta, reason }) => {
+    if (!customer || !delta || !reason) return
     try {
-      await updateLoyalty.mutateAsync({ id: customer.id, points: delta })
-      toast.success(delta > 0 ? `+${delta} poin ditambahkan` : `${delta} poin dikurangi`)
-      setPointsDelta('')
+      await updateLoyalty.mutateAsync({ id: customer.id, points: delta, reason })
+      toast.success(delta > 0 ? `+${delta} poin ditambahkan (${reason})` : `${delta} poin dikurangi (${reason})`)
+      setAdjustOpen(false)
     } catch (err) {
       toast.error(err?.response?.data?.error || 'Gagal mengubah poin')
     }
@@ -417,7 +558,7 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
             </Card>
           </div>
 
-          {/* Loyalty controls + earning rules */}
+          {/* Loyalty: saldo + adjust + alur + riwayat */}
           <Card className="p-3 sm:p-4 bg-gold/5 border-gold/20">
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div className="min-w-0">
@@ -429,40 +570,30 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
                 </p>
                 <p className="text-[11px] text-muted mt-1">
                   {customer.lifetimeTxCount > 0
-                    ? `≈ ${Math.floor((customer.lifetimeValue || 0) / 10_000).toLocaleString('id-ID')} pts seumur hidup`
+                    ? `≈ ${Math.floor((customer.lifetimeValue || 0) / 10_000).toLocaleString('id-ID')} pts seumur hidup dari transaksi`
                     : 'Belum ada poin diperoleh'}
                 </p>
               </div>
               <div className="flex flex-col gap-1.5 items-end">
-                <div className="flex items-center gap-1">
-                  <input
-                    type="number"
-                    value={pointsDelta}
-                    onChange={e => setPointsDelta(e.target.value)}
-                    placeholder="±poin"
-                    className="w-24 bg-dark-surface border border-dark-border text-off-white rounded-lg px-2 py-1.5 text-sm text-center outline-none focus:border-gold/60 tabular-nums"
-                  />
-                  <button
-                    type="button"
-                    disabled={!pointsDelta || Number(pointsDelta) === 0 || updateLoyalty.isPending}
-                    onClick={() => adjustPoints(Number(pointsDelta))}
-                    className="px-3 py-1.5 rounded-lg bg-gold text-dark text-xs font-semibold hover:bg-gold-light disabled:opacity-50"
-                  >
-                    Terapkan
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => openAdjust(0)}
+                  className="px-3 py-1.5 rounded-lg bg-gold text-dark text-xs font-semibold hover:bg-gold-light inline-flex items-center gap-1.5"
+                >
+                  <Edit2 className="w-3 h-3" />
+                  Sesuaikan Poin
+                </button>
                 <div className="flex gap-1">
                   {[-10, +10, +25, +50].map(n => (
                     <button
                       key={n}
                       type="button"
-                      onClick={() => adjustPoints(n)}
-                      disabled={updateLoyalty.isPending}
-                      className={`px-2 py-0.5 rounded-md text-[11px] tabular-nums border ${
+                      onClick={() => openAdjust(n)}
+                      className={`px-2 py-0.5 rounded-md text-[11px] tabular-nums border transition-colors ${
                         n > 0
                           ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20'
                           : 'bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20'
-                      } disabled:opacity-50`}
+                      }`}
                     >
                       {n > 0 ? `+${n}` : n}
                     </button>
@@ -470,26 +601,87 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
                 </div>
               </div>
             </div>
-            {/* Earning rules */}
+
+            {/* Earning rules — alur poin yang dijelaskan */}
             <div className="mt-3 pt-3 border-t border-gold/20">
               <p className="text-[11px] text-muted uppercase tracking-wide font-medium mb-1.5 inline-flex items-center gap-1">
                 <Award className="w-3 h-3 text-gold" /> Cara Mendapatkan Poin
               </p>
               <ul className="space-y-1 text-[11px] text-off-white">
                 <li className="flex items-center justify-between gap-2">
-                  <span>Setiap transaksi</span>
-                  <span className="text-gold tabular-nums">+1 poin / Rp10.000</span>
+                  <span>Otomatis dari transaksi POS</span>
+                  <span className="text-gold tabular-nums">+1 poin / Rp10.000 (setelah diskon)</span>
                 </li>
                 <li className="flex items-center justify-between gap-2">
                   <span>Penyesuaian manual oleh admin</span>
-                  <span className="text-muted tabular-nums">manual</span>
+                  <span className="text-muted">wajib alasan</span>
                 </li>
               </ul>
               <p className="text-[10px] text-muted mt-1.5 leading-relaxed">
-                Poin dihitung otomatis dari nilai transaksi (setelah diskon) saat transaksi dibuat di POS — selama pelanggan terhubung di transaksi.
+                Pelanggan harus tersambung di transaksi (via nama+telepon atau pilih dari daftar di POS) supaya poin tercatat. Walk-in tanpa identitas → tidak dapat poin.
               </p>
             </div>
           </Card>
+
+          {/* Riwayat Pergerakan Poin (Ledger) */}
+          <div>
+            <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2 inline-flex items-center gap-2">
+              <Activity className="w-3.5 h-3.5" /> Riwayat Pergerakan Poin
+              {historyData?.items?.length > 0 && (
+                <span className="text-muted/70 normal-case font-normal">
+                  ({historyData.items.length}{historyData.meta?.hasMore ? '+' : ''})
+                </span>
+              )}
+            </p>
+            {historyLoading ? (
+              <div className="space-y-1.5">
+                {[0,1,2].map(i => <div key={i} className="h-10 rounded-lg bg-dark-card/60 animate-pulse" />)}
+              </div>
+            ) : !historyData?.items?.length ? (
+              <p className="text-sm text-muted text-center py-6 bg-dark-card/30 rounded-xl border border-dashed border-dark-border">
+                Belum ada pergerakan poin
+              </p>
+            ) : (
+              <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+                {historyData.items.map(h => {
+                  const style = POINT_TYPE_STYLE[h.type] || POINT_TYPE_STYLE.adjust
+                  const isPositive = h.delta > 0
+                  return (
+                    <div key={h.id} className={`flex items-center gap-2 p-2 rounded-lg border min-w-0 ${style.bg} ${style.border}`}>
+                      <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${style.text} bg-dark-surface/50 border ${style.border}`}>
+                        {h.type === 'earn'
+                          ? <ShoppingBag className="w-3.5 h-3.5" />
+                          : h.type === 'adjust'
+                            ? <Edit2 className="w-3.5 h-3.5" />
+                            : <Star className="w-3.5 h-3.5" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-off-white truncate font-medium inline-flex items-center gap-1.5 flex-wrap">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${style.bg} ${style.text} border ${style.border} font-semibold`}>
+                            {style.label}
+                          </span>
+                          {h.reason || (h.transaction
+                            ? `Transaksi ${formatRupiahShort(h.transaction.total || 0)}`
+                            : h.type === 'earn' ? 'Earn otomatis' : 'Penyesuaian')}
+                        </p>
+                        <p className="text-[11px] text-muted truncate">
+                          {formatDateTime(h.createdAt)}
+                          {h.actorName && <> · oleh <span className="text-off-white">{h.actorName}</span></>}
+                          {h.transaction && <> · saldo setelah <span className="text-off-white tabular-nums">{h.balanceAfter.toLocaleString('id-ID')}</span></>}
+                        </p>
+                      </div>
+                      <div className={`shrink-0 text-sm font-bold tabular-nums ${isPositive ? 'text-emerald-300' : 'text-red-400'}`}>
+                        {isPositive ? '+' : ''}{h.delta}
+                      </div>
+                    </div>
+                  )
+                })}
+                {historyData.meta?.hasMore && (
+                  <p className="text-[10px] text-muted text-center pt-1">Menampilkan 50 terbaru. Riwayat lebih lama tersedia via API.</p>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Notes */}
           {customer.notes && (
@@ -581,6 +773,15 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
           </div>
         </div>
       )}
+
+      <AdjustPointsModal
+        open={adjustOpen}
+        onClose={() => setAdjustOpen(false)}
+        customer={customer}
+        presetDelta={adjustPreset}
+        onConfirm={submitAdjust}
+        loading={updateLoyalty.isPending}
+      />
     </Modal>
   )
 }

@@ -115,6 +115,7 @@ function PublicBookingPageInner() {
   const [branches, setBranches]   = useState([])
   const [services, setServices]   = useState([])
   const [barbers, setBarbers]     = useState([])
+  const [testimonials, setTestimonials] = useState([])
   const [bookedSlots, setBookedSlots] = useState([])
   const [loading, setLoading]     = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -191,14 +192,16 @@ function PublicBookingPageInner() {
     async function load() {
       setLoading(true); setError(null)
       try {
-        const [bRes, sRes] = await Promise.all([
+        const [bRes, sRes, tRes] = await Promise.all([
           publicApi.get('/public/branches'),
           publicApi.get('/public/services'),
+          publicApi.get('/public/testimonials', { params: { limit: 6 } }).catch(() => ({ data: { data: [] } })),
         ])
         if (cancelled) return
         const br = bRes.data.data || []
         setBranches(br)
         setServices(sRes.data.data || [])
+        setTestimonials(tRes.data.data || [])
         // Auto-select first/only branch
         if (br.length >= 1) {
           setSelected(s => ({ ...s, branch: br[0] }))
@@ -330,7 +333,8 @@ function PublicBookingPageInner() {
     return <BookShell accent={accent}><ErrorShell message={error} /></BookShell>
   }
 
-  const canNextStep0 = !!selected.service
+  // Barber wajib dipilih (opsi "barber bebas" dihapus) — customer harus pilih nama barber.
+  const canNextStep0 = !!selected.service && !!selected.barber
   const canNextStep1 = !!selected.date && !!selected.time
   const totalPrice   = selected.service?.price || 0
 
@@ -344,7 +348,9 @@ function PublicBookingPageInner() {
             disabled={!canNextStep0}
             onClick={() => { if (canNextStep0) { setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }) } }}
             accent={accent}
-            note={canNextStep0 ? `${selected.service.name} · ${formatRupiah(selected.service.price)}` : 'Pilih layanan untuk lanjut'}
+            note={canNextStep0
+              ? `${selected.service.name} · ${formatRupiah(selected.service.price)}`
+              : !selected.barber ? 'Pilih barber & layanan untuk lanjut' : 'Pilih layanan untuk lanjut'}
           />
         ) : null
       }
@@ -364,6 +370,7 @@ function PublicBookingPageInner() {
             <Step1Pick
               tenantName={tenantName} tenantLogo={tenantLogo} bp={bp}
               branches={branches} services={services} barbers={barbers}
+              testimonials={testimonials}
               selected={selected} accent={accent}
               onPickBranch={pickBranch} onPickService={pickService} onPickBarber={pickBarber}
               canNext={canNextStep0}
@@ -773,7 +780,7 @@ function StickyCta({ label, onClick, disabled, accent, note }) {
 // STEP 1 — Pilih Barber & Layanan
 // ═══════════════════════════════════════════════════════════════════════════
 
-function Step1Pick({ tenantName, tenantLogo, bp, branches, services, barbers, selected, accent,
+function Step1Pick({ tenantName, tenantLogo, bp, branches, services, barbers, testimonials = [], selected, accent,
                     onPickBranch, onPickService, onPickBarber, onNext, canNext }) {
   return (
     <div className="space-y-7 lg:space-y-10">
@@ -799,6 +806,11 @@ function Step1Pick({ tenantName, tenantLogo, bp, branches, services, barbers, se
             <SectionTitle accent={accent} step="02" title="Pilih Layanan" />
             <ServiceList services={services} selected={selected.service} onPick={onPickService} accent={accent} />
           </div>
+
+          {/* Testimoni pelanggan — hanya tampil kalau ada published testimoni */}
+          {testimonials.length > 0 && (
+            <TestimonialsSection items={testimonials} accent={accent} />
+          )}
         </div>
 
         {/* Sticky summary — desktop only */}
@@ -819,6 +831,48 @@ function Step1Pick({ tenantName, tenantLogo, bp, branches, services, barbers, se
   )
 }
 
+// Section "Apa Kata Pelanggan" — testimoni rating ≥4★ yang sudah di-publish admin.
+// Layout responsive: 1 col mobile, 2 col tablet, 3 col desktop.
+function TestimonialsSection({ items, accent }) {
+  return (
+    <div>
+      <div className="flex items-end justify-between mb-3 flex-wrap gap-2">
+        <div>
+          <p className="bk-step-num" style={{ color: accent }}>03</p>
+          <h2 className="font-display text-xl font-bold mt-0.5" style={{ color: 'var(--bk-text)' }}>
+            Apa Kata Pelanggan
+          </h2>
+        </div>
+        <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--bk-text-muted)' }}>
+          <span className="tabular-nums">{items.length} review</span>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3">
+        {items.map(t => (
+          <div key={t.id} className="bk-card p-4 flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-semibold text-sm truncate" style={{ color: 'var(--bk-text)' }}>
+                {t.barber?.name || 'Barber'}
+              </span>
+              <span className="tabular-nums text-sm whitespace-nowrap" style={{ color: accent }}>
+                {'★'.repeat(t.rating)}{'☆'.repeat(5 - t.rating)}
+              </span>
+            </div>
+            <p className="text-sm italic leading-relaxed" style={{ color: 'var(--bk-text)' }}>
+              "{t.comment}"
+            </p>
+            {t.publishedAt && (
+              <p className="text-[11px] mt-auto" style={{ color: 'var(--bk-text-muted)' }}>
+                {format(new Date(t.publishedAt), 'd MMM yyyy', { locale: idLocale })}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // Sidebar summary card — appears as right rail on desktop, replaces the
 // bottom-fixed StickyCta. Always shows what's been picked + the next-step CTA.
 function SidebarSummary({ accent, selected, tenantName, ctaLabel, ctaDisabled, onCta }) {
@@ -832,7 +886,7 @@ function SidebarSummary({ accent, selected, tenantName, ctaLabel, ctaDisabled, o
 
       <div className="space-y-2.5 text-sm">
         <SidebarRow label="Cabang"  value={selected.branch?.name} />
-        <SidebarRow label="Barber"  value={selected.barber ? selected.barber.name : (selected.service ? 'Barber tersedia' : null)} muted={!selected.barber && !selected.service} />
+        <SidebarRow label="Barber"  value={selected.barber?.name} muted={!selected.barber} />
         <SidebarRow label="Layanan" value={selected.service?.name} highlight={!!selected.service} accent={accent} />
         {selected.date && (
           <SidebarRow label="Jadwal" value={`${format(selected.date, 'd MMM', { locale: idLocale })} · ${selected.time || ''}`} />
@@ -993,36 +1047,26 @@ function BranchSelector({ branches, selected, onPick, accent }) {
 }
 
 function BarberCarousel({ barbers, selected, onPick, accent }) {
+  if (barbers.length === 0) {
+    return (
+      <p className="text-center py-8 text-sm" style={{ color: 'var(--bk-text-muted)' }}>
+        Belum ada barber tersedia di cabang ini
+      </p>
+    )
+  }
   return (
-    <div className="flex gap-3 overflow-x-auto -mx-1 px-1 pb-2">
-      {/* Anyone option */}
-      <button onClick={() => onPick(null)}
-        className="flex-shrink-0 flex flex-col items-center gap-2 w-[88px]"
-      >
-        <div className="relative w-[72px] h-[72px] rounded-full flex items-center justify-center transition-all"
-          style={{
-            background: 'var(--bk-surface)',
-            border: `2px ${selected === null ? 'solid' : 'dashed'} ${selected === null ? accent : 'var(--bk-border-strong)'}`,
-          }}>
-          <Sparkles className="w-7 h-7" style={{ color: selected === null ? accent : 'var(--bk-text-2)' }} />
-          {selected === null && (
-            <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center"
-              style={{ background: accent, color: '#111' }}>
-              <Check className="w-3 h-3" strokeWidth={3} />
-            </div>
-          )}
-        </div>
-        <p className="text-[11px] font-semibold leading-tight text-center"
-          style={{ color: selected === null ? accent : 'var(--bk-text)' }}>
-          Tersedia
-        </p>
-      </button>
-
+    <div className="flex gap-3 overflow-x-auto -mx-1 px-1 pb-2" role="radiogroup" aria-label="Pilih barber">
       {barbers.map(barber => {
         const isSel = selected?.id === barber.id
+        const hasRating = barber.ratingCount > 0 && barber.avgRating != null
         return (
-          <button key={barber.id} onClick={() => onPick(barber)}
-            className="flex-shrink-0 flex flex-col items-center gap-2 w-[88px]"
+          <button key={barber.id}
+            type="button"
+            onClick={() => onPick(barber)}
+            role="radio"
+            aria-checked={isSel}
+            aria-label={`Barber ${barber.name}${hasRating ? `, rating ${barber.avgRating} dari 5 dari ${barber.ratingCount} ulasan` : ', belum ada rating'}`}
+            className="flex-shrink-0 flex flex-col items-center gap-1.5 w-[96px]"
           >
             <div className="relative">
               <div className="w-[72px] h-[72px] rounded-full overflow-hidden flex items-center justify-center transition-all"
@@ -1034,9 +1078,6 @@ function BarberCarousel({ barbers, selected, onPick, accent }) {
                 }}>
                 <Avatar src={barber.photo} name={barber.name} size="lg" className="w-full h-full" />
               </div>
-              {/* Online dot */}
-              <div className="absolute bottom-0 right-1 w-3.5 h-3.5 rounded-full"
-                style={{ background: '#22C55E', border: '2.5px solid var(--bk-bg)' }} />
               {isSel && (
                 <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center"
                   style={{ background: accent, color: '#111', border: '2px solid var(--bk-bg)' }}>
@@ -1048,6 +1089,17 @@ function BarberCarousel({ barbers, selected, onPick, accent }) {
               style={{ color: isSel ? accent : 'var(--bk-text)' }}>
               {barber.name}
             </p>
+            {hasRating ? (
+              <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold leading-none px-1.5 py-0.5 rounded-full"
+                style={{ background: 'var(--bk-surface)', color: accent }}>
+                ★ {barber.avgRating.toFixed(1)}
+                <span style={{ color: 'var(--bk-text-muted)' }}>({barber.ratingCount})</span>
+              </span>
+            ) : (
+              <span className="text-[10px] leading-none" style={{ color: 'var(--bk-text-muted)' }}>
+                Barber baru
+              </span>
+            )}
           </button>
         )
       })}

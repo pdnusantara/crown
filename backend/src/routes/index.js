@@ -1,5 +1,7 @@
 const router = require('express').Router();
 
+const { enforceSubscription } = require('../middleware/enforceSubscription');
+
 const publicRoutes = require('./public');
 const authRoutes = require('./auth');
 const userRoutes = require('./users');
@@ -26,6 +28,11 @@ const landingRoutes  = require('./landing');
 const superAdminUsageRoutes = require('./superAdminUsage');
 const superAdminAuditLogRoutes = require('./superAdminAuditLog');
 const barberScheduleRoutes = require('./barberSchedules');
+const barberRatingRoutes = require('./barberRatings');
+
+// Tolak operasi tulis dari tenant yang langganannya berakhir (allowlist:
+// auth/subscriptions/payment/public/landing). GET tetap lolos.
+router.use(enforceSubscription);
 
 router.use('/public', publicRoutes);
 router.use('/auth', authRoutes);
@@ -53,5 +60,6 @@ router.use('/landing',    landingRoutes);
 router.use('/super-admin/usage', superAdminUsageRoutes);
 router.use('/super-admin/audit-log', superAdminAuditLogRoutes);
 router.use('/barber-schedules', barberScheduleRoutes);
+router.use('/barber-ratings',   barberRatingRoutes);
 
 module.exports = router;

@@ -2,13 +2,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../lib/api.js'
 
 export function useUsers(filters = {}) {
+  // `enabled` adalah opsi gating, bukan parameter API.
+  const { enabled, ...params } = filters
   return useQuery({
-    queryKey: ['users', filters],
+    queryKey: ['users', params],
     queryFn: async () => {
-      const res = await api.get('/users', { params: filters })
+      const res = await api.get('/users', { params })
       const raw = res.data.data
       return Array.isArray(raw) ? raw : (raw?.data || [])
     },
+    enabled: enabled !== false,
   })
 }
 

@@ -38,6 +38,30 @@ const updateBookingSchema = z.object({
   notes: z.string().optional(),
 });
 
+const bulkBookingSchema = z.object({
+  ids: z.array(z.string().min(1)).min(1).max(100),
+  action: z.enum(['confirm', 'cancel']),
+});
+
+// Bangun where-clause dasar yang sudah tenant- & cabang-scoped sesuai role.
+// Dipakai bersama oleh /stats dan /bulk supaya isolasi multi-tenant konsisten.
+function buildScopeWhere(req) {
+  const where = {};
+  if (req.user.role !== 'super_admin') {
+    where.tenantId = req.user.tenantId;
+  } else if (req.query.tenantId) {
+    where.tenantId = req.query.tenantId;
+  }
+  if (req.user.role === 'kasir' && req.user.branchId) {
+    where.branchId = req.user.branchId;
+  } else if (req.query.branchId) {
+    where.branchId = req.query.branchId;
+  }
+  if (req.user.role === 'barber') where.barberId = req.user.id;
+  if (req.user.role === 'customer') where.customerId = req.user.id;
+  return where;
+}
+
 // GET /api/bookings
 router.get('/', authenticate, async (req, res, next) => {
   try {
@@ -114,6 +138,65 @@ router.get('/', authenticate, async (req, res, next) => {
     ]);
 
     res.json({ success: true, data: paginatedResponse(data, total, page, limit) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/bookings/stats — agregat tenant+cabang yang AKURAT lintas halaman.
+// Halaman daftar hanya punya satu page; kartu statistik butuh hitungan penuh.
+router.get('/stats', authenticate, async (req, res, next) => {
+  try {
+    const { formatYmdInTz } = require('../utils/timezone');
+    const tz = req.query.tz || 'Asia/Jakarta';
+    const todayStr = formatYmdInTz(new Date(), tz);
+
+    const base = buildScopeWhere(req);
+
+    const [today, pending, total] = await Promise.all([
+      prisma.booking.count({ where: { ...base, date: todayStr, status: { not: 'cancelled' } } }),
+      prisma.booking.count({ where: { ...base, status: 'pending' } }),
+      prisma.booking.count({ where: base }),
+    ]);
+
+    res.json({ success: true, data: { today, pending, total } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/bookings/bulk — konfirmasi / batalkan banyak booking sekaligus.
+// updateMany di-filter dengan where tenant+cabang → tidak bisa menyentuh
+// booking tenant/cabang lain meski id-nya ditebak.
+router.post('/bulk', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir'), async (req, res, next) => {
+  try {
+    const { ids, action } = bulkBookingSchema.parse(req.body);
+
+    const where = { ...buildScopeWhere(req), id: { in: ids } };
+    // confirm: hanya yang masih pending; cancel: pending atau confirmed.
+    where.status = action === 'confirm' ? 'pending' : { in: ['pending', 'confirmed'] };
+    const newStatus = action === 'confirm' ? 'confirmed' : 'cancelled';
+
+    const affected = await prisma.booking.findMany({ where, select: { id: true } });
+    if (affected.length === 0) {
+      return res.json({ success: true, data: { count: 0 } });
+    }
+
+    await prisma.booking.updateMany({
+      where: { id: { in: affected.map((a) => a.id) } },
+      data: { status: newStatus },
+    });
+
+    const updated = await prisma.booking.findMany({
+      where: { id: { in: affected.map((a) => a.id) } },
+      include: {
+        branch: { select: { id: true, name: true } },
+        customer: { select: { id: true, name: true, phone: true } },
+      },
+    });
+    updated.forEach((b) => emitBookingEvent('booking:updated', b));
+
+    res.json({ success: true, data: { count: updated.length } });
   } catch (err) {
     next(err);
   }

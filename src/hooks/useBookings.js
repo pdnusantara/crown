@@ -40,6 +40,7 @@ export function useBookings(filters = {}) {
 
     const invalidate = () => {
       qc.invalidateQueries({ queryKey: ['bookings', user.tenantId] })
+      qc.invalidateQueries({ queryKey: ['bookings-stats', user.tenantId] })
     }
 
     socket.on('booking:created', invalidate)
@@ -48,7 +49,7 @@ export function useBookings(filters = {}) {
 
     const handleReconnect = () => {
       joinBranchRoom(branchId)
-      qc.invalidateQueries({ queryKey: ['bookings', user.tenantId] })
+      invalidate()
     }
     socket.on('connect', handleReconnect)
 
@@ -68,12 +69,67 @@ export function useBookings(filters = {}) {
   }
 }
 
+/**
+ * useBookingStats — agregat tenant+cabang yang akurat lintas halaman
+ * (kartu statistik tidak boleh dihitung dari satu page saja).
+ */
+export function useBookingStats(filters = {}) {
+  const { user } = useAuthStore()
+  return useQuery({
+    queryKey: ['bookings-stats', user?.tenantId, filters],
+    queryFn: async () => {
+      const res = await api.get('/bookings/stats', {
+        params: { tenantId: user?.tenantId, ...filters },
+      })
+      return res.data.data
+    },
+    enabled: !!user?.tenantId,
+    keepPreviousData: true,
+  })
+}
+
+/**
+ * fetchAllBookings — tarik semua booking pada filter saat ini untuk export CSV.
+ * Iterasi paginated agar tidak timeout di tenant besar.
+ */
+export async function fetchAllBookings({ tenantId, ...filters }) {
+  const all = []
+  const limit = 200
+  let page = 1
+  let totalPages = 1
+  while (page <= totalPages && page <= 50 /* safety cap */) {
+    const res = await api.get('/bookings', {
+      params: { tenantId, ...filters, page, limit },
+    })
+    const raw = res.data?.data
+    const items = Array.isArray(raw) ? raw : (raw?.data || [])
+    all.push(...items)
+    totalPages = raw?.totalPages || raw?.meta?.totalPages || 1
+    page += 1
+  }
+  return all
+}
+
+// Patch optimistik ke SEMUA cache list booking tenant ini sekaligus —
+// query key memuat objek filter sehingga ada banyak entri tercache.
+function patchBookingCaches(qc, tenantId, patchFn) {
+  const snapshot = qc.getQueriesData({ queryKey: ['bookings', tenantId] })
+  qc.setQueriesData({ queryKey: ['bookings', tenantId] }, (old) => {
+    if (!old || !Array.isArray(old.data)) return old
+    return { ...old, data: old.data.map(patchFn) }
+  })
+  return snapshot
+}
+
 export function useCreateBooking() {
   const qc = useQueryClient()
   const { user } = useAuthStore()
   return useMutation({
     mutationFn: (data) => api.post('/bookings', data).then(r => r.data.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['bookings', user?.tenantId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bookings', user?.tenantId] })
+      qc.invalidateQueries({ queryKey: ['bookings-stats', user?.tenantId] })
+    },
   })
 }
 
@@ -82,7 +138,20 @@ export function useUpdateBooking() {
   const { user } = useAuthStore()
   return useMutation({
     mutationFn: ({ id, ...data }) => api.put(`/bookings/${id}`, data).then(r => r.data.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['bookings', user?.tenantId] }),
+    onMutate: async ({ id, ...data }) => {
+      await qc.cancelQueries({ queryKey: ['bookings', user?.tenantId] })
+      const snapshot = patchBookingCaches(qc, user?.tenantId, (b) =>
+        b.id === id ? { ...b, ...data } : b
+      )
+      return { snapshot }
+    },
+    onError: (_e, _v, ctx) => {
+      ctx?.snapshot?.forEach(([key, data]) => qc.setQueryData(key, data))
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['bookings', user?.tenantId] })
+      qc.invalidateQueries({ queryKey: ['bookings-stats', user?.tenantId] })
+    },
   })
 }
 
@@ -91,7 +160,37 @@ export function useDeleteBooking() {
   const { user } = useAuthStore()
   return useMutation({
     mutationFn: (id) => api.delete(`/bookings/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['bookings', user?.tenantId] }),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ['bookings', user?.tenantId] })
+      const snapshot = patchBookingCaches(qc, user?.tenantId, (b) =>
+        b.id === id ? { ...b, status: 'cancelled' } : b
+      )
+      return { snapshot }
+    },
+    onError: (_e, _v, ctx) => {
+      ctx?.snapshot?.forEach(([key, data]) => qc.setQueryData(key, data))
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['bookings', user?.tenantId] })
+      qc.invalidateQueries({ queryKey: ['bookings-stats', user?.tenantId] })
+    },
+  })
+}
+
+/**
+ * useBulkBooking — konfirmasi / batalkan banyak booking sekaligus
+ * lewat satu request ke POST /bookings/bulk.
+ */
+export function useBulkBooking() {
+  const qc = useQueryClient()
+  const { user } = useAuthStore()
+  return useMutation({
+    mutationFn: ({ ids, action }) =>
+      api.post('/bookings/bulk', { ids, action }).then(r => r.data.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bookings', user?.tenantId] })
+      qc.invalidateQueries({ queryKey: ['bookings-stats', user?.tenantId] })
+    },
   })
 }
 
@@ -106,6 +205,7 @@ export function useCheckInBooking() {
     mutationFn: (id) => api.post(`/bookings/${id}/check-in`).then(r => r.data.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['bookings', user?.tenantId] })
+      qc.invalidateQueries({ queryKey: ['bookings-stats', user?.tenantId] })
       qc.invalidateQueries({ queryKey: ['queue'] })
     },
   })

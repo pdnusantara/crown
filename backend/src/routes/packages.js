@@ -3,6 +3,8 @@ const { z } = require('zod');
 const prisma = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { getIO } = require('../config/socket');
+const { recordAudit } = require('../utils/auditLog');
+const { propagatePackageFeatureChange } = require('../services/featureFlagSync');
 
 const packageSelect = {
   name: true,
@@ -38,7 +40,12 @@ router.get('/', authenticate, async (req, res, next) => {
   try {
     const [packages, counts] = await Promise.all([
       prisma.package.findMany({ select: packageSelect, orderBy: { price: 'asc' } }),
-      prisma.subscription.groupBy({ by: ['package'], _count: { _all: true } }),
+      // Hitung tenant per paket — kecualikan tenant yang sudah di-soft-delete.
+      prisma.subscription.groupBy({
+        by: ['package'],
+        _count: { _all: true },
+        where: { tenant: { deletedAt: null } },
+      }),
     ]);
     const countMap = {};
     for (const c of counts) countMap[c.package] = c._count._all;
@@ -77,6 +84,12 @@ router.put('/:name', authenticate, requireRole('super_admin'), async (req, res, 
       return res.status(400).json({ success: false, error: 'No fields to update' });
     }
 
+    // Simpan daftar fitur lama supaya bisa di-diff dengan yang baru.
+    const before = await prisma.package.findUnique({
+      where: { name },
+      select: { features: true },
+    });
+
     const pkg = await prisma.package.upsert({
       where: { name },
       update: body,
@@ -94,6 +107,25 @@ router.put('/:name', authenticate, requireRole('super_admin'), async (req, res, 
       select: packageSelect,
     });
 
+    // Propagasi perubahan fitur paket → TenantFeatureFlag tenant terkait.
+    // Tanpa ini, mengubah fitur paket tidak pernah sampai ke admin tenant.
+    let propagation = null;
+    if (body.features !== undefined) {
+      propagation = await propagatePackageFeatureChange(
+        name, before?.features || [], pkg.features || [],
+      );
+      if (propagation.affectedTenants > 0) {
+        await recordAudit(req, {
+          action: 'package.features.propagate',
+          target: `package:${name}`,
+          detail: `Paket ${name}: ${propagation.affectedTenants} tenant disinkronkan` +
+            (propagation.added.length ? ` · +[${propagation.added.join(',')}]` : '') +
+            (propagation.removed.length ? ` · -[${propagation.removed.join(',')}]` : ''),
+          severity: 'info',
+        });
+      }
+    }
+
     // Broadcast supaya halaman pricing/billing yang sedang terbuka di tenant
     // langsung sinkron tanpa nunggu refetch periodik.
     const io = getIO();
@@ -101,7 +133,7 @@ router.put('/:name', authenticate, requireRole('super_admin'), async (req, res, 
       io.emit('package:updated', { name: pkg.name, package: pkg });
     }
 
-    res.json({ success: true, data: pkg });
+    res.json({ success: true, data: pkg, propagation });
   } catch (err) {
     if (err instanceof z.ZodError) {
       return res.status(400).json({ success: false, error: err.errors?.[0]?.message || 'Invalid input' });

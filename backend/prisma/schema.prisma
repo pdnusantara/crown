@@ -226,6 +226,32 @@ model Customer {
   tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   transactions  Transaction[]
   bookings      Booking[]
+  pointHistory  PointHistory[]
+}
+
+// Ledger imutabel pergerakan loyalty points — single source of truth untuk
+// audit & rekonsiliasi. Saldo Customer.loyaltyPoints harus = SUM(delta) di
+// ledger ini. Type:
+//   - earn:   poin otomatis dari transaksi POS
+//   - adjust: penyesuaian manual admin (positif/negatif) — reason wajib
+//   - redeem: poin dipakai (future)
+//   - expire: poin kadaluwarsa (future)
+model PointHistory {
+  id          String   @id @default(cuid())
+  tenantId    String
+  customerId  String
+  delta       Int      // positif = nambah, negatif = kurang
+  balanceAfter Int     // snapshot saldo SETELAH operasi → audit-friendly
+  type        String   // 'earn' | 'adjust' | 'redeem' | 'expire'
+  reason      String?  // konteks (mis. "kompensasi keluhan", "ulang tahun")
+  refType     String?  // 'transaction' | 'admin' | 'system'
+  refId       String?  // id transaksi atau user yang adjust
+  actorId     String?  // user id yang melakukan adjust manual (null untuk auto)
+  createdAt   DateTime @default(now())
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, customerId, createdAt])
+  @@index([customerId, createdAt])
 }
 
 model Transaction {
@@ -251,6 +277,10 @@ model Transaction {
   paymentMethod  PaymentMethod     @default(cash)
   cashReceived   Int?
   change         Int?
+  // Poin loyalti yang ditukar oleh pelanggan pada transaksi ini. Nilai diskonnya
+  // sudah masuk di `discountAmount`. Disimpan terpisah supaya laporan bisa
+  // memisahkan "diskon dari poin" vs "diskon manual/voucher".
+  pointsRedeemed Int               @default(0)
   status         TransactionStatus @default(completed)
   createdAt      DateTime          @default(now())
   branch         Branch            @relation(fields: [branchId], references: [id])
@@ -497,12 +527,32 @@ model Shift {
   @@index([kasirId, status])
 }
 
+// Rating per barber yang diberikan customer (via kasir) saat selesai transaksi.
+// Dedup constraint: 1 barber hanya bisa di-rate sekali per transaksi.
 model BarberRating {
-  id        String   @id @default(cuid())
-  barberId  String
-  rating    Int
-  createdAt DateTime @default(now())
-  barber    User     @relation("BarberRatings", fields: [barberId], references: [id])
+  id            String   @id @default(cuid())
+  tenantId      String?  // null untuk legacy data sebelum migrasi 2026-05-15
+  branchId      String?  // opsional, untuk filter per cabang di laporan
+  barberId      String
+  transactionId String?  // null kalau rating diberikan di luar konteks transaksi
+  customerId    String?  // null untuk walk-in tanpa registrasi
+  rating        Int      // 1..5
+  comment       String?  // catatan opsional dari pelanggan/kasir
+  submittedById String?  // user.id yang submit (kasir/admin)
+  // === Moderation & Auto-Action (iter 2 2026-05-15) ===
+  ticketId      String?  // link ke ticket yang auto-dibuat saat rating <=2
+  // publishStatus: 'pending' (default, tidak public), 'published' (tampil di /book), 'hidden' (admin sembunyikan)
+  publishStatus String   @default("pending")
+  publishedAt   DateTime?
+  publishedById String?  // admin yang approve untuk testimoni public
+  createdAt     DateTime @default(now())
+  barber        User     @relation("BarberRatings", fields: [barberId], references: [id])
+
+  @@unique([transactionId, barberId])
+  @@index([tenantId, createdAt])
+  @@index([barberId, createdAt])
+  @@index([branchId, createdAt])
+  @@index([tenantId, publishStatus]) // untuk query public testimoni cepat
 }
 
 model AuditLog {

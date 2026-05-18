@@ -8,6 +8,12 @@ const { requireLicensedBranch } = require('../middleware/requireLicensedBranch')
 const { getIO, branchRoom, tenantRoom, userRoom } = require('../config/socket');
 const { upsertCustomerByPhone } = require('../services/customerService');
 const { buildTenantDateRange, normalizeTimezone, DEFAULT_TZ } = require('../utils/timezone');
+const {
+  POINTS_PER_RUPIAH,
+  calcPointsEarn,
+  calcRedeemValue,
+  validateRedeem,
+} = require('../utils/loyalty');
 
 // Resolve TZ untuk filter tanggal: super_admin pakai tenant target (kalau ada),
 // non-super pakai tenant sendiri. Default Asia/Jakarta saat tidak tersedia.
@@ -53,6 +59,7 @@ const createTransactionSchema = z.object({
   change: z.number().int().nullish(),
   items: z.array(transactionItemSchema).min(1),
   loyaltyPointsEarned: z.number().int().min(0).nullish(),
+  pointsRedeemed: z.number().int().min(0).nullish(),
   voucherCode: z.string().nullish(),
 });
 
@@ -262,17 +269,74 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir
       }
     }
 
-    let { items, loyaltyPointsEarned = 0, voucherCode, queueId, ...txData } = body;
+    let { items, loyaltyPointsEarned = 0, pointsRedeemed = 0, voucherCode, queueId, ...txData } = body;
+    pointsRedeemed = Math.max(0, Math.floor(Number(pointsRedeemed) || 0));
+
+    // === REDEMPTION VALIDATION ===
+    // Validasi poin yang akan dipakai sebelum buat transaksi. Server adalah
+    // pemegang kebenaran — frontend hanya boleh menyarankan, BE harus verify.
+    if (pointsRedeemed > 0) {
+      if (!txData.customerId && !(txData.customerName && txData.customerPhone)) {
+        return res.status(400).json({ success: false, error: 'Tukar poin butuh customer terdaftar' });
+      }
+      // Cari customer untuk cek saldo. Kalau customerId belum di-set tapi ada
+      // nama+telp, resolve via phone (upsert dilakukan di bawah).
+      let customerRecord = null;
+      if (txData.customerId) {
+        customerRecord = await prisma.customer.findFirst({
+          where: { id: txData.customerId, tenantId: txData.tenantId, deletedAt: null },
+          select: { id: true, loyaltyPoints: true },
+        });
+      } else if (txData.customerPhone) {
+        customerRecord = await prisma.customer.findFirst({
+          where: { tenantId: txData.tenantId, phone: txData.customerPhone, deletedAt: null },
+          select: { id: true, loyaltyPoints: true },
+        });
+      }
+      if (!customerRecord) {
+        return res.status(400).json({ success: false, error: 'Customer tidak ditemukan untuk tukar poin' });
+      }
+      const err = validateRedeem({
+        points: pointsRedeemed,
+        balance: customerRecord.loyaltyPoints,
+        subtotal: Number(txData.subtotal) || 0,
+      });
+      if (err) {
+        return res.status(400).json({ success: false, error: err });
+      }
+      // Untuk konsistensi total: pastikan diskon dari poin yang dihitung BE = FE
+      const expectedPointDiscount = calcRedeemValue(pointsRedeemed);
+      const submittedDiscount = Math.max(0, Number(txData.discountAmount) || 0);
+      const submittedTotal    = Math.max(0, Number(txData.total) || 0);
+      const submittedSubtotal = Math.max(0, Number(txData.subtotal) || 0);
+      const submittedTax      = Math.max(0, Number(txData.tax) || 0);
+      const expectedTotal     = Math.max(0, submittedSubtotal - submittedDiscount + submittedTax);
+      // Toleransi 1 rupiah untuk pembulatan. Frontend harus include point
+      // discount di `discountAmount` SEBELUM submit — backend cuma sanity-check.
+      if (Math.abs(submittedTotal - expectedTotal) > 1) {
+        return res.status(400).json({
+          success: false,
+          error: `Total tidak konsisten (expected ${expectedTotal}, got ${submittedTotal})`,
+        });
+      }
+      // Pastikan discountAmount mengandung minimal nilai redeem
+      if (submittedDiscount < expectedPointDiscount) {
+        return res.status(400).json({
+          success: false,
+          error: 'discountAmount harus sudah termasuk diskon poin',
+        });
+      }
+    }
 
     // Auto-calc loyalty points bila frontend tidak mengirim eksplisit.
     // Default: 1 poin per Rp10.000 net (setelah diskon). Hanya berlaku saat
     // transaksi punya customerId — walk-in tanpa nomor telepon tidak terhitung.
     // Bisa di-override per-transaksi dengan kirim `loyaltyPointsEarned`.
-    const POINTS_PER_RUPIAH = 10_000; // 1 point per Rp10.000
     if ((loyaltyPointsEarned == null || loyaltyPointsEarned === 0) && txData.customerId) {
-      const net = Number(txData.total) || 0;
-      loyaltyPointsEarned = Math.max(0, Math.floor(net / POINTS_PER_RUPIAH));
+      loyaltyPointsEarned = calcPointsEarn(txData.total);
     }
+    // Persist pointsRedeemed ke kolom transaksi (untuk laporan)
+    txData.pointsRedeemed = pointsRedeemed;
 
     // Frontend POS mengirim `null` untuk field yang kosong. Setelah Zod
     // (.nullish()) field-field itu sudah lolos validasi, tapi Prisma menolak
@@ -359,15 +423,61 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir
         },
       });
 
-      // Update customer loyalty & visit count if customer provided
+      // Update customer loyalty & visit count if customer provided.
+      // Logika: net delta = earned - redeemed. Tapi kita TULIS dua ledger entry
+      // terpisah (redeem dulu, lalu earn) supaya riwayat tetap granular &
+      // bisa di-audit per kategori.
       if (txData.customerId) {
-        await tx.customer.update({
+        // 1) REDEEM: kurangi saldo dulu (kalau ada)
+        if (pointsRedeemed > 0) {
+          const afterRedeem = await tx.customer.update({
+            where: { id: txData.customerId },
+            data: { loyaltyPoints: { decrement: pointsRedeemed } },
+            select: { loyaltyPoints: true },
+          });
+          // Defensive: kalau race condition bikin saldo < 0, abort transaksi
+          if (afterRedeem.loyaltyPoints < 0) {
+            throw new Error('Saldo poin tidak cukup saat finalisasi (race)');
+          }
+          await tx.pointHistory.create({
+            data: {
+              tenantId: txData.tenantId,
+              customerId: txData.customerId,
+              delta: -pointsRedeemed,
+              balanceAfter: afterRedeem.loyaltyPoints,
+              type: 'redeem',
+              refType: 'transaction',
+              refId: transaction.id,
+              reason: `Tukar ${pointsRedeemed} pt → Rp${calcRedeemValue(pointsRedeemed).toLocaleString('id-ID')} diskon`,
+              actorId: req.user.id,
+            },
+          });
+        }
+
+        // 2) EARN: tambah poin dari nilai transaksi + visit count
+        const updatedCustomer = await tx.customer.update({
           where: { id: txData.customerId },
           data: {
             loyaltyPoints: { increment: loyaltyPointsEarned },
             visitCount: { increment: 1 },
           },
+          select: { loyaltyPoints: true },
         });
+        if (loyaltyPointsEarned > 0) {
+          await tx.pointHistory.create({
+            data: {
+              tenantId: txData.tenantId,
+              customerId: txData.customerId,
+              delta: loyaltyPointsEarned,
+              balanceAfter: updatedCustomer.loyaltyPoints,
+              type: 'earn',
+              refType: 'transaction',
+              refId: transaction.id,
+              reason: null,
+              actorId: null,
+            },
+          });
+        }
       }
 
       // Increment voucher usage count

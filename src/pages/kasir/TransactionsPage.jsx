@@ -11,6 +11,7 @@ import {
   useTransactions, useTransaction, useUpdateTransactionStatus, fetchAllTransactions,
 } from '../../hooks/useTransactions.js'
 import { useUsers } from '../../hooks/useUsers.js'
+import { useBarberRatings } from '../../hooks/useBarberRatings.js'
 import api from '../../lib/api.js'
 import Card from '../../components/ui/Card.jsx'
 import Badge, { getStatusBadge } from '../../components/ui/Badge.jsx'
@@ -791,6 +792,9 @@ function TransactionDetailModal({ tx, loading, onClose }) {
   const toast = useToast()
   const { user } = useAuthStore()
   const [confirmAction, setConfirmAction] = useState(null) // 'cancel' | 'refund' | null
+  // Fetch ratings yang sudah diberikan untuk transaksi ini (max 20 — biasanya 1-3 barber)
+  const { data: ratingsData } = useBarberRatings(tx?.id ? { transactionId: tx.id, limit: 20 } : {})
+  const ratings = tx?.id ? (ratingsData?.items || []) : []
 
   const canManage = user?.role === 'super_admin' || user?.role === 'tenant_admin' || user?.role === 'kasir'
 
@@ -971,6 +975,51 @@ function TransactionDetailModal({ tx, loading, onClose }) {
               <Row label="Poin loyalti" value={`+${tx.loyaltyPointsEarned}`} valueClass="text-blue-300" />
             )}
           </div>
+
+          {/* Rating Barber untuk transaksi ini */}
+          {ratings.length > 0 && (
+            <div className="px-6 py-4 border-t border-dark-border bg-gold/[0.02]">
+              <p className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-3 inline-flex items-center gap-2">
+                <Star className="w-3 h-3 text-gold fill-gold" /> Rating Barber
+              </p>
+              <div className="space-y-2">
+                {ratings.map(r => {
+                  const isLow  = r.rating <= 2
+                  const isHigh = r.rating >= 4
+                  return (
+                    <div key={r.id} className={`p-2.5 rounded-lg border ${
+                      isLow ? 'bg-red-500/5 border-red-500/30' :
+                      isHigh ? 'bg-emerald-500/5 border-emerald-500/30' :
+                      'bg-dark-card border-dark-border'
+                    }`}>
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="text-sm text-off-white font-medium truncate">
+                          {r.barber?.name || '—'}
+                        </span>
+                        <span className={`text-sm tabular-nums whitespace-nowrap ${isLow ? 'text-red-400' : 'text-gold'}`}>
+                          {'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}
+                        </span>
+                      </div>
+                      {r.comment && (
+                        <p className="text-xs italic text-off-white/80 mt-1 leading-snug">"{r.comment}"</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-1.5 text-[10px] text-muted flex-wrap">
+                        <span>{formatDateTime(r.createdAt)}</span>
+                        {r.publishStatus === 'published' && (
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-semibold uppercase tracking-wide">Live di /book</span>
+                        )}
+                        {r.ticketId && (
+                          <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-semibold uppercase tracking-wide inline-flex items-center gap-0.5">
+                            <AlertTriangle className="w-2.5 h-2.5" /> Tiket dibuat
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Actions */}
           {canManage && isCompleted && (
