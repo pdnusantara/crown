@@ -192,6 +192,10 @@ export default function LandingPage() {
     ? `https://wa.me/${waNumber}?text=${encodeURIComponent('Halo, saya tertarik dengan SembaPOS.')}`
     : null
 
+  // Tujuan tombol utama saat user sudah login — selaras dengan logika Nav.
+  const homePath = user?.role === 'super_admin' ? '/super-admin/dashboard'
+                 : user?.role === 'tenant_admin' ? '/admin/dashboard' : '/'
+
   return (
     <div className="min-h-screen bg-[#FBFAF6] text-[#57534E] font-body overflow-x-hidden antialiased">
       <Nav isAuthed={isAuthenticated} userRole={user?.role} />
@@ -250,8 +254,8 @@ export default function LandingPage() {
             transition={{ duration: 0.6, delay: 0.22 }}
             className="flex flex-wrap items-center justify-center gap-3 mt-9"
           >
-            <Link to={isAuthenticated ? '/admin/dashboard' : '/register'} className="btn-gold group">
-              {hero.heroCtaLabel || 'Coba Gratis 14 Hari'}
+            <Link to={isAuthenticated ? homePath : '/register'} className="btn-gold group">
+              {isAuthenticated ? 'Buka Dashboard' : (hero.heroCtaLabel || 'Coba Gratis 14 Hari')}
               <Lucide.ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </Link>
             <a href="#fitur" className="btn-ghost">
@@ -471,12 +475,18 @@ export default function LandingPage() {
       </section>
 
       {/* ── Testimoni ─────────────────────────────────────────────────────── */}
-      {testimonials.length > 0 && (
+      {/* Saat loading tampilkan skeleton supaya tidak ada layout shift; section
+          hilang hanya kalau memang tidak ada testimoni setelah data masuk. */}
+      {(isLoading || testimonials.length > 0) && (
         <section className="py-24 px-6 bg-[#F5EFE3]">
           <div className="max-w-6xl mx-auto">
             <SectionHeading {...sections.testimonials} />
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 mt-14">
-              {testimonials.map((t, i) => (
+              {isLoading
+                ? [1, 2, 3].map(i => (
+                    <div key={i} className="h-56 bg-white border border-[#EAE3D3] rounded-2xl animate-pulse" />
+                  ))
+                : testimonials.map((t, i) => (
                 <motion.div
                   key={t.id}
                   initial={{ opacity: 0, y: 24 }}
@@ -514,12 +524,16 @@ export default function LandingPage() {
       )}
 
       {/* ── FAQ ───────────────────────────────────────────────────────────── */}
-      {faqs.length > 0 && (
+      {(isLoading || faqs.length > 0) && (
         <section className="py-24 px-6">
           <div className="max-w-3xl mx-auto">
             <SectionHeading {...sections.faq} />
             <div className="space-y-3 mt-12">
-              {faqs.map((f, i) => <FAQItem key={f.id} item={f} delay={i * 0.04} />)}
+              {isLoading
+                ? [1, 2, 3, 4].map(i => (
+                    <div key={i} className="h-14 bg-white border border-[#EAE3D3] rounded-xl animate-pulse" />
+                  ))
+                : faqs.map((f, i) => <FAQItem key={f.id} item={f} delay={i * 0.04} />)}
             </div>
           </div>
         </section>
