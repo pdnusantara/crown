@@ -14,6 +14,7 @@ const {
   calcRedeemValue,
   validateRedeem,
 } = require('../utils/loyalty');
+const { recordAudit } = require('../utils/auditLog');
 
 // Resolve TZ untuk filter tanggal: super_admin pakai tenant target (kalau ada),
 // non-super pakai tenant sendiri. Default Asia/Jakarta saat tidak tersedia.
@@ -153,7 +154,6 @@ router.get('/summary', authenticate, requireRole('super_admin', 'tenant_admin', 
     }
     if (req.user.role === 'customer') where.customerId = req.user.id;
     if (branchId) where.branchId = branchId;
-    if (status) where.status = status;
     if (paymentMethod) where.paymentMethod = paymentMethod;
     if (barberId) where.items = { some: { barberId } };
 
@@ -162,19 +162,25 @@ router.get('/summary', authenticate, requireRole('super_admin', 'tenant_admin', 
       where.createdAt = buildTenantDateRange(startDate, endDate, tz);
     }
 
+    // Angka pendapatan HANYA dari transaksi 'completed' — transaksi yang
+    // dibatalkan / refund tidak boleh ikut dihitung sebagai omzet. Kalau user
+    // memfilter status tertentu secara eksplisit, hormati filter itu.
+    const whereRevenue = { ...where, status: status || 'completed' };
+
     const [count, totals, byPayment, byStatus] = await Promise.all([
-      prisma.transaction.count({ where }),
+      prisma.transaction.count({ where: whereRevenue }),
       prisma.transaction.aggregate({
-        where,
+        where: whereRevenue,
         _sum: { total: true, subtotal: true, discountAmount: true },
         _avg: { total: true },
       }),
       prisma.transaction.groupBy({
         by: ['paymentMethod'],
-        where,
+        where: whereRevenue,
         _count: { _all: true },
         _sum: { total: true },
       }),
+      // statusBreakdown tetap melihat SEMUA status (untuk badge jumlah batal).
       prisma.transaction.groupBy({
         by: ['status'],
         where,
@@ -335,8 +341,11 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir
     if ((loyaltyPointsEarned == null || loyaltyPointsEarned === 0) && txData.customerId) {
       loyaltyPointsEarned = calcPointsEarn(txData.total);
     }
-    // Persist pointsRedeemed ke kolom transaksi (untuk laporan)
+    // Persist pointsRedeemed, loyaltyPointsEarned & voucherCode ke kolom
+    // transaksi — dipakai laporan DAN reversal saat transaksi dibatalkan.
     txData.pointsRedeemed = pointsRedeemed;
+    txData.loyaltyPointsEarned = loyaltyPointsEarned || 0;
+    if (voucherCode) txData.voucherCode = voucherCode;
 
     // Frontend POS mengirim `null` untuk field yang kosong. Setelah Zod
     // (.nullish()) field-field itu sudah lolos validasi, tapi Prisma menolak
@@ -529,11 +538,18 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir
   }
 });
 
-// PATCH /api/transactions/:id/status
+// PATCH /api/transactions/:id/status — membatalkan / refund transaksi.
+// Membalik SEMUA efek samping pembuatan transaksi secara atomik:
+//   - poin loyalti yang diperoleh ditarik kembali
+//   - poin yang ditukar dikembalikan ke saldo pelanggan
+//   - visitCount pelanggan dikurangi
+//   - usedCount voucher dikembalikan
+// Transaksi yang sudah cancelled/refunded bersifat FINAL — cegah reversal ganda.
 router.patch('/:id/status', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir'), async (req, res, next) => {
   try {
-    const { status } = z.object({
-      status: z.enum(['completed', 'cancelled', 'refunded']),
+    const { status, reason } = z.object({
+      status: z.enum(['cancelled', 'refunded']),
+      reason: z.string().trim().max(300).optional(),
     }).parse(req.body);
 
     const existing = await prisma.transaction.findUnique({ where: { id: req.params.id } });
@@ -543,12 +559,98 @@ router.patch('/:id/status', authenticate, requireRole('super_admin', 'tenant_adm
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
-    const transaction = await prisma.transaction.update({
-      where: { id: req.params.id },
-      data: { status },
+    // State guard: hanya transaksi 'completed' yang bisa dibatalkan/refund.
+    // Sekali final, tidak bisa diubah lagi — mencegah reversal poin/voucher ganda.
+    if (existing.status !== 'completed') {
+      return res.status(409).json({
+        success: false,
+        error: `Transaksi sudah berstatus ${existing.status} — tidak bisa diubah lagi.`,
+        code: 'TX_NOT_REVERSIBLE',
+      });
+    }
+
+    const shortId = existing.id.slice(-6).toUpperCase();
+    const actionLabel = status === 'cancelled' ? 'pembatalan' : 'refund';
+
+    const transaction = await prisma.$transaction(async (tx) => {
+      // 1) Balikkan efek loyalti pelanggan (kalau transaksi punya customer).
+      if (existing.customerId) {
+        const cur = await tx.customer.findUnique({
+          where: { id: existing.customerId },
+          select: { loyaltyPoints: true, visitCount: true },
+        });
+        if (cur) {
+          // Net: tarik poin yang DIPEROLEH, kembalikan poin yang DITUKAR.
+          const delta = (existing.pointsRedeemed || 0) - (existing.loyaltyPointsEarned || 0);
+          // Lantai 0 — saldo poin tidak boleh negatif (pelanggan mungkin sudah
+          // memakai poinnya di transaksi lain).
+          const newBalance = Math.max(0, cur.loyaltyPoints + delta);
+          const actualDelta = newBalance - cur.loyaltyPoints;
+
+          const data = {};
+          if (actualDelta !== 0) data.loyaltyPoints = newBalance;
+          if (cur.visitCount > 0) data.visitCount = { decrement: 1 };
+          if (Object.keys(data).length > 0) {
+            await tx.customer.update({ where: { id: existing.customerId }, data });
+          }
+          if (actualDelta !== 0) {
+            await tx.pointHistory.create({
+              data: {
+                tenantId: existing.tenantId,
+                customerId: existing.customerId,
+                delta: actualDelta,
+                balanceAfter: newBalance,
+                type: 'adjust',
+                refType: 'transaction',
+                refId: existing.id,
+                reason: `Reversal ${actionLabel} transaksi #${shortId}`,
+                actorId: req.user.id,
+              },
+            });
+          }
+        }
+      }
+
+      // 2) Kembalikan kuota voucher (kalau transaksi memakai voucher).
+      if (existing.voucherCode) {
+        const v = await tx.voucher.findUnique({
+          where: { tenantId_code: { tenantId: existing.tenantId, code: existing.voucherCode } },
+          select: { usedCount: true },
+        });
+        if (v && v.usedCount > 0) {
+          await tx.voucher.update({
+            where: { tenantId_code: { tenantId: existing.tenantId, code: existing.voucherCode } },
+            data: { usedCount: { decrement: 1 } },
+          });
+        }
+      }
+
+      // 3) Ubah status transaksi.
+      return tx.transaction.update({
+        where: { id: existing.id },
+        data: { status },
+      });
     });
 
     res.json({ success: true, data: transaction });
+
+    // Audit + realtime — non-blocking untuk respons.
+    recordAudit(req, {
+      action: `transaction.${status}`,
+      target: `transaction:${existing.id}`,
+      detail: `${actionLabel} transaksi #${shortId} (Rp${existing.total.toLocaleString('id-ID')})${reason ? ` — ${reason}` : ''}`,
+      severity: 'warning',
+    }).catch(() => {});
+
+    const io = getIO();
+    if (io) {
+      io.to(tenantRoom(existing.tenantId)).emit('transaction:updated', {
+        id: existing.id,
+        tenantId: existing.tenantId,
+        branchId: existing.branchId,
+        status,
+      });
+    }
   } catch (err) {
     next(err);
   }

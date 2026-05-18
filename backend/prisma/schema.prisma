@@ -281,6 +281,12 @@ model Transaction {
   // sudah masuk di `discountAmount`. Disimpan terpisah supaya laporan bisa
   // memisahkan "diskon dari poin" vs "diskon manual/voucher".
   pointsRedeemed Int               @default(0)
+  // Poin loyalti yang DIPEROLEH pelanggan dari transaksi ini. Disimpan agar
+  // bisa di-reverse persis saat transaksi dibatalkan / refund.
+  loyaltyPointsEarned Int          @default(0)
+  // Kode voucher yang dipakai (kalau ada) — disimpan supaya usedCount voucher
+  // bisa dikembalikan saat transaksi dibatalkan.
+  voucherCode    String?
   status         TransactionStatus @default(completed)
   createdAt      DateTime          @default(now())
   branch         Branch            @relation(fields: [branchId], references: [id])

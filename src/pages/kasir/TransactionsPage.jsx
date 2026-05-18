@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   Search, Receipt, Eye, Calendar, X as XIcon, User, Store, CreditCard,
   Printer, Download, Filter, ChevronLeft, ChevronRight, AlertTriangle,
@@ -18,7 +19,9 @@ import Badge, { getStatusBadge } from '../../components/ui/Badge.jsx'
 import Modal from '../../components/ui/Modal.jsx'
 import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx'
 import { useToast } from '../../components/ui/Toast.jsx'
-import { formatRupiah, formatDateTime, formatDate } from '../../utils/format.js'
+import { getSocket } from '../../lib/socket.js'
+import { formatRupiah } from '../../utils/format.js'
+import { formatDateTimeInTz } from '../../utils/timezone.js'
 
 const PAYMENT_LABELS = {
   cash:     'Tunai',
@@ -171,6 +174,9 @@ export default function TransactionsPage() {
     return rest
   }, [queryFilters])
   const [summary, setSummary] = useState(null)
+  // Bumped saat status transaksi berubah / event realtime — memaksa summary
+  // (yang bukan React Query) ikut refetch supaya angka omzet tetap akurat.
+  const [summaryRefreshKey, setSummaryRefreshKey] = useState(0)
   useEffect(() => {
     let cancelled = false
     if (!user?.tenantId) return
@@ -178,7 +184,23 @@ export default function TransactionsPage() {
       .then(r => { if (!cancelled) setSummary(r.data?.data || null) })
       .catch(() => { if (!cancelled) setSummary(null) })
     return () => { cancelled = true }
-  }, [user?.tenantId, summaryFilters])
+  }, [user?.tenantId, summaryFilters, summaryRefreshKey])
+
+  // Realtime: transaksi baru / status berubah dari device lain → sinkron.
+  const qc = useQueryClient()
+  useEffect(() => {
+    const socket = getSocket()
+    const onChange = () => {
+      qc.invalidateQueries({ queryKey: ['transactions', 'list'] })
+      setSummaryRefreshKey(k => k + 1)
+    }
+    socket.on('transaction:created', onChange)
+    socket.on('transaction:updated', onChange)
+    return () => {
+      socket.off('transaction:created', onChange)
+      socket.off('transaction:updated', onChange)
+    }
+  }, [qc])
 
   // Staff list untuk filter
   const { data: barbers = [] } = useUsers({ branchId: user?.branchId, role: 'barber' })
@@ -217,7 +239,7 @@ export default function TransactionsPage() {
       }
       const header = ['Tanggal', 'ID', 'Sumber', 'Pelanggan', 'Telepon', 'Item', 'Barber', 'Subtotal', 'Diskon', 'Total', 'Pembayaran', 'Status']
       const rows = all.map((tx) => [
-        formatDateTime(tx.createdAt),
+        formatDateTimeInTz(tx.createdAt),
         tx.id,
         tx.bookingId ? 'Booking' : 'Walk-in',
         customerDisplayName(tx),
@@ -476,7 +498,7 @@ export default function TransactionsPage() {
                         onClick={() => openDetail(tx)}
                         className="border-b border-dark-border/50 hover:bg-dark-card/40 transition-colors cursor-pointer group"
                       >
-                        <Td className="whitespace-nowrap text-muted text-xs">{formatDateTime(tx.createdAt)}</Td>
+                        <Td className="whitespace-nowrap text-muted text-xs">{formatDateTimeInTz(tx.createdAt)}</Td>
                         <Td className="font-mono text-xs text-muted">#{tx.id.slice(-6).toUpperCase()}</Td>
                         <Td>
                           <div className="max-w-[280px]">
@@ -575,7 +597,7 @@ export default function TransactionsPage() {
                         </div>
                       )}
                       <div className="flex items-center justify-between gap-2 mt-2">
-                        <span className="text-[11px] text-muted">{formatDateTime(tx.createdAt)}</span>
+                        <span className="text-[11px] text-muted">{formatDateTimeInTz(tx.createdAt)}</span>
                         <Badge variant={getStatusBadge(tx.paymentMethod)}>
                           {PAYMENT_LABELS[tx.paymentMethod] || tx.paymentMethod || '—'}
                         </Badge>
@@ -601,6 +623,7 @@ export default function TransactionsPage() {
         tx={detailTx}
         loading={!detailTx && fallbackDetail.isLoading}
         onClose={closeDetail}
+        onChanged={() => setSummaryRefreshKey(k => k + 1)}
       />
     </div>
   )
@@ -786,7 +809,7 @@ function EmptyState({ onReset }) {
 
 // ── Detail Modal ──────────────────────────────────────────────────────────────
 
-function TransactionDetailModal({ tx, loading, onClose }) {
+function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
   const isOpen = !!tx || loading
   const updateStatus = useUpdateTransactionStatus()
   const toast = useToast()
@@ -826,6 +849,7 @@ function TransactionDetailModal({ tx, loading, onClose }) {
       await updateStatus.mutateAsync({ id: tx.id, status })
       toast.success(status === 'cancelled' ? 'Transaksi dibatalkan' : 'Transaksi di-refund')
       setConfirmAction(null)
+      onChanged?.()
       onClose()
     } catch (err) {
       toast.error(err?.response?.data?.error || 'Gagal mengubah status')
@@ -855,7 +879,7 @@ function TransactionDetailModal({ tx, loading, onClose }) {
               <h3 className="font-display text-lg font-semibold text-off-white truncate">
                 {customerDisplayName(tx)}
               </h3>
-              <p className="text-xs text-muted">{formatDateTime(tx.createdAt)}</p>
+              <p className="text-xs text-muted">{formatDateTimeInTz(tx.createdAt)}</p>
             </div>
             <div className="flex items-center gap-1 shrink-0">
               <button
@@ -909,7 +933,7 @@ function TransactionDetailModal({ tx, loading, onClose }) {
                   `${tx.booking.date || '—'}${tx.booking.time ? ` · ${tx.booking.time}` : ''}`
                 } />
                 <Meta icon={Clock} label="Dibuat" value={
-                  tx.booking.createdAt ? formatDateTime(tx.booking.createdAt) : '—'
+                  tx.booking.createdAt ? formatDateTimeInTz(tx.booking.createdAt) : '—'
                 } />
                 {tx.booking.serviceName && (
                   <Meta icon={Receipt} label="Layanan" value={tx.booking.serviceName} className="col-span-2" />
@@ -1001,10 +1025,10 @@ function TransactionDetailModal({ tx, loading, onClose }) {
                         </span>
                       </div>
                       {r.comment && (
-                        <p className="text-xs italic text-off-white/80 mt-1 leading-snug">"{r.comment}"</p>
+                        <p className="text-xs italic text-muted mt-1 leading-snug">"{r.comment}"</p>
                       )}
                       <div className="flex items-center gap-2 mt-1.5 text-[10px] text-muted flex-wrap">
-                        <span>{formatDateTime(r.createdAt)}</span>
+                        <span>{formatDateTimeInTz(r.createdAt)}</span>
                         {r.publishStatus === 'published' && (
                           <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-semibold uppercase tracking-wide">Live di /book</span>
                         )}
@@ -1056,7 +1080,7 @@ function TransactionDetailModal({ tx, loading, onClose }) {
         variant="danger"
         icon={AlertTriangle}
         title="Batalkan transaksi?"
-        description="Status transaksi akan diubah menjadi DIBATALKAN. Item dan pembayaran tetap tersimpan untuk audit."
+        description="Transaksi ditandai DIBATALKAN dan dikeluarkan dari perhitungan omzet. Poin loyalti & kunjungan pelanggan, poin yang ditukar, serta kuota voucher otomatis dikembalikan. Tindakan ini final — tidak bisa diurungkan."
         highlight={`#${shortId}`}
         confirmText="Ya, Batalkan"
         cancelText="Tidak, Kembali"
@@ -1068,7 +1092,7 @@ function TransactionDetailModal({ tx, loading, onClose }) {
         variant="warning"
         icon={RefreshCcw}
         title="Refund transaksi?"
-        description="Tandai transaksi ini sebagai REFUND. Pastikan dana sudah dikembalikan ke pelanggan secara fisik / transfer."
+        description="Transaksi ditandai REFUND dan dikeluarkan dari perhitungan omzet. Poin loyalti & kunjungan pelanggan, poin yang ditukar, serta kuota voucher otomatis dikembalikan. Pastikan dana sudah dikembalikan ke pelanggan. Tindakan ini final."
         highlight={`#${shortId}`}
         confirmText="Ya, Refund"
         cancelText="Tidak, Kembali"
