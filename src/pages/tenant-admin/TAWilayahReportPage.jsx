@@ -5,8 +5,8 @@ import {
   ResponsiveContainer, Cell,
 } from 'recharts'
 import {
-  MapPin, ChevronRight, ChevronDown, Users, TrendingUp, TrendingDown,
-  DollarSign, Repeat2, Settings2, Star, AlertCircle, RefreshCw,
+  MapPin, ChevronRight, ChevronDown, Users, TrendingUp,
+  DollarSign, Repeat2, Settings2, AlertCircle, RefreshCw, Download,
   Building2, Home, Sparkles, ArrowUpRight, ArrowDownRight, Minus,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
@@ -14,6 +14,8 @@ import { useWilayahReport } from '../../hooks/useWilayahReport.js'
 import { useProvinces, useRegencies } from '../../hooks/useWilayah.js'
 import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
 import Button from '../../components/ui/Button.jsx'
+import { useToast } from '../../components/ui/Toast.jsx'
+import { useChartTheme } from '../../utils/chartTheme.js'
 import { formatRupiah } from '../../utils/format.js'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -45,7 +47,15 @@ function saveConfig(tenantId, config) {
 
 function pctChange(cur, prev) {
   if (!prev || prev === 0) return null
+  if (typeof cur !== 'number') return null
   return +((cur - prev) / prev * 100).toFixed(1)
+}
+
+// Kelas badge peringkat — light-mode safe (hanya class ber-override).
+function rankBadgeClass(rank) {
+  if (rank === 1) return 'bg-gold/20 text-gold'
+  if (rank === 2 || rank === 3) return 'bg-dark-surface text-off-white'
+  return 'bg-dark-surface text-muted'
 }
 
 function ChangeChip({ cur, prev }) {
@@ -69,14 +79,19 @@ function ChangeChip({ cur, prev }) {
 }
 
 // ── Stat Card ─────────────────────────────────────────────────────────────────
-function StatCard({ icon: Icon, label, value, prev, color = 'text-gold', sub }) {
+// `changeValue` = angka mentah untuk chip perubahan. WAJIB diisi terpisah saat
+// `value` sudah ter-format jadi string (mis. rupiah) — kalau tidak, chip salah
+// hitung (mengira nilai sekarang 0 → selalu -100%).
+function StatCard({ icon: Icon, label, value, prev, changeValue, color = 'text-gold', sub }) {
+  const cur = typeof changeValue === 'number' ? changeValue
+            : typeof value === 'number' ? value : null
   return (
     <Card className="p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="w-9 h-9 rounded-xl bg-dark-surface flex items-center justify-center flex-shrink-0">
           <Icon size={18} className={color} />
         </div>
-        <ChangeChip cur={typeof value === 'number' ? value : 0} prev={prev} />
+        {cur !== null && <ChangeChip cur={cur} prev={prev} />}
       </div>
       <p className="mt-3 text-2xl font-bold text-off-white leading-none">{value}</p>
       <p className="text-xs text-muted mt-1">{label}</p>
@@ -196,8 +211,7 @@ function KecamatanRow({ kec, rank, totalVisits, isExpanded, onToggle }) {
       >
         <td className="py-3 px-4">
           <div className="flex items-center gap-2">
-            <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0
-              ${rank === 1 ? 'bg-gold/20 text-gold' : rank === 2 ? 'bg-gray-400/20 text-gray-400' : rank === 3 ? 'bg-amber-700/20 text-amber-600' : 'bg-dark-surface text-muted'}`}>
+            <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${rankBadgeClass(rank)}`}>
               {rank}
             </span>
             <div>
@@ -282,7 +296,7 @@ function KecamatanRow({ kec, rank, totalVisits, isExpanded, onToggle }) {
 }
 
 // ── Insights ──────────────────────────────────────────────────────────────────
-function InsightsPanel({ byKecamatan, summary }) {
+function InsightsPanel({ byKecamatan }) {
   if (!byKecamatan?.length) return null
 
   const top        = byKecamatan[0]
@@ -363,8 +377,7 @@ function KecamatanMobileCard({ kec, rank, totalVisits, isExpanded, onToggle }) {
         onClick={onToggle}
         className="w-full p-4 flex items-start gap-3 hover:bg-dark-surface/40 transition-colors text-left"
       >
-        <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0
-          ${rank === 1 ? 'bg-gold/20 text-gold' : rank === 2 ? 'bg-gray-400/20 text-gray-400' : rank === 3 ? 'bg-amber-700/20 text-amber-600' : 'bg-dark-surface text-muted'}`}>
+        <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 ${rankBadgeClass(rank)}`}>
           {rank}
         </span>
         <div className="flex-1 min-w-0">
@@ -438,6 +451,8 @@ function EmptyData({ kabupaten }) {
 export default function TAWilayahReportPage() {
   const { user } = useAuthStore()
   const tenantId = user?.tenantId
+  const toast = useToast()
+  const chart = useChartTheme()
 
   const [config, setConfig]           = useState(() => loadConfig(tenantId))
   const [period, setPeriod]           = useState('30d')
@@ -476,6 +491,36 @@ export default function TAWilayahReportPage() {
 
   function toggleKec(id) {
     setExpandedKec(prev => prev === id ? null : id)
+  }
+
+  // Ekspor breakdown wilayah ke CSV — satu baris ringkasan per kecamatan,
+  // diikuti baris tiap desa/kelurahan di bawahnya.
+  function handleExport() {
+    if (!byKecamatan.length) {
+      toast.error('Tidak ada data untuk diekspor')
+      return
+    }
+    const header = ['Kecamatan', 'Desa/Kelurahan', 'Pelanggan', 'Kunjungan', 'Pendapatan', 'Rata-rata kunjungan/pelanggan']
+    const rows = []
+    byKecamatan.forEach(kec => {
+      rows.push([kec.kecamatan, '— Total kecamatan —', kec.customerCount, kec.visitCount, kec.revenue, kec.avgVisitPerCustomer])
+      kec.kelurahan.forEach(kel => {
+        rows.push([kec.kecamatan, kel.kelurahan, kel.customerCount, kel.visitCount, kel.revenue, kel.avgVisitPerCustomer])
+      })
+    })
+    const escape = (v) => {
+      const s = String(v ?? '')
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+    }
+    const csv = [header, ...rows].map(r => r.map(escape).join(',')).join('\r\n')
+    const blob = new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href     = url
+    a.download = `laporan-wilayah-${config?.kabupaten || 'area'}-${period}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success(`Berhasil ekspor ${byKecamatan.length} kecamatan`)
   }
 
   // ── Setup screen ────────────────────────────────────────────────────────────
@@ -526,6 +571,14 @@ export default function TAWilayahReportPage() {
           >
             <Settings2 size={13} />
             Ganti Kabupaten
+          </button>
+          <button
+            onClick={handleExport}
+            disabled={isLoading || byKecamatan.length === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-dark-border text-xs text-muted hover:border-gold/30 hover:text-off-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Download size={13} />
+            Ekspor CSV
           </button>
           <button
             onClick={() => refetch()}
@@ -589,7 +642,8 @@ export default function TAWilayahReportPage() {
           icon={Repeat2}
           label="Total Kunjungan"
           value={isLoading ? '—' : (summary?.totalVisits ?? 0)}
-          prev={summary?.prevVisits}
+          changeValue={summary?.totalVisits ?? 0}
+          prev={period !== 'all' ? summary?.prevVisits : undefined}
           color="text-gold"
           sub={period !== 'all' ? 'vs periode sebelumnya' : undefined}
         />
@@ -597,7 +651,8 @@ export default function TAWilayahReportPage() {
           icon={DollarSign}
           label="Total Pendapatan"
           value={isLoading ? '—' : formatRupiah(summary?.totalRevenue ?? 0)}
-          prev={summary?.prevRevenue}
+          changeValue={summary?.totalRevenue ?? 0}
+          prev={period !== 'all' ? summary?.prevRevenue : undefined}
           color="text-green-400"
           sub={period !== 'all' ? 'vs periode sebelumnya' : undefined}
         />
@@ -626,7 +681,7 @@ export default function TAWilayahReportPage() {
       {!isLoading && !isError && byKecamatan.length > 0 && (
         <>
           {/* Insights */}
-          <InsightsPanel byKecamatan={byKecamatan} summary={summary} />
+          <InsightsPanel byKecamatan={byKecamatan} />
 
           {/* Bar chart */}
           <Card>
@@ -644,17 +699,20 @@ export default function TAWilayahReportPage() {
                   layout="vertical"
                   margin={{ top: 0, right: 30, left: 8, bottom: 0 }}
                 >
-                  <CartesianGrid horizontal={false} stroke="#2A2A2A" />
-                  <XAxis type="number" tick={{ fontSize: 11, fill: '#888' }} axisLine={false} tickLine={false} />
+                  <CartesianGrid horizontal={false} stroke={chart.grid} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: chart.axisTick }} axisLine={false} tickLine={false} />
                   <YAxis
                     type="category"
                     dataKey="kecamatan"
                     width={120}
-                    tick={{ fontSize: 11, fill: '#aaa' }}
+                    tick={{ fontSize: 11, fill: chart.axisTick }}
                     axisLine={false}
                     tickLine={false}
                   />
-                  <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+                  <Tooltip
+                    content={<CustomTooltip />}
+                    cursor={{ fill: chart.isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.03)' }}
+                  />
                   <Bar dataKey="visitCount" radius={[0, 6, 6, 0]} maxBarSize={28}>
                     {chartData.map((_, i) => (
                       <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
