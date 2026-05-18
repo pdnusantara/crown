@@ -157,7 +157,21 @@ export default function LandingPage() {
   useEffect(() => {
     const original = document.title
     document.title = 'SembaPOS — Kelola Barbershop Tanpa Ribet'
-    return () => { document.title = original }
+
+    // Landing selalu terang — pastikan latar terang juga saat masuk lewat
+    // navigasi client-side dari halaman app yang gelap (skrip di index.html
+    // hanya jalan saat load awal). Dikembalikan saat keluar dari landing.
+    const html = document.documentElement
+    const meta = document.querySelector('meta[name="theme-color"]')
+    const prevThemeColor = meta?.content
+    html.classList.add('is-landing')
+    if (meta) meta.content = '#FBFAF6'
+
+    return () => {
+      document.title = original
+      html.classList.remove('is-landing')
+      if (meta && prevThemeColor) meta.content = prevThemeColor
+    }
   }, [])
 
   const hero = data?.hero || {}
