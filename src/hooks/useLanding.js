@@ -1,13 +1,27 @@
+import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../lib/api.js'
+import { getSocket } from '../lib/socket.js'
 
 // Public read — landing content
 export function useLanding() {
-  return useQuery({
+  const qc = useQueryClient()
+  const query = useQuery({
     queryKey: ['landing'],
     queryFn: () => api.get('/landing').then(r => r.data.data),
     staleTime: 60_000,
   })
+
+  // Realtime: super-admin mengubah paket → kartu harga di landing ikut segar
+  // tanpa perlu reload. Backend `PUT /packages/:name` emit `package:updated`.
+  useEffect(() => {
+    const s = getSocket()
+    const onUpdate = () => qc.invalidateQueries({ queryKey: ['landing'] })
+    s.on('package:updated', onUpdate)
+    return () => { s.off('package:updated', onUpdate) }
+  }, [qc])
+
+  return query
 }
 
 // Super-admin: hero update

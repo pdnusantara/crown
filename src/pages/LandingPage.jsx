@@ -5,6 +5,10 @@ import * as Lucide from 'lucide-react'
 import { useLanding } from '../hooks/useLanding.js'
 import { useAuthStore } from '../store/authStore.js'
 import { formatRupiah } from '../utils/format.js'
+import { ALL_FEATURE_FLAGS } from '../store/featureFlagStore.js'
+
+// Peta id-flag → label manusiawi untuk daftar fitur di kartu harga.
+const FLAG_LABEL = Object.fromEntries(ALL_FEATURE_FLAGS.map(f => [f.id, f.label]))
 
 // Helper untuk animasi count-up angka.
 function CountUp({ to = 0, duration = 1500, suffix = '' }) {
@@ -300,8 +304,8 @@ export default function LandingPage() {
                       {p.branchAddonPrice > 0 && (
                         <Feat muted>Cabang tambahan {formatRupiah(p.branchAddonPrice)}{p.branchAddonType === 'monthly' ? '/bulan' : ' (sekali)'}</Feat>
                       )}
-                      {(p.features || []).map((feat, fi) => (
-                        <Feat key={fi}>{feat}</Feat>
+                      {(p.features || []).map((fid) => (
+                        <Feat key={fid}>{FLAG_LABEL[fid] || fid}</Feat>
                       ))}
                     </ul>
 

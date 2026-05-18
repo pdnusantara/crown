@@ -64,6 +64,8 @@ export function useUpdatePackage() {
       qc.invalidateQueries({ queryKey: ['packages'] })
       // Flag fitur tenant ikut berubah → segarkan cache feature-flags.
       qc.invalidateQueries({ queryKey: ['featureFlags'] })
+      // Kartu harga di landing page memakai data paket → ikut disegarkan.
+      qc.invalidateQueries({ queryKey: ['landing'] })
     },
   })
 }
