@@ -1167,12 +1167,12 @@ function POSPageInner() {
         {/* pb besar di mobile supaya kartu terakhir tidak ketutup bar keranjang mengambang */}
         <div className="flex-1 overflow-y-auto pb-28 lg:pb-0">
           {servicesLoading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3" aria-hidden="true">
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5" aria-hidden="true">
               {Array.from({ length: 12 }).map((_, i) => (
-                <div key={i} className="p-3.5 rounded-xl border border-dark-border bg-dark-card animate-pulse">
-                  <div className="w-6 h-6 rounded-md bg-dark-surface mb-2" />
-                  <div className="h-3 w-3/4 rounded bg-dark-surface mb-2" />
-                  <div className="h-3 w-2/5 rounded bg-dark-surface mt-4" />
+                <div key={i} className="p-3 rounded-xl border border-dark-border bg-dark-card animate-pulse">
+                  <div className="w-7 h-7 rounded-lg bg-dark-surface mb-1.5" />
+                  <div className="h-3 w-3/4 rounded bg-dark-surface mb-1.5" />
+                  <div className="h-3 w-1/2 rounded bg-dark-surface" />
                 </div>
               ))}
             </div>
@@ -1194,34 +1194,26 @@ function POSPageInner() {
               <p className="text-xs mt-1">{t('pos.servicesEmptyHint')}</p>
             </div>
           ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5">
             {filtered.map(svc => {
               const inCart = posStore.cartItems.some(item => item.serviceId === svc.id)
               return (
                 <button
                   key={svc.id}
                   onClick={() => handleAddToCart(svc)}
-                  className={`relative flex flex-col p-3.5 rounded-xl border text-left transition-colors ${
-                    inCart ? 'bg-gold/[0.07] border-gold/40' : 'bg-dark-card border-dark-border hover:border-gold/40'
+                  className={`relative p-3 rounded-xl border text-left transition-all ${
+                    inCart ? 'bg-gold/10 border-gold/40' : 'bg-dark-card border-dark-border hover:border-gold/30 hover:bg-dark-surface'
                   }`}
                 >
                   {inCart && (
-                    <span className="absolute top-2 right-2 inline-flex items-center justify-center w-4 h-4 rounded-full bg-gold text-dark">
+                    <span className="absolute top-1.5 right-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-gold text-dark">
                       <Check size={11} strokeWidth={3} />
                     </span>
                   )}
-                  {svc.icon && <span className="text-lg leading-none mb-2">{svc.icon}</span>}
-                  <p className="font-medium text-[13px] text-off-white leading-snug line-clamp-2 mb-3 pr-3">
-                    {svc.name}
-                  </p>
-                  <div className="mt-auto flex items-baseline justify-between gap-1.5">
-                    <span className="text-gold font-semibold text-sm tabular-nums">
-                      {formatRupiah(svc.price)}
-                    </span>
-                    <span className="text-[11px] text-muted whitespace-nowrap">
-                      {svc.duration} {t('pos.minutesShort')}
-                    </span>
-                  </div>
+                  <div className="text-xl mb-1.5 leading-none">{svc.icon}</div>
+                  <p className="font-medium text-[13px] text-off-white leading-tight mb-0.5 line-clamp-2 min-h-[2.2em]">{svc.name}</p>
+                  <p className="text-gold font-semibold text-sm tabular-nums">{formatRupiah(svc.price)}</p>
+                  <p className="text-[11px] text-muted mt-0.5">{svc.duration} {t('pos.minutesShort')}</p>
                 </button>
               )
             })}
