@@ -12,13 +12,18 @@ export function useLanding() {
     staleTime: 60_000,
   })
 
-  // Realtime: super-admin mengubah paket → kartu harga di landing ikut segar
-  // tanpa perlu reload. Backend `PUT /packages/:name` emit `package:updated`.
+  // Realtime: super-admin mengubah paket atau konten landing → halaman ikut
+  // segar tanpa reload. Backend emit `package:updated` (PUT /packages/:name)
+  // dan `landing:updated` (PATCH /landing/hero + CRUD testimoni/FAQ).
   useEffect(() => {
     const s = getSocket()
     const onUpdate = () => qc.invalidateQueries({ queryKey: ['landing'] })
     s.on('package:updated', onUpdate)
-    return () => { s.off('package:updated', onUpdate) }
+    s.on('landing:updated', onUpdate)
+    return () => {
+      s.off('package:updated', onUpdate)
+      s.off('landing:updated', onUpdate)
+    }
   }, [qc])
 
   return query

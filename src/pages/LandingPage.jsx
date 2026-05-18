@@ -46,6 +46,46 @@ const FALLBACK_FEATURES = [
   { icon: 'ShieldCheck',   title: 'Aman & sesuai peran', desc: 'Owner, kasir, barber — tiap orang punya akses sendiri. Data toko tetap aman.' },
 ]
 
+// Fallback konten section — dipakai kalau super-admin belum mengisinya.
+// Backend mengembalikan default yang sama; ini cuma jaring pengaman saat API
+// gagal/loading supaya landing tidak pernah tampil kosong.
+const FALLBACK_TRUST = ['Gratis 14 hari', 'Tanpa kartu kredit', 'Aktif langsung']
+
+const FALLBACK_STEPS = [
+  { title: 'Daftar gratis',  desc: 'Bikin akun toko cuma semenit. Langsung dapat masa coba 14 hari, tanpa kartu kredit.' },
+  { title: 'Atur toko kamu', desc: 'Tambah cabang, layanan, dan tim. Ada checklist panduan biar nggak ada yang kelewat.' },
+  { title: 'Mulai melayani', desc: 'Buka kasir, terima booking, pantau omzet. Sisanya biar aplikasi yang urus.' },
+]
+
+const FALLBACK_SECTIONS = {
+  features:     { kicker: 'Fitur Lengkap',  title: 'Semua yang barbershop kamu butuhin', subtitle: 'Nggak perlu spreadsheet atau aplikasi terpisah. Dari kasir sampai laporan pemilik, semua sudah satu paket.' },
+  steps:        { kicker: 'Gampang Banget', title: 'Mulai cuma 3 langkah', subtitle: 'Dari daftar sampai toko jalan, bisa kelar hari ini juga. Beneran.' },
+  pricing:      { kicker: 'Paket Harga',    title: 'Harga jelas, tanpa kejutan', subtitle: 'Mulai gratis 14 hari. Bayar cuma kalau toko kamu makin ramai — bisa naik paket kapan saja.' },
+  testimonials: { kicker: 'Testimoni',      title: 'Kata para owner barbershop', subtitle: 'Mereka sudah pindah dari catatan manual ke SembaPOS — dan nggak mau balik lagi.' },
+  faq:          { kicker: 'Tanya Jawab',    title: 'Masih ragu? Wajar kok', subtitle: 'Belum nemu jawabannya? Chat tim kami langsung lewat WhatsApp.' },
+}
+
+const FALLBACK_CLOSING = {
+  title:    'Yuk, rapikan barbershop kamu',
+  subtitle: 'Coba gratis 14 hari. Tanpa kartu kredit, tanpa biaya tersembunyi. Kalau cocok, lanjut — kalau enggak, ya sudah.',
+  ctaLabel: 'Daftar Sekarang',
+}
+
+const FALLBACK_FOOTER = 'Sistem manajemen barbershop modern: kasir, antrian, booking online, multi-cabang, dan laporan pintar dalam satu aplikasi.'
+
+// Render judul hero — 2 kata terakhir ditonjolkan emas-italic (memenuhi
+// kontrak label editor super-admin). Judul ≤2 kata seluruhnya jadi emas.
+function renderHeroTitle(title) {
+  const words = String(title || '').trim().split(/\s+/).filter(Boolean)
+  if (words.length === 0) return null
+  if (words.length <= 2) {
+    return <span className="italic text-[#A8893A]">{words.join(' ')}</span>
+  }
+  const head = words.slice(0, -2).join(' ')
+  const tail = words.slice(-2).join(' ')
+  return <>{head}<br /><span className="italic text-[#A8893A]">{tail}</span></>
+}
+
 // Tagline ramah per paket (dipakai kalau `package.description` kosong).
 const PKG_TAGLINE = {
   Basic:      'Pas buat barbershop yang baru mulai rapi-rapi.',
@@ -122,6 +162,12 @@ export default function LandingPage() {
 
   const hero = data?.hero || {}
   const features = (hero.features?.length ? hero.features : FALLBACK_FEATURES)
+  const trustItems = (hero.trustItems?.length ? hero.trustItems : FALLBACK_TRUST)
+  const steps = (hero.steps?.length ? hero.steps : FALLBACK_STEPS)
+  const sections = { ...FALLBACK_SECTIONS, ...(hero.sections || {}) }
+  const closing = { ...FALLBACK_CLOSING, ...(hero.closingCta || {}) }
+  const footerText = hero.footerText || FALLBACK_FOOTER
+  const heroBadge = hero.heroBadge || 'Baru'
   const testimonials = data?.testimonials || []
   const faqs = data?.faqs || []
   const packages = data?.packages || []
@@ -161,7 +207,7 @@ export default function LandingPage() {
             className="inline-flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full bg-white border border-[#EAE0C6] text-[#A8893A] text-xs font-semibold shadow-[0_4px_16px_-8px_rgba(201,168,76,0.5)]"
           >
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#C9A84C] text-[#1C1A17]">
-              <Lucide.Sparkles size={11} /> Baru
+              <Lucide.Sparkles size={11} /> {heroBadge}
             </span>
             {hero.brandTagline || 'Dipercaya barbershop di seluruh Indonesia'}
           </motion.div>
@@ -172,9 +218,7 @@ export default function LandingPage() {
             transition={{ duration: 0.6, delay: 0.06 }}
             className="font-display text-4xl leading-[1.12] sm:text-6xl sm:leading-[1.08] lg:text-7xl font-bold text-[#1C1A17] tracking-tight mt-7"
           >
-            {hero.heroTitle || (
-              <>Kelola barbershop,<br /><span className="italic text-[#A8893A]">tanpa ribet.</span></>
-            )}
+            {renderHeroTitle(hero.heroTitle || 'Kelola barbershop, tanpa ribet.')}
           </motion.h1>
 
           <motion.p
@@ -207,11 +251,14 @@ export default function LandingPage() {
             transition={{ delay: 0.4 }}
             className="text-[13px] text-[#9A9189] mt-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-1"
           >
-            <span className="inline-flex items-center gap-1"><Lucide.Check size={13} className="text-[#C9A84C]" /> Gratis 14 hari</span>
-            <span className="text-[#D8D0BE]">·</span>
-            <span className="inline-flex items-center gap-1"><Lucide.Check size={13} className="text-[#C9A84C]" /> Tanpa kartu kredit</span>
-            <span className="text-[#D8D0BE]">·</span>
-            <span className="inline-flex items-center gap-1"><Lucide.Check size={13} className="text-[#C9A84C]" /> Aktif langsung</span>
+            {trustItems.map((item, i) => (
+              <React.Fragment key={i}>
+                {i > 0 && <span className="text-[#D8D0BE]">·</span>}
+                <span className="inline-flex items-center gap-1">
+                  <Lucide.Check size={13} className="text-[#C9A84C]" /> {item}
+                </span>
+              </React.Fragment>
+            ))}
           </motion.p>
         </motion.div>
 
@@ -259,11 +306,7 @@ export default function LandingPage() {
       {/* ── Fitur ─────────────────────────────────────────────────────────── */}
       <section id="fitur" className="py-24 px-6">
         <div className="max-w-6xl mx-auto">
-          <SectionHeading
-            kicker="Fitur Lengkap"
-            title="Semua yang barbershop kamu butuhin"
-            subtitle="Nggak perlu spreadsheet atau aplikasi terpisah. Dari kasir sampai laporan pemilik, semua sudah satu paket."
-          />
+          <SectionHeading {...sections.features} />
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px mt-14 rounded-2xl overflow-hidden border border-[#EAE3D3] bg-[#EAE3D3]">
             {features.map((f, i) => {
               const Icon = getIcon(f.icon)
@@ -294,29 +337,21 @@ export default function LandingPage() {
       {/* ── Cara mulai ────────────────────────────────────────────────────── */}
       <section className="py-24 px-6 bg-[#F5EFE3]">
         <div className="max-w-5xl mx-auto">
-          <SectionHeading
-            kicker="Gampang Banget"
-            title="Mulai cuma 3 langkah"
-            subtitle="Dari daftar sampai toko jalan, bisa kelar hari ini juga. Beneran."
-          />
-          <div className="grid md:grid-cols-3 gap-5 mt-14">
-            {[
-              { n: '1', t: 'Daftar gratis', d: 'Bikin akun toko cuma semenit. Langsung dapat masa coba 14 hari, tanpa kartu kredit.' },
-              { n: '2', t: 'Atur toko kamu', d: 'Tambah cabang, layanan, dan tim. Ada checklist panduan biar nggak ada yang kelewat.' },
-              { n: '3', t: 'Mulai melayani', d: 'Buka kasir, terima booking, pantau omzet. Sisanya biar aplikasi yang urus.' },
-            ].map((s, i) => (
+          <SectionHeading {...sections.steps} />
+          <div className={`grid gap-5 mt-14 ${steps.length === 2 ? 'md:grid-cols-2' : steps.length >= 4 ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-3'}`}>
+            {steps.map((s, i) => (
               <motion.div
-                key={s.n}
+                key={i}
                 initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
                 className="relative bg-white rounded-2xl border border-[#EAE3D3] p-7"
               >
-                <span className="font-display text-5xl font-bold text-[#EAE0C6]">{s.n}</span>
-                <h3 className="font-display text-lg font-semibold text-[#1C1A17] mt-2 mb-1.5">{s.t}</h3>
-                <p className="text-sm text-[#6B6459] leading-relaxed">{s.d}</p>
-                {i < 2 && (
+                <span className="font-display text-5xl font-bold text-[#EAE0C6]">{i + 1}</span>
+                <h3 className="font-display text-lg font-semibold text-[#1C1A17] mt-2 mb-1.5">{s.title}</h3>
+                <p className="text-sm text-[#6B6459] leading-relaxed">{s.desc}</p>
+                {i < steps.length - 1 && (
                   <Lucide.ArrowRight size={18} className="hidden md:block absolute top-1/2 -right-4 -translate-y-1/2 text-[#C9A84C] z-10" />
                 )}
               </motion.div>
@@ -328,11 +363,7 @@ export default function LandingPage() {
       {/* ── Harga ─────────────────────────────────────────────────────────── */}
       <section id="harga" className="py-24 px-6">
         <div className="max-w-6xl mx-auto">
-          <SectionHeading
-            kicker="Paket Harga"
-            title="Harga jelas, tanpa kejutan"
-            subtitle="Mulai gratis 14 hari. Bayar cuma kalau toko kamu makin ramai — bisa naik paket kapan saja."
-          />
+          <SectionHeading {...sections.pricing} />
 
           {isLoading ? (
             <div className="grid md:grid-cols-3 gap-6 mt-14">
@@ -429,11 +460,7 @@ export default function LandingPage() {
       {testimonials.length > 0 && (
         <section className="py-24 px-6 bg-[#F5EFE3]">
           <div className="max-w-6xl mx-auto">
-            <SectionHeading
-              kicker="Testimoni"
-              title="Kata para owner barbershop"
-              subtitle="Mereka sudah pindah dari catatan manual ke SembaPOS — dan nggak mau balik lagi."
-            />
+            <SectionHeading {...sections.testimonials} />
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 mt-14">
               {testimonials.map((t, i) => (
                 <motion.div
@@ -476,11 +503,7 @@ export default function LandingPage() {
       {faqs.length > 0 && (
         <section className="py-24 px-6">
           <div className="max-w-3xl mx-auto">
-            <SectionHeading
-              kicker="Tanya Jawab"
-              title="Masih ragu? Wajar kok"
-              subtitle="Belum nemu jawabannya? Chat tim kami langsung lewat WhatsApp."
-            />
+            <SectionHeading {...sections.faq} />
             <div className="space-y-3 mt-12">
               {faqs.map((f, i) => <FAQItem key={f.id} item={f} delay={i * 0.04} />)}
             </div>
@@ -502,14 +525,14 @@ export default function LandingPage() {
           <div className="relative">
             <Lucide.Scissors className="text-[#C9A84C] mx-auto mb-4" size={30} />
             <h2 className="font-display text-3xl lg:text-[2.6rem] font-bold text-white leading-tight">
-              Yuk, rapikan barbershop kamu
+              {closing.title}
             </h2>
             <p className="text-[#A8A29A] max-w-lg mx-auto mt-4 mb-8">
-              Coba gratis 14 hari. Tanpa kartu kredit, tanpa biaya tersembunyi. Kalau cocok, lanjut — kalau enggak, ya sudah.
+              {closing.subtitle}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3">
               <Link to="/register" className="btn-gold group">
-                Daftar Sekarang
+                {closing.ctaLabel}
                 <Lucide.ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
               </Link>
               {waHref && (
@@ -525,7 +548,7 @@ export default function LandingPage() {
         </motion.div>
       </section>
 
-      <Footer />
+      <Footer text={footerText} />
 
       {waHref && (
         <motion.a
@@ -667,7 +690,7 @@ function FAQItem({ item, delay }) {
   )
 }
 
-function Footer() {
+function Footer({ text }) {
   return (
     <footer className="bg-[#1C1A17] text-[#A8A29A] px-6 pt-14 pb-8">
       <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-sm">
@@ -679,7 +702,7 @@ function Footer() {
             <span className="font-display text-xl font-bold text-[#FBFAF6]">SembaPOS</span>
           </div>
           <p className="text-[13px] leading-relaxed max-w-sm">
-            Sistem manajemen barbershop modern: kasir, antrian, booking online, multi-cabang, dan laporan pintar dalam satu aplikasi.
+            {text || 'Sistem manajemen barbershop modern: kasir, antrian, booking online, multi-cabang, dan laporan pintar dalam satu aplikasi.'}
           </p>
         </div>
         <div>

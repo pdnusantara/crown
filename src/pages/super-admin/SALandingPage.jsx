@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   Globe, Edit3, Trash2, Plus, Save, MessageSquare, HelpCircle, Star, Eye, EyeOff, ExternalLink,
+  LayoutTemplate,
 } from 'lucide-react'
 import {
   useLanding, useUpdateHero,
@@ -17,6 +18,7 @@ import { useToast } from '../../components/ui/Toast.jsx'
 
 const TABS = [
   { id: 'hero',         label: 'Hero & Branding',  icon: Globe },
+  { id: 'content',      label: 'Section & Footer', icon: LayoutTemplate },
   { id: 'testimonials', label: 'Testimoni',        icon: MessageSquare },
   { id: 'faqs',         label: 'FAQ',              icon: HelpCircle },
 ]
@@ -54,6 +56,7 @@ export default function SALandingPage() {
       </div>
 
       {tab === 'hero' && <HeroEditor />}
+      {tab === 'content' && <ContentEditor />}
       {tab === 'testimonials' && <TestimonialsEditor />}
       {tab === 'faqs' && <FAQEditor />}
     </div>
@@ -68,6 +71,7 @@ function HeroEditor() {
 
   const [form, setForm] = useState(null)
   const [features, setFeatures] = useState([])
+  const [trustItems, setTrustItems] = useState([])
 
   useEffect(() => {
     if (data?.hero && !form) {
@@ -77,9 +81,11 @@ function HeroEditor() {
         heroCtaLabel: data.hero.heroCtaLabel || '',
         brandTagline: data.hero.brandTagline || '',
         whatsappCta:  data.hero.whatsappCta  || '',
+        heroBadge:    data.hero.heroBadge    || '',
         showStats:    data.hero.showStats !== false,
       })
       setFeatures(Array.isArray(data.hero.features) ? data.hero.features : [])
+      setTrustItems(Array.isArray(data.hero.trustItems) ? data.hero.trustItems : [])
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data])
@@ -88,7 +94,11 @@ function HeroEditor() {
 
   async function handleSave() {
     try {
-      await updateHero.mutateAsync({ ...form, features })
+      await updateHero.mutateAsync({
+        ...form,
+        features,
+        trustItems: trustItems.map(t => t.trim()).filter(Boolean),
+      })
       toast.success('Konten landing tersimpan')
     } catch (err) {
       toast.error(err?.response?.data?.error || 'Gagal menyimpan')
@@ -149,6 +159,51 @@ function HeroEditor() {
             onChange={e => setForm(f => ({ ...f, whatsappCta: e.target.value.replace(/\D/g, '') }))}
             hint="Kosongkan jika tidak ingin tampilkan tombol konsultasi"
           />
+
+          <Input
+            label="Teks badge kecil (pil di atas tagline)"
+            placeholder="Baru"
+            value={form.heroBadge}
+            onChange={e => setForm(f => ({ ...f, heroBadge: e.target.value }))}
+            hint="Mis. 'Baru', 'Promo', 'v2.0'"
+          />
+
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs text-muted">Poin kepercayaan (di bawah tombol hero)</label>
+              {trustItems.length < 6 && (
+                <button
+                  type="button"
+                  onClick={() => setTrustItems(arr => [...arr, ''])}
+                  className="text-xs text-gold hover:underline inline-flex items-center gap-1"
+                >
+                  <Plus size={11} /> Tambah
+                </button>
+              )}
+            </div>
+            <div className="space-y-2">
+              {trustItems.length === 0 && (
+                <p className="text-xs text-muted">Belum ada poin. Mis. "Gratis 14 hari".</p>
+              )}
+              {trustItems.map((item, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    className="flex-1 bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60"
+                    placeholder="Gratis 14 hari"
+                    value={item}
+                    onChange={e => setTrustItems(arr => arr.map((v, idx) => idx === i ? e.target.value : v))}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setTrustItems(arr => arr.filter((_, idx) => idx !== i))}
+                    className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
 
           <label className="flex items-center gap-2.5 p-3 rounded-xl bg-dark-surface border border-dark-border cursor-pointer">
             <input
@@ -437,6 +492,169 @@ function FAQEditor() {
           </div>
         </div>
       </Modal>
+    </div>
+  )
+}
+
+// ── Section & Footer editor ──────────────────────────────────────────────
+// Mengatur bagian landing yang sebelumnya hardcoded: judul tiap section,
+// langkah "Cara Mulai", CTA penutup, & teks footer. Semua disimpan lewat
+// PATCH /landing/hero (partial) yang sama dengan editor Hero.
+const SECTION_LABELS = {
+  features:     'Section "Fitur"',
+  steps:        'Section "Cara Mulai"',
+  pricing:      'Section "Harga"',
+  testimonials: 'Section "Testimoni"',
+  faq:          'Section "FAQ"',
+}
+const EMPTY_HEADING = { kicker: '', title: '', subtitle: '' }
+const EMPTY_CLOSING = { title: '', subtitle: '', ctaLabel: '' }
+
+function ContentEditor() {
+  const toast = useToast()
+  const { data, isLoading } = useLanding()
+  const updateHero = useUpdateHero()
+
+  const [steps, setSteps] = useState([])
+  const [sections, setSections] = useState(null)
+  const [closing, setClosing] = useState(EMPTY_CLOSING)
+  const [footerText, setFooterText] = useState('')
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    if (data?.hero && !ready) {
+      setSteps(Array.isArray(data.hero.steps) ? data.hero.steps : [])
+      const s = data.hero.sections || {}
+      setSections(Object.fromEntries(
+        Object.keys(SECTION_LABELS).map(k => [k, { ...EMPTY_HEADING, ...(s[k] || {}) }])
+      ))
+      setClosing({ ...EMPTY_CLOSING, ...(data.hero.closingCta || {}) })
+      setFooterText(data.hero.footerText || '')
+      setReady(true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data])
+
+  if (isLoading || !ready || !sections) return <div className="h-64 bg-dark-card rounded-2xl animate-pulse" />
+
+  function setSection(key, field, value) {
+    setSections(s => ({ ...s, [key]: { ...s[key], [field]: value } }))
+  }
+  function setStep(i, field, value) {
+    setSteps(arr => arr.map((s, idx) => idx === i ? { ...s, [field]: value } : s))
+  }
+
+  async function handleSave() {
+    try {
+      await updateHero.mutateAsync({
+        steps: steps.map(s => ({ title: (s.title || '').trim(), desc: (s.desc || '').trim() })),
+        sections,
+        closingCta: {
+          title:    closing.title.trim(),
+          subtitle: closing.subtitle.trim(),
+          ctaLabel: closing.ctaLabel.trim(),
+        },
+        footerText: footerText.trim(),
+      })
+      toast.success('Konten section tersimpan')
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal menyimpan')
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader><h3 className="font-semibold text-off-white">Judul Section</h3></CardHeader>
+        <CardBody className="space-y-4">
+          {Object.entries(SECTION_LABELS).map(([key, label]) => (
+            <div key={key} className="p-3 bg-dark-surface rounded-xl border border-dark-border space-y-2">
+              <p className="text-xs font-semibold text-gold">{label}</p>
+              <div className="grid sm:grid-cols-2 gap-2">
+                <Input label="Kicker (label kecil)" value={sections[key].kicker} onChange={e => setSection(key, 'kicker', e.target.value)} />
+                <Input label="Judul" value={sections[key].title} onChange={e => setSection(key, 'title', e.target.value)} />
+              </div>
+              <div>
+                <label className="text-xs text-muted block mb-1.5">Subjudul</label>
+                <textarea
+                  rows={2}
+                  className="w-full bg-dark-card border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-gold/60"
+                  value={sections[key].subtitle}
+                  onChange={e => setSection(key, 'subtitle', e.target.value)}
+                />
+              </div>
+            </div>
+          ))}
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-off-white">Langkah "Cara Mulai"</h3>
+            {steps.length < 6 && (
+              <Button size="sm" variant="secondary" icon={Plus} onClick={() => setSteps(a => [...a, { title: '', desc: '' }])}>Tambah</Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardBody className="space-y-3">
+          {steps.length === 0 && <p className="text-sm text-muted text-center py-3">Belum ada langkah.</p>}
+          {steps.map((s, i) => (
+            <div key={i} className="p-3 bg-dark-surface rounded-xl border border-dark-border space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-gold">Langkah {i + 1}</span>
+                <button onClick={() => setSteps(a => a.filter((_, idx) => idx !== i))} className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20">
+                  <Trash2 size={13} />
+                </button>
+              </div>
+              <Input label="Judul" value={s.title} onChange={e => setStep(i, 'title', e.target.value)} />
+              <div>
+                <label className="text-xs text-muted block mb-1.5">Deskripsi</label>
+                <textarea
+                  rows={2}
+                  className="w-full bg-dark-card border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-gold/60"
+                  value={s.desc}
+                  onChange={e => setStep(i, 'desc', e.target.value)}
+                />
+              </div>
+            </div>
+          ))}
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader><h3 className="font-semibold text-off-white">CTA Penutup</h3></CardHeader>
+        <CardBody className="space-y-4">
+          <Input label="Judul" value={closing.title} onChange={e => setClosing(c => ({ ...c, title: e.target.value }))} />
+          <div>
+            <label className="text-xs text-muted block mb-1.5">Subjudul</label>
+            <textarea
+              rows={2}
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-gold/60"
+              value={closing.subtitle}
+              onChange={e => setClosing(c => ({ ...c, subtitle: e.target.value }))}
+            />
+          </div>
+          <Input label="Label tombol" placeholder="Daftar Sekarang" value={closing.ctaLabel} onChange={e => setClosing(c => ({ ...c, ctaLabel: e.target.value }))} />
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader><h3 className="font-semibold text-off-white">Footer</h3></CardHeader>
+        <CardBody>
+          <label className="text-xs text-muted block mb-1.5">Deskripsi singkat di footer</label>
+          <textarea
+            rows={3}
+            className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/60"
+            value={footerText}
+            onChange={e => setFooterText(e.target.value)}
+          />
+        </CardBody>
+      </Card>
+
+      <Button onClick={handleSave} loading={updateHero.isPending} icon={Save} fullWidth>
+        Simpan Konten Section
+      </Button>
     </div>
   )
 }
