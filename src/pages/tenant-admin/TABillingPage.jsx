@@ -12,7 +12,8 @@ import {
   useSubscription, useToggleAutoRenew, usePauseSubscription, useResumeSubscription,
 } from '../../hooks/useSubscription.js'
 import { usePackages } from '../../hooks/usePackages.js'
-import { useFeatureFlagStore, ALL_FEATURE_FLAGS } from '../../store/featureFlagStore.js'
+import { ALL_FEATURE_FLAGS } from '../../store/featureFlagStore.js'
+import { useFeatureFlags } from '../../hooks/useFeatureFlags.js'
 import {
   useCreatePaymentOrder, usePaymentStatus, useMyPaymentOrders,
   useCancelPaymentOrder, useResendPaymentLink, useValidatePromo,
@@ -49,7 +50,7 @@ export default function TABillingPage() {
 
   const { data: sub, isLoading: isLoadingSub, error: subError, refetch: refetchSub } = useSubscription(user?.tenantId)
   const { data: pkgData, isLoading: isLoadingPkgs } = usePackages()
-  const { getTenantFlags } = useFeatureFlagStore()
+  const { data: featureFlags = [], isLoading: flagsLoading } = useFeatureFlags(user?.tenantId)
   const { data: paySettings } = usePaymentStatus()
   const { data: pendingOrders, refetch: refetchOrders } = useMyPaymentOrders()
   const createPayment = useCreatePaymentOrder()
@@ -205,8 +206,10 @@ export default function TABillingPage() {
 
   const packageList = pkgData?.list || []
   const pkg = sub ? (pkgData?.map || {})[sub.package] : null
-  const flags = getTenantFlags(user?.tenantId, sub?.package)
-  const isLoading = isLoadingSub || isLoadingPkgs
+  // Daftar fitur aktif tenant dibaca dari backend (TenantFeatureFlag), bukan
+  // default paket hardcoded — agar konsisten dengan fitur yang benar-benar aktif.
+  const flags = featureFlags
+  const isLoading = isLoadingSub || isLoadingPkgs || flagsLoading
 
   if (isLoading) {
     return (

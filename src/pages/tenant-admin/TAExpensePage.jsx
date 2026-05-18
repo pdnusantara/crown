@@ -5,7 +5,7 @@ import { format, startOfMonth, endOfMonth, addMonths, subMonths, parseISO } from
 import { id as idLocale } from 'date-fns/locale'
 import { useAuthStore } from '../../store/authStore.js'
 import { useExpenseStore, EXPENSE_CATEGORIES } from '../../store/expenseStore.js'
-import { useFeatureFlagStore } from '../../store/featureFlagStore.js'
+import { useFeatureFlags } from '../../hooks/useFeatureFlags.js'
 import { useReportSummary } from '../../hooks/useReports.js'
 import { useBranches } from '../../hooks/useBranches.js'
 import { formatRupiah } from '../../utils/format.js'
@@ -207,11 +207,14 @@ function ExpenseFormModal({ open, onClose, initial, tenantId, branches }) {
 
 export default function TAExpensePage() {
   const { user } = useAuthStore()
-  const { isEnabled } = useFeatureFlagStore()
   const { getByPeriod, deleteExpense, getTotalByPeriod, getCategoryTotals } = useExpenseStore()
 
   const tenantId   = user?.tenantId
-  const isAllowed  = isEnabled(tenantId, 'expense_tracking')
+  // Gate fitur dibaca dari backend (TenantFeatureFlag) lewat useFeatureFlags —
+  // BUKAN dari zustand seed — supaya perubahan fitur paket di
+  // /super-admin/packages langsung berlaku di halaman ini.
+  const { data: featureFlags = [], isLoading: flagsLoading } = useFeatureFlags(tenantId)
+  const isAllowed  = featureFlags.includes('expense_tracking')
   const { data: branches = [] } = useBranches(tenantId)
 
   // Period state — default to current month
@@ -245,6 +248,14 @@ export default function TAExpensePage() {
 
   const monthLabel = format(activeMonth, 'MMMM yyyy', { locale: idLocale })
 
+  // Tunggu status flag termuat dulu — hindari Paywall berkedip lalu hilang.
+  if (flagsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-8 h-8 rounded-full border-2 border-gold/30 border-t-gold animate-spin" />
+      </div>
+    )
+  }
   if (!isAllowed) return <Paywall />
 
   return (

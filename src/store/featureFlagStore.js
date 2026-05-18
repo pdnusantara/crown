@@ -1,5 +1,13 @@
-import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+// Katalog feature-flag — KONSTANTA SAJA.
+//
+// Dulu file ini juga mengekspor `useFeatureFlagStore` (zustand + localStorage)
+// yang dipakai untuk feature-gating. Itu sumber bug: seed-nya hanya kenal slug
+// dummy `barber-king`/`oldboy-cuts`, jadi tenant nyata selalu jatuh ke `[]` →
+// fitur dianggap mati walau super-admin menyalakannya.
+//
+// Gating fitur SEKARANG WAJIB lewat `useFeatureFlags(tenantId)` /
+// `useIsFeatureEnabled(tenantId, flagId)` di `src/hooks/useFeatureFlags.js`
+// yang membaca `TenantFeatureFlag` dari backend. Jangan buat store seed lagi.
 
 const ALL_FLAGS = [
   { id: 'pos',           label: 'POS Kasir',           description: 'Sistem kasir point-of-sale untuk transaksi',        category: 'Core' },
@@ -22,65 +30,13 @@ const ALL_FLAGS = [
   { id: 'backup',        label: 'Backup & Restore',    description: 'Export dan import data tenant',                     category: 'Enterprise' },
 ]
 
-// Default flags per package
+// Default fitur per paket — fallback tampilan saja (mis. /super-admin/feature-flags).
+// Kebenaran per-tenant tetap di TenantFeatureFlag (backend).
 const PACKAGE_DEFAULTS = {
   Basic:      ['pos', 'queue', 'booking', 'loyalty', 'pwa'],
   Pro:        ['pos', 'queue', 'booking', 'loyalty', 'voucher', 'reports', 'schedule', 'multi_branch', 'expense_tracking', 'whatsapp', 'barber_rating', 'heatmap', 'clv', 'wilayah_report', 'pwa', 'backup'],
   Enterprise: ALL_FLAGS.map(f => f.id),
 }
 
-const INITIAL_TENANT_FLAGS = {
-  'barber-king': [...PACKAGE_DEFAULTS.Pro],
-  'oldboy-cuts': [...PACKAGE_DEFAULTS.Basic],
-}
-
 export const ALL_FEATURE_FLAGS = ALL_FLAGS
 export const PACKAGE_FLAG_DEFAULTS = PACKAGE_DEFAULTS
-
-export const useFeatureFlagStore = create(persist(
-  (set, get) => ({
-    tenantFlags: INITIAL_TENANT_FLAGS,
-
-    isEnabled: (tenantId, flagId) => {
-      const flags = get().tenantFlags[tenantId] || []
-      return flags.includes(flagId)
-    },
-
-    toggle: (tenantId, flagId) => {
-      set(state => {
-        const current = state.tenantFlags[tenantId] || []
-        const updated = current.includes(flagId)
-          ? current.filter(f => f !== flagId)
-          : [...current, flagId]
-        return { tenantFlags: { ...state.tenantFlags, [tenantId]: updated } }
-      })
-    },
-
-    setFromPackage: (tenantId, packageName) => {
-      const defaults = PACKAGE_DEFAULTS[packageName] || []
-      set(state => ({ tenantFlags: { ...state.tenantFlags, [tenantId]: [...defaults] } }))
-    },
-
-    // Returns stored flags for tenant. If no explicit entry yet and a
-    // fallbackPackage is provided, returns the package defaults so new
-    // tenants (from API) show their expected feature set.
-    getTenantFlags: (tenantId, fallbackPackage) => {
-      const explicit = get().tenantFlags[tenantId]
-      if (explicit) return explicit
-      if (fallbackPackage && PACKAGE_DEFAULTS[fallbackPackage]) {
-        return [...PACKAGE_DEFAULTS[fallbackPackage]]
-      }
-      return []
-    },
-
-    initTenant: (tenantId, packageName) => {
-      set(state => ({
-        tenantFlags: {
-          ...state.tenantFlags,
-          [tenantId]: [...(PACKAGE_DEFAULTS[packageName] || PACKAGE_DEFAULTS.Basic)]
-        }
-      }))
-    },
-  }),
-  { name: 'barberos-feature-flags' }
-))
