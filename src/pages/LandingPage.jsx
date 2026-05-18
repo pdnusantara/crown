@@ -170,7 +170,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 22 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.06 }}
-            className="font-display text-[2.6rem] leading-[1.08] sm:text-6xl lg:text-7xl font-bold text-[#1C1A17] tracking-tight mt-7"
+            className="font-display text-4xl leading-[1.12] sm:text-6xl sm:leading-[1.08] lg:text-7xl font-bold text-[#1C1A17] tracking-tight mt-7"
           >
             {hero.heroTitle || (
               <>Kelola barbershop,<br /><span className="italic text-[#A8893A]">tanpa ribet.</span></>

@@ -35,7 +35,8 @@ export default function WilayahPicker({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-2">
+    // Stack di ponsel, sejajar mulai tablet — hindari dua dropdown berdesakan.
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
       <div>
         <label className={labelClassName}>Kecamatan</label>
         <select
