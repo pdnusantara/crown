@@ -177,6 +177,7 @@ router.post('/login', async (req, res, next) => {
         tenantId: true,
         branchId: true,
         branch: { select: { id: true, code: true, name: true } },
+        tenant: { select: { id: true, name: true, logo: true, timezone: true, wilayah: true } },
         isActive: true,
         deletedAt: true,
       },
@@ -336,6 +337,7 @@ router.post('/dev-login', async (req, res, next) => {
         id: true, email: true, name: true, role: true, phone: true, photo: true,
         commissionRate: true, tenantId: true, branchId: true,
         branch: { select: { id: true, code: true, name: true } },
+        tenant: { select: { id: true, name: true, logo: true, timezone: true, wilayah: true } },
         isActive: true,
       },
     });
