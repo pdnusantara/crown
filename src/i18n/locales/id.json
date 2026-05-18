@@ -274,6 +274,11 @@
     "openCart": "Lihat Keranjang",
     "closeCart": "Tutup",
     "noBarberWarning": "Pilih barber dulu agar komisi tercatat",
+    "barberRequired": "Pilih barber yang melayani dulu sebelum memproses transaksi.",
+    "customerLabel": "Pelanggan",
+    "changeCustomer": "Ganti",
+    "removeCustomer": "Hapus pelanggan",
+    "noPhone": "Tanpa nomor",
     "viewCart": "Keranjang ({{count}})",
     "itemsInCart": "{{count}} item"
   },

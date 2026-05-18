@@ -274,6 +274,11 @@
     "openCart": "View Cart",
     "closeCart": "Close",
     "noBarberWarning": "Pick a barber to log commissions",
+    "barberRequired": "Pick the barber serving before processing the transaction.",
+    "customerLabel": "Customer",
+    "changeCustomer": "Change",
+    "removeCustomer": "Remove customer",
+    "noPhone": "No phone",
     "viewCart": "Cart ({{count}})",
     "itemsInCart": "{{count}} item(s)"
   },

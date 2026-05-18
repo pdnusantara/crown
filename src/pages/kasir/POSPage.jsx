@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Search, Plus, X, User, Printer, CheckCircle, Check, ChevronDown, Tag, Trash2,
+  Search, Plus, X, User, Printer, CheckCircle, Check, Tag, Trash2,
   MessageCircle, AlertCircle, Clock, Scissors, Star, ListOrdered, ShoppingCart,
   Banknote, RotateCcw, ArrowDown, Wallet, Crown,
 } from 'lucide-react'
@@ -440,6 +440,10 @@ function POSPageInner() {
   // penjaga utama — frontend ini sekadar UX & cegah submit sia-sia.
   const noActiveShift = !shiftLoading && !apiActiveShift
 
+  // Transaksi tidak boleh diproses kalau ada layanan di keranjang yang belum
+  // punya barber — komisi & laporan barber harus tercatat.
+  const missingBarber = posStore.cartItems.length > 0 && posStore.cartItems.some(it => !it.barberId)
+
   // Local UI state
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('All')
@@ -592,6 +596,10 @@ function POSPageInner() {
       setShowPayModal(false)
       return toast.error('Belum ada shift aktif. Buka shift terlebih dahulu sebelum transaksi.')
     }
+    if (missingBarber) {
+      setShowPayModal(false)
+      return toast.error(t('pos.barberRequired'))
+    }
     if (posStore.paymentMethod === 'cash' && posStore.cashReceived < posStore.getTotal()) {
       return toast.error(t('pos.cashNotEnough'))
     }
@@ -733,23 +741,43 @@ function POSPageInner() {
         )}
       </div>
 
-      <button
-        onClick={() => setShowCustomerModal(true)}
-        className="flex items-center gap-3 p-3 bg-dark-card border border-dark-border rounded-xl hover:border-gold/30 transition-all text-left w-full"
-      >
-        <User className="w-5 h-5 text-muted flex-shrink-0" />
-        <div className="flex-1 min-w-0">
-          {posStore.selectedCustomer ? (
-            <>
-              <p className="text-sm font-medium text-off-white truncate">{posStore.selectedCustomer.name}</p>
-              <p className="text-xs text-muted truncate">{posStore.selectedCustomer.phone}</p>
-            </>
-          ) : (
-            <p className="text-sm text-muted">{t('pos.selectCustomerOptional')}</p>
-          )}
-        </div>
-        <ChevronDown className="w-4 h-4 text-muted flex-shrink-0" />
-      </button>
+      {/* Pelanggan — kartu berlabel, sejajar dengan kartu barber di bawahnya */}
+      <div className="bg-dark-card border border-dark-border rounded-xl p-3">
+        <label className="block text-[11px] uppercase tracking-wider text-off-white font-semibold mb-2 inline-flex items-center gap-1.5">
+          <User className="w-3 h-3 text-gold" /> {t('pos.customerLabel')}
+        </label>
+        {posStore.selectedCustomer ? (
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gold to-amber-600 flex items-center justify-center text-dark font-bold text-sm flex-shrink-0">
+              {posStore.selectedCustomer.name?.[0]?.toUpperCase() || '?'}
+            </div>
+            <button onClick={() => setShowCustomerModal(true)} className="flex-1 min-w-0 text-left">
+              <p className="text-sm font-semibold text-off-white truncate">{posStore.selectedCustomer.name}</p>
+              <p className="text-xs text-muted truncate">{posStore.selectedCustomer.phone || t('pos.noPhone')}</p>
+            </button>
+            <button
+              onClick={() => setShowCustomerModal(true)}
+              className="flex-shrink-0 px-2 py-1 rounded-lg text-xs font-medium text-gold hover:bg-gold/10 transition-colors"
+            >
+              {t('pos.changeCustomer')}
+            </button>
+            <button
+              onClick={() => posStore.setSelectedCustomer(null)}
+              aria-label={t('pos.removeCustomer')}
+              className="flex-shrink-0 p-1.5 rounded-lg text-muted hover:text-red-400 hover:bg-dark-surface transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowCustomerModal(true)}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-dashed border-dark-border text-muted hover:border-gold/40 hover:text-off-white transition-all text-sm"
+          >
+            <Plus className="w-4 h-4" /> {t('pos.selectCustomerOptional')}
+          </button>
+        )}
+      </div>
 
       <AnimatePresence>
         {posStore.selectedCustomer && (
@@ -771,14 +799,16 @@ function POSPageInner() {
             const b = barbers.find(x => x.id === e.target.value)
             posStore.setDefaultBarber(b?.id || null, b?.name || null)
           }}
-          className="w-full bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60"
+          className={`w-full bg-dark-surface border text-off-white rounded-lg px-3 py-2 text-sm outline-none transition-colors ${
+            missingBarber ? 'border-amber-500/60 focus:border-amber-500' : 'border-dark-border focus:border-gold/60'
+          }`}
         >
           <option value="">{t('pos.pickBarber')}</option>
           {barbers.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
         </select>
-        {!posStore.defaultBarberId && posStore.cartItems.length > 0 && (
-          <p className="text-[10px] text-amber-400 mt-1.5 flex items-center gap-1">
-            <AlertCircle size={11} /> {t('pos.noBarberWarning')}
+        {missingBarber && (
+          <p className="text-xs text-amber-400 mt-1.5 flex items-center gap-1">
+            <AlertCircle size={12} /> {t('pos.noBarberWarning')}
           </p>
         )}
       </div>
@@ -1049,9 +1079,18 @@ function POSPageInner() {
           </button>
         </div>
       )}
+      {!noActiveShift && missingBarber && (
+        <div className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 flex items-start gap-2.5">
+          <Scissors size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-amber-300">Barber belum dipilih</p>
+            <p className="text-xs text-muted mt-0.5">Pilih barber yang melayani dulu untuk memproses transaksi.</p>
+          </div>
+        </div>
+      )}
       <Button
         fullWidth size="lg"
-        disabled={posStore.cartItems.length === 0 || noActiveShift}
+        disabled={posStore.cartItems.length === 0 || noActiveShift || missingBarber}
         onClick={() => setShowPayModal(true)}
       >
         {t('pos.payAmount', { amount: formatRupiah(posStore.getTotal()) })}
