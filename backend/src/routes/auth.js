@@ -291,6 +291,78 @@ router.post('/login', async (req, res, next) => {
   }
 });
 
+// =============================================================================
+// Dev-login — pintasan login TANPA password untuk masa uji coba.
+// AKTIF HANYA bila env ENABLE_DEV_LOGIN=true. Saat mati, endpoint POST balas 404
+// supaya sama sekali tidak terpakai di produksi normal.
+// =============================================================================
+const DEV_LOGIN_ENABLED = process.env.ENABLE_DEV_LOGIN === 'true';
+
+// GET /api/auth/dev-login — frontend cek apakah pintasan dev aktif.
+router.get('/dev-login', (req, res) => {
+  res.json({ success: true, data: { enabled: DEV_LOGIN_ENABLED } });
+});
+
+const devLoginSchema = z.object({
+  role: z.enum(['tenant_admin', 'kasir', 'barber', 'super_admin']),
+});
+
+// POST /api/auth/dev-login — terbitkan token untuk akun pertama dengan peran
+// tsb di tenant saat ini (tanpa password). Aturan domain sama seperti /login:
+// peran tenant hanya dari subdomain, super_admin hanya dari domain utama.
+router.post('/dev-login', async (req, res, next) => {
+  try {
+    if (!DEV_LOGIN_ENABLED) {
+      return res.status(404).json({ success: false, error: 'Not found' });
+    }
+    const { role } = devLoginSchema.parse(req.body);
+
+    if (role === 'super_admin' && req.tenant) {
+      return res.status(400).json({ success: false, error: 'Super-admin dev-login hanya dari domain utama' });
+    }
+    if (role !== 'super_admin' && !req.tenant) {
+      return res.status(400).json({ success: false, error: 'Pintasan peran tenant harus diakses dari subdomain tenant' });
+    }
+
+    const user = await prisma.user.findFirst({
+      where: {
+        role,
+        isActive: true,
+        deletedAt: null,
+        ...(role === 'super_admin' ? {} : { tenantId: req.tenant.id }),
+      },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true, email: true, name: true, role: true, phone: true, photo: true,
+        commissionRate: true, tenantId: true, branchId: true,
+        branch: { select: { id: true, code: true, name: true } },
+        isActive: true,
+      },
+    });
+    if (!user) {
+      return res.status(404).json({ success: false, error: `Belum ada akun ${role} di tenant ini` });
+    }
+
+    const payload = {
+      id: user.id, email: user.email, role: user.role,
+      tenantId: user.tenantId, branchId: user.branchId,
+    };
+    const accessToken = signAccess(payload);
+    const refreshToken = signRefresh({ id: user.id });
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await prisma.refreshToken.create({
+      data: { token: refreshToken, userId: user.id, expiresAt },
+    });
+
+    res.json({ success: true, data: { accessToken, refreshToken, user } });
+  } catch (err) {
+    if (err?.name === 'ZodError') {
+      return res.status(400).json({ success: false, error: 'Peran tidak valid' });
+    }
+    next(err);
+  }
+});
+
 // POST /api/auth/refresh
 router.post('/refresh', async (req, res, next) => {
   try {

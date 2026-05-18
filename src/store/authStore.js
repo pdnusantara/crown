@@ -124,6 +124,24 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+  // Pintasan login developer — masuk tanpa password sebagai peran tertentu.
+  // Hanya berfungsi bila backend mengaktifkan ENABLE_DEV_LOGIN.
+  devLogin: async (role) => {
+    set({ isLoading: true, error: null })
+    try {
+      const res = await api.post('/auth/dev-login', { role })
+      const { accessToken, refreshToken, user } = res.data.data
+      setTokens(accessToken, refreshToken)
+      cacheUser(user)
+      set({ user, isAuthenticated: true, isLoading: false, error: null })
+      return { success: true, redirectTo: getRedirectPath(user) }
+    } catch (err) {
+      const message = err?.response?.data?.error || 'Pintasan dev gagal'
+      set({ isLoading: false, error: message })
+      return { success: false }
+    }
+  },
+
   logout: async () => {
     try {
       await api.post('/auth/logout', { refreshToken: localStorage.getItem('barberos_refresh_token') })
