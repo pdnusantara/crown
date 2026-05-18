@@ -55,6 +55,12 @@ const updateUserSchema = createUserSchema.partial().omit({ password: true }).ext
   password: z.string().min(6).optional(),
 });
 
+// Reset password — `password` opsional: kalau diisi, admin menentukan sendiri;
+// kalau kosong, server generate otomatis.
+const resetPasswordSchema = z.object({
+  password: z.string().min(6).max(72).optional(),
+});
+
 // GET /api/users
 router.get('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir', 'barber'), async (req, res, next) => {
   try {
@@ -179,9 +185,14 @@ router.put('/:id', authenticate, requireRole('super_admin', 'tenant_admin'), asy
   }
 });
 
-// POST /api/users/:id/reset-password — generate password baru, return sekali
+// POST /api/users/:id/reset-password — set password baru (kustom / otomatis), return sekali
 router.post('/:id/reset-password', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
   try {
+    const parsed = resetPasswordSchema.safeParse(req.body || {});
+    if (!parsed.success) {
+      return res.status(400).json({ success: false, error: 'Password minimal 6 karakter' });
+    }
+
     const existing = await prisma.user.findFirst({
       where: { id: req.params.id, deletedAt: null },
       select: { id: true, email: true, name: true, role: true, tenantId: true },
@@ -198,8 +209,10 @@ router.post('/:id/reset-password', authenticate, requireRole('super_admin', 'ten
       }
     }
 
-    const tempPassword = generateTempPassword();
-    const hashed = await bcrypt.hash(tempPassword, 10);
+    const customPw = parsed.data.password?.trim();
+    const isCustom = !!customPw;
+    const newPassword = isCustom ? customPw : generateTempPassword();
+    const hashed = await bcrypt.hash(newPassword, 10);
 
     await prisma.user.update({
       where: { id: existing.id },
@@ -215,7 +228,8 @@ router.post('/:id/reset-password', authenticate, requireRole('super_admin', 'ten
         userId: existing.id,
         email: existing.email,
         name: existing.name,
-        tempPassword,
+        tempPassword: newPassword,
+        custom: isCustom,
       },
     });
   } catch (err) {

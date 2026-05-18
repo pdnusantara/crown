@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
-import { Plus, Edit2, Trash2, Star, Search, Mail, KeyRound, Copy, Check, AlertTriangle, Camera, X } from 'lucide-react'
+import { Plus, Edit2, Trash2, Star, Search, Mail, KeyRound, Copy, Check, AlertTriangle, Camera, X, Eye, EyeOff, RefreshCw } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useResetUserPassword } from '../../hooks/useUsers.js'
 import { useBranches } from '../../hooks/useBranches.js'
@@ -20,6 +20,16 @@ const ROLES = [
   { value: 'manager', label: 'Manager' },
 ]
 
+// Charset tanpa karakter ambigu (0/O, 1/l/I) — gampang dibacakan ke staf.
+function genPassword(len = 10) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'
+  const buf = new Uint32Array(len)
+  crypto.getRandomValues(buf)
+  let out = ''
+  for (let i = 0; i < len; i++) out += chars[buf[i] % chars.length]
+  return out
+}
+
 export default function TAStaffPage() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
@@ -31,9 +41,13 @@ export default function TAStaffPage() {
   const [roleFilter, setRoleFilter] = useState('')
   const [form, setForm] = useState({ name: '', email: '', role: 'barber', branchId: '', commissionRate: 0.35, photo: '' })
   const [formError, setFormError] = useState({})
-  // { email, tempPassword, name, mode: 'created' | 'reset' } | null
+  // { email, tempPassword, name, mode: 'created' | 'reset', custom? } | null
   const [credentials, setCredentials] = useState(null)
   const [resetTarget, setResetTarget] = useState(null)
+  // Reset password — admin boleh menentukan password sendiri (kosong = otomatis)
+  const [customPw, setCustomPw] = useState('')
+  const [showPw, setShowPw] = useState(false)
+  const [pwError, setPwError] = useState('')
 
   const { data: allStaff = [], isLoading: isLoadingStaff } = useUsers({ tenantId: user?.tenantId })
   const { data: branches = [] } = useBranches(user?.tenantId)
@@ -122,15 +136,36 @@ export default function TAStaffPage() {
     }
   }
 
+  const openReset = (member) => {
+    setCustomPw('')
+    setShowPw(false)
+    setPwError('')
+    setResetTarget(member)
+  }
+
+  const closeReset = () => {
+    if (resetPassword.isPending) return
+    setResetTarget(null)
+    setCustomPw('')
+    setShowPw(false)
+    setPwError('')
+  }
+
   const handleResetPassword = async (member) => {
+    const pw = customPw.trim()
+    if (pw && pw.length < 6) {
+      setPwError('Password minimal 6 karakter')
+      return
+    }
     try {
-      const data = await resetPassword.mutateAsync(member.id)
-      setResetTarget(null)
+      const data = await resetPassword.mutateAsync({ id: member.id, password: pw || undefined })
+      closeReset()
       setCredentials({
         mode: 'reset',
         name: data.name,
         email: data.email,
         tempPassword: data.tempPassword,
+        custom: data.custom,
       })
     } catch (err) {
       toast.error(err?.response?.data?.error || 'Gagal mereset password')
@@ -141,12 +176,12 @@ export default function TAStaffPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold text-off-white">{t('tenantAdmin.staff.title')}</h1>
           <p className="text-muted text-sm mt-1">{t('tenantAdmin.staff.registeredCount', { count: allStaff.length })}</p>
         </div>
-        <Button icon={Plus} onClick={openAdd}>{t('tenantAdmin.staff.addStaff')}</Button>
+        <Button icon={Plus} onClick={openAdd} className="w-full sm:w-auto flex-shrink-0">{t('tenantAdmin.staff.addStaff')}</Button>
       </div>
 
       {/* Filters */}
@@ -195,19 +230,20 @@ export default function TAStaffPage() {
                         <h3 className="font-semibold text-off-white">{member.name}</h3>
                         <Badge variant={roleColors[member.role] || 'muted'} className="mt-1">{member.role}</Badge>
                       </div>
-                      <div className="flex gap-1">
+                      <div className="flex gap-0.5 flex-shrink-0 -mr-1">
                         <button
-                          onClick={() => setResetTarget(member)}
-                          className="p-1.5 rounded-lg text-muted hover:text-amber-400 transition-colors"
+                          onClick={() => openReset(member)}
+                          className="p-2 rounded-lg text-muted hover:text-amber-400 active:text-amber-400 hover:bg-dark-surface transition-colors"
                           title="Reset password"
+                          aria-label={`Reset password ${member.name}`}
                         >
-                          <KeyRound className="w-3.5 h-3.5" />
+                          <KeyRound className="w-4 h-4" />
                         </button>
-                        <button onClick={() => openEdit(member)} className="p-1.5 rounded-lg text-muted hover:text-blue-400 transition-colors" title="Edit">
-                          <Edit2 className="w-3.5 h-3.5" />
+                        <button onClick={() => openEdit(member)} className="p-2 rounded-lg text-muted hover:text-blue-400 active:text-blue-400 hover:bg-dark-surface transition-colors" title="Edit" aria-label={`Edit ${member.name}`}>
+                          <Edit2 className="w-4 h-4" />
                         </button>
-                        <button onClick={() => handleDelete(member)} className="p-1.5 rounded-lg text-muted hover:text-red-400 transition-colors" title="Hapus">
-                          <Trash2 className="w-3.5 h-3.5" />
+                        <button onClick={() => handleDelete(member)} className="p-2 rounded-lg text-muted hover:text-red-400 active:text-red-400 hover:bg-dark-surface transition-colors" title="Hapus" aria-label={`Hapus ${member.name}`}>
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
@@ -303,16 +339,16 @@ export default function TAStaffPage() {
       {/* Konfirmasi Reset Password */}
       <Modal
         isOpen={!!resetTarget}
-        onClose={() => !resetPassword.isPending && setResetTarget(null)}
+        onClose={closeReset}
         title="Reset Password Staf"
       >
         <div className="space-y-4">
-          <div className="flex items-start gap-3 p-3.5 bg-amber-400/10 border border-amber-400/25 rounded-xl">
+          <div className="flex items-start gap-3 p-3.5 bg-amber-400/10 border border-amber-400/20 rounded-xl">
             <AlertTriangle size={16} className="text-amber-400 mt-0.5 flex-shrink-0" />
             <div className="text-sm">
               <p className="text-amber-200 font-medium mb-1">Password lama akan langsung tidak berlaku</p>
               <p className="text-muted text-xs leading-relaxed">
-                Sistem akan men-generate password baru dan staf langsung di-logout dari semua perangkat. Password baru akan ditampilkan <span className="text-amber-300 font-semibold">satu kali</span> di layar berikut — pastikan Anda mencatatnya sebelum menutup.
+                Begitu di-reset, staf langsung di-logout dari semua perangkat. Anda bisa menentukan password sendiri di bawah, atau biarkan kosong agar dibuat otomatis. Password ditampilkan <span className="text-amber-300 font-semibold">satu kali</span> di layar berikut — catat sebelum menutup.
               </p>
             </div>
           </div>
@@ -322,11 +358,52 @@ export default function TAStaffPage() {
               <p className="text-xs text-muted font-mono mt-0.5">{resetTarget.email}</p>
             </div>
           )}
+
+          {/* Password kustom — opsional */}
+          <div>
+            <label className="block text-sm font-medium text-muted mb-1.5">Password baru</label>
+            <div className="relative">
+              <input
+                type={showPw ? 'text' : 'password'}
+                value={customPw}
+                onChange={e => { setCustomPw(e.target.value); setPwError('') }}
+                placeholder="Kosongkan untuk dibuat otomatis"
+                autoComplete="new-password"
+                disabled={resetPassword.isPending}
+                className={`w-full bg-dark-surface text-off-white placeholder-muted rounded-xl px-4 py-2.5 pr-[5.25rem] text-sm font-mono outline-none transition-all border focus:ring-2 focus:ring-gold/15 ${
+                  pwError ? 'border-red-500/60 focus:border-red-500' : 'border-dark-border focus:border-gold/60'
+                }`}
+              />
+              <div className="absolute inset-y-0 right-1.5 flex items-center gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => setShowPw(s => !s)}
+                  aria-label={showPw ? 'Sembunyikan password' : 'Tampilkan password'}
+                  className="p-2 rounded-lg text-muted hover:text-gold transition-colors"
+                >
+                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setCustomPw(genPassword()); setShowPw(true); setPwError('') }}
+                  aria-label="Buat password acak"
+                  title="Buat acak"
+                  className="p-2 rounded-lg text-muted hover:text-gold transition-colors"
+                >
+                  <RefreshCw size={15} />
+                </button>
+              </div>
+            </div>
+            {pwError
+              ? <p className="mt-1.5 text-xs text-red-400">{pwError}</p>
+              : <p className="mt-1.5 text-xs text-muted">Minimal 6 karakter. Kosongkan agar sistem yang membuat.</p>}
+          </div>
+
           <div className="flex gap-3">
             <Button
               variant="outline"
               fullWidth
-              onClick={() => setResetTarget(null)}
+              onClick={closeReset}
               disabled={resetPassword.isPending}
             >
               Batal
@@ -455,9 +532,9 @@ function CredentialsModal({ credentials, onClose }) {
   return (
     <Modal isOpen onClose={onClose} title={title} size="md">
       <div className="space-y-4">
-        <div className="flex items-start gap-3 p-3.5 bg-amber-400/10 border border-amber-400/25 rounded-xl">
+        <div className="flex items-start gap-3 p-3.5 bg-amber-400/10 border border-amber-400/20 rounded-xl">
           <AlertTriangle size={16} className="text-amber-400 mt-0.5 flex-shrink-0" />
-          <p className="text-xs text-amber-200/90 leading-relaxed">
+          <p className="text-xs text-amber-200 leading-relaxed">
             Password ini hanya ditampilkan <span className="font-semibold text-amber-300">sekali</span>. Catat atau salin sekarang dan berikan ke staf yang bersangkutan. Setelah modal ini ditutup, sistem tidak menyimpannya dalam bentuk yang bisa dilihat lagi.
           </p>
         </div>
@@ -483,9 +560,9 @@ function CredentialsModal({ credentials, onClose }) {
           </div>
 
           <div>
-            <p className="text-xs text-muted mb-1">Password sementara</p>
+            <p className="text-xs text-muted mb-1">{credentials.custom ? 'Password baru' : 'Password sementara'}</p>
             <div className="flex items-center gap-2">
-              <code className="flex-1 px-3 py-2 bg-dark-surface rounded-xl text-sm text-gold font-mono tracking-wider select-all">
+              <code className="flex-1 px-3 py-2 bg-dark-surface rounded-xl text-sm text-gold font-mono tracking-wider select-all break-all">
                 {credentials.tempPassword}
               </code>
               <button
