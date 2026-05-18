@@ -14,6 +14,7 @@ export const usePublicTenantStore = create((set) => ({
   phone: null,
   bookingPage: null, // { tagline, description, heroImage, gallery, … }
   wilayah: null,     // { provinsiId, provinsi, kabupatenId, kabupaten }
+  devLogin: false,   // true kalau backend mengaktifkan dev-login (env DEV_LOGIN=1)
   status: 'idle',
 
   resolve: async () => {
@@ -41,6 +42,7 @@ export const usePublicTenantStore = create((set) => ({
         phone: info.phone || null,
         bookingPage: info.bookingPage || null,
         wilayah: info.wilayah || null,
+        devLogin: info.devLogin === true,
         slug,
       })
     } catch {

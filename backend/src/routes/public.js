@@ -52,6 +52,9 @@ router.get('/info', requireTenant, async (req, res, next) => {
         phone:       full.phone || null,
         bookingPage: full.bookingPage || null,
         wilayah:     full.wilayah || null,
+        // Flag dev-login — frontend pakai ini untuk memunculkan tombol login
+        // cepat tanpa password. Hanya true kalau env DEV_LOGIN=1 di backend.
+        devLogin:    process.env.DEV_LOGIN === '1',
       },
     });
   } catch (err) { next(err); }

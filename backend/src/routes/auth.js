@@ -297,6 +297,65 @@ router.post('/login', async (req, res, next) => {
   }
 });
 
+// POST /api/auth/dev-login — login cepat TANPA password, untuk mempercepat
+// testing antar-subdomain saat development.
+//
+// ⚠️  KEAMANAN: endpoint ini bypass autentikasi. Ia HANYA aktif kalau env
+// `DEV_LOGIN=1` di backend; tanpa env itu ia merespons 404 seolah tidak ada.
+// JANGAN PERNAH set DEV_LOGIN=1 di backend produksi — siapa pun bisa masuk
+// sebagai admin tenant mana pun.
+const devLoginSchema = z.object({
+  role: z.enum(['tenant_admin', 'kasir', 'barber']),
+});
+
+router.post('/dev-login', async (req, res, next) => {
+  try {
+    if (process.env.DEV_LOGIN !== '1') {
+      return res.status(404).json({ success: false, error: 'Not found' });
+    }
+    if (!req.tenant) {
+      return res.status(400).json({ success: false, error: 'Dev-login hanya bisa dari subdomain tenant' });
+    }
+    const { role } = devLoginSchema.parse(req.body);
+
+    // Ambil akun pertama (tertua) dengan peran tsb di tenant subdomain ini.
+    const user = await prisma.user.findFirst({
+      where: { tenantId: req.tenant.id, role, isActive: true, deletedAt: null },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true, email: true, name: true, role: true, phone: true, photo: true,
+        commissionRate: true, tenantId: true, branchId: true,
+        branch: { select: { id: true, code: true, name: true } },
+        tenant: { select: { id: true, name: true, logo: true, timezone: true, wilayah: true } },
+      },
+    });
+    if (!user) {
+      return res.status(404).json({ success: false, error: `Tidak ada akun ${role} aktif di tenant ini` });
+    }
+
+    const payload = {
+      id: user.id, email: user.email, role: user.role,
+      tenantId: user.tenantId, branchId: user.branchId,
+    };
+    const accessToken  = signAccess(payload);
+    const refreshToken = signRefresh({ id: user.id });
+    await prisma.refreshToken.create({
+      data: {
+        token: refreshToken,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    res.json({ success: true, data: { accessToken, refreshToken, user } });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ success: false, error: err.errors[0]?.message });
+    }
+    next(err);
+  }
+});
+
 // POST /api/auth/refresh
 router.post('/refresh', async (req, res, next) => {
   try {

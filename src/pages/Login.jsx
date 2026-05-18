@@ -11,17 +11,20 @@ import { getTenantSlug } from '../lib/tenantSlug.js'
 
 // Credentials match backend seed (run: cd backend && npm run db:seed)
 const SUPER_ADMIN_DEMO = { email: 'admin@barberos.com', password: 'Admin123!', role: 'Super Admin', color: 'from-amber-500 to-orange-500' }
-const TENANT_DEMOS = [
-  { email: 'admin@barberkingdom.com',  password: 'Admin123!',  role: 'Tenant Admin', color: 'from-gold to-gold-light' },
-  { email: 'kasir@barberkingdom.com',  password: 'Kasir123!',  role: 'Kasir',         color: 'from-blue-500 to-cyan-500' },
-  { email: 'budi@barberkingdom.com',   password: 'Barber123!', role: 'Barber',        color: 'from-green-500 to-emerald-500' },
+
+// Peran untuk tombol dev-login di subdomain tenant — login tanpa password ke
+// akun tenant subdomain saat ini. Hanya muncul kalau backend DEV_LOGIN=1.
+const DEV_ROLES = [
+  { role: 'tenant_admin', label: 'Tenant Admin', color: 'from-gold to-gold-light' },
+  { role: 'kasir',        label: 'Kasir',        color: 'from-blue-500 to-cyan-500' },
+  { role: 'barber',       label: 'Barber',       color: 'from-green-500 to-emerald-500' },
 ]
 
 export default function Login() {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const { login, isLoading, error, clearError } = useAuthStore()
-  const { status: tenantStatus, name: tenantName, logo: tenantLogo } = usePublicTenantStore()
+  const { login, devLogin, isLoading, error, clearError } = useAuthStore()
+  const { status: tenantStatus, name: tenantName, logo: tenantLogo, devLogin: devLoginEnabled } = usePublicTenantStore()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -32,7 +35,9 @@ export default function Login() {
   // Main domain = no tenant slug detected. We use this to gate the demo accounts
   // and surface the "this is the super-admin sign-in" banner.
   const isMainDomain = !slug && !isTenantContext
-  const demoUsers = isMainDomain ? [SUPER_ADMIN_DEMO] : TENANT_DEMOS
+  // Tombol login cepat tanpa password — hanya di subdomain tenant & saat
+  // backend mengaktifkannya (env DEV_LOGIN=1).
+  const showDevLogin = isTenantContext && devLoginEnabled
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -59,6 +64,13 @@ export default function Login() {
     } else if (result.redirect) {
       setRedirectUrl(result.redirect)
     }
+  }
+
+  const handleDevLogin = async (role) => {
+    clearError()
+    setRedirectUrl(null)
+    const result = await devLogin(role)
+    if (result.success) navigate(result.redirectTo)
   }
 
   return (
@@ -192,32 +204,60 @@ export default function Login() {
             </Button>
           </form>
 
-          {/* Demo users */}
-          <div className="mt-6">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="flex-1 h-px bg-dark-border" />
-              <span className="text-xs text-muted">{t('auth.demoAccounts')}</span>
-              <div className="flex-1 h-px bg-dark-border" />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {demoUsers.map(user => (
-                <button
-                  key={user.email}
-                  onClick={() => handleQuickLogin(user)}
-                  disabled={isLoading}
-                  className="flex items-center gap-2 p-2.5 rounded-xl bg-dark-card border border-dark-border hover:border-gold/30 transition-all text-left group"
-                >
-                  <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${user.color} flex items-center justify-center flex-shrink-0`}>
-                    <span className="text-xs font-bold text-white">{user.role[0]}</span>
+          {/* Login cepat — super-admin demo di main domain, atau dev-login
+              tanpa password di subdomain tenant (kalau backend mengizinkan). */}
+          {(isMainDomain || showDevLogin) && (
+            <div className="mt-6">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex-1 h-px bg-dark-border" />
+                <span className="text-xs text-muted">
+                  {showDevLogin ? 'Login cepat (mode dev)' : t('auth.demoAccounts')}
+                </span>
+                <div className="flex-1 h-px bg-dark-border" />
+              </div>
+
+              {isMainDomain && (
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => handleQuickLogin(SUPER_ADMIN_DEMO)}
+                    disabled={isLoading}
+                    className="flex items-center gap-2 p-2.5 rounded-xl bg-dark-card border border-dark-border hover:border-gold/30 transition-all text-left group"
+                  >
+                    <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${SUPER_ADMIN_DEMO.color} flex items-center justify-center flex-shrink-0`}>
+                      <span className="text-xs font-bold text-white">{SUPER_ADMIN_DEMO.role[0]}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-off-white truncate">{SUPER_ADMIN_DEMO.role}</p>
+                    </div>
+                    <ChevronRight className="w-3 h-3 text-muted group-hover:text-gold transition-colors" />
+                  </button>
+                </div>
+              )}
+
+              {showDevLogin && (
+                <>
+                  <div className="grid grid-cols-3 gap-2">
+                    {DEV_ROLES.map(r => (
+                      <button
+                        key={r.role}
+                        onClick={() => handleDevLogin(r.role)}
+                        disabled={isLoading}
+                        className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-dark-card border border-dark-border hover:border-gold/30 transition-all"
+                      >
+                        <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${r.color} flex items-center justify-center`}>
+                          <span className="text-xs font-bold text-white">{r.label[0]}</span>
+                        </div>
+                        <p className="text-xs font-medium text-off-white truncate">{r.label}</p>
+                      </button>
+                    ))}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-off-white truncate">{user.role}</p>
-                  </div>
-                  <ChevronRight className="w-3 h-3 text-muted group-hover:text-gold transition-colors" />
-                </button>
-              ))}
+                  <p className="text-[11px] text-muted mt-2 text-center leading-relaxed">
+                    Masuk tanpa password sebagai akun tenant ini — khusus pengembangan.
+                  </p>
+                </>
+              )}
             </div>
-          </div>
+          )}
         </motion.div>
 
         <p className="text-center text-muted text-xs mt-6">
