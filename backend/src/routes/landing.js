@@ -249,6 +249,7 @@ router.patch('/layout', authenticate, requireRole('super_admin'), async (req, re
 
     await setSetting(LAYOUT_KEY, JSON.stringify(layout));
     emitLandingUpdate();
+    gcUploads(layout); // bersihkan gambar yatim (best-effort, non-blocking)
     res.json({ success: true, data: layout });
   } catch (err) {
     if (err instanceof z.ZodError) return res.status(400).json({ success: false, error: err.errors[0]?.message });
@@ -289,6 +290,38 @@ router.post('/upload', authenticate, requireRole('super_admin'), (req, res) => {
     res.json({ success: true, data: { url: `/api/uploads/landing/${req.file.filename}` } });
   });
 });
+
+// Kumpulkan nama file `/api/uploads/landing/<file>` yang masih dipakai layout.
+function collectUploadFilenames(value, set = new Set()) {
+  if (typeof value === 'string') {
+    const m = value.match(/\/api\/uploads\/landing\/([\w.-]+)/);
+    if (m) set.add(m[1]);
+  } else if (Array.isArray(value)) {
+    value.forEach(v => collectUploadFilenames(v, set));
+  } else if (value && typeof value === 'object') {
+    Object.values(value).forEach(v => collectUploadFilenames(v, set));
+  }
+  return set;
+}
+
+// Hapus gambar yatim — file di uploads/landing yang tidak lagi dirujuk layout.
+// Best-effort & non-blocking. File berumur < 1 jam dilewati supaya gambar yang
+// baru diunggah tapi belum sempat disimpan ke layout tidak ikut terhapus.
+async function gcUploads(layout) {
+  try {
+    const referenced = collectUploadFilenames(layout);
+    const files = await fs.promises.readdir(UPLOAD_DIR);
+    const cutoff = Date.now() - 60 * 60 * 1000;
+    for (const f of files) {
+      if (referenced.has(f)) continue;
+      const fp = path.join(UPLOAD_DIR, f);
+      const stat = await fs.promises.stat(fp).catch(() => null);
+      if (stat && stat.isFile() && stat.mtimeMs < cutoff) {
+        await fs.promises.unlink(fp).catch(() => {});
+      }
+    }
+  } catch { /* GC best-effort — jangan ganggu request */ }
+}
 
 // ── Testimonials CRUD ─────────────────────────────────────────────────────
 

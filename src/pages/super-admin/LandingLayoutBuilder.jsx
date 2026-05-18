@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors,
@@ -54,6 +54,40 @@ const CORE_EDIT = {
 const uid = () =>
   (crypto?.randomUUID?.() || `b_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`)
 
+// Perkecil gambar sebelum upload supaya landing tetap ringan. PNG dipertahankan
+// (jaga transparansi logo); selain itu diubah ke JPEG. GIF/SVG dilewati apa
+// adanya. Gambar yang sudah kecil tidak diproses ulang.
+function resizeImageFile(file, maxEdge = 1600) {
+  return new Promise((resolve) => {
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return resolve(file)
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const img = new Image()
+      img.onload = () => {
+        const scale = Math.min(1, maxEdge / Math.max(img.width, img.height))
+        if (scale === 1 && file.size < 400_000) return resolve(file)
+        const w = Math.round(img.width * scale)
+        const h = Math.round(img.height * scale)
+        const canvas = document.createElement('canvas')
+        canvas.width = w; canvas.height = h
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+        const isPng = file.type === 'image/png'
+        canvas.toBlob(
+          (blob) => resolve(
+            blob ? new File([blob], isPng ? 'image.png' : 'image.jpg', { type: blob.type }) : file
+          ),
+          isPng ? 'image/png' : 'image/jpeg',
+          isPng ? undefined : 0.85,
+        )
+      }
+      img.onerror = () => resolve(file)
+      img.src = e.target.result
+    }
+    reader.onerror = () => resolve(file)
+    reader.readAsDataURL(file)
+  })
+}
+
 // ── Upload gambar ────────────────────────────────────────────────────────────
 function ImageUploadField({ value, onChange, label = 'Gambar' }) {
   const toast = useToast()
@@ -64,8 +98,9 @@ function ImageUploadField({ value, onChange, label = 'Gambar' }) {
     if (!file) return
     setBusy(true)
     try {
+      const processed = await resizeImageFile(file)
       const fd = new FormData()
-      fd.append('image', file)
+      fd.append('image', processed)
       const res = await api.post('/landing/upload', fd)
       onChange(res.data.data.url)
     } catch (err) {
@@ -297,7 +332,7 @@ function LockedRow({ icon: Icon, label, position }) {
 }
 
 // ── Builder utama ───────────────────────────────────────────────────────────
-export default function LandingLayoutBuilder({ onEditCore }) {
+export default function LandingLayoutBuilder({ onEditCore, onDirtyChange }) {
   const toast = useToast()
   const navigate = useNavigate()
   const { data, isLoading } = useLanding()
@@ -309,12 +344,39 @@ export default function LandingLayoutBuilder({ onEditCore }) {
   const [configDraft, setConfigDraft] = useState({})
   const [previewKey, setPreviewKey] = useState(0)      // bump → iframe reload
   const [previewMode, setPreviewMode] = useState('desktop')
+  const [dirty, setDirty] = useState(false)            // ada perubahan belum disimpan
+  const iframeRef = useRef(null)
 
   useEffect(() => {
     if (data?.layout && !blocks) {
       setBlocks(data.layout.map(b => ({ ...b, visible: b.visible !== false })))
     }
   }, [data, blocks])
+
+  // Lapor status dirty ke parent (SALandingPage) + cegah reload/tutup tab.
+  useEffect(() => { onDirtyChange?.(dirty) }, [dirty, onDirtyChange])
+  useEffect(() => {
+    if (!dirty) return
+    const warn = (e) => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [dirty])
+
+  // Live preview — kirim layout terkini (termasuk yang belum disimpan) ke iframe.
+  const postPreview = useCallback(() => {
+    const win = iframeRef.current?.contentWindow
+    if (win && Array.isArray(blocks)) {
+      win.postMessage({ type: 'sembapos-preview-layout', layout: blocks }, window.location.origin)
+    }
+  }, [blocks])
+  useEffect(() => {
+    const onMsg = (e) => {
+      if (e.origin === window.location.origin && e.data?.type === 'sembapos-preview-ready') postPreview()
+    }
+    window.addEventListener('message', onMsg)
+    return () => window.removeEventListener('message', onMsg)
+  }, [postPreview])
+  useEffect(() => { postPreview() }, [postPreview])
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -333,19 +395,30 @@ export default function LandingLayoutBuilder({ onEditCore }) {
         const newI = bs.findIndex(b => b.id === over.id)
         return oldI < 0 || newI < 0 ? bs : arrayMove(bs, oldI, newI)
       })
+      setDirty(true)
     }
   }
-  const toggle = (id) => setBlocks(bs => bs.map(b => b.id === id ? { ...b, visible: !b.visible } : b))
-  const remove = (id) => setBlocks(bs => bs.filter(b => b.id !== id))
-  const duplicate = (id) => setBlocks(bs => {
-    const i = bs.findIndex(b => b.id === id)
-    if (i < 0) return bs
-    const copy = { ...bs[i], id: uid(), config: { ...(bs[i].config || {}) } }
-    return [...bs.slice(0, i + 1), copy, ...bs.slice(i + 1)]
-  })
+  const toggle = (id) => {
+    setBlocks(bs => bs.map(b => b.id === id ? { ...b, visible: !b.visible } : b))
+    setDirty(true)
+  }
+  const remove = (id) => {
+    setBlocks(bs => bs.filter(b => b.id !== id))
+    setDirty(true)
+  }
+  const duplicate = (id) => {
+    setBlocks(bs => {
+      const i = bs.findIndex(b => b.id === id)
+      if (i < 0) return bs
+      const copy = { ...bs[i], id: uid(), config: { ...(bs[i].config || {}) } }
+      return [...bs.slice(0, i + 1), copy, ...bs.slice(i + 1)]
+    })
+    setDirty(true)
+  }
   const addFreeBlock = (type) => {
     setBlocks(bs => [...bs, { id: uid(), type, visible: true, config: {} }])
     setAddOpen(false)
+    setDirty(true)
   }
 
   function handleEdit(block) {
@@ -363,6 +436,7 @@ export default function LandingLayoutBuilder({ onEditCore }) {
   function saveConfig() {
     setBlocks(bs => bs.map(b => b.id === editing.id ? { ...b, config: configDraft } : b))
     setEditing(null)
+    setDirty(true)
   }
 
   async function handleSave() {
@@ -374,7 +448,7 @@ export default function LandingLayoutBuilder({ onEditCore }) {
       }))
       await updateLayout.mutateAsync(payload)
       toast.success('Tata letak landing tersimpan')
-      setPreviewKey(k => k + 1) // segarkan pratinjau ke kondisi tersimpan
+      setDirty(false)
     } catch (err) {
       toast.error(err?.response?.data?.error || 'Gagal menyimpan tata letak')
     }
@@ -422,9 +496,16 @@ export default function LandingLayoutBuilder({ onEditCore }) {
         </CardBody>
       </Card>
 
-      <Button onClick={handleSave} loading={updateLayout.isPending} icon={Save} fullWidth>
-        Simpan Tata Letak
-      </Button>
+      <div>
+        <Button onClick={handleSave} loading={updateLayout.isPending} icon={Save} fullWidth>
+          Simpan Tata Letak
+        </Button>
+        {dirty && (
+          <p className="text-xs text-amber-400 text-center mt-2">
+            Ada perubahan yang belum disimpan.
+          </p>
+        )}
+      </div>
 
       {/* Pratinjau langsung */}
       <Card>
@@ -465,7 +546,7 @@ export default function LandingLayoutBuilder({ onEditCore }) {
         </CardHeader>
         <CardBody>
           <p className="text-xs text-muted mb-3">
-            Pratinjau menampilkan kondisi <span className="text-off-white">tersimpan</span>. Klik "Simpan Tata Letak" untuk melihat perubahan terbaru.
+            Pratinjau mengikuti perubahan <span className="text-off-white">terkini</span> — termasuk yang belum disimpan.
           </p>
           <div
             className="mx-auto bg-white rounded-xl border border-dark-border overflow-hidden transition-all"
@@ -473,6 +554,8 @@ export default function LandingLayoutBuilder({ onEditCore }) {
           >
             <iframe
               key={previewKey}
+              ref={iframeRef}
+              onLoad={postPreview}
               src="/?preview=1"
               title="Pratinjau landing"
               className="w-full"

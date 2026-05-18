@@ -27,6 +27,18 @@ const TABS = [
 
 export default function SALandingPage() {
   const [tab, setTab] = useState('layout')
+  const [layoutDirty, setLayoutDirty] = useState(false)
+
+  // Pindah tab — kalau builder Tata Letak punya perubahan belum disimpan,
+  // konfirmasi dulu supaya tidak hilang diam-diam.
+  const changeTab = (id) => {
+    if (id === tab) return
+    if (tab === 'layout' && layoutDirty &&
+        !window.confirm('Perubahan tata letak belum disimpan dan akan hilang. Tetap pindah?')) {
+      return
+    }
+    setTab(id)
+  }
 
   return (
     <div className="space-y-6">
@@ -49,7 +61,7 @@ export default function SALandingPage() {
         {TABS.map(t => (
           <button
             key={t.id}
-            onClick={() => setTab(t.id)}
+            onClick={() => changeTab(t.id)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all inline-flex items-center gap-2 ${tab === t.id ? 'bg-gold text-dark' : 'text-muted hover:text-off-white'}`}
           >
             <t.icon size={14} /> {t.label}
@@ -57,7 +69,7 @@ export default function SALandingPage() {
         ))}
       </div>
 
-      {tab === 'layout' && <LandingLayoutBuilder onEditCore={setTab} />}
+      {tab === 'layout' && <LandingLayoutBuilder onEditCore={changeTab} onDirtyChange={setLayoutDirty} />}
       {tab === 'hero' && <HeroEditor />}
       {tab === 'content' && <ContentEditor />}
       {tab === 'testimonials' && <TestimonialsEditor />}

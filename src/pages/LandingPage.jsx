@@ -172,6 +172,23 @@ export default function LandingPage() {
   const { data, isLoading } = useLanding()
   const { user, isAuthenticated } = useAuthStore()
 
+  // Mode preview (iframe builder super-admin) — terima layout langsung dari
+  // builder lewat postMessage supaya perubahan yang belum disimpan ikut tampil.
+  const [previewLayout, setPreviewLayout] = useState(null)
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('preview') !== '1') return
+    const onMsg = (e) => {
+      if (e.origin !== window.location.origin) return
+      if (e.data?.type === 'sembapos-preview-layout' && Array.isArray(e.data.layout)) {
+        setPreviewLayout(e.data.layout)
+      }
+    }
+    window.addEventListener('message', onMsg)
+    // Beri tahu builder bahwa iframe siap menerima layout.
+    try { window.parent?.postMessage({ type: 'sembapos-preview-ready' }, window.location.origin) } catch {}
+    return () => window.removeEventListener('message', onMsg)
+  }, [])
+
   useEffect(() => {
     const original = document.title
     document.title = 'SembaPOS — Kelola Barbershop Tanpa Ribet'
@@ -202,7 +219,8 @@ export default function LandingPage() {
   const faqs = data?.faqs || []
   const packages = data?.packages || []
   const stats = data?.stats || null
-  const layout = (Array.isArray(data?.layout) && data.layout.length) ? data.layout : FALLBACK_LAYOUT
+  const layout = previewLayout
+    || ((Array.isArray(data?.layout) && data.layout.length) ? data.layout : FALLBACK_LAYOUT)
   const waNumber = normalizeWa(hero.whatsappCta)
   const waHref = waNumber
     ? `https://wa.me/${waNumber}?text=${encodeURIComponent('Halo, saya tertarik dengan SembaPOS.')}`
