@@ -1,5 +1,6 @@
 require('dotenv').config();
 const http = require('http');
+const path = require('path');
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
@@ -90,6 +91,12 @@ const refreshLimiter = rateLimit({
   skipSuccessfulRequests: true,
   message: { success: false, error: 'Too many refresh attempts, please try again later.' },
 });
+
+// Gambar yang diunggah builder landing — disajikan statis dari disk.
+// Dipasang sebelum rate limiter & tenantResolver supaya akses gambar tidak
+// terbatas kuota dan tidak butuh konteks tenant. Lewat prefix /api supaya
+// ikut proxy nginx yang sudah ada (tanpa perubahan nginx).
+app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api', generalLimiter);
 app.use('/api/auth/login', loginLimiter);

@@ -10,6 +10,10 @@ import { formatRupiah } from '../utils/format.js'
 // Landing publik SELALU terang — memakai warna eksplisit (bukan class tema
 // `bg-dark`/`text-off-white`) supaya tidak ikut berubah oleh theme store app.
 // Palet: ivory #FBFAF6 · krem #F5EFE3 · tinta #1C1A17 · emas #C9A84C / #A8893A.
+//
+// Urutan & visibilitas section dikendalikan array `layout` dari /api/landing
+// (block builder super-admin). Hero & Footer terkunci di posisinya; section di
+// antaranya dirender lewat BLOCK_REGISTRY mengikuti `layout`.
 
 // Animasi count-up angka statistik.
 function CountUp({ to = 0, duration = 1500, suffix = '' }) {
@@ -73,6 +77,10 @@ const FALLBACK_CLOSING = {
 
 const FALLBACK_FOOTER = 'Sistem manajemen barbershop modern: kasir, antrian, booking online, multi-cabang, dan laporan pintar dalam satu aplikasi.'
 
+// Urutan section default kalau /api/landing belum mengembalikan `layout`.
+const FALLBACK_LAYOUT = ['stats', 'features', 'steps', 'pricing', 'testimonials', 'faq', 'closingCta']
+  .map(t => ({ id: t, type: t, visible: true }))
+
 // Render judul hero — 2 kata terakhir ditonjolkan emas-italic (memenuhi
 // kontrak label editor super-admin). Judul ≤2 kata seluruhnya jadi emas.
 function renderHeroTitle(title) {
@@ -84,6 +92,18 @@ function renderHeroTitle(title) {
   const head = words.slice(0, -2).join(' ')
   const tail = words.slice(-2).join(' ')
   return <>{head}<br /><span className="italic text-[#A8893A]">{tail}</span></>
+}
+
+// Ubah URL YouTube/Vimeo umum → URL embed untuk <iframe>.
+function toEmbedUrl(url) {
+  if (!url) return null
+  const u = String(url).trim()
+  let m
+  if ((m = u.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]{11})/)))
+    return `https://www.youtube.com/embed/${m[1]}`
+  if ((m = u.match(/vimeo\.com\/(?:video\/)?(\d+)/)))
+    return `https://player.vimeo.com/video/${m[1]}`
+  return u // anggap sudah berupa URL embed
 }
 
 // Tagline ramah per paket (dipakai kalau `package.description` kosong).
@@ -151,8 +171,6 @@ function normalizeWa(input) {
 export default function LandingPage() {
   const { data, isLoading } = useLanding()
   const { user, isAuthenticated } = useAuthStore()
-  const { scrollYProgress } = useScroll()
-  const heroY = useTransform(scrollYProgress, [0, 0.3], [0, -60])
 
   useEffect(() => {
     const original = document.title
@@ -176,17 +194,15 @@ export default function LandingPage() {
 
   const hero = data?.hero || {}
   const features = (hero.features?.length ? hero.features : FALLBACK_FEATURES)
-  const trustItems = (hero.trustItems?.length ? hero.trustItems : FALLBACK_TRUST)
   const steps = (hero.steps?.length ? hero.steps : FALLBACK_STEPS)
   const sections = { ...FALLBACK_SECTIONS, ...(hero.sections || {}) }
   const closing = { ...FALLBACK_CLOSING, ...(hero.closingCta || {}) }
   const footerText = hero.footerText || FALLBACK_FOOTER
-  const heroBadge = hero.heroBadge || 'Baru'
   const testimonials = data?.testimonials || []
   const faqs = data?.faqs || []
   const packages = data?.packages || []
   const stats = data?.stats || null
-  const showStats = hero.showStats !== false && !!stats
+  const layout = (Array.isArray(data?.layout) && data.layout.length) ? data.layout : FALLBACK_LAYOUT
   const waNumber = normalizeWa(hero.whatsappCta)
   const waHref = waNumber
     ? `https://wa.me/${waNumber}?text=${encodeURIComponent('Halo, saya tertarik dengan SembaPOS.')}`
@@ -196,385 +212,19 @@ export default function LandingPage() {
   const homePath = user?.role === 'super_admin' ? '/super-admin/dashboard'
                  : user?.role === 'tenant_admin' ? '/admin/dashboard' : '/'
 
+  // Konteks bersama untuk komponen blok core.
+  const ctx = { hero, features, steps, sections, packages, testimonials, faqs, stats, isLoading, closing, waHref }
+
   return (
     <div className="min-h-screen bg-[#FBFAF6] text-[#57534E] font-body overflow-x-hidden antialiased">
       <Nav isAuthed={isAuthenticated} userRole={user?.role} />
 
-      {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="relative pt-32 pb-16 lg:pt-40 lg:pb-24">
-        {/* Latar dekoratif — glow emas lembut + tekstur titik halus */}
-        <div className="absolute inset-0 -z-10 overflow-hidden">
-          <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[820px] h-[420px] rounded-full bg-[#C9A84C]/12 blur-[120px]" />
-          <div className="absolute top-48 -right-20 w-72 h-72 rounded-full bg-[#E8C875]/20 blur-[100px]" />
-          <div
-            className="absolute inset-0 opacity-[0.5]"
-            style={{
-              backgroundImage: 'radial-gradient(#C9A84C26 1px, transparent 1px)',
-              backgroundSize: '26px 26px',
-              maskImage: 'linear-gradient(to bottom, black, transparent 70%)',
-              WebkitMaskImage: 'linear-gradient(to bottom, black, transparent 70%)',
-            }}
-          />
-        </div>
+      <HeroSection hero={hero} isAuthenticated={isAuthenticated} homePath={homePath} />
 
-        <motion.div style={{ y: heroY }} className="max-w-3xl mx-auto px-6 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full bg-white border border-[#EAE0C6] text-[#A8893A] text-xs font-semibold shadow-[0_4px_16px_-8px_rgba(201,168,76,0.5)]"
-          >
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#C9A84C] text-[#1C1A17]">
-              <Lucide.Sparkles size={11} /> {heroBadge}
-            </span>
-            {hero.brandTagline || 'Dipercaya barbershop di seluruh Indonesia'}
-          </motion.div>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 22 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.06 }}
-            className="font-display text-4xl leading-[1.12] sm:text-6xl sm:leading-[1.08] lg:text-7xl font-bold text-[#1C1A17] tracking-tight mt-7"
-          >
-            {renderHeroTitle(hero.heroTitle || 'Kelola barbershop, tanpa ribet.')}
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 22 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.14 }}
-            className="text-base sm:text-lg text-[#6B6459] max-w-xl mx-auto mt-6"
-          >
-            {hero.heroSubtitle || 'Kasir, antrian, booking online, sampai laporan pemilik — semua jadi satu aplikasi. Tinggal pakai, langsung jalan hari ini juga.'}
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 22 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.22 }}
-            className="flex flex-wrap items-center justify-center gap-3 mt-9"
-          >
-            <Link to={isAuthenticated ? homePath : '/register'} className="btn-gold group">
-              {isAuthenticated ? 'Buka Dashboard' : (hero.heroCtaLabel || 'Coba Gratis 14 Hari')}
-              <Lucide.ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-            </Link>
-            <a href="#fitur" className="btn-ghost">
-              <Lucide.Play size={13} className="text-[#A8893A]" /> Lihat Fitur
-            </a>
-          </motion.div>
-
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="text-[13px] text-[#9A9189] mt-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-1"
-          >
-            {trustItems.map((item, i) => (
-              <React.Fragment key={i}>
-                {i > 0 && <span className="text-[#D8D0BE]">·</span>}
-                <span className="inline-flex items-center gap-1">
-                  <Lucide.Check size={13} className="text-[#C9A84C]" /> {item}
-                </span>
-              </React.Fragment>
-            ))}
-          </motion.p>
-        </motion.div>
-
-        {/* Showcase dashboard */}
-        <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.35 }}
-          className="max-w-5xl mx-auto px-6 mt-16"
-        >
-          <div className="relative">
-            <div className="absolute -inset-4 bg-gradient-to-tr from-[#C9A84C]/25 via-transparent to-[#E8C875]/30 rounded-[2.5rem] blur-2xl" />
-            <div className="relative rounded-2xl border border-[#EAE3D3] bg-white shadow-[0_30px_70px_-30px_rgba(28,26,23,0.35)] overflow-hidden">
-              <DashboardMock />
-            </div>
-          </div>
-        </motion.div>
-      </section>
-
-      {/* ── Stats ─────────────────────────────────────────────────────────── */}
-      {showStats && (
-        <section className="border-y border-[#EAE3D3] bg-white">
-          <div className="max-w-5xl mx-auto px-6 py-12 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            {[
-              { label: 'Tenant aktif',        value: stats.tenantCount,      suffix: '+', icon: 'Building2' },
-              { label: 'Cabang terkelola',    value: stats.branchCount,      suffix: '+', icon: 'MapPin' },
-              { label: 'Transaksi diproses',  value: stats.transactionCount, suffix: '+', icon: 'Receipt' },
-              { label: 'Pelanggan tercatat',  value: stats.customerCount,    suffix: '+', icon: 'Users' },
-            ].map((s) => {
-              const Icon = getIcon(s.icon)
-              return (
-                <motion.div key={s.label} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-                  <Icon size={18} className="text-[#C9A84C] mx-auto mb-2" />
-                  <p className="font-display text-3xl md:text-4xl font-bold text-[#1C1A17]">
-                    <CountUp to={s.value} suffix={s.suffix} />
-                  </p>
-                  <p className="text-xs text-[#9A9189] mt-1">{s.label}</p>
-                </motion.div>
-              )
-            })}
-          </div>
-        </section>
-      )}
-
-      {/* ── Fitur ─────────────────────────────────────────────────────────── */}
-      <section id="fitur" className="py-24 px-6">
-        <div className="max-w-6xl mx-auto">
-          <SectionHeading {...sections.features} />
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px mt-14 rounded-2xl overflow-hidden border border-[#EAE3D3] bg-[#EAE3D3]">
-            {features.map((f, i) => {
-              const Icon = getIcon(f.icon)
-              return (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 24 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: '-60px' }}
-                  transition={{ delay: (i % 3) * 0.07 }}
-                  className="group relative bg-white p-7 hover:bg-[#FDFBF4] transition-colors"
-                >
-                  <span className="font-display text-sm font-semibold text-[#C9A84C]">
-                    {String(i + 1).padStart(2, '0')}
-                  </span>
-                  <div className="w-11 h-11 rounded-xl bg-[#FBF4E1] border border-[#EAE0C6] flex items-center justify-center mt-3 mb-4 group-hover:bg-[#C9A84C] transition-colors">
-                    <Icon size={19} className="text-[#A8893A] group-hover:text-[#1C1A17] transition-colors" />
-                  </div>
-                  <h3 className="font-display text-xl font-semibold text-[#1C1A17] mb-1.5">{f.title}</h3>
-                  <p className="text-sm text-[#6B6459] leading-relaxed">{f.desc}</p>
-                </motion.div>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Cara mulai ────────────────────────────────────────────────────── */}
-      <section className="py-24 px-6 bg-[#F5EFE3]">
-        <div className="max-w-5xl mx-auto">
-          <SectionHeading {...sections.steps} />
-          <div className={`grid gap-5 mt-14 ${steps.length === 2 ? 'md:grid-cols-2' : steps.length >= 4 ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-3'}`}>
-            {steps.map((s, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="relative bg-white rounded-2xl border border-[#EAE3D3] p-7"
-              >
-                <span className="font-display text-5xl font-bold text-[#EAE0C6]">{i + 1}</span>
-                <h3 className="font-display text-lg font-semibold text-[#1C1A17] mt-2 mb-1.5">{s.title}</h3>
-                <p className="text-sm text-[#6B6459] leading-relaxed">{s.desc}</p>
-                {i < steps.length - 1 && (
-                  <Lucide.ArrowRight size={18} className="hidden md:block absolute top-1/2 -right-4 -translate-y-1/2 text-[#C9A84C] z-10" />
-                )}
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Harga ─────────────────────────────────────────────────────────── */}
-      <section id="harga" className="py-24 px-6">
-        <div className="max-w-6xl mx-auto">
-          <SectionHeading {...sections.pricing} />
-
-          {isLoading ? (
-            <div className="grid md:grid-cols-3 gap-6 mt-14">
-              {[1, 2, 3].map(i => <div key={i} className="h-[480px] bg-white border border-[#EAE3D3] rounded-2xl animate-pulse" />)}
-            </div>
-          ) : (
-            <div className="grid md:grid-cols-3 gap-6 mt-14 items-start">
-              {packages.map((p, i) => {
-                const prev = i > 0 ? packages[i - 1] : null
-                const featured = p.name === 'Pro'
-                const { inheritFrom, lines } = cardBenefits(p, prev)
-                const annual = Math.round((p.price * 12 * (1 - (p.annualDiscountPercent ?? 17) / 100)) / 1000) * 1000
-                return (
-                  <motion.div
-                    key={p.name}
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: i * 0.08 }}
-                    className={`relative rounded-2xl p-7 flex flex-col ${
-                      featured
-                        ? 'bg-[#1C1A17] text-[#E7E2D6] shadow-[0_30px_60px_-25px_rgba(28,26,23,0.6)] md:-mt-4 md:mb-4'
-                        : 'bg-white border border-[#EAE3D3]'
-                    }`}
-                  >
-                    {featured && (
-                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#C9A84C] text-[#1C1A17] text-[11px] font-bold whitespace-nowrap">
-                        <Lucide.Star size={11} fill="currentColor" /> Paling Banyak Dipilih
-                      </div>
-                    )}
-
-                    <h3 className={`font-display text-2xl font-bold ${featured ? 'text-white' : 'text-[#1C1A17]'}`}>
-                      {p.name}
-                    </h3>
-                    <p className={`text-sm mt-1 min-h-[40px] ${featured ? 'text-[#A8A29A]' : 'text-[#6B6459]'}`}>
-                      {p.description || PKG_TAGLINE[p.name] || 'Paket fleksibel buat barbershop kamu.'}
-                    </p>
-
-                    <div className="mt-5 mb-1 flex items-end gap-1.5">
-                      <span className={`font-display text-4xl font-bold ${featured ? 'text-white' : 'text-[#1C1A17]'}`}>
-                        {formatRupiah(p.price)}
-                      </span>
-                      <span className={`text-sm pb-1 ${featured ? 'text-[#A8A29A]' : 'text-[#9A9189]'}`}>/bulan</span>
-                    </div>
-                    <p className="text-xs text-[#A8893A] font-medium">
-                      Bayar tahunan {formatRupiah(annual)} — hemat {p.annualDiscountPercent ?? 17}%
-                    </p>
-
-                    <div className={`h-px my-6 ${featured ? 'bg-white/10' : 'bg-[#EAE3D3]'}`} />
-
-                    {inheritFrom && (
-                      <p className={`text-xs font-semibold mb-3 ${featured ? 'text-[#E8C875]' : 'text-[#A8893A]'}`}>
-                        Semua di paket {inheritFrom}, plus:
-                      </p>
-                    )}
-                    <ul className="space-y-3 mb-7 flex-1">
-                      {lines.map((line, li) => (
-                        <li key={li} className="flex items-start gap-2.5">
-                          <span className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${
-                            featured ? 'bg-[#C9A84C]' : 'bg-[#FBF4E1] border border-[#EAE0C6]'
-                          }`}>
-                            <Lucide.Check size={11} className={featured ? 'text-[#1C1A17]' : 'text-[#A8893A]'} strokeWidth={3} />
-                          </span>
-                          <span className={`text-sm ${featured ? 'text-[#E7E2D6]' : 'text-[#57534E]'}`}>{line}</span>
-                        </li>
-                      ))}
-                    </ul>
-
-                    <Link
-                      to="/register"
-                      state={{ packageName: p.name }}
-                      className={`flex items-center justify-center gap-1.5 w-full py-3 rounded-xl font-semibold text-sm transition-all ${
-                        featured
-                          ? 'bg-[#C9A84C] text-[#1C1A17] hover:bg-[#E8C875]'
-                          : 'bg-[#1C1A17] text-[#FBFAF6] hover:bg-[#2E2A24]'
-                      }`}
-                    >
-                      Pilih {p.name} <Lucide.ArrowRight size={14} />
-                    </Link>
-                  </motion.div>
-                )
-              })}
-            </div>
-          )}
-
-          <p className="text-center text-[13px] text-[#9A9189] mt-9 inline-flex w-full items-center justify-center gap-2 flex-wrap">
-            <Lucide.ShieldCheck size={14} className="text-[#C9A84C]" />
-            Semua paket sudah termasuk SSL, backup harian otomatis, update gratis & dukungan tim kami.
-          </p>
-        </div>
-      </section>
-
-      {/* ── Testimoni ─────────────────────────────────────────────────────── */}
-      {/* Saat loading tampilkan skeleton supaya tidak ada layout shift; section
-          hilang hanya kalau memang tidak ada testimoni setelah data masuk. */}
-      {(isLoading || testimonials.length > 0) && (
-        <section className="py-24 px-6 bg-[#F5EFE3]">
-          <div className="max-w-6xl mx-auto">
-            <SectionHeading {...sections.testimonials} />
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 mt-14">
-              {isLoading
-                ? [1, 2, 3].map(i => (
-                    <div key={i} className="h-56 bg-white border border-[#EAE3D3] rounded-2xl animate-pulse" />
-                  ))
-                : testimonials.map((t, i) => (
-                <motion.div
-                  key={t.id}
-                  initial={{ opacity: 0, y: 24 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: (i % 3) * 0.08 }}
-                  className="bg-white rounded-2xl border border-[#EAE3D3] p-6 flex flex-col"
-                >
-                  <div className="flex items-center gap-0.5 mb-3 text-[#C9A84C]">
-                    {Array.from({ length: t.rating || 5 }).map((_, idx) => (
-                      <Lucide.Star key={idx} size={14} fill="currentColor" />
-                    ))}
-                  </div>
-                  <p className="text-[15px] text-[#3F3A33] leading-relaxed flex-1">"{t.message}"</p>
-                  <div className="flex items-center gap-3 pt-4 mt-4 border-t border-[#EAE3D3]">
-                    {t.photoUrl ? (
-                      <img src={t.photoUrl} alt={t.name} className="w-10 h-10 rounded-full object-cover" />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#E8C875] to-[#A8893A] flex items-center justify-center text-[#1C1A17] font-bold text-sm">
-                        {t.name?.[0]?.toUpperCase() || '?'}
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-[#1C1A17] truncate">{t.name}</p>
-                      <p className="text-xs text-[#9A9189] truncate">
-                        {[t.role, t.businessName].filter(Boolean).join(' · ')}
-                      </p>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ── FAQ ───────────────────────────────────────────────────────────── */}
-      {(isLoading || faqs.length > 0) && (
-        <section className="py-24 px-6">
-          <div className="max-w-3xl mx-auto">
-            <SectionHeading {...sections.faq} />
-            <div className="space-y-3 mt-12">
-              {isLoading
-                ? [1, 2, 3, 4].map(i => (
-                    <div key={i} className="h-14 bg-white border border-[#EAE3D3] rounded-xl animate-pulse" />
-                  ))
-                : faqs.map((f, i) => <FAQItem key={f.id} item={f} delay={i * 0.04} />)}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ── CTA penutup ───────────────────────────────────────────────────── */}
-      <section className="py-20 px-6">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.97 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          className="max-w-4xl mx-auto text-center rounded-3xl bg-[#1C1A17] px-8 py-14 lg:py-16 relative overflow-hidden"
-        >
-          <div className="absolute inset-0 -z-0 opacity-60" style={{
-            backgroundImage: 'radial-gradient(circle at 18% 30%, rgba(201,168,76,0.35), transparent 45%), radial-gradient(circle at 85% 80%, rgba(232,200,117,0.22), transparent 45%)',
-          }} />
-          <div className="relative">
-            <Lucide.Scissors className="text-[#C9A84C] mx-auto mb-4" size={30} />
-            <h2 className="font-display text-3xl lg:text-[2.6rem] font-bold text-white leading-tight">
-              {closing.title}
-            </h2>
-            <p className="text-[#A8A29A] max-w-lg mx-auto mt-4 mb-8">
-              {closing.subtitle}
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <Link to="/register" className="btn-gold group">
-                {closing.ctaLabel}
-                <Lucide.ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-              </Link>
-              {waHref && (
-                <a
-                  href={waHref} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white/10 border border-white/15 text-[#E7E2D6] font-medium hover:bg-white/15 transition-colors"
-                >
-                  <Lucide.MessageCircle size={16} className="text-[#5DD27A]" /> Tanya via WhatsApp
-                </a>
-              )}
-            </div>
-          </div>
-        </motion.div>
-      </section>
+      {layout.filter(b => b && b.visible !== false).map(b => {
+        const Comp = BLOCK_REGISTRY[b.type]
+        return Comp ? <Comp key={b.id || b.type} block={b} ctx={ctx} /> : null
+      })}
 
       <Footer text={footerText} />
 
@@ -604,6 +254,584 @@ export default function LandingPage() {
       `}</style>
     </div>
   )
+}
+
+// ── Blok core ────────────────────────────────────────────────────────────────
+
+function HeroSection({ hero, isAuthenticated, homePath }) {
+  const { scrollYProgress } = useScroll()
+  const heroY = useTransform(scrollYProgress, [0, 0.3], [0, -60])
+  const heroBadge = hero.heroBadge || 'Baru'
+  const trustItems = (hero.trustItems?.length ? hero.trustItems : FALLBACK_TRUST)
+
+  return (
+    <section className="relative pt-32 pb-16 lg:pt-40 lg:pb-24">
+      {/* Latar dekoratif — glow emas lembut + tekstur titik halus */}
+      <div className="absolute inset-0 -z-10 overflow-hidden">
+        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[820px] h-[420px] rounded-full bg-[#C9A84C]/12 blur-[120px]" />
+        <div className="absolute top-48 -right-20 w-72 h-72 rounded-full bg-[#E8C875]/20 blur-[100px]" />
+        <div
+          className="absolute inset-0 opacity-[0.5]"
+          style={{
+            backgroundImage: 'radial-gradient(#C9A84C26 1px, transparent 1px)',
+            backgroundSize: '26px 26px',
+            maskImage: 'linear-gradient(to bottom, black, transparent 70%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, black, transparent 70%)',
+          }}
+        />
+      </div>
+
+      <motion.div style={{ y: heroY }} className="max-w-3xl mx-auto px-6 text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="inline-flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full bg-white border border-[#EAE0C6] text-[#A8893A] text-xs font-semibold shadow-[0_4px_16px_-8px_rgba(201,168,76,0.5)]"
+        >
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#C9A84C] text-[#1C1A17]">
+            <Lucide.Sparkles size={11} /> {heroBadge}
+          </span>
+          {hero.brandTagline || 'Dipercaya barbershop di seluruh Indonesia'}
+        </motion.div>
+
+        <motion.h1
+          initial={{ opacity: 0, y: 22 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.06 }}
+          className="font-display text-4xl leading-[1.12] sm:text-6xl sm:leading-[1.08] lg:text-7xl font-bold text-[#1C1A17] tracking-tight mt-7"
+        >
+          {renderHeroTitle(hero.heroTitle || 'Kelola barbershop, tanpa ribet.')}
+        </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0, y: 22 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.14 }}
+          className="text-base sm:text-lg text-[#6B6459] max-w-xl mx-auto mt-6"
+        >
+          {hero.heroSubtitle || 'Kasir, antrian, booking online, sampai laporan pemilik — semua jadi satu aplikasi. Tinggal pakai, langsung jalan hari ini juga.'}
+        </motion.p>
+
+        <motion.div
+          initial={{ opacity: 0, y: 22 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.22 }}
+          className="flex flex-wrap items-center justify-center gap-3 mt-9"
+        >
+          <Link to={isAuthenticated ? homePath : '/register'} className="btn-gold group">
+            {isAuthenticated ? 'Buka Dashboard' : (hero.heroCtaLabel || 'Coba Gratis 14 Hari')}
+            <Lucide.ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+          </Link>
+          <a href="#fitur" className="btn-ghost">
+            <Lucide.Play size={13} className="text-[#A8893A]" /> Lihat Fitur
+          </a>
+        </motion.div>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="text-[13px] text-[#9A9189] mt-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-1"
+        >
+          {trustItems.map((item, i) => (
+            <React.Fragment key={i}>
+              {i > 0 && <span className="text-[#D8D0BE]">·</span>}
+              <span className="inline-flex items-center gap-1">
+                <Lucide.Check size={13} className="text-[#C9A84C]" /> {item}
+              </span>
+            </React.Fragment>
+          ))}
+        </motion.p>
+      </motion.div>
+
+      {/* Showcase dashboard */}
+      <motion.div
+        initial={{ opacity: 0, y: 50 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, delay: 0.35 }}
+        className="max-w-5xl mx-auto px-6 mt-16"
+      >
+        <div className="relative">
+          <div className="absolute -inset-4 bg-gradient-to-tr from-[#C9A84C]/25 via-transparent to-[#E8C875]/30 rounded-[2.5rem] blur-2xl" />
+          <div className="relative rounded-2xl border border-[#EAE3D3] bg-white shadow-[0_30px_70px_-30px_rgba(28,26,23,0.35)] overflow-hidden">
+            <DashboardMock />
+          </div>
+        </div>
+      </motion.div>
+    </section>
+  )
+}
+
+function StatsSection({ ctx }) {
+  const { stats } = ctx
+  if (!stats) return null
+  return (
+    <section className="border-y border-[#EAE3D3] bg-white">
+      <div className="max-w-5xl mx-auto px-6 py-12 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+        {[
+          { label: 'Tenant aktif',        value: stats.tenantCount,      suffix: '+', icon: 'Building2' },
+          { label: 'Cabang terkelola',    value: stats.branchCount,      suffix: '+', icon: 'MapPin' },
+          { label: 'Transaksi diproses',  value: stats.transactionCount, suffix: '+', icon: 'Receipt' },
+          { label: 'Pelanggan tercatat',  value: stats.customerCount,    suffix: '+', icon: 'Users' },
+        ].map((s) => {
+          const Icon = getIcon(s.icon)
+          return (
+            <motion.div key={s.label} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+              <Icon size={18} className="text-[#C9A84C] mx-auto mb-2" />
+              <p className="font-display text-3xl md:text-4xl font-bold text-[#1C1A17]">
+                <CountUp to={s.value} suffix={s.suffix} />
+              </p>
+              <p className="text-xs text-[#9A9189] mt-1">{s.label}</p>
+            </motion.div>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+function FeaturesSection({ ctx }) {
+  const { features, sections } = ctx
+  return (
+    <section id="fitur" className="py-24 px-6">
+      <div className="max-w-6xl mx-auto">
+        <SectionHeading {...sections.features} />
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px mt-14 rounded-2xl overflow-hidden border border-[#EAE3D3] bg-[#EAE3D3]">
+          {features.map((f, i) => {
+            const Icon = getIcon(f.icon)
+            return (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-60px' }}
+                transition={{ delay: (i % 3) * 0.07 }}
+                className="group relative bg-white p-7 hover:bg-[#FDFBF4] transition-colors"
+              >
+                <span className="font-display text-sm font-semibold text-[#C9A84C]">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <div className="w-11 h-11 rounded-xl bg-[#FBF4E1] border border-[#EAE0C6] flex items-center justify-center mt-3 mb-4 group-hover:bg-[#C9A84C] transition-colors">
+                  <Icon size={19} className="text-[#A8893A] group-hover:text-[#1C1A17] transition-colors" />
+                </div>
+                <h3 className="font-display text-xl font-semibold text-[#1C1A17] mb-1.5">{f.title}</h3>
+                <p className="text-sm text-[#6B6459] leading-relaxed">{f.desc}</p>
+              </motion.div>
+            )
+          })}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function StepsSection({ ctx }) {
+  const { steps, sections } = ctx
+  return (
+    <section className="py-24 px-6 bg-[#F5EFE3]">
+      <div className="max-w-5xl mx-auto">
+        <SectionHeading {...sections.steps} />
+        <div className={`grid gap-5 mt-14 ${steps.length === 2 ? 'md:grid-cols-2' : steps.length >= 4 ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-3'}`}>
+          {steps.map((s, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.1 }}
+              className="relative bg-white rounded-2xl border border-[#EAE3D3] p-7"
+            >
+              <span className="font-display text-5xl font-bold text-[#EAE0C6]">{i + 1}</span>
+              <h3 className="font-display text-lg font-semibold text-[#1C1A17] mt-2 mb-1.5">{s.title}</h3>
+              <p className="text-sm text-[#6B6459] leading-relaxed">{s.desc}</p>
+              {i < steps.length - 1 && (
+                <Lucide.ArrowRight size={18} className="hidden md:block absolute top-1/2 -right-4 -translate-y-1/2 text-[#C9A84C] z-10" />
+              )}
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function PricingSection({ ctx }) {
+  const { packages, isLoading, sections } = ctx
+  return (
+    <section id="harga" className="py-24 px-6">
+      <div className="max-w-6xl mx-auto">
+        <SectionHeading {...sections.pricing} />
+
+        {isLoading ? (
+          <div className="grid md:grid-cols-3 gap-6 mt-14">
+            {[1, 2, 3].map(i => <div key={i} className="h-[480px] bg-white border border-[#EAE3D3] rounded-2xl animate-pulse" />)}
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-3 gap-6 mt-14 items-start">
+            {packages.map((p, i) => {
+              const prev = i > 0 ? packages[i - 1] : null
+              const featured = p.name === 'Pro'
+              const { inheritFrom, lines } = cardBenefits(p, prev)
+              const annual = Math.round((p.price * 12 * (1 - (p.annualDiscountPercent ?? 17) / 100)) / 1000) * 1000
+              return (
+                <motion.div
+                  key={p.name}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.08 }}
+                  className={`relative rounded-2xl p-7 flex flex-col ${
+                    featured
+                      ? 'bg-[#1C1A17] text-[#E7E2D6] shadow-[0_30px_60px_-25px_rgba(28,26,23,0.6)] md:-mt-4 md:mb-4'
+                      : 'bg-white border border-[#EAE3D3]'
+                  }`}
+                >
+                  {featured && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#C9A84C] text-[#1C1A17] text-[11px] font-bold whitespace-nowrap">
+                      <Lucide.Star size={11} fill="currentColor" /> Paling Banyak Dipilih
+                    </div>
+                  )}
+
+                  <h3 className={`font-display text-2xl font-bold ${featured ? 'text-white' : 'text-[#1C1A17]'}`}>
+                    {p.name}
+                  </h3>
+                  <p className={`text-sm mt-1 min-h-[40px] ${featured ? 'text-[#A8A29A]' : 'text-[#6B6459]'}`}>
+                    {p.description || PKG_TAGLINE[p.name] || 'Paket fleksibel buat barbershop kamu.'}
+                  </p>
+
+                  <div className="mt-5 mb-1 flex items-end gap-1.5">
+                    <span className={`font-display text-4xl font-bold ${featured ? 'text-white' : 'text-[#1C1A17]'}`}>
+                      {formatRupiah(p.price)}
+                    </span>
+                    <span className={`text-sm pb-1 ${featured ? 'text-[#A8A29A]' : 'text-[#9A9189]'}`}>/bulan</span>
+                  </div>
+                  <p className="text-xs text-[#A8893A] font-medium">
+                    Bayar tahunan {formatRupiah(annual)} — hemat {p.annualDiscountPercent ?? 17}%
+                  </p>
+
+                  <div className={`h-px my-6 ${featured ? 'bg-white/10' : 'bg-[#EAE3D3]'}`} />
+
+                  {inheritFrom && (
+                    <p className={`text-xs font-semibold mb-3 ${featured ? 'text-[#E8C875]' : 'text-[#A8893A]'}`}>
+                      Semua di paket {inheritFrom}, plus:
+                    </p>
+                  )}
+                  <ul className="space-y-3 mb-7 flex-1">
+                    {lines.map((line, li) => (
+                      <li key={li} className="flex items-start gap-2.5">
+                        <span className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          featured ? 'bg-[#C9A84C]' : 'bg-[#FBF4E1] border border-[#EAE0C6]'
+                        }`}>
+                          <Lucide.Check size={11} className={featured ? 'text-[#1C1A17]' : 'text-[#A8893A]'} strokeWidth={3} />
+                        </span>
+                        <span className={`text-sm ${featured ? 'text-[#E7E2D6]' : 'text-[#57534E]'}`}>{line}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Link
+                    to="/register"
+                    state={{ packageName: p.name }}
+                    className={`flex items-center justify-center gap-1.5 w-full py-3 rounded-xl font-semibold text-sm transition-all ${
+                      featured
+                        ? 'bg-[#C9A84C] text-[#1C1A17] hover:bg-[#E8C875]'
+                        : 'bg-[#1C1A17] text-[#FBFAF6] hover:bg-[#2E2A24]'
+                    }`}
+                  >
+                    Pilih {p.name} <Lucide.ArrowRight size={14} />
+                  </Link>
+                </motion.div>
+              )
+            })}
+          </div>
+        )}
+
+        <p className="text-center text-[13px] text-[#9A9189] mt-9 inline-flex w-full items-center justify-center gap-2 flex-wrap">
+          <Lucide.ShieldCheck size={14} className="text-[#C9A84C]" />
+          Semua paket sudah termasuk SSL, backup harian otomatis, update gratis & dukungan tim kami.
+        </p>
+      </div>
+    </section>
+  )
+}
+
+function TestimonialsSection({ ctx }) {
+  const { testimonials, isLoading, sections } = ctx
+  // Section hilang kalau memang tidak ada testimoni setelah data masuk;
+  // saat loading tampilkan skeleton supaya tidak ada layout shift.
+  if (!isLoading && testimonials.length === 0) return null
+  return (
+    <section className="py-24 px-6 bg-[#F5EFE3]">
+      <div className="max-w-6xl mx-auto">
+        <SectionHeading {...sections.testimonials} />
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 mt-14">
+          {isLoading
+            ? [1, 2, 3].map(i => (
+                <div key={i} className="h-56 bg-white border border-[#EAE3D3] rounded-2xl animate-pulse" />
+              ))
+            : testimonials.map((t, i) => (
+              <motion.div
+                key={t.id}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: (i % 3) * 0.08 }}
+                className="bg-white rounded-2xl border border-[#EAE3D3] p-6 flex flex-col"
+              >
+                <div className="flex items-center gap-0.5 mb-3 text-[#C9A84C]">
+                  {Array.from({ length: t.rating || 5 }).map((_, idx) => (
+                    <Lucide.Star key={idx} size={14} fill="currentColor" />
+                  ))}
+                </div>
+                <p className="text-[15px] text-[#3F3A33] leading-relaxed flex-1">"{t.message}"</p>
+                <div className="flex items-center gap-3 pt-4 mt-4 border-t border-[#EAE3D3]">
+                  {t.photoUrl ? (
+                    <img src={t.photoUrl} alt={t.name} className="w-10 h-10 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#E8C875] to-[#A8893A] flex items-center justify-center text-[#1C1A17] font-bold text-sm">
+                      {t.name?.[0]?.toUpperCase() || '?'}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[#1C1A17] truncate">{t.name}</p>
+                    <p className="text-xs text-[#9A9189] truncate">
+                      {[t.role, t.businessName].filter(Boolean).join(' · ')}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function FaqSection({ ctx }) {
+  const { faqs, isLoading, sections } = ctx
+  if (!isLoading && faqs.length === 0) return null
+  return (
+    <section className="py-24 px-6">
+      <div className="max-w-3xl mx-auto">
+        <SectionHeading {...sections.faq} />
+        <div className="space-y-3 mt-12">
+          {isLoading
+            ? [1, 2, 3, 4].map(i => (
+                <div key={i} className="h-14 bg-white border border-[#EAE3D3] rounded-xl animate-pulse" />
+              ))
+            : faqs.map((f, i) => <FAQItem key={f.id} item={f} delay={i * 0.04} />)}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function ClosingCtaSection({ ctx }) {
+  const { closing, waHref } = ctx
+  return (
+    <section className="py-20 px-6">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.97 }}
+        whileInView={{ opacity: 1, scale: 1 }}
+        viewport={{ once: true }}
+        className="max-w-4xl mx-auto text-center rounded-3xl bg-[#1C1A17] px-8 py-14 lg:py-16 relative overflow-hidden"
+      >
+        <div className="absolute inset-0 -z-0 opacity-60" style={{
+          backgroundImage: 'radial-gradient(circle at 18% 30%, rgba(201,168,76,0.35), transparent 45%), radial-gradient(circle at 85% 80%, rgba(232,200,117,0.22), transparent 45%)',
+        }} />
+        <div className="relative">
+          <Lucide.Scissors className="text-[#C9A84C] mx-auto mb-4" size={30} />
+          <h2 className="font-display text-3xl lg:text-[2.6rem] font-bold text-white leading-tight">
+            {closing.title}
+          </h2>
+          <p className="text-[#A8A29A] max-w-lg mx-auto mt-4 mb-8">
+            {closing.subtitle}
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link to="/register" className="btn-gold group">
+              {closing.ctaLabel}
+              <Lucide.ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+            </Link>
+            {waHref && (
+              <a
+                href={waHref} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white/10 border border-white/15 text-[#E7E2D6] font-medium hover:bg-white/15 transition-colors"
+              >
+                <Lucide.MessageCircle size={16} className="text-[#5DD27A]" /> Tanya via WhatsApp
+              </a>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    </section>
+  )
+}
+
+// ── Blok free (banyak instance, konten dari block.config) ────────────────────
+
+// Heading kecil opsional untuk blok free.
+function BlockHeading({ kicker, title, subtitle }) {
+  if (!title && !kicker) return null
+  return (
+    <div className="text-center max-w-2xl mx-auto">
+      {kicker && (
+        <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#A8893A]">
+          <span className="w-5 h-px bg-[#C9A84C]" /> {kicker} <span className="w-5 h-px bg-[#C9A84C]" />
+        </p>
+      )}
+      {title && (
+        <h2 className="font-display text-3xl lg:text-[2.4rem] font-bold text-[#1C1A17] mt-3 leading-tight">{title}</h2>
+      )}
+      {subtitle && <p className="text-[#6B6459] mt-3">{subtitle}</p>}
+    </div>
+  )
+}
+
+function GallerySection({ block }) {
+  const cfg = block.config || {}
+  const items = Array.isArray(cfg.items) ? cfg.items.filter(it => it && it.url) : []
+  if (items.length === 0) return null
+  return (
+    <section className="py-24 px-6">
+      <div className="max-w-6xl mx-auto">
+        <BlockHeading kicker={cfg.kicker} title={cfg.title} subtitle={cfg.subtitle} />
+        <div className={`grid sm:grid-cols-2 lg:grid-cols-3 gap-4 ${(cfg.title || cfg.kicker) ? 'mt-12' : ''}`}>
+          {items.map((it, i) => (
+            <motion.figure
+              key={i}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: (i % 3) * 0.07 }}
+              className="rounded-2xl overflow-hidden border border-[#EAE3D3] bg-white"
+            >
+              <img src={it.url} alt={it.caption || ''} loading="lazy" className="w-full h-56 object-cover" />
+              {it.caption && <figcaption className="px-4 py-3 text-sm text-[#6B6459]">{it.caption}</figcaption>}
+            </motion.figure>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function VideoSection({ block }) {
+  const cfg = block.config || {}
+  const embed = toEmbedUrl(cfg.url)
+  if (!embed) return null
+  return (
+    <section className="py-24 px-6 bg-[#F5EFE3]">
+      <div className="max-w-4xl mx-auto">
+        <BlockHeading kicker={cfg.kicker} title={cfg.title} subtitle={cfg.subtitle} />
+        <div className={`relative aspect-video rounded-2xl overflow-hidden border border-[#EAE3D3] bg-black ${(cfg.title || cfg.kicker) ? 'mt-12' : ''}`}>
+          <iframe
+            src={embed}
+            title={cfg.title || 'Video'}
+            className="absolute inset-0 w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function LogoStripSection({ block }) {
+  const cfg = block.config || {}
+  const logos = Array.isArray(cfg.logos) ? cfg.logos.filter(l => l && l.url) : []
+  if (logos.length === 0) return null
+  return (
+    <section className="py-16 px-6 border-y border-[#EAE3D3] bg-white">
+      <div className="max-w-6xl mx-auto">
+        {cfg.title && (
+          <p className="text-center text-xs font-bold uppercase tracking-[0.18em] text-[#A8893A] mb-8">{cfg.title}</p>
+        )}
+        <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6">
+          {logos.map((l, i) => (
+            <img
+              key={i}
+              src={l.url}
+              alt={l.name || ''}
+              title={l.name || ''}
+              loading="lazy"
+              className="h-9 md:h-11 w-auto object-contain opacity-70 hover:opacity-100 transition-opacity"
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function BannerSection({ block }) {
+  const cfg = block.config || {}
+  if (!cfg.heading && !cfg.image) return null
+  return (
+    <section className="py-20 px-6">
+      <div className="max-w-5xl mx-auto relative rounded-3xl overflow-hidden border border-[#EAE3D3] bg-[#1C1A17]">
+        {cfg.image && (
+          <img src={cfg.image} alt="" className="absolute inset-0 w-full h-full object-cover opacity-35" />
+        )}
+        <div className="relative px-8 py-14 text-center">
+          {cfg.heading && (
+            <h2 className="font-display text-3xl lg:text-[2.4rem] font-bold text-white leading-tight">{cfg.heading}</h2>
+          )}
+          {cfg.text && <p className="text-[#D9D3C7] max-w-xl mx-auto mt-4">{cfg.text}</p>}
+          {cfg.ctaLabel && cfg.ctaUrl && (
+            <a href={cfg.ctaUrl} className="btn-gold group mt-7">
+              {cfg.ctaLabel}
+              <Lucide.ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+            </a>
+          )}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function RichTextSection({ block }) {
+  const cfg = block.config || {}
+  if (!cfg.heading && !cfg.body) return null
+  return (
+    <section className="py-24 px-6">
+      <div className="max-w-3xl mx-auto text-center">
+        {cfg.kicker && (
+          <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#A8893A]">
+            <span className="w-5 h-px bg-[#C9A84C]" /> {cfg.kicker} <span className="w-5 h-px bg-[#C9A84C]" />
+          </p>
+        )}
+        {cfg.heading && (
+          <h2 className="font-display text-3xl lg:text-[2.4rem] font-bold text-[#1C1A17] mt-3 leading-tight">{cfg.heading}</h2>
+        )}
+        {cfg.body && (
+          <p className="text-[#6B6459] mt-4 leading-relaxed whitespace-pre-line">{cfg.body}</p>
+        )}
+        {cfg.ctaLabel && cfg.ctaUrl && (
+          <a href={cfg.ctaUrl} className="btn-gold group mt-7">
+            {cfg.ctaLabel}
+            <Lucide.ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+          </a>
+        )}
+      </div>
+    </section>
+  )
+}
+
+// Peta tipe blok → komponen. Dipakai renderer LandingPage untuk render `layout`.
+const BLOCK_REGISTRY = {
+  stats:        StatsSection,
+  features:     FeaturesSection,
+  steps:        StepsSection,
+  pricing:      PricingSection,
+  testimonials: TestimonialsSection,
+  faq:          FaqSection,
+  closingCta:   ClosingCtaSection,
+  gallery:      GallerySection,
+  video:        VideoSection,
+  logoStrip:    LogoStripSection,
+  banner:       BannerSection,
+  richText:     RichTextSection,
 }
 
 // ── Subkomponen ──────────────────────────────────────────────────────────────

@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   Globe, Edit3, Trash2, Plus, Save, MessageSquare, HelpCircle, Star, Eye, EyeOff, ExternalLink,
-  LayoutTemplate,
+  LayoutTemplate, Layers,
 } from 'lucide-react'
+import LandingLayoutBuilder from './LandingLayoutBuilder.jsx'
 import {
   useLanding, useUpdateHero,
   useTestimonials, useCreateTestimonial, useUpdateTestimonial, useDeleteTestimonial,
@@ -17,6 +18,7 @@ import Badge from '../../components/ui/Badge.jsx'
 import { useToast } from '../../components/ui/Toast.jsx'
 
 const TABS = [
+  { id: 'layout',       label: 'Tata Letak',       icon: Layers },
   { id: 'hero',         label: 'Hero & Branding',  icon: Globe },
   { id: 'content',      label: 'Section & Footer', icon: LayoutTemplate },
   { id: 'testimonials', label: 'Testimoni',        icon: MessageSquare },
@@ -24,7 +26,7 @@ const TABS = [
 ]
 
 export default function SALandingPage() {
-  const [tab, setTab] = useState('hero')
+  const [tab, setTab] = useState('layout')
 
   return (
     <div className="space-y-6">
@@ -55,6 +57,7 @@ export default function SALandingPage() {
         ))}
       </div>
 
+      {tab === 'layout' && <LandingLayoutBuilder onEditCore={setTab} />}
       {tab === 'hero' && <HeroEditor />}
       {tab === 'content' && <ContentEditor />}
       {tab === 'testimonials' && <TestimonialsEditor />}

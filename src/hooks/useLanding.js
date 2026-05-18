@@ -41,6 +41,15 @@ export function useUpdateHero() {
   })
 }
 
+// Super-admin: simpan tata letak blok (block builder)
+export function useUpdateLayout() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (layout) => api.patch('/landing/layout', { layout }).then(r => r.data.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['landing'] }),
+  })
+}
+
 // Super-admin: testimonials
 export function useTestimonials() {
   return useQuery({

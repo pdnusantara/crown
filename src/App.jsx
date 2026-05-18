@@ -115,6 +115,10 @@ function ProtectedRoute({ children, roles }) {
 // dashboard sesuai peran.
 function RootRedirector() {
   const { isAuthenticated, user } = useAuthStore()
+  // Mode preview (iframe builder landing super-admin) — render landing apa
+  // adanya tanpa redirect, walau super-admin sedang login.
+  const isPreview = new URLSearchParams(window.location.search).get('preview') === '1'
+  if (isPreview) return <LandingPage />
   if (isAuthenticated) return <Navigate to={roleHomePath(user)} replace />
   if (isTenantSubdomain()) return <Navigate to="/login" replace />
   return <LandingPage />

@@ -11,3 +11,4 @@ Thumbs.db
 prisma/migrations/
 *.db
 *.sqlite
+uploads/

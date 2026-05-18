@@ -1,4 +1,8 @@
 const router = require('express').Router();
+const path   = require('path');
+const fs     = require('fs');
+const crypto = require('crypto');
+const multer = require('multer');
 const { z }  = require('zod');
 const prisma = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
@@ -31,6 +35,19 @@ const SETTING_KEYS = {
 
 // Keys yang nilainya JSON-encoded — di-parse saat baca, di-stringify saat tulis.
 const JSON_KEYS = ['features', 'trustItems', 'steps', 'sections', 'closingCta'];
+
+// ── Block layout (block builder) ───────────────────────────────────────────
+// Tata letak landing disimpan sebagai JSON array di SystemSetting. Hero & Footer
+// TIDAK masuk array (posisinya terkunci di renderer). Blok "core" = singleton,
+// kontennya dari sumber lama (hero/sections/testimoni/dll); blok "free" bisa
+// banyak instance dengan konten inline di `config`.
+const LAYOUT_KEY = 'landing_layout';
+const ORDERABLE_CORE_TYPES = ['stats', 'features', 'steps', 'pricing', 'testimonials', 'faq', 'closingCta'];
+const FREE_BLOCK_TYPES = ['gallery', 'video', 'logoStrip', 'banner', 'richText'];
+const ALL_BLOCK_TYPES = [...ORDERABLE_CORE_TYPES, ...FREE_BLOCK_TYPES];
+
+// Urutan default = tampilan landing saat ini (tanpa hero/footer yang terkunci).
+const DEFAULT_LAYOUT = ORDERABLE_CORE_TYPES.map(t => ({ id: t, type: t, visible: true }));
 
 const DEFAULTS = {
   heroTitle:    'Kelola barbershop, tanpa ribet.',
@@ -101,6 +118,16 @@ async function getAllHero() {
   return out;
 }
 
+// Baca layout blok; fallback ke DEFAULT_LAYOUT kalau belum diset / rusak.
+async function getLayout() {
+  const row = await prisma.systemSetting.findUnique({ where: { key: LAYOUT_KEY } });
+  if (!row) return DEFAULT_LAYOUT;
+  try {
+    const parsed = JSON.parse(row.value);
+    return Array.isArray(parsed) ? parsed : DEFAULT_LAYOUT;
+  } catch { return DEFAULT_LAYOUT; }
+}
+
 // ── Public read endpoint ──────────────────────────────────────────────────
 
 // GET /api/landing — semua konten landing untuk render publik
@@ -108,7 +135,7 @@ router.get('/', async (req, res, next) => {
   try {
     // Stats selalu dihitung — frontend yang memutuskan tampil-atau-tidak
     // berdasarkan hero.showStats (lebih murah daripada double-await).
-    const [hero, testimonials, faqs, packages, stats] = await Promise.all([
+    const [hero, testimonials, faqs, packages, stats, layout] = await Promise.all([
       getAllHero(),
       prisma.landingTestimonial.findMany({
         where: { isActive: true },
@@ -120,11 +147,12 @@ router.get('/', async (req, res, next) => {
       }),
       prisma.package.findMany({ orderBy: { price: 'asc' } }),
       computeStats(),
+      getLayout(),
     ]);
 
     res.json({
       success: true,
-      data: { hero, testimonials, faqs, packages, stats },
+      data: { hero, testimonials, faqs, packages, stats, layout },
     });
   } catch (err) { next(err); }
 });
@@ -190,6 +218,76 @@ router.patch('/hero', authenticate, requireRole('super_admin'), async (req, res,
     if (err instanceof z.ZodError) return res.status(400).json({ success: false, error: err.errors[0]?.message });
     next(err);
   }
+});
+
+// ── Block layout: PATCH /api/landing/layout ───────────────────────────────
+
+const layoutBlockSchema = z.object({
+  id:      z.string().min(1).max(64),
+  type:    z.enum(ALL_BLOCK_TYPES),
+  visible: z.boolean(),
+  // Konten blok free (gallery/banner/dll). Permissif — struktur diatur FE.
+  config:  z.record(z.any()).optional(),
+});
+const layoutSchema = z.array(layoutBlockSchema).max(40);
+
+// PATCH /api/landing/layout — super_admin simpan urutan & visibilitas blok.
+router.patch('/layout', authenticate, requireRole('super_admin'), async (req, res, next) => {
+  try {
+    const layout = layoutSchema.parse(req.body?.layout ?? req.body);
+
+    // Blok core bersifat singleton — tidak boleh ada tipe core ganda.
+    const seenCore = new Set();
+    for (const b of layout) {
+      if (ORDERABLE_CORE_TYPES.includes(b.type)) {
+        if (seenCore.has(b.type)) {
+          return res.status(400).json({ success: false, error: `Blok "${b.type}" tidak boleh muncul lebih dari sekali` });
+        }
+        seenCore.add(b.type);
+      }
+    }
+
+    await setSetting(LAYOUT_KEY, JSON.stringify(layout));
+    emitLandingUpdate();
+    res.json({ success: true, data: layout });
+  } catch (err) {
+    if (err instanceof z.ZodError) return res.status(400).json({ success: false, error: err.errors[0]?.message });
+    next(err);
+  }
+});
+
+// ── Image upload: POST /api/landing/upload ────────────────────────────────
+// Simpan ke disk (backend/uploads/landing) lalu balas URL. Dipakai blok free
+// (galeri/banner/logo). Disajikan via express.static di /api/uploads (server.js).
+
+const UPLOAD_DIR = path.join(__dirname, '../../uploads/landing');
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
+const ALLOWED_IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const uploadImage = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+    filename:    (req, file, cb) => {
+      const ext = (path.extname(file.originalname) || '.jpg').toLowerCase();
+      cb(null, `${crypto.randomUUID()}${ext}`);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (req, file, cb) => {
+    if (ALLOWED_IMAGE_MIME.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Format gambar harus JPG, PNG, WebP, atau GIF'));
+  },
+}).single('image');
+
+router.post('/upload', authenticate, requireRole('super_admin'), (req, res) => {
+  uploadImage(req, res, (err) => {
+    if (err) {
+      const msg = err.code === 'LIMIT_FILE_SIZE' ? 'Ukuran gambar maksimal 5 MB' : err.message;
+      return res.status(400).json({ success: false, error: msg });
+    }
+    if (!req.file) return res.status(400).json({ success: false, error: 'File gambar wajib diunggah (field "image")' });
+    res.json({ success: true, data: { url: `/api/uploads/landing/${req.file.filename}` } });
+  });
 });
 
 // ── Testimonials CRUD ─────────────────────────────────────────────────────
