@@ -13,6 +13,7 @@ import { useThemeStore } from './store/themeStore.js'
 import { getBranchSlug } from './utils/branchSlug.js'
 import { useTenantStore } from './store/tenantStore.js'
 import { usePublicTenantStore } from './store/publicTenantStore.js'
+import { isTenantSubdomain } from './lib/tenantSlug.js'
 import { Skeleton } from './components/ui/Skeleton.jsx'
 import { queryClient } from './lib/queryClient.js'
 
@@ -108,14 +109,14 @@ function ProtectedRoute({ children, roles }) {
   return children
 }
 
-// Root redirector — landing untuk apex domain, /book untuk subdomain tenant,
-// dashboard role-nya kalau sudah login.
+// Root redirector — landing marketing hanya untuk apex domain (sembapos.com).
+// Di subdomain tenant, root langsung ke /login (deteksi hostname sinkron, tanpa
+// menunggu resolve tenant → tidak ada kedip landing). Kalau sudah login →
+// dashboard sesuai peran.
 function RootRedirector() {
   const { isAuthenticated, user } = useAuthStore()
-  const { slug: publicSlug, status: publicStatus } = usePublicTenantStore()
   if (isAuthenticated) return <Navigate to={roleHomePath(user)} replace />
-  // Subdomain tenant (mahkota.sembapos.com) → arahkan langsung ke booking publik
-  if (publicSlug && publicStatus === 'ready') return <Navigate to="/book" replace />
+  if (isTenantSubdomain()) return <Navigate to="/login" replace />
   return <LandingPage />
 }
 
