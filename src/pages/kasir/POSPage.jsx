@@ -782,8 +782,10 @@ function POSPageInner() {
         )}
       </div>
 
+      {/* Kartu member loyalti — hanya di desktop. Di mobile disembunyikan demi
+          ruang; saldo poin tetap tampil di bagian "tukar poin" bila diperlukan. */}
       <AnimatePresence>
-        {posStore.selectedCustomer && (
+        {posStore.selectedCustomer && !isMobile && (
           <CustomerHistorySnippet
             customer={posStore.selectedCustomer}
             transactionTotal={posStore.getTotal()}
