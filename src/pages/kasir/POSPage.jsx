@@ -743,31 +743,22 @@ function POSPageInner() {
         )}
       </div>
 
-      {/* Pelanggan — kartu berlabel, sejajar dengan kartu barber di bawahnya.
-          Label disembunyikan di mobile (avatar/ikon sudah cukup jelas). */}
-      <div className="bg-dark-card border border-dark-border rounded-xl p-2.5 lg:p-3">
-        <label className="hidden lg:inline-flex text-[11px] uppercase tracking-wider text-off-white font-semibold mb-2 items-center gap-1.5">
-          <User className="w-3 h-3 text-gold" /> {t('pos.customerLabel')}
-        </label>
-        {posStore.selectedCustomer ? (
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gold to-amber-600 flex items-center justify-center text-dark font-bold text-sm flex-shrink-0">
-              {posStore.selectedCustomer.name?.[0]?.toUpperCase() || '?'}
-            </div>
-            <button onClick={() => setShowCustomerModal(true)} className="flex-1 min-w-0 text-left">
-              <p className="text-sm font-semibold text-off-white truncate">{posStore.selectedCustomer.name}</p>
-              <p className="text-xs text-muted truncate">{posStore.selectedCustomer.phone || t('pos.noPhone')}</p>
-            </button>
-            <button
-              onClick={() => setShowCustomerModal(true)}
-              className="flex-shrink-0 px-2 py-1 rounded-lg text-xs font-medium text-gold hover:bg-gold/10 transition-colors"
-            >
-              {t('pos.changeCustomer')}
+      {/* Pelanggan — di MOBILE jadi satu baris ringkas (hemat tempat); di
+          desktop tetap kartu berlabel sejajar dengan kartu barber. */}
+      {isMobile ? (
+        posStore.selectedCustomer ? (
+          <div className="flex items-center gap-2 px-1">
+            <User className="w-3.5 h-3.5 text-gold flex-shrink-0" />
+            <button onClick={() => setShowCustomerModal(true)} className="flex-1 min-w-0 text-left truncate">
+              <span className="text-sm font-medium text-off-white">{posStore.selectedCustomer.name}</span>
+              {posStore.selectedCustomer.phone && (
+                <span className="text-xs text-muted"> · {posStore.selectedCustomer.phone}</span>
+              )}
             </button>
             <button
               onClick={() => posStore.setSelectedCustomer(null)}
               aria-label={t('pos.removeCustomer')}
-              className="flex-shrink-0 p-1.5 rounded-lg text-muted hover:text-red-400 hover:bg-dark-surface transition-colors"
+              className="flex-shrink-0 p-1 rounded-lg text-muted hover:text-red-400 transition-colors"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -775,12 +766,49 @@ function POSPageInner() {
         ) : (
           <button
             onClick={() => setShowCustomerModal(true)}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-dashed border-dark-border text-muted hover:border-gold/40 hover:text-off-white transition-all text-sm"
+            className="w-full flex items-center gap-2 px-1 py-1 text-sm text-muted hover:text-off-white transition-colors"
           >
-            <Plus className="w-4 h-4" /> {t('pos.selectCustomerOptional')}
+            <Plus className="w-3.5 h-3.5 text-gold" /> {t('pos.selectCustomerOptional')}
           </button>
-        )}
-      </div>
+        )
+      ) : (
+        <div className="bg-dark-card border border-dark-border rounded-xl p-3">
+          <label className="inline-flex text-[11px] uppercase tracking-wider text-off-white font-semibold mb-2 items-center gap-1.5">
+            <User className="w-3 h-3 text-gold" /> {t('pos.customerLabel')}
+          </label>
+          {posStore.selectedCustomer ? (
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gold to-amber-600 flex items-center justify-center text-dark font-bold text-sm flex-shrink-0">
+                {posStore.selectedCustomer.name?.[0]?.toUpperCase() || '?'}
+              </div>
+              <button onClick={() => setShowCustomerModal(true)} className="flex-1 min-w-0 text-left">
+                <p className="text-sm font-semibold text-off-white truncate">{posStore.selectedCustomer.name}</p>
+                <p className="text-xs text-muted truncate">{posStore.selectedCustomer.phone || t('pos.noPhone')}</p>
+              </button>
+              <button
+                onClick={() => setShowCustomerModal(true)}
+                className="flex-shrink-0 px-2 py-1 rounded-lg text-xs font-medium text-gold hover:bg-gold/10 transition-colors"
+              >
+                {t('pos.changeCustomer')}
+              </button>
+              <button
+                onClick={() => posStore.setSelectedCustomer(null)}
+                aria-label={t('pos.removeCustomer')}
+                className="flex-shrink-0 p-1.5 rounded-lg text-muted hover:text-red-400 hover:bg-dark-surface transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowCustomerModal(true)}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-dashed border-dark-border text-muted hover:border-gold/40 hover:text-off-white transition-all text-sm"
+            >
+              <Plus className="w-4 h-4" /> {t('pos.selectCustomerOptional')}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Kartu member loyalti — hanya di desktop. Di mobile disembunyikan demi
           ruang; saldo poin tetap tampil di bagian "tukar poin" bila diperlukan. */}
