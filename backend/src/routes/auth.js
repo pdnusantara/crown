@@ -5,6 +5,7 @@ const prisma = require('../config/database');
 const { signAccess, signRefresh, verifyRefresh, REFRESH_EXPIRY } = require('../config/jwt');
 const { authenticate } = require('../middleware/auth');
 const { recordAudit } = require('../utils/auditLog');
+const { seedTenantFlags } = require('../services/featureFlagSync');
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -107,6 +108,10 @@ router.post('/register', async (req, res, next) => {
           autoRenew: false,
         },
       });
+
+      // Seed feature flag sesuai paket — tanpa ini tenant self-service punya
+      // TenantFeatureFlag kosong → semua fitur ter-gate mati di UI.
+      await seedTenantFlags(tx, tenant.id, body.packageName);
 
       // Audit
       await tx.auditLog.create({

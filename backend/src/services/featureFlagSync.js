@@ -20,6 +20,28 @@ const KNOWN_FLAG_IDS = [
 ];
 const KNOWN = new Set(KNOWN_FLAG_IDS);
 
+// Flag default per paket — dipakai saat tenant pertama dibuat supaya
+// TenantFeatureFlag punya baseline (bukan kosong → semua fitur ter-gate mati).
+// Harus sinkron dengan PACKAGE_FLAG_DEFAULTS di frontend featureFlagStore.js.
+const PACKAGE_FLAG_DEFAULTS = {
+  Basic:      ['pos', 'queue', 'booking', 'loyalty', 'pwa'],
+  Pro:        ['pos', 'queue', 'booking', 'loyalty', 'voucher', 'reports', 'schedule',
+               'multi_branch', 'expense_tracking', 'whatsapp', 'barber_rating',
+               'heatmap', 'clv', 'wilayah_report', 'pwa', 'backup'],
+  Enterprise: [...KNOWN_FLAG_IDS],
+};
+
+// Seed seluruh flag untuk satu tenant baru sesuai paketnya. `client` boleh
+// prisma transaction (tx) maupun instance prisma global. Idempotent
+// (skipDuplicates) sehingga aman dipanggil ulang.
+async function seedTenantFlags(client, tenantId, packageName) {
+  const enabled = new Set(PACKAGE_FLAG_DEFAULTS[packageName] || PACKAGE_FLAG_DEFAULTS.Basic);
+  await client.tenantFeatureFlag.createMany({
+    data: KNOWN_FLAG_IDS.map((flagId) => ({ tenantId, flagId, enabled: enabled.has(flagId) })),
+    skipDuplicates: true,
+  });
+}
+
 function emitTenantFlagChange(tenantId) {
   try {
     const io = getIO();
@@ -119,6 +141,8 @@ async function syncTenantFlagsToPackage(tenantId, packageName) {
 
 module.exports = {
   KNOWN_FLAG_IDS,
+  PACKAGE_FLAG_DEFAULTS,
+  seedTenantFlags,
   propagatePackageFeatureChange,
   syncTenantFlagsToPackage,
 };

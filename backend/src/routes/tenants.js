@@ -7,6 +7,7 @@ const { parsePagination, paginatedResponse } = require('../utils/pagination');
 const { isValidTimezone, DEFAULT_TZ, SUPPORTED_TIMEZONES } = require('../utils/timezone');
 const { getIO, tenantRoom, userRoom } = require('../config/socket');
 const { recordAudit } = require('../utils/auditLog');
+const { seedTenantFlags } = require('../services/featureFlagSync');
 
 const tzSchema = z.string().refine(isValidTimezone, {
   message: 'Invalid IANA timezone string',
@@ -114,32 +115,9 @@ function mapPrismaError(err) {
   return null;
 }
 
-// Default flags per subscription package — kept in sync with the frontend
-// `PACKAGE_FLAG_DEFAULTS` catalog. Used when a tenant is first created so the
-// TenantFeatureFlag table has a sensible baseline (instead of an empty set
-// that would render every gated feature as disabled in the tenant UI).
-const ALL_KNOWN_FLAGS = [
-  'pos','booking','loyalty','voucher','queue',
-  'reports','heatmap','clv','wilayah_report',
-  'schedule','multi_branch','expense_tracking',
-  'pwa','whatsapp','barber_rating',
-  'api_access','white_label','backup',
-];
-const PACKAGE_FLAG_DEFAULTS = {
-  Basic:      ['pos','queue','booking','loyalty','pwa'],
-  Pro:        ['pos','queue','booking','loyalty','voucher','reports','schedule','multi_branch','expense_tracking','whatsapp','barber_rating','heatmap','clv','wilayah_report','pwa','backup'],
-  Enterprise: [...ALL_KNOWN_FLAGS],
-};
-
-async function seedTenantFlags(tx, tenantId, packageName) {
-  const enabled = new Set(PACKAGE_FLAG_DEFAULTS[packageName] || []);
-  const rows = ALL_KNOWN_FLAGS.map((flagId) => ({
-    tenantId,
-    flagId,
-    enabled: enabled.has(flagId),
-  }));
-  await tx.tenantFeatureFlag.createMany({ data: rows, skipDuplicates: true });
-}
+// Seeding flag default per paket dipindah ke services/featureFlagSync.js
+// (`seedTenantFlags`) supaya dipakai bersama oleh super-admin create-tenant
+// dan self-service /register — satu sumber kebenaran.
 
 // GET /api/tenants/timezones — public; daftar IANA timezone yang didukung untuk selector.
 router.get('/timezones', (req, res) => {
