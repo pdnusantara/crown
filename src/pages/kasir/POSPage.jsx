@@ -93,7 +93,7 @@ function CustomerHistorySnippet({ customer, transactionTotal = 0 }) {
       className="overflow-hidden"
     >
       {/* Kartu member digital — kompak: tinggi ~2 baris (+1 baris preview poin) */}
-      <div className="relative overflow-hidden rounded-xl border border-gold/30 bg-dark-card px-3 py-2.5">
+      <div className="relative overflow-hidden rounded-xl border border-gold/30 bg-dark-card px-3 py-2 lg:py-2.5">
         {/* Aksen emas — pakai overlay transparan, bukan gradient warna-dark
             (gradient stop `to-dark-card` tidak ikut light-mode override). */}
         <div className="pointer-events-none absolute inset-0 bg-gold/[0.06]" />
@@ -129,9 +129,10 @@ function CustomerHistorySnippet({ customer, transactionTotal = 0 }) {
           )}
         </div>
 
-        {/* Baris 3 (opsional): preview poin dari transaksi berjalan */}
+        {/* Baris 3 (opsional): preview poin transaksi berjalan — disembunyikan
+            di mobile demi menghemat ruang zona atas. */}
         {pointsToEarn > 0 && (
-          <div className="relative mt-2 flex items-center justify-between gap-2 text-[10px] px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30">
+          <div className="relative mt-2 hidden lg:flex items-center justify-between gap-2 text-[10px] px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30">
             <span className="text-emerald-300 inline-flex items-center gap-1 font-medium">
               <Star size={9} className="fill-emerald-300 flex-shrink-0" />
               {t('pos.pointsEarnPreview', { points: pointsToEarn })}
@@ -726,8 +727,9 @@ function POSPageInner() {
   // ─── Cart panel (extracted so we can reuse for desktop side + mobile sheet) ──
   const cartPanel = (
     <div className="flex flex-col flex-1 min-h-0">
-      {/* ── FIXED TOP: pelanggan & barber — selalu terlihat, tidak ikut ter-scroll ── */}
-      <div className="flex-shrink-0 space-y-3">
+      {/* ── FIXED TOP: pelanggan & barber — selalu terlihat, tidak ikut ter-scroll.
+          Lebih ringkas di mobile supaya area keranjang tidak ketutup. ── */}
+      <div className="flex-shrink-0 space-y-2 lg:space-y-3">
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-semibold text-off-white">{t('pos.cart')}</h3>
         {isMobile && (
@@ -741,9 +743,10 @@ function POSPageInner() {
         )}
       </div>
 
-      {/* Pelanggan — kartu berlabel, sejajar dengan kartu barber di bawahnya */}
-      <div className="bg-dark-card border border-dark-border rounded-xl p-3">
-        <label className="block text-[11px] uppercase tracking-wider text-off-white font-semibold mb-2 inline-flex items-center gap-1.5">
+      {/* Pelanggan — kartu berlabel, sejajar dengan kartu barber di bawahnya.
+          Label disembunyikan di mobile (avatar/ikon sudah cukup jelas). */}
+      <div className="bg-dark-card border border-dark-border rounded-xl p-2.5 lg:p-3">
+        <label className="hidden lg:inline-flex text-[11px] uppercase tracking-wider text-off-white font-semibold mb-2 items-center gap-1.5">
           <User className="w-3 h-3 text-gold" /> {t('pos.customerLabel')}
         </label>
         {posStore.selectedCustomer ? (
@@ -788,9 +791,10 @@ function POSPageInner() {
         )}
       </AnimatePresence>
 
-      {/* Barber selector */}
-      <div className="bg-dark-card border border-dark-border rounded-xl p-3">
-        <label className="block text-[11px] uppercase tracking-wider text-off-white font-semibold mb-1.5 inline-flex items-center gap-1.5">
+      {/* Barber selector — label disembunyikan di mobile; placeholder select
+          ("Pilih barber") sudah memberi konteks. */}
+      <div className="bg-dark-card border border-dark-border rounded-xl p-2.5 lg:p-3">
+        <label className="hidden lg:inline-flex text-[11px] uppercase tracking-wider text-off-white font-semibold mb-1.5 items-center gap-1.5">
           <Scissors className="w-3 h-3 text-gold" /> {t('pos.barberServing')}
         </label>
         <select
