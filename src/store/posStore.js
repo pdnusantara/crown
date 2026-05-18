@@ -220,17 +220,16 @@ export const usePosStore = create(
           })),
         }
 
-        // Call API (non-blocking, don't fail if offline)
-        let txnId = `txn-${Date.now()}`
-        try {
-          const res = await import('../lib/api.js').then(m => m.default.post('/transactions', payload))
-          txnId = res.data.data.id
-        } catch (e) {
-          console.warn('Transaction API call failed, using local ID', e.message)
-        }
+        // Transaksi WAJIB tersimpan di server. Kalau POST gagal, lempar error
+        // apa adanya — JANGAN palsukan id lokal. Id palsu (`txn-...`) bikin
+        // struk & rating mengacu transaksi yang tidak ada di DB → muncul
+        // "transaksi tidak ditemukan", dan penjualan gagal terlihat sukses.
+        const api = (await import('../lib/api.js')).default
+        const res = await api.post('/transactions', payload)
+        const saved = res.data.data
 
         const transaction = {
-          id: txnId,
+          id: saved.id,
           ...payload,
           customer: state.selectedCustomer,
           customerName: state.selectedCustomer?.name || 'Walk-in Customer',
@@ -242,8 +241,8 @@ export const usePosStore = create(
             barberName: item.barberName,
           })),
           discountAmount: state.getDiscountAmount(),
-          createdAt: new Date().toISOString(),
-          status: 'completed',
+          createdAt: saved.createdAt || new Date().toISOString(),
+          status: saved.status || 'completed',
         }
 
         set(s => ({ lastTransaction: transaction, transactions: [transaction, ...s.transactions] }))
