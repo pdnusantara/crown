@@ -347,18 +347,24 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir
       if (txData[k] === null) delete txData[k];
     }
 
-    // Auto-link transaction ke shift yang sedang terbuka — walau frontend
-    // tidak mengirim shiftId. Ini krusial supaya halaman Penutupan Shift bisa
-    // menjumlahkan transaksi yang dibuat di sesi kasir ini.
-    if (!txData.shiftId && req.user.role === 'kasir') {
-      try {
-        const openShift = await prisma.shift.findFirst({
-          where: { branchId: txData.branchId, kasirId: req.user.id, status: 'open' },
-          select: { id: true },
-          orderBy: { openedAt: 'desc' },
+    // Kasir WAJIB punya shift terbuka sebelum membuat transaksi — setiap
+    // transaksi harus tercatat dalam satu sesi kas yang bisa direkonsiliasi
+    // di halaman Penutupan Shift. shiftId yang dikirim frontend diabaikan;
+    // backend selalu memakai shift terbuka milik kasir tsb (anti-spoof).
+    if (req.user.role === 'kasir') {
+      const openShift = await prisma.shift.findFirst({
+        where: { branchId: txData.branchId, kasirId: req.user.id, status: 'open' },
+        select: { id: true },
+        orderBy: { openedAt: 'desc' },
+      });
+      if (!openShift) {
+        return res.status(409).json({
+          success: false,
+          error: 'Belum ada shift aktif. Buka shift terlebih dahulu sebelum melakukan transaksi.',
+          code: 'NO_ACTIVE_SHIFT',
         });
-        if (openShift) txData.shiftId = openShift.id;
-      } catch (_) { /* defensive — never block transaction on this */ }
+      }
+      txData.shiftId = openShift.id;
     }
 
     // Resolve bookingId & customer dari queue kalau transaksi datang dari

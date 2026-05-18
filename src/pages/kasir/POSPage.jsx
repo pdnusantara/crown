@@ -409,7 +409,7 @@ function POSPageInner() {
   const validateVoucherMut = useValidateVoucher()
   const redeemVoucherMut   = useRedeemVoucher()
   const { currentShift, addTransaction: addShiftTransaction } = useShiftStore()
-  const { data: apiActiveShift } = useActiveShift(user?.branchId)
+  const { data: apiActiveShift, isLoading: shiftLoading } = useActiveShift(user?.branchId)
   const {
     data: services = [],
     isLoading: servicesLoading,
@@ -433,6 +433,11 @@ function POSPageInner() {
   // Feature flag checks — backend-backed, realtime invalidate on `featureFlag:changed`.
   const voucherEnabled       = useIsFeatureEnabled(user?.tenantId, 'voucher')
   const barberRatingEnabled  = useIsFeatureEnabled(user?.tenantId, 'barber_rating')
+
+  // Transaksi hanya boleh saat shift terbuka. `noActiveShift` baru true setelah
+  // query selesai (hindari flash blokir saat masih memuat). Backend tetap jadi
+  // penjaga utama — frontend ini sekadar UX & cegah submit sia-sia.
+  const noActiveShift = !shiftLoading && !apiActiveShift
 
   // Local UI state
   const [search, setSearch] = useState('')
@@ -580,6 +585,10 @@ function POSPageInner() {
 
   const handlePay = async () => {
     if (posStore.cartItems.length === 0) return toast.error(t('pos.cartIsEmpty'))
+    if (noActiveShift) {
+      setShowPayModal(false)
+      return toast.error('Belum ada shift aktif. Buka shift terlebih dahulu sebelum transaksi.')
+    }
     if (posStore.paymentMethod === 'cash' && posStore.cashReceived < posStore.getTotal()) {
       return toast.error(t('pos.cashNotEnough'))
     }
@@ -1008,9 +1017,24 @@ function POSPageInner() {
 
       {/* ── FIXED BOTTOM: tombol bayar — selalu terlihat tanpa perlu scroll ── */}
       <div className="flex-shrink-0 pt-3 mt-1 border-t border-dark-border">
+      {noActiveShift && (
+        <div className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 flex items-start gap-2.5">
+          <Clock size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-amber-300">Belum ada shift aktif</p>
+            <p className="text-xs text-muted mt-0.5">Buka shift dulu untuk mulai menerima transaksi.</p>
+          </div>
+          <button
+            onClick={() => navigate(`/${getBranchSlug(user)}/kasir/shift-closing`)}
+            className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-amber-500 text-dark text-xs font-bold hover:bg-amber-400 transition-colors"
+          >
+            Buka Shift
+          </button>
+        </div>
+      )}
       <Button
         fullWidth size="lg"
-        disabled={posStore.cartItems.length === 0}
+        disabled={posStore.cartItems.length === 0 || noActiveShift}
         onClick={() => setShowPayModal(true)}
       >
         {t('pos.payAmount', { amount: formatRupiah(posStore.getTotal()) })}
