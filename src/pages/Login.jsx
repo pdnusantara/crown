@@ -1,52 +1,38 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
-import { Eye, EyeOff, Scissors, Mail, Lock, Shield, Building2, ExternalLink, Zap } from 'lucide-react'
+import { Eye, EyeOff, Scissors, Mail, Lock, ChevronRight, Shield, Building2, ExternalLink } from 'lucide-react'
 import { useAuthStore } from '../store/authStore.js'
 import { usePublicTenantStore } from '../store/publicTenantStore.js'
-import api from '../lib/api.js'
 import Button from '../components/ui/Button.jsx'
 import Input from '../components/ui/Input.jsx'
 import { getTenantSlug } from '../lib/tenantSlug.js'
 
-// Pintasan login developer — hanya tampil bila backend mengaktifkan
-// ENABLE_DEV_LOGIN. Peran tenant tampil di subdomain, super-admin di domain utama.
-const DEV_ROLES_TENANT = [
-  { role: 'tenant_admin', label: 'Admin',  color: 'from-gold to-gold-light' },
-  { role: 'kasir',        label: 'Kasir',  color: 'from-blue-500 to-cyan-500' },
-  { role: 'barber',       label: 'Barber', color: 'from-green-500 to-emerald-500' },
-]
-const DEV_ROLES_MAIN = [
-  { role: 'super_admin', label: 'Super Admin', color: 'from-amber-500 to-orange-500' },
+// Credentials match backend seed (run: cd backend && npm run db:seed)
+const SUPER_ADMIN_DEMO = { email: 'admin@barberos.com', password: 'Admin123!', role: 'Super Admin', color: 'from-amber-500 to-orange-500' }
+const TENANT_DEMOS = [
+  { email: 'admin@barberkingdom.com',  password: 'Admin123!',  role: 'Tenant Admin', color: 'from-gold to-gold-light' },
+  { email: 'kasir@barberkingdom.com',  password: 'Kasir123!',  role: 'Kasir',         color: 'from-blue-500 to-cyan-500' },
+  { email: 'budi@barberkingdom.com',   password: 'Barber123!', role: 'Barber',        color: 'from-green-500 to-emerald-500' },
 ]
 
 export default function Login() {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const { login, devLogin, isLoading, error, clearError } = useAuthStore()
+  const { login, isLoading, error, clearError } = useAuthStore()
   const { status: tenantStatus, name: tenantName, logo: tenantLogo } = usePublicTenantStore()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [redirectUrl, setRedirectUrl] = useState(null)
-  const [devEnabled, setDevEnabled] = useState(false)
 
   const isTenantContext = tenantStatus === 'found'
   const slug = getTenantSlug()
   // Main domain = no tenant slug detected. We use this to gate the demo accounts
   // and surface the "this is the super-admin sign-in" banner.
   const isMainDomain = !slug && !isTenantContext
-  const devRoles = isMainDomain ? DEV_ROLES_MAIN : DEV_ROLES_TENANT
-
-  // Cek apakah pintasan login developer aktif di backend.
-  useEffect(() => {
-    let alive = true
-    api.get('/auth/dev-login')
-      .then(r => { if (alive) setDevEnabled(!!r.data?.data?.enabled) })
-      .catch(() => {})
-    return () => { alive = false }
-  }, [])
+  const demoUsers = isMainDomain ? [SUPER_ADMIN_DEMO] : TENANT_DEMOS
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -62,11 +48,17 @@ export default function Login() {
     }
   }
 
-  const handleDevLogin = async (role) => {
+  const handleQuickLogin = async (user) => {
     clearError()
     setRedirectUrl(null)
-    const result = await devLogin(role)
-    if (result.success) navigate(result.redirectTo)
+    setEmail(user.email)
+    setPassword(user.password)
+    const result = await login(user.email, user.password)
+    if (result.success) {
+      navigate(result.redirectTo)
+    } else if (result.redirect) {
+      setRedirectUrl(result.redirect)
+    }
   }
 
   return (
@@ -200,36 +192,32 @@ export default function Login() {
             </Button>
           </form>
 
-          {/* Pintasan login developer — hanya saat ENABLE_DEV_LOGIN aktif */}
-          {devEnabled && (
-            <div className="mt-6">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="flex-1 h-px bg-dark-border" />
-                <span className="text-xs text-muted inline-flex items-center gap-1.5">
-                  <Zap size={12} className="text-gold" /> Pintasan Developer
-                </span>
-                <div className="flex-1 h-px bg-dark-border" />
-              </div>
-              <p className="text-[11px] text-muted text-center mb-3 leading-relaxed">
-                Masuk cepat tanpa password untuk uji coba. Nonaktifkan sebelum rilis.
-              </p>
-              <div className={`grid gap-2 ${isMainDomain ? 'grid-cols-1' : 'grid-cols-3'}`}>
-                {devRoles.map(r => (
-                  <button
-                    key={r.role}
-                    onClick={() => handleDevLogin(r.role)}
-                    disabled={isLoading}
-                    className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-dark-card border border-dark-border hover:border-gold/30 active:scale-95 transition-all disabled:opacity-50"
-                  >
-                    <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${r.color} flex items-center justify-center flex-shrink-0`}>
-                      <span className="text-sm font-bold text-white">{r.label[0]}</span>
-                    </div>
-                    <span className="text-[11px] font-medium text-off-white text-center leading-tight">{r.label}</span>
-                  </button>
-                ))}
-              </div>
+          {/* Demo users */}
+          <div className="mt-6">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex-1 h-px bg-dark-border" />
+              <span className="text-xs text-muted">{t('auth.demoAccounts')}</span>
+              <div className="flex-1 h-px bg-dark-border" />
             </div>
-          )}
+            <div className="grid grid-cols-2 gap-2">
+              {demoUsers.map(user => (
+                <button
+                  key={user.email}
+                  onClick={() => handleQuickLogin(user)}
+                  disabled={isLoading}
+                  className="flex items-center gap-2 p-2.5 rounded-xl bg-dark-card border border-dark-border hover:border-gold/30 transition-all text-left group"
+                >
+                  <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${user.color} flex items-center justify-center flex-shrink-0`}>
+                    <span className="text-xs font-bold text-white">{user.role[0]}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-off-white truncate">{user.role}</p>
+                  </div>
+                  <ChevronRight className="w-3 h-3 text-muted group-hover:text-gold transition-colors" />
+                </button>
+              ))}
+            </div>
+          </div>
         </motion.div>
 
         <p className="text-center text-muted text-xs mt-6">
