@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  /* Safe-area insets (iPhone notch / home indicator). Butuh
+     viewport-fit=cover di <meta viewport> agar env() bernilai non-nol. */
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+  .mb-safe { margin-bottom: env(safe-area-inset-bottom, 0px); }
+  .bottom-safe { bottom: env(safe-area-inset-bottom, 0px); }
+}
+
 @layer base {
   * {
     box-sizing: border-box;

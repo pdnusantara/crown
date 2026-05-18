@@ -472,6 +472,9 @@ function POSPageInner() {
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches
   )
+  // Tinggi keyboard on-screen (mobile). Dipakai mengangkat bottom-sheet keranjang
+  // supaya tombol "Bayar" tidak ketutup keyboard saat input voucher/diskon/poin.
+  const [kbInset, setKbInset] = useState(0)
 
   const receipt = useRef(null)
 
@@ -496,6 +499,23 @@ function POSPageInner() {
     const onChange = (e) => setIsMobile(e.matches)
     mq.addEventListener?.('change', onChange)
     return () => mq.removeEventListener?.('change', onChange)
+  }, [])
+
+  // Keyboard watcher — visualViewport menyusut saat keyboard muncul.
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const onResize = () => {
+      const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+      // < 80px dianggap noise (bukan keyboard, mis. toolbar browser)
+      setKbInset(inset > 80 ? inset : 0)
+    }
+    vv.addEventListener('resize', onResize)
+    vv.addEventListener('scroll', onResize)
+    return () => {
+      vv.removeEventListener('resize', onResize)
+      vv.removeEventListener('scroll', onResize)
+    }
   }, [])
 
   // Draft protection: load on mount
@@ -758,9 +778,9 @@ function POSPageInner() {
             <button
               onClick={() => posStore.setSelectedCustomer(null)}
               aria-label={t('pos.removeCustomer')}
-              className="flex-shrink-0 p-1 rounded-lg text-muted hover:text-red-400 transition-colors"
+              className="flex-shrink-0 p-2.5 -m-1 rounded-lg text-muted hover:text-red-400 active:text-red-400 transition-colors"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         ) : (
@@ -864,10 +884,10 @@ function POSPageInner() {
               <span className="text-sm font-semibold text-gold whitespace-nowrap tabular-nums">{formatRupiah(item.price)}</span>
               <button
                 onClick={() => posStore.removeFromCart(item.id)}
-                className="p-1 text-muted hover:text-red-400 transition-colors flex-shrink-0"
+                className="p-2.5 -m-1 text-muted hover:text-red-400 active:text-red-400 transition-colors flex-shrink-0"
                 aria-label={t('common.remove') || 'Remove'}
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
           ))
@@ -1080,12 +1100,12 @@ function POSPageInner() {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {PAYMENT_METHODS.map(pm => (
           <button
             key={pm.id}
             onClick={() => posStore.setPaymentMethod(pm.id)}
-            className={`flex flex-col items-center gap-1 p-2 rounded-xl border text-xs transition-all ${
+            className={`flex flex-col items-center gap-1 p-2 rounded-xl border text-xs transition-all active:scale-95 ${
               posStore.paymentMethod === pm.id ? 'bg-gold/10 border-gold text-gold' : 'bg-dark-card border-dark-border text-muted hover:border-gold/30'
             }`}
           >
@@ -1134,7 +1154,7 @@ function POSPageInner() {
   )
 
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100vh-7rem)] gap-4">
+    <div className={`flex flex-col lg:flex-row h-[calc(100dvh-7rem)] gap-4 transition-[padding] ${(queueId || showDraftBanner) ? 'pt-14' : ''}`}>
       {/* Queue Context Banner */}
       {queueId && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-gold/95 px-4 py-2.5 flex items-center gap-3">
@@ -1189,7 +1209,7 @@ function POSPageInner() {
             <button
               key={cat.id}
               onClick={() => setCategory(cat.id)}
-              className={`snap-start px-4 py-1.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all flex-shrink-0 ${
+              className={`snap-start px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all flex-shrink-0 active:scale-95 ${
                 category === cat.id ? 'bg-gold text-dark' : 'bg-dark-card border border-dark-border text-muted hover:text-off-white'
               }`}
             >
@@ -1235,7 +1255,7 @@ function POSPageInner() {
                 <button
                   key={svc.id}
                   onClick={() => handleAddToCart(svc)}
-                  className={`relative p-3 rounded-xl border text-left transition-all ${
+                  className={`relative p-3 rounded-xl border text-left transition-all active:scale-[0.97] ${
                     inCart ? 'bg-gold/10 border-gold/40' : 'bg-dark-card border-dark-border hover:border-gold/30 hover:bg-dark-surface'
                   }`}
                 >
@@ -1265,7 +1285,7 @@ function POSPageInner() {
       {!showCartSheet && (
         <button
           onClick={() => setShowCartSheet(true)}
-          className="lg:hidden fixed left-3 right-3 bottom-[5.75rem] z-40 flex items-center gap-3 px-4 py-3 rounded-2xl bg-gold text-dark font-semibold shadow-2xl active:scale-[0.98] transition-transform"
+          className="lg:hidden fixed left-3 right-3 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] z-40 flex items-center gap-3 px-4 py-3 rounded-2xl bg-gold text-dark font-semibold shadow-2xl active:scale-[0.98] transition-transform"
           aria-label={t('pos.openCart')}
         >
           <span className="relative flex-shrink-0">
@@ -1299,7 +1319,11 @@ function POSPageInner() {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="lg:hidden fixed inset-x-0 bottom-0 z-50 flex flex-col bg-dark-surface border-t border-dark-border rounded-t-3xl px-4 pt-3 pb-4 h-[85vh]"
+              style={{
+                bottom: kbInset,
+                maxHeight: kbInset > 0 ? `calc(100dvh - ${kbInset}px)` : undefined,
+              }}
+              className="lg:hidden fixed inset-x-0 z-50 flex flex-col bg-dark-surface border-t border-dark-border rounded-t-3xl px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] h-[85dvh]"
             >
               <div className="flex justify-center pb-2 flex-shrink-0">
                 <div className="w-10 h-1 rounded-full bg-dark-border" />

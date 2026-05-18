@@ -61,7 +61,7 @@ export const Modal = ({
               shadow-2xl
               ${className}
             `}
-            style={{ maxHeight: '90vh', overflowY: 'auto' }}
+            style={{ maxHeight: '90dvh', overflowY: 'auto' }}
           >
             {/* Handle bar (mobile) */}
             <div className="md:hidden flex justify-center pt-3 pb-1">
