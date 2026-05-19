@@ -1033,12 +1033,12 @@ function WhatsAppCard({ waState, setWaState, onConnect, onDisconnect, onSaveSett
         </div>
 
         {/* Beta limitations */}
-        <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-          <p className="text-xs text-amber-400 font-medium mb-1 flex items-center gap-1.5">
-            <AlertTriangle className="w-3.5 h-3.5" />
+        <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+          <p className="text-xs text-amber-400 font-semibold mb-1.5 flex items-center gap-1.5">
+            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
             Batasan fase Beta:
           </p>
-          <ul className="text-xs text-amber-400 space-y-1 list-disc list-inside">
+          <ul className="text-xs text-off-white space-y-1 list-disc list-inside marker:text-amber-400">
             {(waState.limitations || []).map((item, idx) => (
               <li key={idx}>{item}</li>
             ))}
