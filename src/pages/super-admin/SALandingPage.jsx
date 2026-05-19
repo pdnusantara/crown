@@ -524,6 +524,7 @@ const SECTION_LABELS = {
 }
 const EMPTY_HEADING = { kicker: '', title: '', subtitle: '' }
 const EMPTY_CLOSING = { title: '', subtitle: '', ctaLabel: '' }
+const EMPTY_CONTACT = { contactPhone: '', contactEmail: '', contactAddress: '' }
 
 function ContentEditor() {
   const toast = useToast()
@@ -534,6 +535,7 @@ function ContentEditor() {
   const [sections, setSections] = useState(null)
   const [closing, setClosing] = useState(EMPTY_CLOSING)
   const [footerText, setFooterText] = useState('')
+  const [contact, setContact] = useState(EMPTY_CONTACT)
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
@@ -545,6 +547,11 @@ function ContentEditor() {
       ))
       setClosing({ ...EMPTY_CLOSING, ...(data.hero.closingCta || {}) })
       setFooterText(data.hero.footerText || '')
+      setContact({
+        contactPhone:   data.hero.contactPhone   || '',
+        contactEmail:   data.hero.contactEmail   || '',
+        contactAddress: data.hero.contactAddress || '',
+      })
       setReady(true)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -570,6 +577,9 @@ function ContentEditor() {
           ctaLabel: closing.ctaLabel.trim(),
         },
         footerText: footerText.trim(),
+        contactPhone:   contact.contactPhone.trim(),
+        contactEmail:   contact.contactEmail.trim(),
+        contactAddress: contact.contactAddress.trim(),
       })
       toast.success('Konten section tersimpan')
     } catch (err) {
@@ -664,6 +674,39 @@ function ContentEditor() {
             value={footerText}
             onChange={e => setFooterText(e.target.value)}
           />
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader><h3 className="font-semibold text-off-white">Kontak & Alamat</h3></CardHeader>
+        <CardBody className="space-y-4">
+          <p className="text-xs text-muted">
+            Tampil di bagian "Kontak" pada footer landing page. Kosongkan semua untuk memakai info bawaan.
+          </p>
+          <Input
+            label="Nomor telepon / WhatsApp"
+            placeholder="0812-3456-7890"
+            value={contact.contactPhone}
+            onChange={e => setContact(c => ({ ...c, contactPhone: e.target.value }))}
+            hint="Jika berupa nomor HP, tombol akan membuka WhatsApp."
+          />
+          <Input
+            label="Email"
+            type="email"
+            placeholder="halo@sembapos.com"
+            value={contact.contactEmail}
+            onChange={e => setContact(c => ({ ...c, contactEmail: e.target.value }))}
+          />
+          <div>
+            <label className="text-xs text-muted block mb-1.5">Alamat</label>
+            <textarea
+              rows={3}
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/60"
+              placeholder="Jl. Contoh No. 1, Kota, Indonesia"
+              value={contact.contactAddress}
+              onChange={e => setContact(c => ({ ...c, contactAddress: e.target.value }))}
+            />
+          </div>
         </CardBody>
       </Card>
 

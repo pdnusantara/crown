@@ -244,7 +244,14 @@ export default function LandingPage() {
         return Comp ? <Comp key={b.id || b.type} block={b} ctx={ctx} /> : null
       })}
 
-      <Footer text={footerText} />
+      <Footer
+        text={footerText}
+        contact={{
+          phone:   hero.contactPhone   || '',
+          email:   hero.contactEmail   || '',
+          address: hero.contactAddress || '',
+        }}
+      />
 
       {waHref && (
         <motion.a
@@ -964,7 +971,11 @@ function FAQItem({ item, delay }) {
   )
 }
 
-function Footer({ text }) {
+function Footer({ text, contact = {} }) {
+  const phone = (contact.phone || '').trim()
+  const email = (contact.email || '').trim()
+  const address = (contact.address || '').trim()
+  const waPhone = normalizeWa(phone)
   return (
     <footer className="bg-[#1C1A17] text-[#A8A29A] px-6 pt-14 pb-8">
       <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-sm">
@@ -989,10 +1000,44 @@ function Footer({ text }) {
           </ul>
         </div>
         <div>
-          <h4 className="font-semibold text-[#FBFAF6] mb-3">Perusahaan</h4>
-          <ul className="space-y-2 text-[13px]">
-            <li>sembapos.com</li>
-            <li>Indonesia</li>
+          <h4 className="font-semibold text-[#FBFAF6] mb-3">Kontak</h4>
+          <ul className="space-y-2.5 text-[13px]">
+            {phone && (
+              <li>
+                <a
+                  href={waPhone ? `https://wa.me/${waPhone}` : `tel:${phone.replace(/[^\d+]/g, '')}`}
+                  target={waPhone ? '_blank' : undefined}
+                  rel={waPhone ? 'noopener noreferrer' : undefined}
+                  className="inline-flex items-start gap-2 hover:text-[#C9A84C] transition-colors"
+                >
+                  <Lucide.Phone size={14} className="text-[#C9A84C] flex-shrink-0 mt-0.5" />
+                  <span>{phone}</span>
+                </a>
+              </li>
+            )}
+            {email && (
+              <li>
+                <a
+                  href={`mailto:${email}`}
+                  className="inline-flex items-start gap-2 hover:text-[#C9A84C] transition-colors break-all"
+                >
+                  <Lucide.Mail size={14} className="text-[#C9A84C] flex-shrink-0 mt-0.5" />
+                  <span>{email}</span>
+                </a>
+              </li>
+            )}
+            {address && (
+              <li className="inline-flex items-start gap-2">
+                <Lucide.MapPin size={14} className="text-[#C9A84C] flex-shrink-0 mt-0.5" />
+                <span className="whitespace-pre-line">{address}</span>
+              </li>
+            )}
+            {!phone && !email && !address && (
+              <>
+                <li>sembapos.com</li>
+                <li>Indonesia</li>
+              </>
+            )}
           </ul>
         </div>
       </div>

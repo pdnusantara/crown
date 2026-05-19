@@ -26,6 +26,9 @@ const SETTING_KEYS = {
   whatsappCta:  'landing_whatsapp_cta', // nomor WA buat tombol "konsultasi"
   heroBadge:    'landing_hero_badge',   // teks pil "Baru" di atas judul
   footerText:   'landing_footer_text',  // deskripsi singkat di footer
+  contactPhone:   'landing_contact_phone',   // nomor telepon/WA kontak di footer
+  contactEmail:   'landing_contact_email',   // alamat email kontak di footer
+  contactAddress: 'landing_contact_address', // alamat fisik di footer
   features:     'landing_features',     // JSON: array fitur
   trustItems:   'landing_trust_items',  // JSON: array string trust-line hero
   steps:        'landing_steps',        // JSON: array {title,desc} "cara mulai"
@@ -58,6 +61,9 @@ const DEFAULTS = {
   whatsappCta:  '',
   heroBadge:    'Baru',
   footerText:   'Sistem manajemen barbershop modern: kasir, antrian, booking online, multi-cabang, dan laporan pintar dalam satu aplikasi.',
+  contactPhone:   '',
+  contactEmail:   '',
+  contactAddress: 'Indonesia',
   features: JSON.stringify([
     { icon: 'Scissors',      title: 'Kasir khusus barbershop', desc: 'Catat layanan, produk, sampai komisi barber sekali tap. Cepat, antrean nggak numpuk.' },
     { icon: 'CalendarClock', title: 'Booking & antrian online', desc: 'Pelanggan booking sendiri lewat link toko. Giliran rapi, nggak ada rebutan.' },
@@ -183,6 +189,9 @@ const heroUpdateSchema = z.object({
   whatsappCta:  z.string().max(20).optional(),
   heroBadge:    z.string().max(40).optional(),
   footerText:   z.string().max(600).optional(),
+  contactPhone:   z.string().max(40).optional(),
+  contactEmail:   z.string().max(120).optional(),
+  contactAddress: z.string().max(300).optional(),
   showStats:    z.boolean().optional(),
   features:     z.array(z.object({
     icon:  z.string().max(40),
