@@ -405,8 +405,9 @@ function TARatingsPageInner() {
           </button>
         </div>
 
-        {/* Rating tabs — always visible */}
-        <div className="flex items-center gap-1.5 mt-3 overflow-x-auto pb-0.5">
+        {/* Rating tabs — grid 2 kolom di mobile (4 tab tampil penuh & rata,
+            tak ada yang kepotong); satu baris di desktop. */}
+        <div className="grid grid-cols-2 gap-1.5 mt-3 sm:flex sm:items-center">
           {[
             { id: 'all',  label: 'Semua',         color: 'bg-dark-card text-off-white' },
             { id: 'high', label: '★4-5 (Positif)', color: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' },
@@ -419,7 +420,7 @@ function TARatingsPageInner() {
                 key={tab.id}
                 type="button"
                 onClick={() => setRatingTab(tab.id)}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                className={`w-full sm:w-auto sm:flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium text-center border transition-all ${
                   isActive
                     ? `${tab.color} border-current`
                     : 'bg-dark-surface border-dark-border text-muted hover:text-off-white'
