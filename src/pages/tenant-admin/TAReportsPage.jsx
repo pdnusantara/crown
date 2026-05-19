@@ -18,7 +18,7 @@ import {
 import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Table from '../../components/ui/Table.jsx'
-import { formatRupiah } from '../../utils/format.js'
+import { formatRupiah, formatRupiahShort } from '../../utils/format.js'
 import { useChartTheme, tooltipStyle } from '../../utils/chartTheme.js'
 
 function linearRegression(data) {
@@ -272,22 +272,33 @@ export default function TAReportsPage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { title: t('tenantAdmin.reports.totalRevenue'),       value: showKpiSkeleton ? null : formatRupiah(kpiValues.totalRevenue),       icon: DollarSign },
-          { title: t('tenantAdmin.reports.totalTransactions'),  value: showKpiSkeleton ? null : kpiValues.totalTransactions,                icon: Receipt },
-          { title: t('tenantAdmin.reports.avgPerTransaction'),  value: showKpiSkeleton ? null : formatRupiah(kpiValues.avgPerTxn),          icon: TrendingUp },
-          { title: t('tenantAdmin.reports.uniqueCustomers'),    value: showKpiSkeleton ? null : kpiValues.uniqueCustomers,                  icon: Users },
+          { title: t('tenantAdmin.reports.totalRevenue'),       raw: kpiValues.totalRevenue,     type: 'currency', icon: DollarSign },
+          { title: t('tenantAdmin.reports.totalTransactions'),  raw: kpiValues.totalTransactions, type: 'count',    icon: Receipt },
+          { title: t('tenantAdmin.reports.avgPerTransaction'),  raw: kpiValues.avgPerTxn,        type: 'currency', icon: TrendingUp },
+          { title: t('tenantAdmin.reports.uniqueCustomers'),    raw: kpiValues.uniqueCustomers,   type: 'count',    icon: Users },
         ].map((kpi, i) => (
           <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
             <Card className="p-4 h-full">
               {/* items-start: icon ter-anchor di atas (sejajar label), tak
                   mengambang di tengah & tak menempel ke angka nominal.
-                  gap-3 + flex-shrink-0 menjaga jarak konsisten di mobile. */}
-              <div className="flex items-start justify-between gap-3">
+                  gap-2.5 + flex-shrink-0 menjaga jarak konsisten di mobile. */}
+              <div className="flex items-start justify-between gap-2.5">
                 <div className="min-w-0 space-y-1.5">
                   <p className="text-xs text-muted leading-snug">{kpi.title}</p>
-                  {kpi.value === null
-                    ? <Skeleton className="h-7 w-20" />
-                    : <p className="text-lg sm:text-xl font-bold text-off-white leading-tight break-words">{kpi.value}</p>}
+                  {showKpiSkeleton ? (
+                    <Skeleton className="h-7 w-20" />
+                  ) : kpi.type === 'currency' ? (
+                    // Mobile: format ringkas (Rp12,5jt) agar nominal tak meluber
+                    // di grid 2-kolom. Desktop: nominal penuh.
+                    <p className="font-bold text-off-white leading-tight whitespace-nowrap tabular-nums">
+                      <span className="text-lg sm:hidden">{formatRupiahShort(kpi.raw)}</span>
+                      <span className="hidden sm:inline text-xl">{formatRupiah(kpi.raw)}</span>
+                    </p>
+                  ) : (
+                    <p className="text-lg sm:text-xl font-bold text-off-white leading-tight whitespace-nowrap tabular-nums">
+                      {Number(kpi.raw || 0).toLocaleString('id-ID')}
+                    </p>
+                  )}
                 </div>
                 <div className="w-9 h-9 rounded-xl bg-gold/10 flex items-center justify-center flex-shrink-0">
                   <kpi.icon className="w-[18px] h-[18px] text-gold" />
