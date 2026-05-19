@@ -10,7 +10,7 @@ import { format, startOfMonth, endOfMonth, addMonths, subMonths, parseISO } from
 import { id as idLocale } from 'date-fns/locale'
 import { useAuthStore } from '../../store/authStore.js'
 import { useFeatureFlags } from '../../hooks/useFeatureFlags.js'
-import { useReportSummary, useBarberReport } from '../../hooks/useReports.js'
+import { useReportSummary, useBarberPayroll } from '../../hooks/useReports.js'
 import { useBranches } from '../../hooks/useBranches.js'
 import {
   useExpenses, useExpenseStats, useCreateExpense, useUpdateExpense,
@@ -558,20 +558,31 @@ function ListSkeleton() {
 // Jembatan Komisi → Pengeluaran. Komisi barber TIDAK otomatis jadi pengeluaran —
 // modal ini menampilkan komisi tiap barber periode berjalan, lalu "Catat" mengisi
 // form pengeluaran (kategori Gaji & Honor) otomatis untuk di-review & disimpan.
+// Label & rincian per skema gaji untuk modal Gaji Barber.
+const SALARY_LABEL = { commission: 'Komisi', fixed: 'Gaji Pokok', hybrid: 'Pokok + Komisi' }
+function payDetail(b) {
+  if (b.salaryType === 'fixed') return 'Gaji pokok bulanan tetap'
+  if (b.salaryType === 'hybrid') {
+    return `Pokok ${formatRupiahShort(b.baseSalary)} + komisi ${formatRupiahShort(b.commission)}`
+  }
+  return `Omzet ${formatRupiahShort(b.revenue)} · ${Math.round((b.commissionRate || 0) * 100)}% · ${b.servicesCount} layanan`
+}
+
 function BarberPayrollModal({ open, onClose, monthLabel, startDate, endDate, onPick }) {
   const { user } = useAuthStore()
-  const { data, isLoading, isError } = useBarberReport(
+  const { data, isLoading, isError } = useBarberPayroll(
     open ? user?.tenantId : undefined,
     { startDate, endDate },
   )
+  // Tampilkan barber dengan gaji > 0 (komisi / gaji pokok / kombinasi).
   const barbers = useMemo(
-    () => (Array.isArray(data) ? data : []).filter(b => (b.commission || 0) > 0),
+    () => (Array.isArray(data) ? data : []).filter(b => (b.pay || 0) > 0),
     [data],
   )
-  const totalCommission = barbers.reduce((s, b) => s + (b.commission || 0), 0)
+  const totalPay = barbers.reduce((s, b) => s + (b.pay || 0), 0)
 
   // Penanda "sudah dicatat": cek pengeluaran kategori gaji bulan ini yang
-  // ber-barberId → barber tsb komisinya sudah masuk pengeluaran.
+  // ber-barberId → barber tsb gajinya sudah masuk pengeluaran.
   const { data: gajiExpenses } = useQuery({
     queryKey: ['expenses', 'payroll-paid', startDate, endDate],
     queryFn: () => api
@@ -587,12 +598,13 @@ function BarberPayrollModal({ open, onClose, monthLabel, startDate, endDate, onP
   const paidCount = barbers.filter(b => paidBarberIds.has(b.barberId)).length
 
   return (
-    <Modal isOpen={open} onClose={onClose} title="Gaji / Komisi Barber" size="md">
+    <Modal isOpen={open} onClose={onClose} title="Gaji Barber" size="md">
       <div className="space-y-3">
         <p className="text-xs text-muted">
-          Komisi tiap barber dari transaksi <span className="text-off-white font-medium capitalize">{monthLabel}</span>.
-          Klik <span className="text-gold">Catat</span> untuk mengisi form pengeluaran otomatis.
-          Barber bertanda <span className="text-green-400">✓ Dicatat</span> komisinya sudah masuk pengeluaran bulan ini.
+          Gaji tiap barber untuk <span className="text-off-white font-medium capitalize">{monthLabel}</span> sesuai
+          skema masing-masing (komisi / gaji pokok / kombinasi). Klik <span className="text-gold">Catat</span> untuk
+          mengisi form pengeluaran otomatis. Tanda <span className="text-green-400">✓ Dicatat</span> = sudah masuk
+          pengeluaran bulan ini.
         </p>
 
         {isLoading ? (
@@ -602,14 +614,14 @@ function BarberPayrollModal({ open, onClose, monthLabel, startDate, endDate, onP
         ) : isError ? (
           <div className="flex flex-col items-center gap-2 py-10 text-center">
             <AlertCircle size={22} className="text-red-400" />
-            <p className="text-sm text-muted">Gagal memuat data komisi</p>
+            <p className="text-sm text-muted">Gagal memuat data gaji barber</p>
           </div>
         ) : barbers.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-10 text-center">
             <div className="w-12 h-12 rounded-2xl bg-dark-surface border border-dark-border flex items-center justify-center">
               <Scissors size={20} className="text-muted" />
             </div>
-            <p className="text-sm text-muted capitalize">Belum ada komisi barber di {monthLabel}</p>
+            <p className="text-sm text-muted capitalize">Belum ada gaji barber untuk dibayar di {monthLabel}</p>
           </div>
         ) : (
           <>
@@ -622,13 +634,16 @@ function BarberPayrollModal({ open, onClose, monthLabel, startDate, endDate, onP
                       <Scissors size={15} className="text-blue-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-off-white truncate">{b.barberName}</p>
-                      <p className="text-[10px] text-muted">
-                        Omzet {formatRupiahShort(b.revenue)} · {Math.round((b.commissionRate || 0) * 100)}% · {b.servicesCount} layanan
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm text-off-white truncate">{b.barberName}</p>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-dark-surface text-muted flex-shrink-0 whitespace-nowrap">
+                          {SALARY_LABEL[b.salaryType] || 'Komisi'}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-muted truncate">{payDetail(b)}</p>
                     </div>
                     <span className="text-sm font-semibold text-off-white flex-shrink-0 tabular-nums">
-                      {formatRupiahShort(b.commission)}
+                      {formatRupiahShort(b.pay)}
                     </span>
                     {paid ? (
                       <span className="inline-flex items-center gap-1 text-[10px] font-medium text-green-400 bg-green-500/10 border border-green-500/20 px-2 py-1 rounded-lg flex-shrink-0">
@@ -649,7 +664,7 @@ function BarberPayrollModal({ open, onClose, monthLabel, startDate, endDate, onP
                 {paidCount > 0 && <span className="text-green-400"> · {paidCount} sudah dicatat</span>}
               </span>
               <span className="text-off-white font-semibold tabular-nums">
-                Total komisi {formatRupiah(totalCommission)}
+                Total gaji {formatRupiah(totalPay)}
               </span>
             </div>
           </>
@@ -760,20 +775,28 @@ function ExpensePageInner() {
   const openCreate = () => { setEditTarget(null); setFormOpen(true) }
   const openEdit   = (e) => { setEditTarget(e); setFormOpen(true) }
 
-  // Dari modal Gaji Barber → buka form pengeluaran terisi otomatis (komisi
-  // barber). Bukan edit (tanpa id) → ExpenseFormModal memperlakukannya prefill.
+  // Dari modal Gaji Barber → buka form pengeluaran terisi otomatis sesuai
+  // skema gaji barber. Bukan edit (tanpa id) → ExpenseFormModal prefill.
   const handlePickPayroll = (barber) => {
     setPayrollOpen(false)
+    const ratePct = Math.round((barber.commissionRate || 0) * 100)
+    let note
+    if (barber.salaryType === 'fixed') {
+      note = 'Gaji pokok bulanan'
+    } else if (barber.salaryType === 'hybrid') {
+      note = `Gaji pokok ${formatRupiah(barber.baseSalary || 0)} + komisi ${ratePct}% (${formatRupiah(barber.commission || 0)})`
+    } else {
+      note = `Komisi ${ratePct}% dari omzet ${formatRupiah(barber.revenue || 0)}`
+    }
     setEditTarget({
       category: 'gaji',
-      description: `Komisi ${barber.barberName} ${monthLabel}`,
-      amount: String(barber.commission || 0),
-      // Tanggal di akhir bulan komisi → masuk laporan bulan tsb & terdeteksi
-      // sebagai "sudah dicatat" oleh modal Gaji Barber.
+      description: `Gaji ${barber.barberName} ${monthLabel}`,
+      amount: String(barber.pay || 0),
+      // Tanggal akhir bulan → masuk laporan bulan tsb & terdeteksi "sudah dicatat".
       date: endDate,
       branchId: '',
       barberId: barber.barberId,
-      note: `Komisi ${Math.round((barber.commissionRate || 0) * 100)}% dari omzet ${formatRupiah(barber.revenue || 0)}`,
+      note,
     })
     setFormOpen(true)
   }

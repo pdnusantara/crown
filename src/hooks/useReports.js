@@ -69,6 +69,20 @@ export function useBarberReport(tenantId, filters = {}) {
   })
 }
 
+// Daftar gaji barber periode (semua skema: komisi / pokok / pokok+komisi) —
+// dipakai fitur "Gaji Barber" di /admin/expenses.
+export function useBarberPayroll(tenantId, filters = {}) {
+  return useQuery({
+    queryKey: ['reports', 'barberPayroll', tenantId, filters],
+    queryFn: async () => {
+      const res = await api.get('/reports/barber-payroll', { params: { tenantId, ...filters } })
+      return res.data.data
+    },
+    enabled: !!tenantId,
+    staleTime: 30_000,
+  })
+}
+
 export function useServiceReport(tenantId, filters = {}) {
   return useQuery({
     queryKey: ['reports', 'services', tenantId, filters],

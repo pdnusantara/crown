@@ -283,7 +283,7 @@ router.get('/barbers', authenticate, requireRole('super_admin', 'tenant_admin'),
     const barberIds = barberStats.map((b) => b.barberId).filter(Boolean);
     const barbers = await prisma.user.findMany({
       where: { id: { in: barberIds } },
-      select: { id: true, name: true, phone: true, commissionRate: true },
+      select: { id: true, name: true, phone: true, commissionRate: true, salaryType: true, baseSalary: true },
     });
     const barberMap = {};
     barbers.forEach((b) => { barberMap[b.id] = b; });
@@ -299,16 +299,21 @@ router.get('/barbers', authenticate, requireRole('super_admin', 'tenant_admin'),
     ratings.forEach((r) => { ratingMap[r.barberId] = r; });
 
     const result = barberStats.map((stat) => {
-      const rate = barberMap[stat.barberId]?.commissionRate ?? 0.35;
+      const b = barberMap[stat.barberId] || {};
+      const rate = b.commissionRate ?? 0.35;
+      const salaryType = b.salaryType || 'commission';
       const revenue = stat._sum.price || 0;
       return {
         barberId: stat.barberId,
-        barberName: barberMap[stat.barberId]?.name || 'Unknown',
+        barberName: b.name || 'Unknown',
         revenue,
         servicesCount: stat._count.id,
-        // Rate & komisi per barber — dipakai fitur "Gaji Barber" di /admin/expenses.
+        // Rate, skema & komisi per barber — dipakai laporan & fitur "Gaji Barber".
         commissionRate: rate,
-        commission: Math.round(revenue * rate),
+        salaryType,
+        baseSalary: b.baseSalary || 0,
+        // Barber skema 'fixed' (gaji pokok) tak memperoleh komisi → 0.
+        commission: salaryType === 'fixed' ? 0 : Math.round(revenue * rate),
         averageRating: ratingMap[stat.barberId]?._avg.rating || null,
         totalRatings: ratingMap[stat.barberId]?._count.id || 0,
       };
@@ -408,6 +413,71 @@ router.get('/customers', authenticate, requireRole('super_admin', 'tenant_admin'
 });
 
 // GET /api/reports/services - service popularity report
+// GET /api/reports/barber-payroll — daftar gaji barber periode untuk semua
+// skema. Berbeda dari /barbers: menyertakan barber TANPA transaksi (gaji
+// pokok tetap dibayar), dan menghitung `pay` per skema gaji tiap barber.
+router.get('/barber-payroll', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
+  try {
+    const tenantId = req.user.role === 'super_admin' ? req.query.tenantId : req.user.tenantId;
+    if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId wajib' });
+
+    const branchId = await resolveBranchId(req.query.branchId, tenantId);
+    const tz = await resolveTenantTz(tenantId);
+    const startDate = req.query.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const endDate = req.query.endDate || new Date().toISOString();
+
+    // Semua barber aktif tenant — termasuk yang nol transaksi (skema gaji
+    // pokok tetap perlu dibayar).
+    const barbers = await prisma.user.findMany({
+      where: { tenantId, role: 'barber', deletedAt: null, isActive: true },
+      select: { id: true, name: true, commissionRate: true, salaryType: true, baseSalary: true },
+      orderBy: { name: 'asc' },
+    });
+    if (barbers.length === 0) return res.json({ success: true, data: [] });
+
+    const txWhere = {
+      status: 'completed',
+      tenantId,
+      createdAt: buildDateRange(startDate, endDate, tz),
+    };
+    if (branchId) txWhere.branchId = branchId;
+
+    const stats = await prisma.transactionItem.groupBy({
+      by: ['barberId'],
+      where: { barberId: { in: barbers.map(b => b.id) }, transaction: txWhere },
+      _sum: { price: true },
+      _count: { id: true },
+    });
+    const statMap = {};
+    stats.forEach((s) => { statMap[s.barberId] = s; });
+
+    const data = barbers.map((b) => {
+      const revenue = statMap[b.id]?._sum.price || 0;
+      const servicesCount = statMap[b.id]?._count.id || 0;
+      const rate = b.commissionRate ?? 0.35;
+      const salaryType = b.salaryType || 'commission';
+      // Komisi-only → baseSalary tak relevan; fixed → tak ada komisi.
+      const baseSalary = salaryType === 'commission' ? 0 : (b.baseSalary || 0);
+      const commission = salaryType === 'fixed' ? 0 : Math.round(revenue * rate);
+      return {
+        barberId: b.id,
+        barberName: b.name,
+        salaryType,
+        revenue,
+        servicesCount,
+        commissionRate: rate,
+        baseSalary,
+        commission,
+        pay: baseSalary + commission,
+      };
+    });
+
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/services', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
   try {
     const tenantId = req.user.role === 'super_admin' ? req.query.tenantId : req.user.tenantId;

@@ -111,6 +111,10 @@ model User {
   phone          String?
   photo          String?
   commissionRate Float    @default(0.35)
+  // Skema gaji barber: 'commission' (% omzet) | 'fixed' (gaji pokok bulanan)
+  // | 'hybrid' (gaji pokok + komisi). baseSalary = gaji pokok per bulan (Rp).
+  salaryType     String   @default("commission")
+  baseSalary     Int      @default(0)
   tenantId       String?
   branchId       String?
   isActive       Boolean  @default(true)
