@@ -127,6 +127,8 @@ model User {
   ratings       BarberRating[] @relation("BarberRatings")
   ticketsCreated Ticket[]
   ticketReplies  TicketReply[]
+  attendances    Attendance[]
+  workSchedules  WorkSchedule[]
 }
 
 model RefreshToken {
@@ -173,6 +175,11 @@ model Tenant {
   //   sendHour     = jam (0-23, zona waktu tenant) job dijalankan
   //   message      = teks pesan, placeholder {nama} {toko} {hari}
   visitReminder Json?
+  // Konfigurasi absensi digital staf (kasir & barber) — disimpan JSON agar
+  // bisa diperluas tanpa migrasi. { enabled, lateToleranceMin, autoCheckOut }.
+  //   lateToleranceMin = toleransi menit sebelum dihitung terlambat
+  //   autoCheckOut     = true: job menutup absen yang lupa di-checkout
+  attendanceConfig Json?
   isSuspended  Boolean  @default(false)
   deletedAt    DateTime?
   createdAt    DateTime @default(now())
@@ -187,6 +194,8 @@ model Tenant {
   tickets      Ticket[]
   broadcasts   BroadcastRecipient[]
   expenses     Expense[]
+  attendances   Attendance[]
+  workSchedules WorkSchedule[]
 }
 
 model Branch {
@@ -200,6 +209,12 @@ model Branch {
   phone        String?
   openTime     String   @default("09:00")
   closeTime    String   @default("21:00")
+  // Titik koordinat cabang untuk geofence absensi digital. Staf hanya bisa
+  // check-in bila berada dalam radius `attendanceRadius` meter dari titik ini.
+  // Null = absensi belum dikonfigurasi untuk cabang ini.
+  latitude         Float?
+  longitude        Float?
+  attendanceRadius Int      @default(100)
   isActive     Boolean  @default(true)
   deletedAt    DateTime?
   createdAt    DateTime @default(now())
@@ -210,6 +225,7 @@ model Branch {
   bookings     Booking[]
   shifts       Shift[]
   expenses     Expense[]
+  attendances  Attendance[]
 
   @@unique([tenantId, code])
 }
@@ -729,4 +745,68 @@ model ErrorLog {
   resolvedAt DateTime?
   resolvedBy String?
   createdAt  DateTime  @default(now())
+}
+
+// ── Absensi digital ──────────────────────────────────────────────────────────
+// Catatan kehadiran harian satu staf (kasir/barber). Satu baris per staf per
+// hari kalender (zona waktu tenant). Lokasi check-in/out divalidasi geofence
+// terhadap koordinat cabang. Status & menit terlambat diturunkan dari
+// WorkSchedule staf pada hari tersebut.
+model Attendance {
+  id            String   @id @default(cuid())
+  tenantId      String
+  branchId      String?
+  staffId       String
+  // Snapshot identitas staf saat absen — audit trail tetap valid walau user
+  // di-rename / di-deactivate / pindah cabang.
+  staffName     String?
+  staffRole     String?
+  // Tanggal kalender (UTC-midnight, mewakili hari lokal tenant).
+  date          DateTime
+  checkInAt     DateTime?
+  checkOutAt    DateTime?
+  checkInLat       Float?
+  checkInLng       Float?
+  checkInDistance  Float?   // meter dari titik cabang saat check-in
+  checkOutLat      Float?
+  checkOutLng      Float?
+  checkOutDistance Float?
+  // present | late | absent | leave  — 'absent'/'leave' bisa diisi manual admin.
+  status        String   @default("present")
+  lateMinutes       Int   @default(0)
+  earlyLeaveMinutes Int   @default(0)
+  workedMinutes Int?               // checkOut - checkIn (menit)
+  // Snapshot jadwal kerja efektif hari itu — supaya rekap historis tak berubah
+  // saat admin mengedit WorkSchedule di kemudian hari.
+  scheduleStart String?
+  scheduleEnd   String?
+  note          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch        Branch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  staff         User     @relation(fields: [staffId], references: [id])
+
+  @@unique([staffId, date])
+  @@index([tenantId, date])
+  @@index([branchId, date])
+}
+
+// Jadwal kerja mingguan per staf — acuan perhitungan terlambat & pulang cepat.
+// Satu baris per (staf, hari) — dayOfWeek 0=Minggu .. 6=Sabtu.
+model WorkSchedule {
+  id        String   @id @default(cuid())
+  tenantId  String
+  staffId   String
+  dayOfWeek Int
+  isDayOff  Boolean  @default(false)
+  startTime String   @default("09:00")
+  endTime   String   @default("17:00")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  staff     User     @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, dayOfWeek])
+  @@index([tenantId])
 }

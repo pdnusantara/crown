@@ -7,7 +7,7 @@ import {
   Star, TrendingUp, LogOut, Sun, Moon, Search, LogIn, Languages,
   Tag, GitCompare, Megaphone, Flag, MessageSquare, Activity,
   PieChart, UserCircle, DollarSign, Package, ShieldAlert, MapPin,
-  ChevronRight, Wallet, Landmark, LifeBuoy,
+  ChevronRight, Wallet, Landmark, LifeBuoy, Fingerprint,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useTenantStore } from '../../store/tenantStore.js'
@@ -15,6 +15,7 @@ import { useThemeStore } from '../../store/themeStore.js'
 import { useTicketStats } from '../../hooks/useTickets.js'
 import { useSubscriptionStore } from '../../store/subscriptionStore.js'
 import { useErrorLogStats } from '../../hooks/useErrorLogs.js'
+import { useFeatureFlags } from '../../hooks/useFeatureFlags.js'
 import { getBranchSlug } from '../../utils/branchSlug.js'
 import { useTranslation } from 'react-i18next'
 import Avatar from '../ui/Avatar.jsx'
@@ -50,6 +51,7 @@ const navConfig = {
     { labelKey: 'nav.wilayahReport', icon: MapPin,        path: '/admin/wilayah-report' },
     { labelKey: 'nav.expenses',      icon: Wallet,        path: '/admin/expenses' },
     { labelKey: 'nav.ratings',       icon: Star,          path: '/admin/ratings' },
+    { labelKey: 'nav.attendance',    icon: Fingerprint,   path: '/admin/attendance', flag: 'attendance' },
     { labelKey: 'nav.tickets',       icon: MessageSquare, path: '/admin/tickets', badge: 'ta_tickets' },
     { labelKey: 'nav.billing',       icon: CreditCard,    path: '/admin/billing' },
     { labelKey: 'nav.settings',      icon: Settings,      path: '/admin/settings' },
@@ -63,6 +65,7 @@ const navConfig = {
       { labelKey: 'nav.booking',      icon: CalendarDays,  path: `/${slug}/kasir/bookings` },
       { labelKey: 'nav.transactions', icon: Receipt,       path: `/${slug}/kasir/transactions` },
       { labelKey: 'nav.shiftClose',   icon: LogIn,         path: `/${slug}/kasir/shift-closing` },
+      { labelKey: 'nav.attendance',   icon: Fingerprint,   path: `/${slug}/kasir/attendance`, flag: 'attendance' },
       { labelKey: 'nav.help',         icon: LifeBuoy,      path: `/${slug}/kasir/bantuan` },
     ]
   },
@@ -70,6 +73,7 @@ const navConfig = {
     { labelKey: 'nav.dashboard',  icon: LayoutDashboard, path: '/barber/dashboard' },
     { labelKey: 'nav.queue',      icon: ListOrdered,     path: '/barber/queue' },
     { labelKey: 'nav.commission', icon: TrendingUp,      path: '/barber/commission' },
+    { labelKey: 'nav.attendance', icon: Fingerprint,     path: '/barber/attendance', flag: 'attendance' },
   ],
   customer: [
     { labelKey: 'nav.booking', icon: CalendarDays, path: '/customer/booking' },
@@ -96,6 +100,8 @@ export const Sidebar = ({ collapsed = false, onSearchClick }) => {
   const unresolvedErrors = user?.role === 'super_admin' ? (errorStats?.unresolved || 0) : 0
   const { i18n, t } = useTranslation()
   const toggleLang = () => i18n.changeLanguage(i18n.language === 'id' ? 'en' : 'id')
+  // Item nav ber-`flag` hanya tampil bila fitur paket tenant mengaktifkannya.
+  const { data: enabledFlags = [] } = useFeatureFlags(user?.tenantId)
 
   if (!user) return null
 
@@ -114,8 +120,8 @@ export const Sidebar = ({ collapsed = false, onSearchClick }) => {
   const getNavItems = () => {
     const config = navConfig[user.role]
     if (!config) return []
-    if (typeof config === 'function') return config(user)
-    return config
+    const items = typeof config === 'function' ? config(user) : config
+    return items.filter((i) => !i.flag || enabledFlags.includes(i.flag))
   }
 
   const navItems = getNavItems()

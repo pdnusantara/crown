@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import {
-  LogIn, CreditCard, ListOrdered, LogOut, HelpCircle,
+  LogIn, CreditCard, ListOrdered, LogOut, HelpCircle, Fingerprint,
 } from 'lucide-react'
 import HelpCenter from '../../components/HelpCenter.jsx'
 import { useAuthStore } from '../../store/authStore.js'
@@ -15,6 +15,7 @@ function buildCategories(slug) {
   const bookings     = `/${slug}/kasir/bookings`
   const transactions = `/${slug}/kasir/transactions`
   const shiftClosing = `/${slug}/kasir/shift-closing`
+  const attendance   = `/${slug}/kasir/attendance`
 
   return [
     {
@@ -153,6 +154,39 @@ function buildCategories(slug) {
           a: 'Selisih berarti uang laci tidak sama dengan catatan sistem. Hitung ulang uang dan periksa transaksi tunai. Bila selisih tetap ada, tutup shift apa adanya — selisih tercatat, lalu laporkan ke pemilik toko.',
           to: shiftClosing,
           toLabel: 'Buka Tutup Shift',
+        },
+      ],
+    },
+    {
+      id: 'absensi',
+      label: 'Absensi Digital',
+      icon: Fingerprint,
+      items: [
+        {
+          id: 'ab-checkin',
+          q: 'Bagaimana cara absen masuk (check-in)?',
+          a: 'Absensi memakai lokasi GPS. Anda hanya bisa check-in saat berada di lokasi cabang. Pastikan GPS HP aktif dan izinkan akses lokasi saat diminta browser.',
+          steps: [
+            'Buka menu Absensi.',
+            'Tekan "Check In Sekarang" — izinkan akses lokasi bila browser bertanya.',
+            'Bila berhasil, status berubah jadi "Sedang bekerja". Status terlambat dihitung otomatis dari jadwal kerja Anda.',
+          ],
+          to: attendance,
+          toLabel: 'Buka Absensi',
+        },
+        {
+          id: 'ab-checkout',
+          q: 'Bagaimana absen pulang (check-out)?',
+          a: 'Saat selesai bekerja, buka menu Absensi lalu tekan "Check Out Sekarang". Total jam kerja Anda akan tercatat. Bila lupa check-out, sistem dapat menutupnya otomatis di akhir hari.',
+          to: attendance,
+          toLabel: 'Buka Absensi',
+        },
+        {
+          id: 'ab-luar',
+          q: 'Absen saya ditolak karena di luar jangkauan?',
+          a: 'Aplikasi menampilkan jarak Anda dari cabang. Mendekatlah ke lokasi cabang lalu coba lagi. Bila Anda yakin sudah di cabang, pastikan GPS akurat (aktifkan GPS presisi tinggi) atau laporkan ke pemilik toko agar koordinat cabang diperiksa.',
+          to: attendance,
+          toLabel: 'Buka Absensi',
         },
       ],
     },

@@ -31,6 +31,7 @@ const barberScheduleRoutes = require('./barberSchedules');
 const barberRatingRoutes = require('./barberRatings');
 const expenseRoutes = require('./expenses');
 const auditLogRoutes = require('./auditLogs');
+const attendanceRoutes = require('./attendance');
 
 // Tolak operasi tulis dari tenant yang langganannya berakhir (allowlist:
 // auth/subscriptions/payment/public/landing). GET tetap lolos.
@@ -65,5 +66,6 @@ router.use('/barber-schedules', barberScheduleRoutes);
 router.use('/barber-ratings',   barberRatingRoutes);
 router.use('/expenses',         expenseRoutes);
 router.use('/audit-logs',       auditLogRoutes);
+router.use('/attendance',       attendanceRoutes);
 
 module.exports = router;

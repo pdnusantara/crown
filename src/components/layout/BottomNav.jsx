@@ -4,10 +4,11 @@ import { useTranslation } from 'react-i18next'
 import {
   LayoutDashboard, Building2, BarChart3, Settings,
   CreditCard, ListOrdered, CalendarDays, Receipt,
-  Star, TrendingUp, DollarSign, MessageSquare, Menu,
+  Star, TrendingUp, DollarSign, MessageSquare, Menu, Fingerprint,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useTicketStats } from '../../hooks/useTickets.js'
+import { useFeatureFlags } from '../../hooks/useFeatureFlags.js'
 import { getBranchSlug } from '../../utils/branchSlug.js'
 
 const navConfig = {
@@ -36,6 +37,7 @@ const navConfig = {
     { labelKey: 'nav.dashboard',  icon: LayoutDashboard, path: '/barber/dashboard' },
     { labelKey: 'nav.queue',      icon: ListOrdered,     path: '/barber/queue' },
     { labelKey: 'nav.commission', icon: TrendingUp,      path: '/barber/commission' },
+    { labelKey: 'nav.attendance', icon: Fingerprint,     path: '/barber/attendance', flag: 'attendance' },
   ],
   customer: [
     { labelKey: 'nav.booking', icon: CalendarDays, path: '/customer/booking' },
@@ -74,11 +76,14 @@ export const BottomNav = ({ onMoreClick }) => {
   // endpoint /tickets/stats; peran lain skip agar tidak memicu 403.
   const ticketStatsEnabled = user?.role === 'super_admin' || user?.role === 'tenant_admin'
   const { data: ticketStats } = useTicketStats({}, ticketStatsEnabled)
+  // Item ber-`flag` hanya tampil bila fitur paket tenant mengaktifkannya.
+  const { data: enabledFlags = [] } = useFeatureFlags(user?.tenantId)
 
   if (!user) return null
 
   const config = navConfig[user.role]
-  const navItems = typeof config === 'function' ? config(user) : config || []
+  const rawItems = typeof config === 'function' ? config(user) : config || []
+  const navItems = rawItems.filter((i) => !i.flag || enabledFlags.includes(i.flag))
   const showMore = ROLES_WITH_MORE.includes(user.role) && typeof onMoreClick === 'function'
 
   const openTickets = ticketStatsEnabled ? (ticketStats?.open || 0) : 0

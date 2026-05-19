@@ -14,6 +14,7 @@ const { resolveBranchAliasMiddleware } = require('./src/utils/branchResolver');
 const { initSocket } = require('./src/config/socket');
 const { initRenewalJob } = require('./src/jobs/subscriptionRenewal');
 const { initVisitReminderJob } = require('./src/jobs/visitReminder');
+const { initAttendanceFinalizeJob } = require('./src/jobs/attendanceFinalize');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -166,6 +167,7 @@ httpServer.listen(PORT, () => {
   console.log(`BarberOS backend running on port ${PORT} [${process.env.NODE_ENV || 'development'}] (HTTP + Socket.io)`);
   initRenewalJob();
   initVisitReminderJob();
+  initAttendanceFinalizeJob();
 });
 
 module.exports = app;

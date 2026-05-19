@@ -56,6 +56,7 @@ const TAWilayahReportPage    = lazy(() => import('./pages/tenant-admin/TAWilayah
 const TAExpensePage          = lazy(() => import('./pages/tenant-admin/TAExpensePage.jsx'))
 const TARatingsPage          = lazy(() => import('./pages/tenant-admin/TARatingsPage.jsx'))
 const TAHelpPage             = lazy(() => import('./pages/tenant-admin/TAHelpPage.jsx'))
+const TAAttendancePage       = lazy(() => import('./pages/tenant-admin/TAAttendancePage.jsx'))
 
 const POSPage          = lazy(() => import('./pages/kasir/POSPage.jsx'))
 const QueuePage        = lazy(() => import('./pages/kasir/QueuePage.jsx'))
@@ -67,6 +68,8 @@ const KasirHelpPage    = lazy(() => import('./pages/kasir/HelpPage.jsx'))
 const BarberDashboard  = lazy(() => import('./pages/barber/BarberDashboard.jsx'))
 const BarberQueue      = lazy(() => import('./pages/barber/BarberQueue.jsx'))
 const BarberCommission = lazy(() => import('./pages/barber/BarberCommission.jsx'))
+
+const StaffAttendancePage = lazy(() => import('./pages/StaffAttendancePage.jsx'))
 
 const CustomerBooking = lazy(() => import('./pages/customer/CustomerBooking.jsx'))
 const CustomerHistory = lazy(() => import('./pages/customer/CustomerHistory.jsx'))
@@ -303,6 +306,7 @@ export default function App() {
               <Route path="wilayah-report" element={<TAWilayahReportPage />} />
               <Route path="expenses"       element={<TAExpensePage />} />
               <Route path="ratings"        element={<TARatingsPage />} />
+              <Route path="attendance"     element={<TAAttendancePage />} />
               <Route path="bantuan"        element={<TAHelpPage />} />
             </Route>
             <Route index element={<Navigate to="dashboard" replace />} />
@@ -321,6 +325,7 @@ export default function App() {
                 <Route path="bookings"      element={<BookingsPage />} />
                 <Route path="transactions"  element={<TransactionsPage />} />
                 <Route path="shift-closing" element={<ShiftClosingPage />} />
+                <Route path="attendance"    element={<StaffAttendancePage />} />
                 <Route path="bantuan"       element={<KasirHelpPage />} />
                 <Route index element={<Navigate to="pos" replace />} />
               </Route>
@@ -338,6 +343,7 @@ export default function App() {
                 <Route path="dashboard"  element={<BarberDashboard />} />
                 <Route path="queue"      element={<BarberQueue />} />
                 <Route path="commission" element={<BarberCommission />} />
+                <Route path="attendance" element={<StaffAttendancePage />} />
                 <Route index element={<Navigate to="dashboard" replace />} />
               </Route>
             </Route>

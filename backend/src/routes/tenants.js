@@ -45,6 +45,7 @@ const tenantSelect = {
   wilayah: true,
   transactionMessages: true,
   visitReminder: true,
+  attendanceConfig: true,
   isSuspended: true,
   createdAt: true,
   updatedAt: true,
@@ -356,6 +357,14 @@ const visitReminderSchema = z.object({
   message:      z.string().max(600).nullish(),
 }).strict().nullish();
 
+// Konfigurasi absensi digital. lateToleranceMin = toleransi menit sebelum
+// dihitung terlambat; autoCheckOut = job menutup absen yang lupa di-checkout.
+const attendanceConfigSchema = z.object({
+  enabled:          z.boolean().optional(),
+  lateToleranceMin: z.number().int().min(0).max(120).optional(),
+  autoCheckOut:     z.boolean().optional(),
+}).strict().nullish();
+
 const selfUpdateSchema = z.object({
   name:        z.string().min(1).max(255).optional(),
   phone:       z.string().max(50).nullish(),
@@ -369,6 +378,7 @@ const selfUpdateSchema = z.object({
   wilayah:     wilayahSchema,
   transactionMessages: transactionMessagesSchema,
   visitReminder: visitReminderSchema,
+  attendanceConfig: attendanceConfigSchema,
 });
 // ── Upload gambar tenant (hero & galeri halaman booking) ───────────────────────
 // Gambar disimpan sebagai FILE di disk, bukan base64 di JSON tenant — supaya

@@ -15,6 +15,9 @@ const branchSelect = {
   phone: true,
   openTime: true,
   closeTime: true,
+  latitude: true,
+  longitude: true,
+  attendanceRadius: true,
   isActive: true,
   createdAt: true,
   tenant: { select: { id: true, name: true } },
@@ -39,6 +42,10 @@ const createBranchSchema = z.object({
   phone: z.string().optional(),
   openTime: z.string().optional(),
   closeTime: z.string().optional(),
+  // Koordinat geofence absensi — boleh null untuk mengosongkan konfigurasi.
+  latitude:  z.number().min(-90).max(90).nullable().optional(),
+  longitude: z.number().min(-180).max(180).nullable().optional(),
+  attendanceRadius: z.number().int().min(10).max(5000).optional(),
   isActive: z.boolean().optional(),
 });
 

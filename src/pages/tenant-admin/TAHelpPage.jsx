@@ -1,7 +1,7 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Rocket, Store, Users, BarChart3, Settings,
+  Rocket, Store, Users, BarChart3, Settings, Fingerprint,
 } from 'lucide-react'
 import HelpCenter from '../../components/HelpCenter.jsx'
 
@@ -203,6 +203,64 @@ const CATEGORIES = [
         ],
         to: '/admin/expenses',
         toLabel: 'Buka Pengeluaran',
+      },
+    ],
+  },
+  {
+    id: 'absensi',
+    label: 'Absensi Digital',
+    icon: Fingerprint,
+    items: [
+      {
+        id: 'a-mulai',
+        q: 'Bagaimana cara mengaktifkan absensi digital?',
+        a: 'Absensi Digital mencatat kehadiran kasir & barber lewat check-in/check-out GPS dari HP mereka. Sebelum dipakai, atur dulu koordinat tiap cabang dan jadwal kerja tiap staf.',
+        steps: [
+          'Buka menu Absensi → tab Pengaturan.',
+          'Pada "Koordinat Cabang", isi latitude & longitude tiap cabang — bisa tekan "Lokasi saya" saat Anda berada di cabang, atau salin dari Google Maps.',
+          'Tentukan radius (meter) — jarak maksimal staf boleh check-in dari titik cabang.',
+          'Atur "Toleransi terlambat" dan nyalakan "Auto check-out" bila perlu, lalu Simpan Konfigurasi.',
+        ],
+        to: '/admin/attendance',
+        toLabel: 'Buka Absensi',
+      },
+      {
+        id: 'a-jadwal',
+        q: 'Bagaimana mengatur jadwal kerja staf untuk absensi?',
+        a: 'Di tab Jadwal Kerja, tiap staf punya jadwal mingguan (Senin–Minggu). Jam masuk pada jadwal inilah yang dipakai untuk menghitung keterlambatan, dan hari libur tidak dihitung sebagai hari kerja.',
+        steps: [
+          'Buka menu Absensi → tab Jadwal Kerja.',
+          'Klik "Atur" pada staf yang dituju.',
+          'Untuk tiap hari: centang "Libur" bila hari libur, atau isi jam masuk & jam pulang.',
+          'Klik Simpan. Jadwal berlaku untuk perhitungan absensi berikutnya.',
+        ],
+        to: '/admin/attendance',
+        toLabel: 'Buka Absensi',
+      },
+      {
+        id: 'a-staf',
+        q: 'Bagaimana staf melakukan absen?',
+        a: 'Kasir & barber membuka menu Absensi di perangkat masing-masing, lalu menekan "Check In" saat tiba dan "Check Out" saat pulang. Aplikasi membaca lokasi GPS dan hanya menerima absen bila staf berada dalam radius cabang.',
+        steps: [
+          'Staf membuka menu Absensi dan mengizinkan akses lokasi di browser.',
+          'Tekan "Check In Sekarang" — status terlambat dihitung otomatis dari jadwal kerja.',
+          'Saat pulang, tekan "Check Out Sekarang" untuk mencatat total jam kerja.',
+          'Bila di luar radius, aplikasi menolak dan menampilkan jarak staf dari cabang.',
+        ],
+        to: '/admin/attendance',
+        toLabel: 'Buka Absensi',
+      },
+      {
+        id: 'a-rekap',
+        q: 'Di mana melihat rekap & laporan kehadiran?',
+        a: 'Tab Rekap menampilkan catatan absen harian (bisa difilter tanggal, cabang, status) dan tab Laporan merangkum kehadiran tiap staf untuk satu periode: hari hadir, terlambat, alpa, izin, dan total jam kerja. Keduanya bisa diekspor ke CSV.',
+        steps: [
+          'Tab Rekap: pantau siapa hadir/terlambat hari ini; klik ikon pensil untuk mengoreksi status.',
+          'Tombol "Catat Izin / Alpa" untuk mencatat ketidakhadiran staf secara manual.',
+          'Tab Laporan: pilih periode untuk melihat rekap per staf, lalu ekspor CSV bila perlu.',
+        ],
+        to: '/admin/attendance',
+        toLabel: 'Buka Absensi',
       },
     ],
   },

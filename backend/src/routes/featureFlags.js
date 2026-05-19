@@ -32,6 +32,7 @@ const AVAILABLE_FLAGS = [
   { id: 'schedule',         label: 'Jadwal Shift',             category: 'Operations' },
   { id: 'multi_branch',     label: 'Multi-Cabang',             category: 'Operations' },
   { id: 'expense_tracking', label: 'Manajemen Pengeluaran',    category: 'Operations' },
+  { id: 'attendance',       label: 'Absensi Digital',          category: 'Operations' },
   { id: 'pwa',              label: 'Install Aplikasi',         category: 'UX' },
   { id: 'whatsapp',         label: 'Struk WhatsApp',           category: 'UX' },
   { id: 'barber_rating',    label: 'Rating Barber',            category: 'UX' },

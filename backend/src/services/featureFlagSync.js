@@ -14,7 +14,7 @@ const { getIO, tenantRoom } = require('../config/socket');
 const KNOWN_FLAG_IDS = [
   'pos', 'booking', 'loyalty', 'voucher', 'queue',
   'reports', 'heatmap', 'clv', 'wilayah_report',
-  'schedule', 'multi_branch', 'expense_tracking',
+  'schedule', 'multi_branch', 'expense_tracking', 'attendance',
   'pwa', 'whatsapp', 'barber_rating',
   'api_access', 'white_label', 'backup',
 ];
@@ -26,7 +26,7 @@ const KNOWN = new Set(KNOWN_FLAG_IDS);
 const PACKAGE_FLAG_DEFAULTS = {
   Basic:      ['pos', 'queue', 'booking', 'loyalty', 'pwa'],
   Pro:        ['pos', 'queue', 'booking', 'loyalty', 'voucher', 'reports', 'schedule',
-               'multi_branch', 'expense_tracking', 'whatsapp', 'barber_rating',
+               'multi_branch', 'expense_tracking', 'attendance', 'whatsapp', 'barber_rating',
                'heatmap', 'clv', 'wilayah_report', 'pwa', 'backup'],
   Enterprise: [...KNOWN_FLAG_IDS],
 };
