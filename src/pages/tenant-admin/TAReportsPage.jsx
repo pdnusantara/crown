@@ -278,15 +278,20 @@ export default function TAReportsPage() {
           { title: t('tenantAdmin.reports.uniqueCustomers'),    value: showKpiSkeleton ? null : kpiValues.uniqueCustomers,                  icon: Users },
         ].map((kpi, i) => (
           <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-            <Card className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted">{kpi.title}</p>
+            <Card className="p-4 h-full">
+              {/* items-start: icon ter-anchor di atas (sejajar label), tak
+                  mengambang di tengah & tak menempel ke angka nominal.
+                  gap-3 + flex-shrink-0 menjaga jarak konsisten di mobile. */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 space-y-1.5">
+                  <p className="text-xs text-muted leading-snug">{kpi.title}</p>
                   {kpi.value === null
-                    ? <Skeleton className="h-7 w-24 mt-1" />
-                    : <p className="text-xl font-bold text-off-white mt-1">{kpi.value}</p>}
+                    ? <Skeleton className="h-7 w-20" />
+                    : <p className="text-lg sm:text-xl font-bold text-off-white leading-tight break-words">{kpi.value}</p>}
                 </div>
-                <kpi.icon className="w-8 h-8 text-gold/40" />
+                <div className="w-9 h-9 rounded-xl bg-gold/10 flex items-center justify-center flex-shrink-0">
+                  <kpi.icon className="w-[18px] h-[18px] text-gold" />
+                </div>
               </div>
             </Card>
           </motion.div>
