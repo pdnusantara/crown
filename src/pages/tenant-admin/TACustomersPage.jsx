@@ -1292,40 +1292,48 @@ export default function TACustomersPage() {
             })}
           </div>
 
-          {/* Quick filter chips: dormant (win-back) + birthday */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] uppercase tracking-wider text-off-white font-semibold mr-1">Cepat:</span>
-            {[
-              { days: 30, label: 'Dormant 30+ hari' },
-              { days: 60, label: 'Dormant 60+ hari' },
-              { days: 90, label: 'Dormant 90+ hari' },
-            ].map(opt => {
-              const active = dormantDays === opt.days
-              return (
-                <button
-                  key={opt.days}
-                  type="button"
-                  onClick={() => setDormantDays(active ? 0 : opt.days)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-medium inline-flex items-center gap-1 transition-colors ${
-                    active
-                      ? 'bg-amber-500/20 border border-amber-500/40 text-amber-300'
-                      : 'bg-dark-card/60 border border-dark-border text-muted hover:text-off-white'
-                  }`}
-                >
-                  <Clock className="w-3 h-3" /> {opt.label}
-                </button>
-              )
-            })}
+          {/* Filter cepat: dormant (win-back) + ulang tahun.
+              Dormant dijadikan segmented control — satu grup ringkas, bukan
+              3 chip panjang yang membungkus berantakan di mobile. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] uppercase tracking-wider text-off-white font-semibold">Cepat:</span>
+
+            <div className="inline-flex items-center gap-0.5 rounded-lg bg-dark-card/60 border border-dark-border p-0.5">
+              <span className="inline-flex items-center gap-1 pl-1.5 pr-1 text-[11px] text-muted">
+                <Clock className="w-3 h-3" /> Dormant
+              </span>
+              {[30, 60, 90].map(days => {
+                const active = dormantDays === days
+                return (
+                  <button
+                    key={days}
+                    type="button"
+                    onClick={() => setDormantDays(active ? 0 : days)}
+                    aria-pressed={active}
+                    title={`Pelanggan tanpa kunjungan ${days}+ hari`}
+                    className={`px-2 py-1 rounded-md text-[11px] font-medium tabular-nums transition-colors ${
+                      active
+                        ? 'bg-amber-500/25 text-amber-300'
+                        : 'text-muted hover:text-off-white hover:bg-dark-surface'
+                    }`}
+                  >
+                    {days}+
+                  </button>
+                )
+              })}
+            </div>
+
             {(() => {
               const active = birthMonthFilter === 'current'
               return (
                 <button
                   type="button"
                   onClick={() => setBirthMonthFilter(active ? '' : 'current')}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-medium inline-flex items-center gap-1 transition-colors ${
+                  aria-pressed={active}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-medium inline-flex items-center gap-1 border transition-colors ${
                     active
-                      ? 'bg-pink-500/20 border border-pink-500/40 text-pink-300'
-                      : 'bg-dark-card/60 border border-dark-border text-muted hover:text-off-white'
+                      ? 'bg-pink-500/20 border-pink-500/40 text-pink-300'
+                      : 'bg-dark-card/60 border-dark-border text-muted hover:text-off-white'
                   }`}
                 >
                   <Cake className="w-3 h-3" /> Ulang Tahun Bulan Ini
