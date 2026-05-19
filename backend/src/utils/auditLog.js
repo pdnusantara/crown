@@ -11,7 +11,7 @@
 // Severity: 'info' | 'success' | 'warning' | 'error'.
 
 const prisma = require('../config/database');
-const { getIO } = require('../config/socket');
+const { getIO, tenantRoom } = require('../config/socket');
 
 const SUPER_ADMIN_ROOM = 'support';
 
@@ -31,6 +31,9 @@ async function recordAudit(req, payload) {
 
   const actorId   = payload.actorId   ?? req?.user?.id   ?? null;
   const actorName = payload.actorName ?? req?.user?.name ?? 'system';
+  // Tenant aktor — supaya log realtime sampai ke halaman /admin/settings tenant
+  // (bukan hanya ke super-admin). Aksi super-admin tak punya tenant → null.
+  const tenantId  = payload.tenantId  ?? req?.user?.tenantId ?? null;
 
   try {
     const log = await prisma.auditLog.create({
@@ -38,7 +41,10 @@ async function recordAudit(req, payload) {
     });
     try {
       const io = getIO();
-      if (io) io.to(SUPER_ADMIN_ROOM).emit('auditLog:created', { id: log.id, action, severity });
+      if (io) {
+        io.to(SUPER_ADMIN_ROOM).emit('auditLog:created', { id: log.id, action, severity });
+        if (tenantId) io.to(tenantRoom(tenantId)).emit('auditLog:created', { id: log.id, action, severity });
+      }
     } catch { /* socket optional */ }
     return log;
   } catch (err) {

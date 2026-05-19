@@ -1,11 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore.js'
 import { useTenantStore } from '../../store/tenantStore.js'
-import { useAuditStore } from '../../store/auditStore.js'
 import { useTenant, useUpdateMyTenant } from '../../hooks/useTenants.js'
 import { useSubscription } from '../../hooks/useSubscription.js'
+import { useAuditLogs, useAuditActions } from '../../hooks/useAuditLogs.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
 import Button from '../../components/ui/Button.jsx'
@@ -13,32 +13,22 @@ import Input from '../../components/ui/Input.jsx'
 import Modal from '../../components/ui/Modal.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import * as api from '../../lib/api.js'
-import { Settings, Bell, Shield, Palette, Download, Upload, FileText, MessageCircle, Send, QrCode, Smartphone, RefreshCw, PowerOff, CheckCircle2, XCircle, Loader2, AlertTriangle, Phone, ArrowUpRight } from 'lucide-react'
+import { Settings, Bell, Shield, Palette, Download, Upload, FileText, MessageCircle, Send, QrCode, Smartphone, RefreshCw, PowerOff, CheckCircle2, XCircle, Loader2, AlertTriangle, Phone, ArrowUpRight, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { format, differenceInDays } from 'date-fns'
 import { formatDistanceToNow } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
-import { formatRupiah } from '../../utils/format.js'
+import { formatRupiah, formatDateTime } from '../../utils/format.js'
 import { FALLBACK_TIMEZONES, DEFAULT_TZ } from '../../utils/timezone.js'
 
-const ACTION_COLORS = {
-  CREATE: 'success',
-  UPDATE: 'info',
-  DELETE: 'error',
-}
-
-function getActionColor(action) {
-  for (const [prefix, color] of Object.entries(ACTION_COLORS)) {
-    if (action.startsWith(prefix)) return color
-  }
-  return 'muted'
-}
+// Warna badge log aktivitas mengikuti severity dari backend AuditLog.
+const SEVERITY_VARIANT = { info: 'info', success: 'success', warning: 'warning', error: 'danger' }
+const AUDIT_LIMIT = 15
 
 export default function TASettingsPage() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
   const navigate = useNavigate()
   const { getBranchesByTenant, getServicesByTenant, getStaffByTenant, getCustomersByTenant, getProductsByTenant } = useTenantStore()
-  const { getLogs } = useAuditStore()
   const toast = useToast()
   const fileInputRef = useRef(null)
   const updateMyTenant = useUpdateMyTenant()
@@ -190,7 +180,36 @@ export default function TASettingsPage() {
   }
   const [importData, setImportData] = useState(null)
   const [showImportConfirm, setShowImportConfirm] = useState(false)
-  const [auditFilter, setAuditFilter] = useState({ action: '', search: '' })
+  // ── Log aktivitas (real backend AuditLog) ──────────────────────────────────
+  const [auditFilter, setAuditFilter]           = useState({ action: '', search: '' })
+  const [auditSearchInput, setAuditSearchInput] = useState('')
+  const [auditPage, setAuditPage]               = useState(1)
+  const [auditExporting, setAuditExporting]     = useState(false)
+
+  // Debounce 350ms — tak query tiap ketik.
+  useEffect(() => {
+    const tmr = setTimeout(() => setAuditFilter(f => ({ ...f, search: auditSearchInput.trim() })), 350)
+    return () => clearTimeout(tmr)
+  }, [auditSearchInput])
+  useEffect(() => { setAuditPage(1) }, [auditFilter.search, auditFilter.action])
+
+  const auditEnabled = activeTab === 'audit'
+  const auditQueryParams = useMemo(() => ({
+    page: auditPage,
+    limit: AUDIT_LIMIT,
+    ...(auditFilter.search ? { search: auditFilter.search } : {}),
+    ...(auditFilter.action ? { action: auditFilter.action } : {}),
+  }), [auditPage, auditFilter])
+
+  const {
+    data: auditData, isLoading: auditLoading, isError: auditError,
+    isFetching: auditFetching, refetch: refetchAudit,
+  } = useAuditLogs(auditQueryParams, auditEnabled)
+  const { data: auditActions = [] } = useAuditActions(auditEnabled)
+
+  const auditLogs       = auditData?.data || []
+  const auditTotal      = auditData?.total || 0
+  const auditTotalPages = auditData?.totalPages || 0
   const [waState, setWaState] = useState({
     loading: false,
     status: 'idle',
@@ -274,22 +293,34 @@ export default function TASettingsPage() {
     e.target.value = ''
   }
 
-  const auditLogs = getLogs(user.tenantId, 100).filter(l => {
-    const matchAction = !auditFilter.action || l.action.startsWith(auditFilter.action)
-    const matchSearch = !auditFilter.search || l.userName.toLowerCase().includes(auditFilter.search.toLowerCase()) || l.details.toLowerCase().includes(auditFilter.search.toLowerCase())
-    return matchAction && matchSearch
-  })
-
-  const exportAuditCSV = () => {
-    const header = `${t('tenantAdmin.settings.colTime')},${t('tenantAdmin.settings.colUser')},${t('tenantAdmin.settings.colAction')},${t('tenantAdmin.settings.colDetail')}\n`
-    const rows = auditLogs.map(l => `"${l.timestamp}","${l.userName}","${l.action}","${l.details}"`).join('\n')
-    const blob = new Blob([header + rows], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `audit-log-${format(new Date(), 'yyyy-MM-dd')}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+  // Ekspor seluruh log periode (dengan filter aktif) ke CSV — bukan 1 halaman.
+  const exportAuditCSV = async () => {
+    if (auditExporting) return
+    setAuditExporting(true)
+    try {
+      const res = await api.get('/audit-logs', { params: { ...auditQueryParams, page: 1, limit: 1000 } })
+      const rows = res.data?.data?.data || []
+      if (rows.length === 0) { toast.error('Tidak ada log untuk diekspor'); return }
+      const header = ['Waktu', 'Pengguna', 'Aksi', 'Tingkat', 'Detail']
+      const escape = (v) => {
+        const s = String(v ?? '')
+        return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+      }
+      const body = rows.map(l => [formatDateTime(l.createdAt), l.actorName, l.action, l.severity, l.detail || ''])
+      const csv = [header, ...body].map(r => r.map(escape).join(',')).join('\r\n')
+      const blob = new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `log-aktivitas-${format(new Date(), 'yyyy-MM-dd')}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success(`Berhasil ekspor ${rows.length} log`)
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal mengekspor log')
+    } finally {
+      setAuditExporting(false)
+    }
   }
 
   const loadWhatsAppStatus = async () => {
@@ -661,58 +692,163 @@ export default function TASettingsPage() {
 
       {activeTab === 'audit' && (
         <div className="space-y-4">
-          <div className="flex gap-3 flex-wrap">
-            <input
-              value={auditFilter.search}
-              onChange={e => setAuditFilter(f => ({ ...f, search: e.target.value }))}
-              placeholder={t('tenantAdmin.settings.searchUserDetailPlaceholder')}
-              className="flex-1 min-w-[200px] bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60"
-            />
-            <select value={auditFilter.action} onChange={e => setAuditFilter(f => ({ ...f, action: e.target.value }))} className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2 text-sm outline-none focus:border-gold/60">
+          {/* Filter bar */}
+          <div className="flex gap-2 flex-wrap">
+            <div className="relative flex-1 min-w-[180px]">
+              <input
+                type="text"
+                inputMode="search"
+                value={auditSearchInput}
+                onChange={e => setAuditSearchInput(e.target.value)}
+                placeholder={t('tenantAdmin.settings.searchUserDetailPlaceholder')}
+                className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-4 pr-9 py-2.5 text-sm outline-none focus:border-gold/60"
+              />
+              {auditSearchInput && (
+                <button
+                  onClick={() => setAuditSearchInput('')}
+                  aria-label="Hapus pencarian"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-off-white"
+                >
+                  <X size={15} />
+                </button>
+              )}
+            </div>
+            <select
+              value={auditFilter.action}
+              onChange={e => setAuditFilter(f => ({ ...f, action: e.target.value }))}
+              aria-label="Filter aksi"
+              className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-gold/60 max-w-[170px]"
+            >
               <option value="">{t('tenantAdmin.settings.allActions')}</option>
-              <option value="CREATE">CREATE</option>
-              <option value="UPDATE">UPDATE</option>
-              <option value="DELETE">DELETE</option>
+              {auditActions.map(a => <option key={a} value={a}>{a}</option>)}
             </select>
-            <Button variant="secondary" icon={Download} onClick={exportAuditCSV}>{t('tenantAdmin.settings.exportCsv')}</Button>
+            <button
+              onClick={() => refetchAudit()}
+              disabled={auditFetching}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-sm text-muted hover:border-gold/30 hover:text-off-white transition-all disabled:opacity-40"
+            >
+              <RefreshCw size={14} className={auditFetching ? 'animate-spin' : ''} />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
+            <Button
+              variant="secondary"
+              icon={Download}
+              loading={auditExporting}
+              onClick={exportAuditCSV}
+              disabled={auditTotal === 0}
+            >
+              <span className="hidden sm:inline">{t('tenantAdmin.settings.exportCsv')}</span>
+            </Button>
           </div>
 
           <Card>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-dark-border">
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{t('tenantAdmin.settings.colTime')}</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{t('tenantAdmin.settings.colUser')}</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{t('tenantAdmin.settings.colAction')}</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{t('tenantAdmin.settings.colDetail')}</th>
-                  </tr>
-                </thead>
-                <tbody>
+            {auditLoading ? (
+              <div className="divide-y divide-dark-border">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 px-4 py-3.5">
+                    <div className="h-3 w-28 bg-dark-surface rounded animate-pulse" />
+                    <div className="h-3 w-24 bg-dark-surface rounded animate-pulse" />
+                    <div className="h-5 w-20 bg-dark-surface rounded-full animate-pulse ml-auto" />
+                  </div>
+                ))}
+              </div>
+            ) : auditError ? (
+              <div className="flex flex-col items-center justify-center py-14 gap-3 text-center px-4">
+                <AlertTriangle className="w-9 h-9 text-red-400" />
+                <p className="text-sm text-muted">Gagal memuat log aktivitas</p>
+                <Button variant="outline" size="sm" icon={RefreshCw} onClick={() => refetchAudit()}>
+                  Coba lagi
+                </Button>
+              </div>
+            ) : auditLogs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-14 gap-2 text-center px-4">
+                <FileText className="w-9 h-9 text-muted/40" />
+                <p className="text-sm text-muted">
+                  {auditFilter.search || auditFilter.action
+                    ? 'Tidak ada log yang cocok dengan filter'
+                    : t('tenantAdmin.settings.noAuditLogs')}
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Desktop table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-dark-border">
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{t('tenantAdmin.settings.colTime')}</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{t('tenantAdmin.settings.colUser')}</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{t('tenantAdmin.settings.colAction')}</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{t('tenantAdmin.settings.colDetail')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {auditLogs.map(log => (
+                        <tr key={log.id} className="border-b border-dark-border/50 hover:bg-dark-surface/50 transition-colors">
+                          <td className="px-4 py-3 text-xs text-muted whitespace-nowrap align-top">
+                            <div>{formatDateTime(log.createdAt)}</div>
+                            <div className="text-muted/60">{formatDistanceToNow(new Date(log.createdAt), { addSuffix: true, locale: idLocale })}</div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-off-white align-top">{log.actorName}</td>
+                          <td className="px-4 py-3 align-top">
+                            <Badge variant={SEVERITY_VARIANT[log.severity] || 'muted'} className="text-xs">{log.action}</Badge>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-muted align-top max-w-md break-words">{log.detail || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile cards */}
+                <div className="md:hidden divide-y divide-dark-border">
                   {auditLogs.map(log => (
-                    <tr key={log.id} className="border-b border-dark-border/50 hover:bg-dark-surface/50 transition-colors">
-                      <td className="px-4 py-3 text-xs text-muted whitespace-nowrap">
-                        <div>{format(new Date(log.timestamp), 'dd/MM HH:mm')}</div>
-                        <div className="text-muted/60">{formatDistanceToNow(new Date(log.timestamp), { addSuffix: true, locale: idLocale })}</div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-off-white">{log.userName}</td>
-                      <td className="px-4 py-3">
-                        <Badge variant={getActionColor(log.action)} className="text-xs">{log.action}</Badge>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-muted max-w-xs truncate">{log.details}</td>
-                    </tr>
+                    <div key={log.id} className="p-4 space-y-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <Badge variant={SEVERITY_VARIANT[log.severity] || 'muted'} className="text-xs">{log.action}</Badge>
+                        <span className="text-[11px] text-muted whitespace-nowrap flex-shrink-0">
+                          {formatDistanceToNow(new Date(log.createdAt), { addSuffix: true, locale: idLocale })}
+                        </span>
+                      </div>
+                      {log.detail && <p className="text-sm text-off-white break-words">{log.detail}</p>}
+                      <div className="flex items-center gap-1.5 text-[11px] text-muted flex-wrap">
+                        <span className="text-off-white/70">{log.actorName}</span>
+                        <span>·</span>
+                        <span>{formatDateTime(log.createdAt)}</span>
+                      </div>
+                    </div>
                   ))}
-                  {auditLogs.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="px-4 py-12 text-center text-muted">
-                        <FileText className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                        <p>{t('tenantAdmin.settings.noAuditLogs')}</p>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                </div>
+              </>
+            )}
+
+            {/* Pagination */}
+            {!auditLoading && !auditError && auditTotalPages > 1 && (
+              <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-dark-border">
+                <span className="text-xs text-muted">
+                  Hal <span className="text-off-white">{auditPage}</span> / {auditTotalPages}
+                  <span className="hidden sm:inline"> · {auditTotal} log</span>
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setAuditPage(p => Math.max(1, p - 1))}
+                    disabled={auditPage <= 1}
+                    aria-label="Halaman sebelumnya"
+                    className="p-1.5 rounded-lg border border-dark-border text-muted hover:text-off-white hover:border-gold/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft size={15} />
+                  </button>
+                  <button
+                    onClick={() => setAuditPage(p => Math.min(auditTotalPages, p + 1))}
+                    disabled={auditPage >= auditTotalPages}
+                    aria-label="Halaman berikutnya"
+                    className="p-1.5 rounded-lg border border-dark-border text-muted hover:text-off-white hover:border-gold/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight size={15} />
+                  </button>
+                </div>
+              </div>
+            )}
           </Card>
         </div>
       )}
