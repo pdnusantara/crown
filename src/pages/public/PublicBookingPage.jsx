@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   MapPin, Clock, Check, ChevronRight, Scissors, ChevronLeft,
   User, Phone, MessageSquare, Star, Copy, Share2,
-  Sparkles, AlertCircle,
+  Sparkles, AlertCircle, Camera, Globe, Music2, Image as ImageIcon,
 } from 'lucide-react'
 import publicApi from '../../lib/publicApi.js'
 import WilayahPicker from '../../components/WilayahPicker.jsx'
@@ -823,6 +823,16 @@ function Step1Pick({ tenantName, tenantLogo, bp, branches, services, barbers, te
           {testimonials.length > 0 && (
             <TestimonialsSection items={testimonials} accent={accent} />
           )}
+
+          {/* Galeri foto — dari pengaturan Halaman Booking */}
+          {bp.showGallery !== false && Array.isArray(bp.gallery) && bp.gallery.length > 0 && (
+            <GallerySection images={bp.gallery} accent={accent} />
+          )}
+
+          {/* Sosial media & kontak — dari pengaturan Halaman Booking */}
+          {bp.showSocial !== false && (
+            <SocialContactSection bp={bp} accent={accent} />
+          )}
         </div>
 
         {/* Sticky summary — desktop only */}
@@ -879,6 +889,80 @@ function TestimonialsSection({ items, accent }) {
               </p>
             )}
           </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Galeri foto toko — grid responsif dari `bookingPage.gallery`.
+function GallerySection({ images, accent }) {
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        <ImageIcon className="w-5 h-5" style={{ color: accent }} />
+        <h2 className="font-display text-xl font-bold" style={{ color: 'var(--bk-text)' }}>Galeri</h2>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+        {images.map((src, i) => (
+          <img
+            key={i}
+            src={src}
+            alt={`Galeri ${i + 1}`}
+            loading="lazy"
+            className="w-full aspect-square object-cover rounded-xl"
+            style={{ border: '1px solid var(--bk-border)' }}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Normalisasi nilai sosmed/kontak (handle ATAU URL) → URL siap-klik.
+function buildSocialLinks(bp) {
+  const clean = (v) => (v || '').trim()
+  const isUrl = (v) => /^https?:\/\//i.test(v)
+  const links = []
+  const ig = clean(bp.instagram)
+  const tt = clean(bp.tiktok)
+  const fb = clean(bp.facebook)
+  const wa = clean(bp.whatsapp)
+  const map = clean(bp.googleMapsUrl)
+  if (ig)  links.push({ key: 'ig', label: 'Instagram', icon: Camera,        href: isUrl(ig) ? ig : `https://instagram.com/${ig.replace(/^@/, '')}` })
+  if (tt)  links.push({ key: 'tt', label: 'TikTok',    icon: Music2,        href: isUrl(tt) ? tt : `https://tiktok.com/@${tt.replace(/^@/, '')}` })
+  if (fb)  links.push({ key: 'fb', label: 'Facebook',  icon: Globe,         href: isUrl(fb) ? fb : `https://facebook.com/${fb}` })
+  if (wa) {
+    const digits = wa.replace(/\D/g, '').replace(/^0/, '62')
+    if (digits) links.push({ key: 'wa', label: 'WhatsApp', icon: MessageSquare, href: `https://wa.me/${digits}` })
+  }
+  if (map) links.push({ key: 'map', label: 'Lihat Lokasi', icon: MapPin, href: map })
+  return links
+}
+
+// Sosial media & kontak toko — dari `bookingPage`.
+function SocialContactSection({ bp, accent }) {
+  const links = buildSocialLinks(bp)
+  if (links.length === 0) return null
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-3">
+        <Share2 className="w-5 h-5" style={{ color: accent }} />
+        <h2 className="font-display text-xl font-bold" style={{ color: 'var(--bk-text)' }}>Sosial Media &amp; Kontak</h2>
+      </div>
+      <div className="flex flex-wrap gap-2.5">
+        {links.map(l => (
+          <a
+            key={l.key}
+            href={l.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-transform active:scale-95"
+            style={{ background: 'var(--bk-surface)', border: '1px solid var(--bk-border)', color: 'var(--bk-text)' }}
+          >
+            <l.icon className="w-4 h-4" style={{ color: accent }} />
+            {l.label}
+          </a>
         ))}
       </div>
     </div>
