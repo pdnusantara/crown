@@ -381,14 +381,6 @@ function PaymentModalBody({ posStore, appliedVoucher, methodLabel, processing, o
   )
 }
 
-const CATEGORIES = [
-  { id: 'All', labelKey: 'common.all' },
-  { id: 'Potong Rambut', labelKey: 'pos.categoryHaircut' },
-  { id: 'Perawatan', labelKey: 'pos.categoryTreatment' },
-  { id: 'Warna', labelKey: 'pos.categoryColor' },
-  { id: 'Combo', labelKey: 'pos.categoryCombo' },
-]
-
 function POSPageInner() {
   const { t } = useTranslation()
 
@@ -571,6 +563,23 @@ function POSPageInner() {
     setShowDraftBanner(false)
     setDraft(null)
   }
+
+  // Kategori chip dibuat dinamis dari layanan tenant — kategori apa pun yang
+  // ditambahkan admin di /admin/services otomatis muncul sebagai pill di sini
+  // (services di-refetch realtime lewat event service:created/updated/deleted).
+  const categories = useMemo(() => {
+    const set = new Set()
+    for (const svc of services) {
+      const c = (svc.category || '').trim()
+      if (c) set.add(c)
+    }
+    return ['All', ...[...set].sort((a, b) => a.localeCompare(b, 'id'))]
+  }, [services])
+
+  // Bila kategori terpilih hilang (semua layanannya dihapus admin), kembali ke "Semua".
+  useEffect(() => {
+    if (category !== 'All' && !categories.includes(category)) setCategory('All')
+  }, [categories, category])
 
   // Memoize service filter to avoid re-running on every render (e.g. cart updates)
   const filtered = useMemo(() => {
@@ -1222,15 +1231,15 @@ function POSPageInner() {
         {/* flex-wrap: semua chip kategori terlihat penuh di mobile tanpa
             terpotong/geser-horizontal; di desktop tetap muat satu baris. */}
         <div className="flex flex-wrap gap-2 flex-shrink-0">
-          {CATEGORIES.map(cat => (
+          {categories.map(cat => (
             <button
-              key={cat.id}
-              onClick={() => setCategory(cat.id)}
+              key={cat}
+              onClick={() => setCategory(cat)}
               className={`px-3.5 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all flex-shrink-0 active:scale-95 ${
-                category === cat.id ? 'bg-gold text-dark' : 'bg-dark-card border border-dark-border text-muted hover:text-off-white'
+                category === cat ? 'bg-gold text-dark' : 'bg-dark-card border border-dark-border text-muted hover:text-off-white'
               }`}
             >
-              {t(cat.labelKey)}
+              {cat === 'All' ? t('common.all') : cat}
             </button>
           ))}
         </div>
