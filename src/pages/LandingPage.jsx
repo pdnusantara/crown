@@ -173,11 +173,15 @@ export default function LandingPage() {
   const { data, isLoading } = useLanding()
   const { user, isAuthenticated } = useAuthStore()
 
+  // Mode preview builder super-admin — dideteksi sekali dari query string.
+  const isPreview = typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('preview') === '1'
+
   // Mode preview (iframe builder super-admin) — terima layout langsung dari
   // builder lewat postMessage supaya perubahan yang belum disimpan ikut tampil.
   const [previewLayout, setPreviewLayout] = useState(null)
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('preview') !== '1') return
+    if (!isPreview) return
     const onMsg = (e) => {
       if (e.origin !== window.location.origin) return
       if (e.data?.type === 'sembapos-preview-layout' && Array.isArray(e.data.layout)) {
@@ -216,11 +220,27 @@ export default function LandingPage() {
   // mode preview builder supaya statistik iklan tidak tercemar kunjungan admin.
   const metaPixelId = hero.metaPixelId
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('preview') === '1') return
+    if (isPreview) return
     if (metaPixelId) initMetaPixel(metaPixelId)
-  }, [metaPixelId])
+  }, [metaPixelId, isPreview])
+
+  // Sticky CTA mobile — muncul setelah pengunjung scroll melewati hero, dan
+  // sembunyi lagi saat mendekati footer supaya tak menutupi CTA penutup.
+  const [showStickyCta, setShowStickyCta] = useState(false)
+  useEffect(() => {
+    if (isPreview) return
+    const onScroll = () => {
+      const y = window.scrollY
+      const nearBottom = window.innerHeight + y > document.documentElement.scrollHeight - 720
+      setShowStickyCta(y > 620 && !nearBottom)
+    }
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [isPreview])
 
   const features = (hero.features?.length ? hero.features : FALLBACK_FEATURES)
+  const trustItems = (hero.trustItems?.length ? hero.trustItems : FALLBACK_TRUST)
   const steps = (hero.steps?.length ? hero.steps : FALLBACK_STEPS)
   const sections = { ...FALLBACK_SECTIONS, ...(hero.sections || {}) }
   const closing = { ...FALLBACK_CLOSING, ...(hero.closingCta || {}) }
@@ -247,7 +267,13 @@ export default function LandingPage() {
     <div className="min-h-screen bg-[#FBFAF6] text-[#57534E] font-body overflow-x-hidden antialiased">
       <Nav isAuthed={isAuthenticated} userRole={user?.role} />
 
-      <HeroSection hero={hero} isAuthenticated={isAuthenticated} homePath={homePath} />
+      <HeroSection
+        hero={hero}
+        stats={stats}
+        trustItems={trustItems}
+        isAuthenticated={isAuthenticated}
+        homePath={homePath}
+      />
 
       {layout.filter(b => b && b.visible !== false).map(b => {
         const Comp = BLOCK_REGISTRY[b.type]
@@ -270,12 +296,21 @@ export default function LandingPage() {
           transition={{ delay: 1 }}
           href={waHref} target="_blank" rel="noopener noreferrer"
           aria-label="Konsultasi via WhatsApp"
-          className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-[#25D366] hover:bg-[#1ebe5a] flex items-center justify-center shadow-[0_10px_30px_-6px_rgba(37,211,102,0.6)] transition-colors"
+          className={`fixed ${showStickyCta ? 'bottom-28 md:bottom-6' : 'bottom-6'} right-6 z-40 w-14 h-14 rounded-full bg-[#25D366] hover:bg-[#1ebe5a] flex items-center justify-center shadow-[0_10px_30px_-6px_rgba(37,211,102,0.6)] transition-all`}
         >
           <Lucide.MessageCircle size={22} className="text-white" />
           <span className="absolute inset-0 rounded-full bg-[#25D366] animate-ping opacity-25" />
         </motion.a>
       )}
+
+      <StickyCtaBar
+        show={showStickyCta}
+        authed={isAuthenticated}
+        to={isAuthenticated ? homePath : '/register'}
+        label={isAuthenticated ? 'Buka Dashboard' : (hero.heroCtaLabel || 'Coba Gratis 14 Hari')}
+        note={isAuthenticated ? 'Lanjutkan ke aplikasi kamu' : trustItems.join(' · ')}
+        onCta={() => { if (!isAuthenticated) trackPixel('Lead') }}
+      />
 
       {/* Utility class lokal — landing selalu terang, lepas dari tema app */}
       <style>{`
@@ -293,11 +328,15 @@ export default function LandingPage() {
 
 // ── Blok core ────────────────────────────────────────────────────────────────
 
-function HeroSection({ hero, isAuthenticated, homePath }) {
+function HeroSection({ hero, stats, trustItems, isAuthenticated, homePath }) {
   const { scrollYProgress } = useScroll()
   const heroY = useTransform(scrollYProgress, [0, 0.3], [0, -60])
   const heroBadge = hero.heroBadge || 'Baru'
-  const trustItems = (hero.trustItems?.length ? hero.trustItems : FALLBACK_TRUST)
+
+  // Bukti sosial — pakai jumlah tenant nyata bila statistik diaktifkan & sudah
+  // cukup banyak; di bawah ambang tampilkan klaim umum supaya tetap meyakinkan.
+  const tenantCount = stats?.tenantCount || 0
+  const showRealCount = hero.showStats !== false && tenantCount >= 10
 
   return (
     <section className="relative pt-32 pb-16 lg:pt-40 lg:pb-24">
@@ -381,6 +420,38 @@ function HeroSection({ hero, isAuthenticated, homePath }) {
             </React.Fragment>
           ))}
         </motion.p>
+
+        {/* Bukti sosial — kluster avatar + rating bintang + jumlah pengguna */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="mt-7 flex items-center justify-center gap-3"
+        >
+          <div className="flex -space-x-2.5">
+            {['A', 'R', 'B', 'S'].map((c) => (
+              <div
+                key={c}
+                className="w-8 h-8 rounded-full border-2 border-[#FBFAF6] flex items-center justify-center text-[11px] font-bold text-[#1C1A17] bg-gradient-to-br from-[#E8C875] to-[#A8893A]"
+              >
+                {c}
+              </div>
+            ))}
+            <div className="w-8 h-8 rounded-full border-2 border-[#FBFAF6] flex items-center justify-center text-[11px] font-bold text-[#A8893A] bg-[#FBF4E1]">
+              +
+            </div>
+          </div>
+          <div className="text-left">
+            <div className="flex items-center gap-0.5 text-[#C9A84C]">
+              {[0, 1, 2, 3, 4].map(i => <Lucide.Star key={i} size={12} fill="currentColor" />)}
+            </div>
+            <p className="text-[12.5px] text-[#6B6459] leading-tight mt-0.5">
+              {showRealCount
+                ? <>Dipercaya <strong className="font-semibold text-[#1C1A17]">{tenantCount.toLocaleString('id-ID')}+</strong> barbershop di Indonesia</>
+                : 'Dibuat khusus untuk barbershop Indonesia'}
+            </p>
+          </div>
+        </motion.div>
       </motion.div>
 
       {/* Showcase dashboard */}
@@ -981,6 +1052,41 @@ function FAQItem({ item, delay }) {
         )}
       </AnimatePresence>
     </motion.div>
+  )
+}
+
+// Sticky CTA mobile — bilah konversi yang muncul saat scroll. Khusus layar
+// kecil (desktop sudah punya tombol daftar permanen di Nav). Label & teks
+// reassurance diturunkan dari konten dinamis super-admin.
+function StickyCtaBar({ show, authed, label, to, note, onCta }) {
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          initial={{ y: 110, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 110, opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 280, damping: 30 }}
+          className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[#FBFAF6]/95 backdrop-blur-md border-t border-[#EAE3D3] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-10px_30px_-12px_rgba(28,26,23,0.3)]"
+        >
+          <div className="max-w-md mx-auto">
+            <Link
+              to={to}
+              onClick={onCta}
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#C9A84C] text-[#1C1A17] font-bold text-sm shadow-[0_10px_24px_-10px_rgba(201,168,76,0.9)]"
+            >
+              {label}
+              <Lucide.ArrowRight size={16} />
+            </Link>
+            {note && (
+              <p className="text-center text-[11px] text-[#9A9189] mt-1.5 truncate">
+                {authed ? note : <><Lucide.ShieldCheck size={11} className="inline -mt-0.5 mr-1 text-[#C9A84C]" />{note}</>}
+              </p>
+            )}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 }
 
