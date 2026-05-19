@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Trash2, Pencil, TrendingDown, TrendingUp, Wallet, ChevronLeft, ChevronRight,
   Search, AlertCircle, Download, RefreshCw, X, Receipt, CheckSquare, Square, Loader2,
-  CopyPlus, ArrowUp, ArrowDown, Minus, Scissors,
+  CopyPlus, ArrowUp, ArrowDown, Minus, Scissors, Check,
 } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, parseISO } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
@@ -42,6 +42,7 @@ const EMPTY_FORM = () => ({
   amount: '',
   branchId: '',
   note: '',
+  barberId: '', // pass-through (tak tampil di UI) — penanda komisi barber
 })
 
 // Tanggal pengeluaran disimpan UTC-midnight — ambil bagian kalender saja
@@ -172,6 +173,7 @@ function ExpenseFormModal({ open, onClose, initial, branches, onSaved }) {
         amount: String(initial.amount),
         branchId: initial.branchId || '',
         note: initial.note || '',
+        barberId: initial.barberId || '',
       })
     } else if (initial) {
       // Prefill pengeluaran baru (mis. dari "Gaji Barber") — sudah berbentuk form.
@@ -199,6 +201,7 @@ function ExpenseFormModal({ open, onClose, initial, branches, onSaved }) {
       date: form.date,
       branchId: form.branchId || null,
       note: form.note.trim() || null,
+      barberId: form.barberId || null,
     }
     try {
       if (initial?.id) {
@@ -567,13 +570,29 @@ function BarberPayrollModal({ open, onClose, monthLabel, startDate, endDate, onP
   )
   const totalCommission = barbers.reduce((s, b) => s + (b.commission || 0), 0)
 
+  // Penanda "sudah dicatat": cek pengeluaran kategori gaji bulan ini yang
+  // ber-barberId → barber tsb komisinya sudah masuk pengeluaran.
+  const { data: gajiExpenses } = useQuery({
+    queryKey: ['expenses', 'payroll-paid', startDate, endDate],
+    queryFn: () => api
+      .get('/expenses', { params: { category: 'gaji', startDate, endDate, limit: 1000 } })
+      .then(r => r.data?.data?.data || []),
+    enabled: open,
+    staleTime: 10_000,
+  })
+  const paidBarberIds = useMemo(
+    () => new Set((gajiExpenses || []).map(e => e.barberId).filter(Boolean)),
+    [gajiExpenses],
+  )
+  const paidCount = barbers.filter(b => paidBarberIds.has(b.barberId)).length
+
   return (
     <Modal isOpen={open} onClose={onClose} title="Gaji / Komisi Barber" size="md">
       <div className="space-y-3">
         <p className="text-xs text-muted">
           Komisi tiap barber dari transaksi <span className="text-off-white font-medium capitalize">{monthLabel}</span>.
-          Klik <span className="text-gold">Catat</span> untuk mengisi form pengeluaran otomatis —
-          nominal tetap bisa diubah sebelum disimpan.
+          Klik <span className="text-gold">Catat</span> untuk mengisi form pengeluaran otomatis.
+          Barber bertanda <span className="text-green-400">✓ Dicatat</span> komisinya sudah masuk pengeluaran bulan ini.
         </p>
 
         {isLoading ? (
@@ -595,28 +614,40 @@ function BarberPayrollModal({ open, onClose, monthLabel, startDate, endDate, onP
         ) : (
           <>
             <div className="max-h-[44vh] overflow-y-auto -mx-1 divide-y divide-dark-border">
-              {barbers.map(b => (
-                <div key={b.barberId} className="flex items-center gap-3 px-1 py-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-blue-400/10 flex items-center justify-center flex-shrink-0">
-                    <Scissors size={15} className="text-blue-400" />
+              {barbers.map(b => {
+                const paid = paidBarberIds.has(b.barberId)
+                return (
+                  <div key={b.barberId} className={`flex items-center gap-3 px-1 py-2.5 ${paid ? 'opacity-55' : ''}`}>
+                    <div className="w-8 h-8 rounded-lg bg-blue-400/10 flex items-center justify-center flex-shrink-0">
+                      <Scissors size={15} className="text-blue-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-off-white truncate">{b.barberName}</p>
+                      <p className="text-[10px] text-muted">
+                        Omzet {formatRupiahShort(b.revenue)} · {Math.round((b.commissionRate || 0) * 100)}% · {b.servicesCount} layanan
+                      </p>
+                    </div>
+                    <span className="text-sm font-semibold text-off-white flex-shrink-0 tabular-nums">
+                      {formatRupiahShort(b.commission)}
+                    </span>
+                    {paid ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-green-400 bg-green-500/10 border border-green-500/20 px-2 py-1 rounded-lg flex-shrink-0">
+                        <Check size={12} /> Dicatat
+                      </span>
+                    ) : (
+                      <Button size="xs" variant="secondary" onClick={() => onPick(b)} className="flex-shrink-0">
+                        Catat
+                      </Button>
+                    )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-off-white truncate">{b.barberName}</p>
-                    <p className="text-[10px] text-muted">
-                      Omzet {formatRupiahShort(b.revenue)} · {Math.round((b.commissionRate || 0) * 100)}% · {b.servicesCount} layanan
-                    </p>
-                  </div>
-                  <span className="text-sm font-semibold text-off-white flex-shrink-0 tabular-nums">
-                    {formatRupiahShort(b.commission)}
-                  </span>
-                  <Button size="xs" variant="secondary" onClick={() => onPick(b)} className="flex-shrink-0">
-                    Catat
-                  </Button>
-                </div>
-              ))}
+                )
+              })}
             </div>
             <div className="flex items-center justify-between gap-2 pt-2 text-xs border-t border-dark-border">
-              <span className="text-muted">{barbers.length} barber</span>
+              <span className="text-muted">
+                {barbers.length} barber
+                {paidCount > 0 && <span className="text-green-400"> · {paidCount} sudah dicatat</span>}
+              </span>
               <span className="text-off-white font-semibold tabular-nums">
                 Total komisi {formatRupiah(totalCommission)}
               </span>
@@ -737,8 +768,11 @@ function ExpensePageInner() {
       category: 'gaji',
       description: `Komisi ${barber.barberName} ${monthLabel}`,
       amount: String(barber.commission || 0),
-      date: format(new Date(), 'yyyy-MM-dd'),
+      // Tanggal di akhir bulan komisi → masuk laporan bulan tsb & terdeteksi
+      // sebagai "sudah dicatat" oleh modal Gaji Barber.
+      date: endDate,
       branchId: '',
+      barberId: barber.barberId,
       note: `Komisi ${Math.round((barber.commissionRate || 0) * 100)}% dari omzet ${formatRupiah(barber.revenue || 0)}`,
     })
     setFormOpen(true)

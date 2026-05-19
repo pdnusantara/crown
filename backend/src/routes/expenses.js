@@ -13,6 +13,7 @@ const expenseSelect = {
   id: true,
   tenantId: true,
   branchId: true,
+  barberId: true,
   category: true,
   description: true,
   amount: true,
@@ -98,6 +99,16 @@ async function assertBranchOwnership(branchId, tenantId) {
   return !!branch;
 }
 
+// Pastikan barber (bila diisi) adalah user tenant ini.
+async function assertBarberOwnership(barberId, tenantId) {
+  if (!barberId) return true;
+  const u = await prisma.user.findFirst({
+    where: { id: barberId, tenantId },
+    select: { id: true },
+  });
+  return !!u;
+}
+
 // Tanggal kalender valid — regex saja tak cukup: "2026-04-31" lolos regex tapi
 // `new Date` menggulirkannya ke 1 Mei. Round-trip memastikan tanggal benar ada.
 const calendarDate = z.string()
@@ -111,6 +122,7 @@ const calendarDate = z.string()
 const createExpenseSchema = z.object({
   tenantId:    z.string().optional(),
   branchId:    z.string().min(1).nullable().optional(),
+  barberId:    z.string().min(1).nullable().optional(),
   category:    z.enum(VALID_CATEGORIES),
   description: z.string().trim().min(1, 'Deskripsi wajib diisi').max(200),
   amount:      z.number().int('Nominal harus bilangan bulat').min(1, 'Nominal harus lebih dari 0').max(100_000_000_000),
@@ -230,14 +242,19 @@ router.post('/', async (req, res, next) => {
     if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId wajib' });
 
     const branchId = body.branchId || null;
+    const barberId = body.barberId || null;
     if (!(await assertBranchOwnership(branchId, tenantId))) {
       return res.status(400).json({ success: false, error: 'Cabang tidak valid' });
+    }
+    if (!(await assertBarberOwnership(barberId, tenantId))) {
+      return res.status(400).json({ success: false, error: 'Barber tidak valid' });
     }
 
     const expense = await prisma.expense.create({
       data: {
         tenantId,
         branchId,
+        barberId,
         category:    body.category,
         description: body.description,
         amount:      body.amount,
@@ -277,6 +294,11 @@ router.put('/:id', async (req, res, next) => {
         return res.status(400).json({ success: false, error: 'Cabang tidak valid' });
       }
     }
+    if (body.barberId !== undefined && body.barberId) {
+      if (!(await assertBarberOwnership(body.barberId, existing.tenantId))) {
+        return res.status(400).json({ success: false, error: 'Barber tidak valid' });
+      }
+    }
 
     const data = {};
     if (body.category !== undefined)    data.category = body.category;
@@ -285,6 +307,7 @@ router.put('/:id', async (req, res, next) => {
     if (body.date !== undefined)        data.date = toDayStart(body.date);
     if (body.note !== undefined)        data.note = body.note ?? null;
     if (body.branchId !== undefined)    data.branchId = body.branchId || null;
+    if (body.barberId !== undefined)    data.barberId = body.barberId || null;
 
     const expense = await prisma.expense.update({
       where: { id: req.params.id },

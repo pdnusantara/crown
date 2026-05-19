@@ -394,6 +394,9 @@ model Expense {
   // Tanggal kalender pengeluaran, disimpan UTC-midnight agar filter periode
   // konsisten lintas timezone (lihat catatan di routes/expenses.js).
   date        DateTime
+  // Barber terkait — diisi saat pengeluaran dibuat dari fitur "Gaji Barber"
+  // (penanda agar komisi tak dobel dicatat). Kolom skalar, tanpa FK.
+  barberId    String?
   note        String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
