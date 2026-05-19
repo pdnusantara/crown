@@ -223,26 +223,26 @@ function LeaderboardRow({ barber, index, maxRevenue, branchName }) {
       transition={{ delay: index * 0.07, duration: 0.35 }}
       className="border-b border-dark-border/50 hover:bg-dark-surface/50 transition-colors"
     >
-      <td className="px-4 py-3 w-10">
+      <td className="px-3 sm:px-4 py-3 w-10">
         <span className={`font-bold text-lg ${index === 0 ? 'text-gold' : index === 1 ? 'text-gray-300' : index === 2 ? 'text-amber-700' : 'text-muted'}`}>
           {index < 3 ? medals[index] : index + 1}
         </span>
       </td>
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-3">
+      <td className="px-3 sm:px-4 py-3">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           <Avatar src={barber.photo} name={barber.barberName || barber.name} size="sm" />
-          <div>
-            <p className="font-medium text-off-white text-sm">{barber.barberName || barber.name}</p>
+          <div className="min-w-0">
+            <p className="font-medium text-off-white text-sm truncate">{barber.barberName || barber.name}</p>
             {barber.averageRating && (
               <p className="text-xs text-muted">⭐ {barber.averageRating.toFixed(1)}</p>
             )}
           </div>
         </div>
       </td>
-      <td className="px-4 py-3 text-muted text-sm hidden md:table-cell">{branchName}</td>
-      <td className="px-4 py-3 text-off-white text-sm text-center">{barber.servicesCount || barber.todayTxns || 0}</td>
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-2">
+      <td className="px-3 sm:px-4 py-3 text-muted text-sm hidden md:table-cell">{branchName}</td>
+      <td className="px-3 sm:px-4 py-3 text-off-white text-sm text-center">{barber.servicesCount || barber.todayTxns || 0}</td>
+      <td className="px-3 sm:px-4 py-3 text-right whitespace-nowrap">
+        <div className="flex items-center justify-end gap-2">
           <div className="w-16 bg-dark-card rounded-full h-1.5 hidden lg:block">
             <motion.div
               initial={{ width: 0 }}
@@ -251,7 +251,7 @@ function LeaderboardRow({ barber, index, maxRevenue, branchName }) {
               className="h-1.5 rounded-full bg-gold"
             />
           </div>
-          <span className="font-semibold text-gold text-sm">
+          <span className="font-semibold text-gold text-sm whitespace-nowrap tabular-nums">
             Rp <AnimNum value={barber.revenue || 0} />
           </span>
         </div>
@@ -492,11 +492,11 @@ export default function TADashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-dark-border text-xs text-muted">
-                  <th className="px-4 py-3 text-left font-medium w-10">#</th>
-                  <th className="px-4 py-3 text-left font-medium">{t('tenantAdmin.dashboard.colBarber')}</th>
-                  <th className="px-4 py-3 text-left font-medium hidden md:table-cell">{t('nav.branches')}</th>
-                  <th className="px-4 py-3 text-center font-medium">Layanan</th>
-                  <th className="px-4 py-3 text-left font-medium">{t('common.revenue')}</th>
+                  <th className="px-3 sm:px-4 py-3 text-left font-medium w-10">#</th>
+                  <th className="px-3 sm:px-4 py-3 text-left font-medium">{t('tenantAdmin.dashboard.colBarber')}</th>
+                  <th className="px-3 sm:px-4 py-3 text-left font-medium hidden md:table-cell">{t('nav.branches')}</th>
+                  <th className="px-3 sm:px-4 py-3 text-center font-medium">Layanan</th>
+                  <th className="px-3 sm:px-4 py-3 text-right font-medium">{t('common.revenue')}</th>
                 </tr>
               </thead>
               <tbody>
