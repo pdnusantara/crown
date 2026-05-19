@@ -421,8 +421,9 @@ export default function TASettingsPage() {
         <p className="text-muted text-sm mt-1">{t('tenantAdmin.settings.subtitle')}</p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-dark-card border border-dark-border rounded-xl p-1 w-fit">
+      {/* Tabs — flex-wrap + max-w-full supaya semua tab tetap terlihat &
+          membungkus rapi di mobile (sebelumnya 2 tab terakhir keluar layar). */}
+      <div className="flex flex-wrap gap-1 bg-dark-card border border-dark-border rounded-xl p-1 w-fit max-w-full">
         {TABS.map(tab => (
           <button
             key={tab.id}
