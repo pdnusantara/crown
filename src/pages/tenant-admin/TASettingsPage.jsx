@@ -1,8 +1,7 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore.js'
-import { useTenantStore } from '../../store/tenantStore.js'
 import { useTenant, useUpdateMyTenant } from '../../hooks/useTenants.js'
 import { useSubscription } from '../../hooks/useSubscription.js'
 import { useAuditLogs, useAuditActions } from '../../hooks/useAuditLogs.js'
@@ -10,7 +9,6 @@ import { useToast } from '../../components/ui/Toast.jsx'
 import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Input from '../../components/ui/Input.jsx'
-import Modal from '../../components/ui/Modal.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import * as api from '../../lib/api.js'
 import { Settings, Bell, Shield, Palette, Download, Upload, FileText, MessageCircle, Send, QrCode, Smartphone, RefreshCw, PowerOff, CheckCircle2, XCircle, Loader2, AlertTriangle, Phone, ArrowUpRight, ChevronLeft, ChevronRight, X } from 'lucide-react'
@@ -28,9 +26,7 @@ export default function TASettingsPage() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
   const navigate = useNavigate()
-  const { getBranchesByTenant, getServicesByTenant, getStaffByTenant, getCustomersByTenant, getProductsByTenant } = useTenantStore()
   const toast = useToast()
-  const fileInputRef = useRef(null)
   const updateMyTenant = useUpdateMyTenant()
 
   const { data: tenant } = useTenant(user?.tenantId)
@@ -178,8 +174,7 @@ export default function TASettingsPage() {
       setBookingSaving(false)
     }
   }
-  const [importData, setImportData] = useState(null)
-  const [showImportConfirm, setShowImportConfirm] = useState(false)
+  const [exporting, setExporting] = useState(false)
   // ── Log aktivitas (real backend AuditLog) ──────────────────────────────────
   const [auditFilter, setAuditFilter]           = useState({ action: '', search: '' })
   const [auditSearchInput, setAuditSearchInput] = useState('')
@@ -254,43 +249,44 @@ export default function TASettingsPage() {
     }
   }
 
-  const handleExport = () => {
-    const data = {
-      version: '1.0',
-      exportedAt: new Date().toISOString(),
-      tenant: user.tenantId,
-      branches: getBranchesByTenant(user.tenantId),
-      services: getServicesByTenant(user.tenantId),
-      staff: getStaffByTenant(user.tenantId),
-      customers: getCustomersByTenant(user.tenantId),
-      products: getProductsByTenant(user.tenantId),
-    }
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `barberos-backup-${format(new Date(), 'yyyy-MM-dd')}.json`
-    a.click()
-    URL.revokeObjectURL(url)
-    toast.success(t('tenantAdmin.settings.backupDownloaded'))
-  }
-
-  const handleImport = (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      try {
-        const data = JSON.parse(ev.target.result)
-        if (!data.version || !data.tenant) throw new Error(t('tenantAdmin.settings.invalidFormat'))
-        setImportData(data)
-        setShowImportConfirm(true)
-      } catch (err) {
-        toast.error(t('tenantAdmin.settings.invalidBackupFile', { message: err.message }))
+  // Ekspor data tenant ke JSON — diambil langsung dari API backend (real,
+  // tenant-scoped). Hanya-baca, jadi aman dipakai sebagai backup.
+  const handleExport = async () => {
+    if (exporting) return
+    setExporting(true)
+    try {
+      const unwrap = (res) => {
+        const d = res?.data?.data
+        return Array.isArray(d) ? d : (d?.data || [])
       }
+      const [branches, services, staff, customers] = await Promise.all([
+        api.get('/branches',  { params: { tenantId: user.tenantId } }),
+        api.get('/services',  { params: { tenantId: user.tenantId } }),
+        api.get('/users',     { params: { tenantId: user.tenantId } }),
+        api.get('/customers', { params: { tenantId: user.tenantId, limit: 1000 } }),
+      ])
+      const payload = {
+        version: '2.0',
+        exportedAt: new Date().toISOString(),
+        tenant: { id: user.tenantId, name: tenant?.name || null },
+        branches:  unwrap(branches),
+        services:  unwrap(services),
+        staff:     unwrap(staff),
+        customers: unwrap(customers),
+      }
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `crown-backup-${tenant?.slug || 'tenant'}-${format(new Date(), 'yyyy-MM-dd')}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success(`Backup terunduh — ${payload.branches.length} cabang, ${payload.services.length} layanan, ${payload.staff.length} staf, ${payload.customers.length} pelanggan`)
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal mengunduh backup')
+    } finally {
+      setExporting(false)
     }
-    reader.readAsText(file)
-    e.target.value = ''
   }
 
   // Ekspor seluruh log periode (dengan filter aktif) ke CSV — bukan 1 halaman.
@@ -641,7 +637,7 @@ export default function TASettingsPage() {
       )}
 
       {activeTab === 'backup' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="max-w-xl">
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
@@ -650,41 +646,14 @@ export default function TASettingsPage() {
               </div>
             </CardHeader>
             <CardBody className="space-y-4">
-              <p className="text-sm text-muted">{t('tenantAdmin.settings.exportDataDesc')}</p>
-              <div className="space-y-2 text-xs text-muted">
-                <p>{t('tenantAdmin.settings.branchCountLine', { count: getBranchesByTenant(user.tenantId).length })}</p>
-                <p>{t('tenantAdmin.settings.serviceCountLine', { count: getServicesByTenant(user.tenantId).length })}</p>
-                <p>{t('tenantAdmin.settings.staffCountLine', { count: getStaffByTenant(user.tenantId).length })}</p>
-                <p>{t('tenantAdmin.settings.customerCountLine', { count: getCustomersByTenant(user.tenantId).length })}</p>
-              </div>
-              <Button icon={Download} fullWidth onClick={handleExport}>{t('tenantAdmin.settings.downloadBackup')}</Button>
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Upload className="w-5 h-5 text-gold" />
-                <h3 className="font-semibold text-off-white">{t('tenantAdmin.settings.importData')}</h3>
-              </div>
-            </CardHeader>
-            <CardBody className="space-y-4">
-              <p className="text-sm text-muted">{t('tenantAdmin.settings.importDataDesc')}</p>
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-dark-border rounded-xl p-8 text-center cursor-pointer hover:border-gold/40 hover:bg-gold/5 transition-all"
-              >
-                <Upload className="w-8 h-8 text-muted mx-auto mb-2" />
-                <p className="text-sm text-muted">{t('tenantAdmin.settings.clickToSelectBackup')}</p>
-                <p className="text-xs text-muted/60 mt-1">{t('tenantAdmin.settings.formatJson')}</p>
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".json"
-                onChange={handleImport}
-                className="hidden"
-              />
+              <p className="text-sm text-muted">
+                Unduh seluruh data toko (cabang, layanan, staf, pelanggan) sebagai
+                berkas JSON untuk arsip atau cadangan. Data diambil langsung dari
+                server — selalu yang terbaru.
+              </p>
+              <Button icon={Download} fullWidth onClick={handleExport} loading={exporting} disabled={exporting}>
+                {exporting ? 'Menyiapkan…' : t('tenantAdmin.settings.downloadBackup')}
+              </Button>
             </CardBody>
           </Card>
         </div>
@@ -852,32 +821,6 @@ export default function TASettingsPage() {
           </Card>
         </div>
       )}
-
-      {/* Import Confirm Modal */}
-      <Modal isOpen={showImportConfirm} onClose={() => setShowImportConfirm(false)} title={t('tenantAdmin.settings.confirmImport')}>
-        {importData && (
-          <div className="space-y-4">
-            <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-              <p className="text-sm text-amber-400 font-medium mb-2">{t('tenantAdmin.settings.warning')}</p>
-              <p className="text-xs text-amber-300/80">{t('tenantAdmin.settings.importWarningDesc')}</p>
-            </div>
-            <div className="space-y-2 text-sm text-muted">
-              <p>{t('tenantAdmin.settings.importFromPrefix')} <span className="text-off-white">{importData.tenant}</span>:</p>
-              <p>{t('tenantAdmin.settings.branchCountLine', { count: importData.branches?.length || 0 })}</p>
-              <p>{t('tenantAdmin.settings.serviceCountLine', { count: importData.services?.length || 0 })}</p>
-              <p>{t('tenantAdmin.settings.staffCountLineShort', { count: importData.staff?.length || 0 })}</p>
-              <p>{t('tenantAdmin.settings.customerCountLine', { count: importData.customers?.length || 0 })}</p>
-            </div>
-            <div className="flex gap-3">
-              <Button variant="outline" fullWidth onClick={() => setShowImportConfirm(false)}>{t('tenantAdmin.settings.cancel')}</Button>
-              <Button variant="danger" fullWidth onClick={() => {
-                toast.info(t('tenantAdmin.settings.importSuccessSim'))
-                setShowImportConfirm(false)
-              }}>{t('tenantAdmin.settings.importData')}</Button>
-            </div>
-          </div>
-        )}
-      </Modal>
     </div>
   )
 }

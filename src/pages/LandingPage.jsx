@@ -290,6 +290,19 @@ export default function LandingPage() {
     }
     canon.setAttribute('href', pageUrl)
 
+    // Favicon dinamis — diterapkan ke seluruh sesi (tidak dipulihkan saat
+    // keluar landing) supaya identitas merek tetap konsisten.
+    if (hero.siteFavicon) {
+      let icon = document.head.querySelector('link[rel="icon"]')
+      if (!icon) {
+        icon = document.createElement('link')
+        icon.rel = 'icon'
+        document.head.appendChild(icon)
+      }
+      icon.setAttribute('type', 'image/png')
+      icon.setAttribute('href', hero.siteFavicon)
+    }
+
     // Structured data (JSON-LD) — Organization + SoftwareApplication. Rating
     // diturunkan dari testimoni nyata supaya valid (bukan angka karangan).
     const tlist = data?.testimonials || []
@@ -362,7 +375,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#FBFAF6] text-[#57534E] font-body overflow-x-hidden antialiased">
-      <Nav isAuthed={isAuthenticated} userRole={user?.role} />
+      <Nav isAuthed={isAuthenticated} userRole={user?.role} logo={hero.siteLogo} />
 
       <HeroSection
         hero={hero}
@@ -379,6 +392,7 @@ export default function LandingPage() {
 
       <Footer
         text={footerText}
+        logo={hero.siteLogo}
         contact={{
           phone:   hero.contactPhone   || '',
           email:   hero.contactEmail   || '',
@@ -1043,7 +1057,7 @@ const BLOCK_REGISTRY = {
 
 // ── Subkomponen ──────────────────────────────────────────────────────────────
 
-function Nav({ isAuthed, userRole }) {
+function Nav({ isAuthed, userRole, logo }) {
   const [scrolled, setScrolled] = useState(false)
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 16)
@@ -1061,10 +1075,16 @@ function Nav({ isAuthed, userRole }) {
     }`}>
       <div className="max-w-6xl mx-auto px-6 py-3.5 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-[#1C1A17] flex items-center justify-center">
-            <Lucide.Scissors size={17} className="text-[#C9A84C]" />
-          </div>
-          <span className="font-display text-xl font-bold tracking-tight text-[#1C1A17]">SembaPOS</span>
+          {logo ? (
+            <img src={logo} alt="SembaPOS" className="h-9 w-auto max-w-[180px] object-contain" />
+          ) : (
+            <>
+              <div className="w-9 h-9 rounded-xl bg-[#1C1A17] flex items-center justify-center">
+                <Lucide.Scissors size={17} className="text-[#C9A84C]" />
+              </div>
+              <span className="font-display text-xl font-bold tracking-tight text-[#1C1A17]">SembaPOS</span>
+            </>
+          )}
         </Link>
 
         <nav className="hidden md:flex items-center gap-7 text-sm font-medium">
@@ -1187,7 +1207,7 @@ function StickyCtaBar({ show, authed, label, to, note, onCta }) {
   )
 }
 
-function Footer({ text, contact = {} }) {
+function Footer({ text, logo, contact = {} }) {
   const phone = (contact.phone || '').trim()
   const email = (contact.email || '').trim()
   const address = (contact.address || '').trim()
@@ -1197,10 +1217,16 @@ function Footer({ text, contact = {} }) {
       <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-sm">
         <div className="col-span-2">
           <div className="flex items-center gap-2.5 mb-3">
-            <div className="w-9 h-9 rounded-xl bg-[#C9A84C] flex items-center justify-center">
-              <Lucide.Scissors size={17} className="text-[#1C1A17]" />
-            </div>
-            <span className="font-display text-xl font-bold text-[#FBFAF6]">SembaPOS</span>
+            {logo ? (
+              <img src={logo} alt="SembaPOS" className="h-9 w-auto max-w-[180px] object-contain" />
+            ) : (
+              <>
+                <div className="w-9 h-9 rounded-xl bg-[#C9A84C] flex items-center justify-center">
+                  <Lucide.Scissors size={17} className="text-[#1C1A17]" />
+                </div>
+                <span className="font-display text-xl font-bold text-[#FBFAF6]">SembaPOS</span>
+              </>
+            )}
           </div>
           <p className="text-[13px] leading-relaxed max-w-sm">
             {text || 'Sistem manajemen barbershop modern: kasir, antrian, booking online, multi-cabang, dan laporan pintar dalam satu aplikasi.'}

@@ -39,6 +39,8 @@ const SETTING_KEYS = {
   seoDescription: 'landing_seo_description', // meta description & og:description
   seoKeywords:    'landing_seo_keywords',    // meta keywords (dipisah koma)
   seoOgImage:     'landing_seo_og_image',    // URL gambar share (og:image)
+  siteLogo:       'landing_site_logo',       // URL logo header & footer landing
+  siteFavicon:    'landing_site_favicon',    // URL favicon (ikon tab browser)
 };
 
 // Keys yang nilainya JSON-encoded — di-parse saat baca, di-stringify saat tulis.
@@ -100,6 +102,8 @@ const DEFAULTS = {
   seoDescription: 'Kasir, antrian, booking online, multi-cabang, dan laporan pintar — semua dalam satu aplikasi yang dirancang khusus untuk barbershop. Coba gratis 14 hari, tanpa kartu kredit.',
   seoKeywords:    'aplikasi barbershop, POS barbershop, manajemen barbershop, kasir barbershop, booking barbershop, antrian barbershop',
   seoOgImage:     '',
+  siteLogo:       '',
+  siteFavicon:    '',
 };
 
 async function getSetting(key) {
@@ -224,6 +228,8 @@ const heroUpdateSchema = z.object({
   seoDescription: z.string().max(320).optional(),
   seoKeywords:    z.string().max(400).optional(),
   seoOgImage:     z.string().max(500).optional(),
+  siteLogo:       z.string().max(500).optional(),
+  siteFavicon:    z.string().max(500).optional(),
 });
 
 // PATCH /api/landing/hero — super_admin update branding/hero

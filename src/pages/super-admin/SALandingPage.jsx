@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   Globe, Edit3, Trash2, Plus, Save, MessageSquare, HelpCircle, Star, Eye, EyeOff, ExternalLink,
-  LayoutTemplate, Layers, Search, Upload,
+  LayoutTemplate, Layers, Search, Upload, Image as ImageIcon,
 } from 'lucide-react'
 import LandingLayoutBuilder from './LandingLayoutBuilder.jsx'
 import {
@@ -364,6 +364,60 @@ function TrackingEditor() {
   )
 }
 
+// ── Image upload field ───────────────────────────────────────────────────
+// Field unggah gambar pakai-ulang: thumbnail + tombol unggah ke /landing/upload
+// + tombol hapus. `onChange` menerima URL hasil unggah (atau '' saat dihapus).
+function ImageUploadField({ label, hint, value, accept = 'image/png,image/jpeg,image/webp', onChange }) {
+  const toast = useToast()
+  const [uploading, setUploading] = useState(false)
+
+  async function handleUpload(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('image', file)
+      const res = await api.post('/landing/upload', fd)
+      onChange(res.data?.data?.url || '')
+      toast.success('Gambar diunggah — jangan lupa simpan')
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal mengunggah gambar')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div>
+      <label className="text-xs text-muted block mb-1.5">{label}</label>
+      <div className="flex items-center gap-3">
+        <div className="w-14 h-14 rounded-lg bg-dark-surface border border-dark-border flex items-center justify-center overflow-hidden flex-shrink-0">
+          {value
+            ? <img src={value} alt="" className="w-full h-full object-contain" />
+            : <ImageIcon size={18} className="text-muted" />}
+        </div>
+        <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-dark-surface border border-dark-border text-sm cursor-pointer hover:border-gold/40 transition-colors">
+          <Upload size={13} /> {uploading ? 'Mengunggah…' : 'Unggah'}
+          <input type="file" accept={accept} className="hidden" onChange={handleUpload} disabled={uploading} />
+        </label>
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20"
+            title="Hapus gambar"
+          >
+            <Trash2 size={14} />
+          </button>
+        )}
+      </div>
+      {hint && <p className="text-[11px] text-muted mt-1.5">{hint}</p>}
+    </div>
+  )
+}
+
 // ── Hero / branding editor ───────────────────────────────────────────────
 function HeroEditor() {
   const toast = useToast()
@@ -384,6 +438,8 @@ function HeroEditor() {
         whatsappCta:  data.hero.whatsappCta  || '',
         heroBadge:    data.hero.heroBadge    || '',
         showStats:    data.hero.showStats !== false,
+        siteLogo:     data.hero.siteLogo     || '',
+        siteFavicon:  data.hero.siteFavicon  || '',
       })
       setFeatures(Array.isArray(data.hero.features) ? data.hero.features : [])
       setTrustItems(Array.isArray(data.hero.trustItems) ? data.hero.trustItems : [])
