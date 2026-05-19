@@ -421,18 +421,22 @@ export default function TASettingsPage() {
         <p className="text-muted text-sm mt-1">{t('tenantAdmin.settings.subtitle')}</p>
       </div>
 
-      {/* Tabs — flex-wrap + max-w-full supaya semua tab tetap terlihat &
-          membungkus rapi di mobile (sebelumnya 2 tab terakhir keluar layar). */}
-      <div className="flex flex-wrap gap-1 bg-dark-card border border-dark-border rounded-xl p-1 w-fit max-w-full">
-        {TABS.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === tab.id ? 'bg-gold text-dark' : 'text-muted hover:text-off-white'}`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* Tabs — di mobile grid 2 kolom rapi & rata (semua tab terlihat);
+          di desktop kembali satu baris ringkas. */}
+      <div className="grid grid-cols-2 gap-1 max-w-full sm:flex sm:w-fit bg-dark-card border border-dark-border rounded-xl p-1">
+        {TABS.map((tab, idx) => {
+          // Tab terakhir bila jumlahnya ganjil → lebar penuh agar tak ada sel kosong.
+          const lastOdd = idx === TABS.length - 1 && TABS.length % 2 === 1
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium text-center transition-all w-full sm:w-auto ${lastOdd ? 'col-span-2 sm:col-span-1' : ''} ${activeTab === tab.id ? 'bg-gold text-dark' : 'text-muted hover:text-off-white'}`}
+            >
+              {tab.label}
+            </button>
+          )
+        })}
       </div>
 
       {activeTab === 'general' && (
