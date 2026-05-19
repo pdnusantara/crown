@@ -176,9 +176,11 @@ model Tenant {
   //   message      = teks pesan, placeholder {nama} {toko} {hari}
   visitReminder Json?
   // Konfigurasi absensi digital staf (kasir & barber) — disimpan JSON agar
-  // bisa diperluas tanpa migrasi. { enabled, lateToleranceMin, autoCheckOut }.
+  // bisa diperluas tanpa migrasi.
   //   lateToleranceMin = toleransi menit sebelum dihitung terlambat
   //   autoCheckOut     = true: job menutup absen yang lupa di-checkout
+  //   maxAccuracyM     = akurasi GPS maksimum (meter) yang diterima
+  //   requireSelfie    = true: staf wajib unggah foto selfie saat check-in/out
   attendanceConfig Json?
   isSuspended  Boolean  @default(false)
   deletedAt    DateTime?
@@ -768,9 +770,11 @@ model Attendance {
   checkInLat       Float?
   checkInLng       Float?
   checkInDistance  Float?   // meter dari titik cabang saat check-in
+  checkInPhoto     String?  // URL foto selfie check-in (bila requireSelfie aktif)
   checkOutLat      Float?
   checkOutLng      Float?
   checkOutDistance Float?
+  checkOutPhoto    String?
   // present | late | absent | leave  — 'absent'/'leave' bisa diisi manual admin.
   status        String   @default("present")
   lateMinutes       Int   @default(0)

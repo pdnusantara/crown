@@ -20,6 +20,7 @@ import { useActiveShift } from '../../hooks/useShifts.js'
 import { useBarberRatingStats } from '../../hooks/useBarberRatings.js'
 import { useIsFeatureEnabled } from '../../hooks/useFeatureFlags.js'
 import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
+import AttendanceTodayWidget from '../../components/AttendanceTodayWidget.jsx'
 import Avatar from '../../components/ui/Avatar.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import { formatRupiah, formatRupiahShort } from '../../utils/format.js'
@@ -286,6 +287,7 @@ export default function TADashboard() {
   const { data: barberReport = []                   } = useBarberReport(tenantId)
   const { data: serviceReport = []                  } = useServiceReport(tenantId)
   const barberRatingEnabled = useIsFeatureEnabled(tenantId, 'barber_rating')
+  const attendanceEnabled = useIsFeatureEnabled(tenantId, 'attendance')
   const { data: ratingStats } = useBarberRatingStats({ days: 7 })
 
   // ── Flatten summary data ─────────────────────────────────────────────────
@@ -520,6 +522,13 @@ export default function TADashboard() {
           </div>
         </Card>
       </motion.div>
+
+      {/* Kehadiran staf hari ini */}
+      {attendanceEnabled && (
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.42 }}>
+          <AttendanceTodayWidget />
+        </motion.div>
+      )}
 
       {/* Branch Performance */}
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>

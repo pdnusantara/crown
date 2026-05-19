@@ -641,6 +641,15 @@ function StaffPayrollModal({ open, onClose, monthLabel, startDate, endDate, onPi
                         </span>
                       </div>
                       <p className="text-[10px] text-muted truncate">{payDetail(s)}</p>
+                      {s.attendance && (s.attendance.present + s.attendance.late + s.attendance.absent + s.attendance.leave) > 0 && (
+                        <p className="text-[10px] truncate">
+                          <span className="text-muted">Absensi: </span>
+                          <span className="text-green-400">{s.attendance.present + s.attendance.late} hadir</span>
+                          {s.attendance.late > 0 && <span className="text-amber-400"> · {s.attendance.late} telat</span>}
+                          {s.attendance.absent > 0 && <span className="text-red-400"> · {s.attendance.absent} alpa</span>}
+                          {s.attendance.leave > 0 && <span className="text-blue-400"> · {s.attendance.leave} izin</span>}
+                        </p>
+                      )}
                     </div>
                     <span className="text-sm font-semibold text-off-white flex-shrink-0 tabular-nums">
                       {formatRupiahShort(s.pay)}

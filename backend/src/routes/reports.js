@@ -450,6 +450,31 @@ router.get('/staff-payroll', authenticate, requireRole('super_admin', 'tenant_ad
     const statMap = {};
     stats.forEach((s) => { statMap[s.barberId] = s; });
 
+    // ── Integrasi absensi — rekap kehadiran periode per staf ────────────────
+    // date Attendance bergranularitas hari; konversi rentang payroll ke hari.
+    const attStartYmd = String(startDate).slice(0, 10);
+    const attEndYmd   = String(endDate).slice(0, 10);
+    const attRecords = await prisma.attendance.findMany({
+      where: {
+        tenantId,
+        staffId: { in: staff.map((s) => s.id) },
+        date: {
+          gte: new Date(`${attStartYmd}T00:00:00.000Z`),
+          lte: new Date(`${attEndYmd}T23:59:59.999Z`),
+        },
+      },
+      select: { staffId: true, status: true, workedMinutes: true },
+    });
+    const attMap = {};
+    attRecords.forEach((r) => {
+      const a = (attMap[r.staffId] ||= { present: 0, late: 0, absent: 0, leave: 0, workedMinutes: 0 });
+      if (r.status === 'late') a.late++;
+      else if (r.status === 'absent') a.absent++;
+      else if (r.status === 'leave') a.leave++;
+      else a.present++;
+      a.workedMinutes += r.workedMinutes || 0;
+    });
+
     const data = staff.map((s) => {
       const revenue = statMap[s.id]?._sum.price || 0;
       const servicesCount = statMap[s.id]?._count.id || 0;
@@ -470,6 +495,7 @@ router.get('/staff-payroll', authenticate, requireRole('super_admin', 'tenant_ad
         baseSalary,
         commission,
         pay: baseSalary + commission,
+        attendance: attMap[s.id] || { present: 0, late: 0, absent: 0, leave: 0, workedMinutes: 0 },
       };
     });
 

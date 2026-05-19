@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import {
   Fingerprint, CalendarClock, BarChart3, Settings2, Download,
-  Loader2, AlertTriangle, Pencil, X, Navigation, ClipboardList, Save,
+  Loader2, AlertTriangle, Pencil, X, Navigation, ClipboardList, Save, MapPin,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useToast } from '../../components/ui/Toast.jsx'
@@ -12,7 +12,8 @@ import { useBranches, useUpdateBranch } from '../../hooks/useBranches.js'
 import { useTenant, useUpdateMyTenant } from '../../hooks/useTenants.js'
 import {
   useAttendanceList, useAttendanceStats, useAttendanceReport,
-  useAttendanceSchedules, useUpdateSchedule, useUpdateAttendance, useManualAttendance,
+  useAttendanceSchedules, useUpdateSchedule, useBulkSchedule,
+  useUpdateAttendance, useManualAttendance,
 } from '../../hooks/useAttendance.js'
 import {
   DAY_NAMES, DAY_NAMES_SHORT, ATT_STATUS, statusMeta, fmtDuration, fmtTime, fmtDateLong,
@@ -313,6 +314,22 @@ function StatusEditModal({ row, onClose }) {
   return (
     <ModalShell title="Koreksi Absensi" onClose={onClose}>
       <p className="text-sm text-muted mb-3">{row.staffName || row.staff?.name} · {fmtDateLong(row.date)}</p>
+      {(row.checkInPhoto || row.checkOutPhoto) && (
+        <div className="flex gap-2 mb-3">
+          {row.checkInPhoto && (
+            <a href={row.checkInPhoto} target="_blank" rel="noreferrer" className="flex-1">
+              <img src={row.checkInPhoto} alt="Selfie check-in" className="w-full h-28 object-cover rounded-lg border border-dark-border" />
+              <span className="block text-[10px] text-muted text-center mt-1">Check-in {fmtTime(row.checkInAt)}</span>
+            </a>
+          )}
+          {row.checkOutPhoto && (
+            <a href={row.checkOutPhoto} target="_blank" rel="noreferrer" className="flex-1">
+              <img src={row.checkOutPhoto} alt="Selfie check-out" className="w-full h-28 object-cover rounded-lg border border-dark-border" />
+              <span className="block text-[10px] text-muted text-center mt-1">Check-out {fmtTime(row.checkOutAt)}</span>
+            </a>
+          )}
+        </div>
+      )}
       <label className="block text-xs text-muted mb-1">Status</label>
       <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls + ' mb-3'}>
         {Object.entries(ATT_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
@@ -547,15 +564,22 @@ function JadwalTab() {
 function ScheduleEditorModal({ staff, onClose }) {
   const toast = useToast()
   const update = useUpdateSchedule()
+  const bulk = useBulkSchedule()
   const [days, setDays] = useState(() => staff.schedule.map((d) => ({ ...d })))
+  const [applyAll, setApplyAll] = useState(false)
 
   const setDay = (dow, patch) =>
     setDays((arr) => arr.map((d) => (d.dayOfWeek === dow ? { ...d, ...patch } : d)))
 
   const save = async () => {
     try {
-      await update.mutateAsync({ staffId: staff.staffId, days })
-      toast.success('Jadwal kerja disimpan.')
+      if (applyAll) {
+        const res = await bulk.mutateAsync({ days })
+        toast.success(`Jadwal diterapkan ke ${res?.staffCount ?? 'semua'} staf.`)
+      } else {
+        await update.mutateAsync({ staffId: staff.staffId, days })
+        toast.success('Jadwal kerja disimpan.')
+      }
       onClose()
     } catch (err) {
       toast.error(err?.response?.data?.error || 'Gagal menyimpan jadwal.')
@@ -587,9 +611,13 @@ function ScheduleEditorModal({ staff, onClose }) {
           )
         })}
       </div>
+      <label className="flex items-center gap-2 text-xs text-muted mb-3">
+        <input type="checkbox" checked={applyAll} onChange={(e) => setApplyAll(e.target.checked)} className="accent-gold" />
+        Terapkan jadwal ini ke <span className="text-off-white">semua staf</span> kasir &amp; barber
+      </label>
       <div className="flex gap-2">
         <Button variant="ghost" onClick={onClose} fullWidth>Batal</Button>
-        <Button onClick={save} loading={update.isLoading} icon={Save} fullWidth>Simpan</Button>
+        <Button onClick={save} loading={update.isLoading || bulk.isLoading} icon={Save} fullWidth>Simpan</Button>
       </div>
     </ModalShell>
   )
@@ -605,13 +633,17 @@ function PengaturanTab({ tenantId }) {
   const updateTenant = useUpdateMyTenant()
   const updateBranch = useUpdateBranch()
 
-  const [cfg, setCfg] = useState({ enabled: true, lateToleranceMin: 10, autoCheckOut: true })
+  const [cfg, setCfg] = useState({
+    enabled: true, lateToleranceMin: 10, autoCheckOut: true, maxAccuracyM: 75, requireSelfie: false,
+  })
   useEffect(() => {
     const c = tenant?.attendanceConfig
     if (c) setCfg({
       enabled: c.enabled !== false,
       lateToleranceMin: typeof c.lateToleranceMin === 'number' ? c.lateToleranceMin : 10,
       autoCheckOut: c.autoCheckOut !== false,
+      maxAccuracyM: typeof c.maxAccuracyM === 'number' ? c.maxAccuracyM : 75,
+      requireSelfie: c.requireSelfie === true,
     })
   }, [tenant?.attendanceConfig])
 
@@ -651,6 +683,21 @@ function PengaturanTab({ tenantId }) {
             </span>
             <input type="checkbox" checked={cfg.autoCheckOut} className="accent-gold w-4 h-4"
               onChange={(e) => setCfg((c) => ({ ...c, autoCheckOut: e.target.checked }))} />
+          </label>
+          <div className="flex items-center justify-between gap-3 border-t border-dark-border pt-4">
+            <span className="text-sm text-off-white">Akurasi GPS maksimum
+              <span className="block text-xs text-muted">Absen ditolak bila akurasi GPS lebih buruk dari nilai ini (meter).</span>
+            </span>
+            <input type="number" min={20} max={500} value={cfg.maxAccuracyM}
+              onChange={(e) => setCfg((c) => ({ ...c, maxAccuracyM: Math.max(20, Math.min(500, +e.target.value || 75)) }))}
+              className={inputCls + ' w-24 text-center'} />
+          </div>
+          <label className="flex items-center justify-between gap-3 border-t border-dark-border pt-4">
+            <span className="text-sm text-off-white">Wajib foto selfie
+              <span className="block text-xs text-muted">Staf harus mengambil foto selfie tiap check-in &amp; check-out sebagai bukti.</span>
+            </span>
+            <input type="checkbox" checked={cfg.requireSelfie} className="accent-gold w-4 h-4"
+              onChange={(e) => setCfg((c) => ({ ...c, requireSelfie: e.target.checked }))} />
           </label>
           <Button onClick={saveCfg} loading={updateTenant.isLoading} icon={Save}>Simpan Konfigurasi</Button>
         </CardBody>
@@ -749,9 +796,18 @@ function BranchGeofenceRow({ branch, tenantId, updateBranch }) {
             onChange={(e) => setForm((f) => ({ ...f, attendanceRadius: e.target.value }))} className={inputCls} />
         </div>
       </div>
-      <div className="flex gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <Button variant="outline" size="sm" icon={Navigation} onClick={useMyLocation} loading={locating}>Lokasi saya</Button>
         <Button size="sm" icon={Save} onClick={save} loading={updateBranch.isLoading}>Simpan</Button>
+        {form.latitude !== '' && form.longitude !== '' && (
+          <a
+            href={`https://www.google.com/maps?q=${form.latitude},${form.longitude}`}
+            target="_blank" rel="noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-gold hover:underline"
+          >
+            <MapPin className="w-3.5 h-3.5" /> Lihat di Maps
+          </a>
+        )}
       </div>
     </div>
   )

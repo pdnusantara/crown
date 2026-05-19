@@ -363,6 +363,8 @@ const attendanceConfigSchema = z.object({
   enabled:          z.boolean().optional(),
   lateToleranceMin: z.number().int().min(0).max(120).optional(),
   autoCheckOut:     z.boolean().optional(),
+  maxAccuracyM:     z.number().int().min(20).max(500).optional(),
+  requireSelfie:    z.boolean().optional(),
 }).strict().nullish();
 
 const selfUpdateSchema = z.object({

@@ -7,6 +7,10 @@
 //
 // Fitur di-gate flag `attendance` (paket Pro & Enterprise) — defense-in-depth.
 const router = require('express').Router();
+const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
+const multer = require('multer');
 const { z } = require('zod');
 const prisma = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
@@ -16,7 +20,34 @@ const { getIO, tenantRoom } = require('../config/socket');
 const { tenantDayStart, formatYmdInTz, normalizeTimezone } = require('../utils/timezone');
 
 // ── Konstanta & default ─────────────────────────────────────────────────────
-const ATT_DEFAULTS = { enabled: true, lateToleranceMin: 10, autoCheckOut: true };
+const ATT_DEFAULTS = {
+  enabled: true, lateToleranceMin: 10, autoCheckOut: true,
+  maxAccuracyM: 75, requireSelfie: false,
+};
+
+// ── Upload foto selfie absensi ──────────────────────────────────────────────
+const ATT_UPLOAD_DIR = path.join(__dirname, '../../uploads/attendance');
+fs.mkdirSync(ATT_UPLOAD_DIR, { recursive: true });
+const ALLOWED_IMG = ['image/jpeg', 'image/png', 'image/webp'];
+const uploadSelfie = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, ATT_UPLOAD_DIR),
+    filename:    (req, file, cb) => {
+      const ext = (path.extname(file.originalname) || '.jpg').toLowerCase();
+      cb(null, `${crypto.randomUUID()}${ext}`);
+    },
+  }),
+  limits: { fileSize: 3 * 1024 * 1024 }, // 3 MB
+  fileFilter: (req, file, cb) =>
+    ALLOWED_IMG.includes(file.mimetype) ? cb(null, true) : cb(new Error('Foto harus JPG, PNG, atau WebP')),
+}).single('photo');
+
+// Jalankan multer sebagai promise — multipart diparse, JSON dilewati apa adanya.
+function runSelfieUpload(req, res) {
+  return new Promise((resolve) => {
+    uploadSelfie(req, res, (err) => resolve(err || null));
+  });
+}
 const SCHEDULE_DEFAULT = { isDayOff: false, startTime: '09:00', endTime: '17:00' };
 const STATUSES = ['present', 'late', 'absent', 'leave'];
 
@@ -24,8 +55,8 @@ const attendanceSelect = {
   id: true, tenantId: true, branchId: true, staffId: true,
   staffName: true, staffRole: true, date: true,
   checkInAt: true, checkOutAt: true,
-  checkInLat: true, checkInLng: true, checkInDistance: true,
-  checkOutLat: true, checkOutLng: true, checkOutDistance: true,
+  checkInLat: true, checkInLng: true, checkInDistance: true, checkInPhoto: true,
+  checkOutLat: true, checkOutLng: true, checkOutDistance: true, checkOutPhoto: true,
   status: true, lateMinutes: true, earlyLeaveMinutes: true, workedMinutes: true,
   scheduleStart: true, scheduleEnd: true, note: true,
   createdAt: true, updatedAt: true,
@@ -79,8 +110,11 @@ function resolveConfig(raw) {
   const c = { ...ATT_DEFAULTS, ...(raw && typeof raw === 'object' ? raw : {}) };
   c.enabled = c.enabled !== false;
   c.autoCheckOut = c.autoCheckOut !== false;
+  c.requireSelfie = c.requireSelfie === true;
   const tol = parseInt(c.lateToleranceMin, 10);
   c.lateToleranceMin = Number.isFinite(tol) ? Math.min(120, Math.max(0, tol)) : ATT_DEFAULTS.lateToleranceMin;
+  const acc = parseInt(c.maxAccuracyM, 10);
+  c.maxAccuracyM = Number.isFinite(acc) ? Math.min(500, Math.max(20, acc)) : ATT_DEFAULTS.maxAccuracyM;
   return c;
 }
 
@@ -187,10 +221,11 @@ router.get('/me/history', requireRole('kasir', 'barber'), async (req, res, next)
   } catch (err) { next(err); }
 });
 
+// coerce — nilai bisa datang sebagai number (JSON) atau string (multipart form).
 const geoSchema = z.object({
-  latitude:  z.number().min(-90).max(90),
-  longitude: z.number().min(-180).max(180),
-  accuracy:  z.number().min(0).max(100000).optional(),
+  latitude:  z.coerce.number().min(-90).max(90),
+  longitude: z.coerce.number().min(-180).max(180),
+  accuracy:  z.coerce.number().min(0).max(100000).optional(),
 });
 
 // Validasi geofence — kembalikan { ok, distance, error }.
@@ -212,10 +247,27 @@ function checkGeofence(branch, lat, lng) {
   return { ok: true, distance, radius };
 }
 
+// Validasi akurasi GPS & kewajiban foto selfie. Kembalikan pesan error / null.
+function checkAccuracyAndSelfie(cfg, accuracy, file) {
+  if (accuracy != null && accuracy > cfg.maxAccuracyM) {
+    return `Akurasi GPS terlalu rendah (±${Math.round(accuracy)} m, maks ${cfg.maxAccuracyM} m). `
+      + 'Aktifkan GPS presisi tinggi dan coba lagi di area terbuka.';
+  }
+  if (cfg.requireSelfie && !file) return 'Foto selfie wajib diunggah untuk absen.';
+  return null;
+}
+
 // POST /api/attendance/check-in
 router.post('/check-in', requireRole('kasir', 'barber'), async (req, res, next) => {
   try {
-    const { latitude, longitude } = geoSchema.parse(req.body);
+    const upErr = await runSelfieUpload(req, res);
+    if (upErr) {
+      return res.status(400).json({
+        success: false,
+        error: upErr.code === 'LIMIT_FILE_SIZE' ? 'Ukuran foto maksimal 3 MB' : upErr.message,
+      });
+    }
+    const { latitude, longitude, accuracy } = geoSchema.parse(req.body);
     const { id: staffId, tenantId, branchId, name, role } = req.user;
 
     const tenant = await prisma.tenant.findUnique({
@@ -225,6 +277,8 @@ router.post('/check-in', requireRole('kasir', 'barber'), async (req, res, next) 
     if (!cfg.enabled) {
       return res.status(403).json({ success: false, error: 'Absensi sedang dinonaktifkan oleh admin.' });
     }
+    const guard = checkAccuracyAndSelfie(cfg, accuracy, req.file);
+    if (guard) return res.status(422).json({ success: false, error: guard, code: 'CHECK_FAILED' });
 
     const branch = branchId
       ? await prisma.branch.findFirst({
@@ -259,10 +313,11 @@ router.post('/check-in', requireRole('kasir', 'barber'), async (req, res, next) 
     }
 
     const now = new Date();
+    const checkInPhoto = req.file ? `/api/uploads/attendance/${req.file.filename}` : null;
     const data = {
       tenantId, branchId, staffId, staffName: name, staffRole: role, date,
       checkInAt: now, checkInLat: latitude, checkInLng: longitude, checkInDistance: geo.distance,
-      status, lateMinutes, note,
+      checkInPhoto, status, lateMinutes, note,
       scheduleStart: schedule.startTime, scheduleEnd: schedule.endTime,
     };
     const record = await prisma.attendance.upsert({
@@ -289,12 +344,22 @@ router.post('/check-in', requireRole('kasir', 'barber'), async (req, res, next) 
 // POST /api/attendance/check-out
 router.post('/check-out', requireRole('kasir', 'barber'), async (req, res, next) => {
   try {
-    const { latitude, longitude } = geoSchema.parse(req.body);
+    const upErr = await runSelfieUpload(req, res);
+    if (upErr) {
+      return res.status(400).json({
+        success: false,
+        error: upErr.code === 'LIMIT_FILE_SIZE' ? 'Ukuran foto maksimal 3 MB' : upErr.message,
+      });
+    }
+    const { latitude, longitude, accuracy } = geoSchema.parse(req.body);
     const { id: staffId, tenantId, branchId, name } = req.user;
 
     const tenant = await prisma.tenant.findUnique({
-      where: { id: tenantId }, select: { timezone: true },
+      where: { id: tenantId }, select: { timezone: true, attendanceConfig: true },
     });
+    const cfg = resolveConfig(tenant?.attendanceConfig);
+    const guard = checkAccuracyAndSelfie(cfg, accuracy, req.file);
+    if (guard) return res.status(422).json({ success: false, error: guard, code: 'CHECK_FAILED' });
     const tz = tenant?.timezone || 'Asia/Jakarta';
     const clock = tenantClock(tz);
     const date = tenantDayStart(clock.ymd, tz);
@@ -333,6 +398,7 @@ router.post('/check-out', requireRole('kasir', 'barber'), async (req, res, next)
       data: {
         checkOutAt: now, checkOutLat: latitude, checkOutLng: longitude,
         checkOutDistance: geo.distance, workedMinutes, earlyLeaveMinutes,
+        checkOutPhoto: req.file ? `/api/uploads/attendance/${req.file.filename}` : undefined,
       },
       select: attendanceSelect,
     });
@@ -420,6 +486,58 @@ router.get('/stats', requireAdmin, async (req, res, next) => {
         totalWorkedMinutes: agg._sum.workedMinutes || 0,
       },
     });
+  } catch (err) { next(err); }
+});
+
+// GET /api/attendance/today-summary — ringkasan kehadiran hari ini (widget dashboard)
+router.get('/today-summary', requireAdmin, async (req, res, next) => {
+  try {
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId wajib' });
+
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { timezone: true } });
+    const tz = tenant?.timezone || 'Asia/Jakarta';
+    const clock = tenantClock(tz);
+    const date = tenantDayStart(clock.ymd, tz);
+
+    const staff = await prisma.user.findMany({
+      where: { tenantId, role: { in: ['kasir', 'barber'] }, deletedAt: null, isActive: true },
+      select: { id: true, name: true, role: true, branch: { select: { name: true } } },
+      orderBy: { name: 'asc' },
+    });
+    const staffIds = staff.map((s) => s.id);
+
+    const [records, schedules] = await Promise.all([
+      prisma.attendance.findMany({
+        where: { tenantId, date },
+        select: { staffId: true, status: true, checkInAt: true, checkOutAt: true, lateMinutes: true },
+      }),
+      prisma.workSchedule.findMany({ where: { staffId: { in: staffIds }, dayOfWeek: clock.dayOfWeek } }),
+    ]);
+    const recMap = {};
+    records.forEach((r) => { recMap[r.staffId] = r; });
+    const offMap = {};
+    schedules.forEach((s) => { offMap[s.staffId] = s.isDayOff; });
+
+    const counts = { present: 0, late: 0, leave: 0, absent: 0, pending: 0, dayoff: 0 };
+    const rows = staff.map((s) => {
+      const rec = recMap[s.id];
+      let status;
+      if (rec) status = rec.status;
+      else if (offMap[s.id]) status = 'dayoff';
+      else status = 'pending';
+      counts[status] = (counts[status] || 0) + 1;
+      return {
+        id: s.id, name: s.name, role: s.role, branchName: s.branch?.name || null,
+        status,
+        checkInAt: rec?.checkInAt || null,
+        checkOutAt: rec?.checkOutAt || null,
+        working: !!(rec?.checkInAt && !rec?.checkOutAt),
+        lateMinutes: rec?.lateMinutes || 0,
+      };
+    });
+
+    res.json({ success: true, data: { date: clock.ymd, totalStaff: staff.length, counts, staff: rows } });
   } catch (err) { next(err); }
 });
 
@@ -555,6 +673,47 @@ const scheduleSchema = z.object({
     startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Jam tidak valid'),
     endTime:   z.string().regex(/^\d{2}:\d{2}$/, 'Jam tidak valid'),
   })).min(1).max(7),
+});
+
+// POST /api/attendance/schedules/bulk — terapkan satu jadwal ke semua staf
+router.post('/schedules/bulk', requireAdmin, async (req, res, next) => {
+  try {
+    const { days } = scheduleSchema.parse(req.body);
+    const tenantId = resolveTenantId(req, true);
+    if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId wajib' });
+
+    const staff = await prisma.user.findMany({
+      where: { tenantId, role: { in: ['kasir', 'barber'] }, deletedAt: null },
+      select: { id: true },
+    });
+    if (staff.length === 0) {
+      return res.status(404).json({ success: false, error: 'Belum ada staf kasir/barber' });
+    }
+
+    await prisma.$transaction(
+      staff.flatMap((s) =>
+        days.map((d) =>
+          prisma.workSchedule.upsert({
+            where:  { staffId_dayOfWeek: { staffId: s.id, dayOfWeek: d.dayOfWeek } },
+            create: { tenantId, staffId: s.id, dayOfWeek: d.dayOfWeek, isDayOff: d.isDayOff, startTime: d.startTime, endTime: d.endTime },
+            update: { isDayOff: d.isDayOff, startTime: d.startTime, endTime: d.endTime },
+          }),
+        ),
+      ),
+    );
+
+    await recordAudit(req, {
+      action: 'attendance.schedule_bulk',
+      target: `tenant:${tenantId}`,
+      detail: `Jadwal kerja diterapkan ke ${staff.length} staf`,
+      severity: 'info',
+    });
+    emitAttendance('attendance:schedule_changed', { staffId: null }, tenantId);
+    res.json({ success: true, data: { staffCount: staff.length } });
+  } catch (err) {
+    if (err instanceof z.ZodError) return res.status(400).json({ success: false, error: err.errors[0]?.message });
+    next(err);
+  }
 });
 
 // PUT /api/attendance/schedules/:staffId — atur jadwal kerja mingguan satu staf

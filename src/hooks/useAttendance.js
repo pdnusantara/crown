@@ -37,10 +37,24 @@ export function useMyAttendanceHistory() {
   })
 }
 
+// Bila ada foto selfie (File), kirim sebagai multipart; selain itu JSON biasa.
+function buildGeoPayload(data) {
+  if (data?.photo instanceof File) {
+    const fd = new FormData()
+    fd.append('latitude', data.latitude)
+    fd.append('longitude', data.longitude)
+    if (data.accuracy != null) fd.append('accuracy', data.accuracy)
+    fd.append('photo', data.photo)
+    return fd
+  }
+  const { photo, ...geo } = data || {}
+  return geo
+}
+
 export function useCheckIn() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (geo) => api.post('/attendance/check-in', geo).then(r => r.data.data),
+    mutationFn: (geo) => api.post('/attendance/check-in', buildGeoPayload(geo)).then(r => r.data.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['attendance'] }),
   })
 }
@@ -48,7 +62,7 @@ export function useCheckIn() {
 export function useCheckOut() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (geo) => api.post('/attendance/check-out', geo).then(r => r.data.data),
+    mutationFn: (geo) => api.post('/attendance/check-out', buildGeoPayload(geo)).then(r => r.data.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['attendance'] }),
   })
 }
@@ -75,6 +89,16 @@ export function useAttendanceStats(params, enabled = true) {
   })
 }
 
+export function useAttendanceTodaySummary(enabled = true) {
+  useAttendanceRealtime()
+  return useQuery({
+    queryKey: ['attendance', 'today-summary'],
+    queryFn: async () => (await api.get('/attendance/today-summary')).data.data,
+    enabled,
+    staleTime: 1000 * 60,
+  })
+}
+
 export function useAttendanceReport(params, enabled = true) {
   return useQuery({
     queryKey: ['attendance', 'report', params],
@@ -97,6 +121,14 @@ export function useUpdateSchedule() {
   return useMutation({
     mutationFn: ({ staffId, days }) =>
       api.put(`/attendance/schedules/${staffId}`, { days }).then(r => r.data.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['attendance', 'schedules'] }),
+  })
+}
+
+export function useBulkSchedule() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ days }) => api.post('/attendance/schedules/bulk', { days }).then(r => r.data.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['attendance', 'schedules'] }),
   })
 }

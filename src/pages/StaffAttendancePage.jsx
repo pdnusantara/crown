@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { MapPin, Clock, CheckCircle2, LogIn, LogOut, AlertTriangle, CalendarDays, Loader2, History, Navigation } from 'lucide-react'
+import React, { useState, useRef } from 'react'
+import { MapPin, Clock, CheckCircle2, LogIn, LogOut, AlertTriangle, CalendarDays, Loader2, History, Navigation, Camera } from 'lucide-react'
 import { useMyAttendanceToday, useMyAttendanceHistory, useCheckIn, useCheckOut } from '../hooks/useAttendance.js'
 import { useToast } from '../components/ui/Toast.jsx'
 import Card, { CardBody, CardHeader } from '../components/ui/Card.jsx'
@@ -35,15 +35,19 @@ export default function StaffAttendancePage() {
   const checkIn = useCheckIn()
   const checkOut = useCheckOut()
   const [busy, setBusy] = useState(false)
+  const fileRef = useRef(null)
+  const pendingMode = useRef(null)
 
   const featureDisabled = error?.response?.status === 403
+  const requireSelfie = !!data?.config?.requireSelfie
 
-  const act = async (mode) => {
+  // Jalankan absen: baca GPS lalu kirim (dengan foto bila ada).
+  const runAct = async (mode, photo) => {
     setBusy(true)
     try {
       const geo = await getPosition()
       const mut = mode === 'in' ? checkIn : checkOut
-      await mut.mutateAsync(geo)
+      await mut.mutateAsync({ ...geo, photo })
       toast.success(mode === 'in' ? 'Check-in berhasil. Selamat bekerja!' : 'Check-out berhasil. Terima kasih!')
     } catch (err) {
       const msg = err?.response?.data?.error || err?.message || 'Terjadi kesalahan.'
@@ -51,6 +55,24 @@ export default function StaffAttendancePage() {
     } finally {
       setBusy(false)
     }
+  }
+
+  // Tombol absen — bila wajib selfie, buka kamera dulu; selain itu langsung GPS.
+  const act = (mode) => {
+    if (requireSelfie) {
+      pendingMode.current = mode
+      fileRef.current?.click()
+    } else {
+      runAct(mode, null)
+    }
+  }
+
+  const onPhotoPicked = (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    const mode = pendingMode.current
+    pendingMode.current = null
+    if (file && mode) runAct(mode, file)
   }
 
   if (isLoading) {
@@ -145,21 +167,32 @@ export default function StaffAttendancePage() {
 
             {/* Tombol aksi */}
             {phase !== 'done' && (
-              <button
-                onClick={() => act(phase === 'idle' ? 'in' : 'out')}
-                disabled={busy || !branchConfigured}
-                className={`mt-6 w-full py-4 rounded-2xl font-semibold text-base inline-flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                  phase === 'idle'
-                    ? 'bg-gold text-dark hover:bg-gold-light shadow-gold'
-                    : 'bg-red-600 text-white hover:bg-red-500'
-                }`}
-              >
-                {busy
-                  ? <><Loader2 className="w-5 h-5 animate-spin" /> Membaca lokasi…</>
-                  : phase === 'idle'
-                    ? <><LogIn className="w-5 h-5" /> Check In Sekarang</>
-                    : <><LogOut className="w-5 h-5" /> Check Out Sekarang</>}
-              </button>
+              <>
+                <input
+                  ref={fileRef} type="file" accept="image/*" capture="user"
+                  onChange={onPhotoPicked} className="hidden"
+                />
+                <button
+                  onClick={() => act(phase === 'idle' ? 'in' : 'out')}
+                  disabled={busy || !branchConfigured}
+                  className={`mt-6 w-full py-4 rounded-2xl font-semibold text-base inline-flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                    phase === 'idle'
+                      ? 'bg-gold text-dark hover:bg-gold-light shadow-gold'
+                      : 'bg-red-600 text-white hover:bg-red-500'
+                  }`}
+                >
+                  {busy
+                    ? <><Loader2 className="w-5 h-5 animate-spin" /> Memproses…</>
+                    : phase === 'idle'
+                      ? <>{requireSelfie ? <Camera className="w-5 h-5" /> : <LogIn className="w-5 h-5" />} Check In Sekarang</>
+                      : <>{requireSelfie ? <Camera className="w-5 h-5" /> : <LogOut className="w-5 h-5" />} Check Out Sekarang</>}
+                </button>
+                {requireSelfie && (
+                  <p className="mt-2 text-xs text-muted flex items-center justify-center gap-1">
+                    <Camera className="w-3.5 h-3.5" /> Anda akan diminta mengambil foto selfie.
+                  </p>
+                )}
+              </>
             )}
           </CardBody>
         </Card>
