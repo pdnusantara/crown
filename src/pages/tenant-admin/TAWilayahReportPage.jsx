@@ -1,14 +1,16 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell,
 } from 'recharts'
 import {
-  MapPin, ChevronRight, ChevronDown, Users, TrendingUp,
+  MapPin, ChevronRight, ChevronDown, ChevronUp, ChevronsUpDown, Users, TrendingUp,
   DollarSign, Repeat2, Settings2, AlertCircle, RefreshCw, Download,
   Building2, Home, Sparkles, ArrowUpRight, ArrowDownRight, Minus,
 } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
+import { id as idLocale } from 'date-fns/locale'
 import { useAuthStore } from '../../store/authStore.js'
 import api from '../../lib/api.js'
 import { useWilayahReport } from '../../hooks/useWilayahReport.js'
@@ -17,7 +19,7 @@ import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
 import Button from '../../components/ui/Button.jsx'
 import { useToast } from '../../components/ui/Toast.jsx'
 import { useChartTheme } from '../../utils/chartTheme.js'
-import { formatRupiah } from '../../utils/format.js'
+import { formatRupiah, formatRupiahShort } from '../../utils/format.js'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const PERIODS = [
@@ -66,6 +68,42 @@ function ChangeChip({ cur, prev }) {
   )
 }
 
+// Deteksi viewport mobile — dipakai untuk menyusutkan sumbu chart agar batang
+// tetap terbaca di layar sempit.
+function useIsMobile(bp = 768) {
+  const [mobile, setMobile] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth < bp
+  )
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width:${bp - 1}px)`)
+    const onChange = e => setMobile(e.matches)
+    setMobile(mq.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [bp])
+  return mobile
+}
+
+// ── Sortable table header cell ─────────────────────────────────────────────────
+function SortHeader({ label, sortKey, sort, onSort, align = 'center' }) {
+  const active   = sort.key === sortKey
+  const alignCls = align === 'right' ? 'text-right' : align === 'left' ? 'text-left' : 'text-center'
+  const justify  = align === 'right' ? 'justify-end' : align === 'left' ? 'justify-start' : 'justify-center'
+  return (
+    <th className={`py-3 px-4 font-medium ${alignCls}`}>
+      <button
+        onClick={() => onSort(sortKey)}
+        className={`inline-flex items-center gap-1 w-full ${justify} ${active ? 'text-gold' : 'text-muted'} hover:text-off-white transition-colors`}
+      >
+        {label}
+        {active
+          ? (sort.dir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)
+          : <ChevronsUpDown size={12} className="opacity-40" />}
+      </button>
+    </th>
+  )
+}
+
 // ── Stat Card ─────────────────────────────────────────────────────────────────
 // `changeValue` = angka mentah untuk chip perubahan. WAJIB diisi terpisah saat
 // `value` sudah ter-format jadi string (mis. rupiah) — kalau tidak, chip salah
@@ -81,7 +119,7 @@ function StatCard({ icon: Icon, label, value, prev, changeValue, color = 'text-g
         </div>
         {cur !== null && <ChangeChip cur={cur} prev={prev} />}
       </div>
-      <p className="mt-3 text-2xl font-bold text-off-white leading-none">{value}</p>
+      <p className="mt-3 text-xl sm:text-2xl font-bold text-off-white leading-tight break-words">{value}</p>
       <p className="text-xs text-muted mt-1">{label}</p>
       {sub && <p className="text-xs text-muted/60 mt-0.5">{sub}</p>}
     </Card>
@@ -387,10 +425,10 @@ function KecamatanMobileCard({ kec, rank, totalVisits, isExpanded, onToggle }) {
             <p className="font-medium text-off-white truncate">{kec.kecamatan}</p>
             <ChangeChip cur={kec.visitCount} prev={kec.prevVisitCount} />
           </div>
-          <div className="flex items-center gap-3 mt-1.5 text-xs text-muted">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-muted">
             <span><span className="text-off-white font-medium">{kec.visitCount}</span> kunjungan</span>
             <span><span className="text-off-white font-medium">{kec.customerCount}</span> pelanggan</span>
-            <span className="text-gold font-medium">{formatRupiah(kec.revenue)}</span>
+            <span className="text-gold font-medium">{formatRupiahShort(kec.revenue)}</span>
           </div>
           <div className="mt-2 h-1.5 bg-dark-surface rounded-full overflow-hidden">
             <div className="h-full bg-gold rounded-full" style={{ width: `${pct}%` }} />
@@ -420,7 +458,7 @@ function KecamatanMobileCard({ kec, rank, totalVisits, isExpanded, onToggle }) {
                     </div>
                     <p className="text-xs text-muted">{kel.visitCount} kunjungan · {kel.customerCount} pelanggan</p>
                   </div>
-                  <span className="text-xs text-gold flex-shrink-0">{formatRupiah(kel.revenue)}</span>
+                  <span className="text-xs text-gold flex-shrink-0">{formatRupiahShort(kel.revenue)}</span>
                 </div>
               ))}
             </div>
@@ -463,14 +501,33 @@ export default function TAWilayahReportPage() {
   const [period, setPeriod]           = useState('30d')
   const [showConfig, setShowConfig]   = useState(false)
   const [expandedKec, setExpandedKec] = useState(null)
+  const [sort, setSort]               = useState({ key: 'visitCount', dir: 'desc' })
+  const isMobile = useIsMobile()
 
-  const { data, isLoading, isError, refetch } = useWilayahReport({
+  const { data, isLoading, isError, refetch, dataUpdatedAt } = useWilayahReport({
     kabupatenId: config?.kabupatenId,
     period,
   })
 
   const summary      = data?.summary
   const byKecamatan  = data?.byKecamatan || []
+
+  // Daftar kecamatan ter-sort untuk tabel & kartu (chart tetap urut kunjungan).
+  const sortedKecamatan = useMemo(() => {
+    const arr = [...byKecamatan]
+    arr.sort((a, b) => {
+      const av = Number(a[sort.key]) || 0
+      const bv = Number(b[sort.key]) || 0
+      return sort.dir === 'asc' ? av - bv : bv - av
+    })
+    return arr
+  }, [byKecamatan, sort])
+
+  function toggleSort(key) {
+    setSort(prev => prev.key === key
+      ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+      : { key, dir: 'desc' })
+  }
 
   const chartData = useMemo(() =>
     byKecamatan
@@ -568,6 +625,11 @@ export default function TAWilayahReportPage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {dataUpdatedAt > 0 && !isLoading && (
+            <span className="text-[11px] text-muted/70 self-center mr-0.5">
+              Diperbarui {formatDistanceToNow(dataUpdatedAt, { addSuffix: true, locale: idLocale })}
+            </span>
+          )}
           <button
             onClick={() => setShowConfig(v => !v)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-dark-border text-xs text-muted hover:border-gold/30 hover:text-off-white transition-all"
@@ -652,7 +714,12 @@ export default function TAWilayahReportPage() {
         <StatCard
           icon={DollarSign}
           label="Total Pendapatan"
-          value={isLoading ? '—' : formatRupiah(summary?.totalRevenue ?? 0)}
+          value={isLoading ? '—' : (
+            <>
+              <span className="sm:hidden">{formatRupiahShort(summary?.totalRevenue ?? 0)}</span>
+              <span className="hidden sm:inline">{formatRupiah(summary?.totalRevenue ?? 0)}</span>
+            </>
+          )}
           changeValue={summary?.totalRevenue ?? 0}
           prev={period !== 'all' ? summary?.prevRevenue : undefined}
           color="text-green-400"
@@ -699,15 +766,16 @@ export default function TAWilayahReportPage() {
                 <BarChart
                   data={chartData}
                   layout="vertical"
-                  margin={{ top: 0, right: 30, left: 8, bottom: 0 }}
+                  margin={{ top: 0, right: isMobile ? 14 : 30, left: 8, bottom: 0 }}
                 >
                   <CartesianGrid horizontal={false} stroke={chart.grid} />
-                  <XAxis type="number" tick={{ fontSize: 11, fill: chart.axisTick }} axisLine={false} tickLine={false} />
+                  <XAxis type="number" tick={{ fontSize: isMobile ? 9 : 11, fill: chart.axisTick }} axisLine={false} tickLine={false} />
                   <YAxis
                     type="category"
                     dataKey="kecamatan"
-                    width={120}
-                    tick={{ fontSize: 11, fill: chart.axisTick }}
+                    width={isMobile ? 78 : 120}
+                    tick={{ fontSize: isMobile ? 9 : 11, fill: chart.axisTick }}
+                    tickFormatter={isMobile ? (v) => (v.length > 11 ? `${v.slice(0, 10)}…` : v) : undefined}
                     axisLine={false}
                     tickLine={false}
                   />
@@ -741,15 +809,15 @@ export default function TAWilayahReportPage() {
                 <thead>
                   <tr className="border-b border-dark-border text-xs text-muted">
                     <th className="py-3 px-4 text-left font-medium">Kecamatan</th>
-                    <th className="py-3 px-4 text-center font-medium">Pelanggan</th>
-                    <th className="py-3 px-4 text-left font-medium">Kunjungan</th>
-                    <th className="py-3 px-4 text-right font-medium">Pendapatan</th>
-                    <th className="py-3 px-4 text-center font-medium">Rata-rata</th>
+                    <SortHeader label="Pelanggan"  sortKey="customerCount"       sort={sort} onSort={toggleSort} align="center" />
+                    <SortHeader label="Kunjungan"  sortKey="visitCount"          sort={sort} onSort={toggleSort} align="left" />
+                    <SortHeader label="Pendapatan" sortKey="revenue"             sort={sort} onSort={toggleSort} align="right" />
+                    <SortHeader label="Rata-rata"  sortKey="avgVisitPerCustomer" sort={sort} onSort={toggleSort} align="center" />
                     <th className="py-3 px-4 w-8" />
                   </tr>
                 </thead>
                 <tbody>
-                  {byKecamatan.map((kec, i) => (
+                  {sortedKecamatan.map((kec, i) => (
                     <KecamatanRow
                       key={kec.kecamatanId}
                       kec={kec}
@@ -766,11 +834,24 @@ export default function TAWilayahReportPage() {
 
           {/* Kecamatan Cards — mobile */}
           <div className="md:hidden space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <h3 className="font-semibold text-off-white">Detail per Kecamatan</h3>
-              <p className="text-xs text-muted">{byKecamatan.length} kecamatan</p>
+              <div className="relative flex-shrink-0">
+                <select
+                  value={sort.key}
+                  onChange={e => setSort({ key: e.target.value, dir: 'desc' })}
+                  className="appearance-none bg-dark-card border border-dark-border text-muted rounded-lg pl-2.5 pr-7 py-1.5 text-xs outline-none focus:border-gold/40"
+                  aria-label="Urutkan kecamatan"
+                >
+                  <option value="visitCount">Urut: Kunjungan</option>
+                  <option value="customerCount">Urut: Pelanggan</option>
+                  <option value="revenue">Urut: Pendapatan</option>
+                  <option value="avgVisitPerCustomer">Urut: Loyalitas</option>
+                </select>
+                <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+              </div>
             </div>
-            {byKecamatan.map((kec, i) => (
+            {sortedKecamatan.map((kec, i) => (
               <KecamatanMobileCard
                 key={kec.kecamatanId}
                 kec={kec}
