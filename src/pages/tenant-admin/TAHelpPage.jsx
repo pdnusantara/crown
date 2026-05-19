@@ -75,7 +75,7 @@ const CATEGORIES = [
         a: 'POS dipakai akun kasir untuk mencatat penjualan. Sebagai pemilik Anda tidak melayani transaksi langsung, tetapi penting memahami alurnya.',
         steps: [
           'Kasir membuka shift sebelum transaksi pertama.',
-          'Pilih pelanggan, barber, dan layanan ke keranjang.',
+          'Pilih pelanggan (wajib), barber, dan layanan ke keranjang.',
           'Terapkan voucher atau poin loyalti bila ada.',
           'Pilih metode bayar dan selesaikan — struk tercetak.',
         ],
@@ -165,7 +165,7 @@ const CATEGORIES = [
       {
         id: 'l-laporan',
         q: 'Laporan apa saja yang tersedia?',
-        a: 'Menu Laporan menyajikan omzet, jumlah transaksi, performa layanan, dan kontribusi tiap barber. Anda bisa memfilter per cabang dan periode, lalu ekspor ke CSV.',
+        a: 'Menu Laporan menyajikan omzet, jumlah transaksi, performa layanan, serta performa tiap barber lengkap dengan komisi riil yang mereka hasilkan. Bisa difilter per cabang dan periode, lalu diekspor ke CSV.',
         to: '/admin/reports',
         toLabel: 'Buka Laporan',
       },
@@ -179,7 +179,27 @@ const CATEGORIES = [
       {
         id: 'l-pengeluaran',
         q: 'Bagaimana mencatat pengeluaran toko?',
-        a: 'Menu Pengeluaran mencatat biaya operasional seperti sewa, gaji, dan belanja. Pengeluaran dipotong dari omzet untuk menghitung laba bersih.',
+        a: 'Menu Pengeluaran mencatat biaya operasional (sewa, gaji, listrik, belanja, dll). Total pengeluaran dipotong dari omzet untuk menghitung laba bersih bulan tersebut.',
+        steps: [
+          'Klik "Tambah", pilih kategori, isi nominal, tanggal, dan deskripsi.',
+          'Pakai pemilih bulan di atas untuk berpindah periode.',
+          'Tombol "Salin Bulan Lalu" menyalin pengeluaran rutin (sewa, gaji, internet) dari bulan sebelumnya — centang yang perlu, simpan sekaligus.',
+          'Ekspor CSV untuk menyimpan rekap pengeluaran satu bulan.',
+        ],
+        to: '/admin/expenses',
+        toLabel: 'Buka Pengeluaran',
+      },
+      {
+        id: 'l-gaji-barber',
+        q: 'Bagaimana mencatat gaji / komisi barber?',
+        a: 'Komisi barber dihitung otomatis dari transaksi (omzet × rate tiap barber), tetapi TIDAK otomatis menjadi pengeluaran — Anda yang menentukan kapan dan berapa membayarnya.',
+        steps: [
+          'Di halaman Pengeluaran, klik tombol "Gaji Barber".',
+          'Muncul daftar komisi tiap barber untuk bulan yang sedang dilihat.',
+          'Klik "Catat" pada seorang barber — form pengeluaran terisi otomatis (kategori Gaji & Honor, nominal = komisi).',
+          'Periksa nominalnya (boleh diubah bila yang dibayar berbeda), lalu simpan.',
+          'Barber yang komisinya sudah dicatat ditandai "✓ Dicatat" supaya tidak dobel bayar.',
+        ],
         to: '/admin/expenses',
         toLabel: 'Buka Pengeluaran',
       },

@@ -51,10 +51,10 @@ function buildCategories(slug) {
         {
           id: 'tx-alur',
           q: 'Bagaimana mencatat transaksi baru?',
-          a: 'Menu Kasir dipakai untuk mencatat penjualan layanan kepada pelanggan.',
+          a: 'Menu Kasir dipakai untuk mencatat penjualan layanan kepada pelanggan. Pelanggan wajib dipilih — transaksi tidak bisa diproses tanpa pelanggan.',
           steps: [
-            'Pilih atau daftarkan pelanggan, lalu pilih barber.',
-            'Tambahkan layanan yang diminta ke keranjang.',
+            'Pilih atau daftarkan pelanggan terlebih dahulu (wajib).',
+            'Pilih barber yang melayani, lalu tambahkan layanan ke keranjang.',
             'Masukkan voucher atau tukar poin loyalti bila ada.',
             'Pilih metode pembayaran dan tekan Bayar.',
             'Struk tercetak dan transaksi tersimpan.',
