@@ -78,6 +78,25 @@ const FALLBACK_CLOSING = {
 
 const FALLBACK_FOOTER = 'Sistem manajemen barbershop modern: kasir, antrian, booking online, multi-cabang, dan laporan pintar dalam satu aplikasi.'
 
+// Nilai SEO default — dipakai saat /api/landing belum termuat / gagal.
+const FALLBACK_SEO = {
+  title:       'SembaPOS — Sistem Manajemen Barbershop Modern',
+  description: 'Kasir, antrian, booking online, multi-cabang, dan laporan pintar — semua dalam satu aplikasi yang dirancang khusus untuk barbershop. Coba gratis 14 hari, tanpa kartu kredit.',
+  keywords:    'aplikasi barbershop, POS barbershop, manajemen barbershop, kasir barbershop, booking barbershop, antrian barbershop',
+}
+
+// Set/perbarui satu <meta> di <head>; dibuat bila belum ada.
+function upsertMeta(selector, content) {
+  let el = document.head.querySelector(selector)
+  if (!el) {
+    el = document.createElement('meta')
+    const m = selector.match(/\[(name|property)="([^"]+)"\]/)
+    if (m) el.setAttribute(m[1], m[2])
+    document.head.appendChild(el)
+  }
+  el.setAttribute('content', content)
+}
+
 // Urutan section default kalau /api/landing belum mengembalikan `layout`.
 const FALLBACK_LAYOUT = ['stats', 'features', 'steps', 'pricing', 'testimonials', 'faq', 'closingCta']
   .map(t => ({ id: t, type: t, visible: true }))
@@ -195,8 +214,9 @@ export default function LandingPage() {
   }, [])
 
   useEffect(() => {
+    // Judul disimpan untuk dipulihkan saat keluar dari landing — nilai SEO
+    // dinamis diisi oleh efek SEO terpisah di bawah.
     const original = document.title
-    document.title = 'SembaPOS — Kelola Barbershop Tanpa Ribet'
 
     // Landing selalu terang — pastikan latar terang juga saat masuk lewat
     // navigasi client-side dari halaman app yang gelap (skrip di index.html
@@ -238,6 +258,83 @@ export default function LandingPage() {
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [isPreview])
+
+  // SEO dinamis — judul, meta description/keywords, Open Graph, Twitter Card,
+  // canonical, & structured data JSON-LD. Semua bersumber dari konten yang
+  // diatur super-admin (tab "SEO & Iklan"); index.html hanya jadi nilai awal.
+  useEffect(() => {
+    const seoTitle = (hero.seoTitle || FALLBACK_SEO.title).trim()
+    const seoDesc  = (hero.seoDescription || FALLBACK_SEO.description).trim()
+    const seoKeys  = (hero.seoKeywords || FALLBACK_SEO.keywords).trim()
+    const origin   = window.location.origin
+    const pageUrl  = origin + '/'
+    let ogImage    = (hero.seoOgImage || '/og-image.svg').trim()
+    if (ogImage.startsWith('/')) ogImage = origin + ogImage
+
+    document.title = seoTitle
+    upsertMeta('meta[name="description"]', seoDesc)
+    upsertMeta('meta[name="keywords"]', seoKeys)
+    upsertMeta('meta[property="og:title"]', seoTitle)
+    upsertMeta('meta[property="og:description"]', seoDesc)
+    upsertMeta('meta[property="og:image"]', ogImage)
+    upsertMeta('meta[property="og:url"]', pageUrl)
+    upsertMeta('meta[name="twitter:title"]', seoTitle)
+    upsertMeta('meta[name="twitter:description"]', seoDesc)
+    upsertMeta('meta[name="twitter:image"]', ogImage)
+
+    let canon = document.head.querySelector('link[rel="canonical"]')
+    if (!canon) {
+      canon = document.createElement('link')
+      canon.rel = 'canonical'
+      document.head.appendChild(canon)
+    }
+    canon.setAttribute('href', pageUrl)
+
+    // Structured data (JSON-LD) — Organization + SoftwareApplication. Rating
+    // diturunkan dari testimoni nyata supaya valid (bukan angka karangan).
+    const tlist = data?.testimonials || []
+    const org = {
+      '@type': 'Organization',
+      '@id': pageUrl + '#organization',
+      name: 'SembaPOS',
+      url: pageUrl,
+      logo: ogImage,
+    }
+    if (hero.contactEmail)   org.email     = hero.contactEmail
+    if (hero.contactPhone)   org.telephone = hero.contactPhone
+    if (hero.contactAddress) org.address   = hero.contactAddress
+    const app = {
+      '@type': 'SoftwareApplication',
+      name: 'SembaPOS',
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Web',
+      description: seoDesc,
+      url: pageUrl,
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'IDR', description: 'Uji coba gratis 14 hari' },
+    }
+    if (tlist.length > 0) {
+      const avg = tlist.reduce((s, t) => s + (t.rating || 5), 0) / tlist.length
+      app.aggregateRating = {
+        '@type': 'AggregateRating',
+        ratingValue: avg.toFixed(1),
+        reviewCount: String(tlist.length),
+        bestRating: '5',
+      }
+    }
+    const ld = { '@context': 'https://schema.org', '@graph': [org, app] }
+    let ldEl = document.getElementById('sembapos-jsonld')
+    if (!ldEl) {
+      ldEl = document.createElement('script')
+      ldEl.type = 'application/ld+json'
+      ldEl.id = 'sembapos-jsonld'
+      document.head.appendChild(ldEl)
+    }
+    ldEl.textContent = JSON.stringify(ld)
+
+    return () => {
+      document.getElementById('sembapos-jsonld')?.remove()
+    }
+  }, [data])
 
   const features = (hero.features?.length ? hero.features : FALLBACK_FEATURES)
   const trustItems = (hero.trustItems?.length ? hero.trustItems : FALLBACK_TRUST)

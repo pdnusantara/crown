@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   Globe, Edit3, Trash2, Plus, Save, MessageSquare, HelpCircle, Star, Eye, EyeOff, ExternalLink,
-  LayoutTemplate, Layers, Target,
+  LayoutTemplate, Layers, Search, Upload,
 } from 'lucide-react'
 import LandingLayoutBuilder from './LandingLayoutBuilder.jsx'
 import {
@@ -16,6 +16,7 @@ import Input from '../../components/ui/Input.jsx'
 import Modal from '../../components/ui/Modal.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import { useToast } from '../../components/ui/Toast.jsx'
+import api from '../../lib/api.js'
 
 const TABS = [
   { id: 'layout',       label: 'Tata Letak',       icon: Layers },
@@ -23,7 +24,7 @@ const TABS = [
   { id: 'content',      label: 'Section & Footer', icon: LayoutTemplate },
   { id: 'testimonials', label: 'Testimoni',        icon: MessageSquare },
   { id: 'faqs',         label: 'FAQ',              icon: HelpCircle },
-  { id: 'tracking',     label: 'Pelacakan',        icon: Target },
+  { id: 'tracking',     label: 'SEO & Iklan',      icon: Search },
 ]
 
 export default function SALandingPage() {
@@ -75,7 +76,184 @@ export default function SALandingPage() {
       {tab === 'content' && <ContentEditor />}
       {tab === 'testimonials' && <TestimonialsEditor />}
       {tab === 'faqs' && <FAQEditor />}
-      {tab === 'tracking' && <TrackingEditor />}
+      {tab === 'tracking' && (
+        <div className="space-y-6">
+          <SeoEditor />
+          <TrackingEditor />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── SEO editor ───────────────────────────────────────────────────────────
+// Mengatur judul, deskripsi, kata kunci, & gambar share (Open Graph) landing
+// page. Disimpan lewat PATCH /landing/hero; LandingPage menyuntik meta tag,
+// Open Graph, Twitter Card, canonical, & JSON-LD secara dinamis.
+function SeoEditor() {
+  const toast = useToast()
+  const { data, isLoading } = useLanding()
+  const updateHero = useUpdateHero()
+
+  const [form, setForm] = useState(null)
+  const [uploading, setUploading] = useState(false)
+
+  useEffect(() => {
+    if (data?.hero && !form) {
+      setForm({
+        seoTitle:       data.hero.seoTitle       || '',
+        seoDescription: data.hero.seoDescription || '',
+        seoKeywords:    data.hero.seoKeywords    || '',
+        seoOgImage:     data.hero.seoOgImage     || '',
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data])
+
+  if (isLoading || !form) return <div className="h-64 bg-dark-card rounded-2xl animate-pulse" />
+
+  const titleLen = form.seoTitle.length
+  const descLen  = form.seoDescription.length
+
+  async function handleSave() {
+    try {
+      await updateHero.mutateAsync({
+        seoTitle:       form.seoTitle.trim(),
+        seoDescription: form.seoDescription.trim(),
+        seoKeywords:    form.seoKeywords.trim(),
+        seoOgImage:     form.seoOgImage.trim(),
+      })
+      toast.success('Pengaturan SEO tersimpan')
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal menyimpan')
+    }
+  }
+
+  async function handleUpload(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('image', file)
+      const res = await api.post('/landing/upload', fd)
+      setForm(f => ({ ...f, seoOgImage: res.data?.data?.url || '' }))
+      toast.success('Gambar diunggah — jangan lupa simpan')
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal mengunggah gambar')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const previewTitle = form.seoTitle.trim() || 'SembaPOS — Sistem Manajemen Barbershop Modern'
+  const previewDesc  = form.seoDescription.trim()
+    || 'Kasir, antrian, booking online, multi-cabang, dan laporan pintar — semua dalam satu aplikasi untuk barbershop.'
+  const ogSrc = form.seoOgImage.trim() || '/og-image.svg'
+
+  return (
+    <div className="grid lg:grid-cols-2 gap-6">
+      <Card>
+        <CardHeader><h3 className="font-semibold text-off-white">SEO Landing Page</h3></CardHeader>
+        <CardBody className="space-y-4">
+          <div>
+            <Input
+              label="Judul halaman (title tag)"
+              placeholder="SembaPOS — Sistem Manajemen Barbershop Modern"
+              value={form.seoTitle}
+              onChange={e => setForm(f => ({ ...f, seoTitle: e.target.value }))}
+            />
+            <p className={`text-[11px] mt-1 ${titleLen > 60 ? 'text-amber-400' : 'text-muted'}`}>
+              {titleLen}/60 karakter ideal{titleLen > 60 ? ' — bisa terpotong di hasil pencarian' : ''}
+            </p>
+          </div>
+          <div>
+            <label className="text-xs text-muted block mb-1.5">Deskripsi (meta description)</label>
+            <textarea
+              rows={3}
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/60"
+              placeholder="Ringkasan menarik 1–2 kalimat yang muncul di hasil pencarian Google."
+              value={form.seoDescription}
+              onChange={e => setForm(f => ({ ...f, seoDescription: e.target.value }))}
+            />
+            <p className={`text-[11px] mt-1 ${descLen > 160 ? 'text-amber-400' : 'text-muted'}`}>
+              {descLen}/160 karakter ideal{descLen > 160 ? ' — bisa terpotong di hasil pencarian' : ''}
+            </p>
+          </div>
+          <Input
+            label="Kata kunci (pisahkan dengan koma)"
+            placeholder="aplikasi barbershop, POS barbershop, kasir barbershop"
+            value={form.seoKeywords}
+            onChange={e => setForm(f => ({ ...f, seoKeywords: e.target.value }))}
+          />
+
+          <div>
+            <label className="text-xs text-muted block mb-1.5">Gambar share (Open Graph — 1200×630 px)</label>
+            <div className="flex items-center gap-2">
+              <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-dark-surface border border-dark-border text-sm cursor-pointer hover:border-gold/40 transition-colors">
+                <Upload size={13} /> {uploading ? 'Mengunggah…' : 'Unggah gambar'}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={handleUpload}
+                  disabled={uploading}
+                />
+              </label>
+              {form.seoOgImage && (
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, seoOgImage: '' }))}
+                  className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                  title="Hapus gambar"
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
+            </div>
+            <p className="text-[11px] text-muted mt-1.5">
+              Disarankan format JPG/PNG agar tampil di semua platform sosial. Kosongkan untuk memakai gambar bawaan.
+            </p>
+          </div>
+
+          <Button onClick={handleSave} loading={updateHero.isPending} icon={Save} fullWidth>
+            Simpan Pengaturan SEO
+          </Button>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader><h3 className="font-semibold text-off-white">Pratinjau</h3></CardHeader>
+        <CardBody className="space-y-5">
+          <div>
+            <p className="text-xs text-muted mb-2">Tampil di hasil pencarian Google</p>
+            <div className="p-3 rounded-xl bg-white">
+              <p className="text-[#1a0dab] text-base leading-snug truncate">{previewTitle}</p>
+              <p className="text-[#006621] text-xs mt-0.5">https://sembapos.com</p>
+              <p className="text-[#4d5156] text-[13px] mt-1 line-clamp-2">{previewDesc}</p>
+            </div>
+          </div>
+          <div>
+            <p className="text-xs text-muted mb-2">Tampil saat dibagikan (Open Graph)</p>
+            <div className="rounded-xl overflow-hidden border border-dark-border">
+              <div className="aspect-[1200/630] bg-dark-card overflow-hidden">
+                <img src={ogSrc} alt="Pratinjau Open Graph" className="w-full h-full object-cover" />
+              </div>
+              <div className="p-3 bg-dark-surface">
+                <p className="text-[11px] text-muted uppercase">sembapos.com</p>
+                <p className="text-sm font-semibold text-off-white truncate mt-0.5">{previewTitle}</p>
+                <p className="text-xs text-muted line-clamp-2 mt-0.5">{previewDesc}</p>
+              </div>
+            </div>
+          </div>
+          <p className="text-[11px] text-muted leading-relaxed">
+            Halaman juga otomatis menyuntik canonical URL & data terstruktur
+            JSON-LD (Organization + SoftwareApplication, lengkap dengan rating
+            dari testimoni) untuk hasil pencarian yang lebih kaya.
+          </p>
+        </CardBody>
+      </Card>
     </div>
   )
 }

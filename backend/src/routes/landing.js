@@ -35,6 +35,10 @@ const SETTING_KEYS = {
   sections:     'landing_sections',     // JSON: heading per-section
   closingCta:   'landing_closing_cta',  // JSON: {title,subtitle,ctaLabel}
   metaPixelId:  'landing_meta_pixel_id',// Meta (Facebook) Pixel ID untuk iklan
+  seoTitle:       'landing_seo_title',       // <title> & og:title landing
+  seoDescription: 'landing_seo_description', // meta description & og:description
+  seoKeywords:    'landing_seo_keywords',    // meta keywords (dipisah koma)
+  seoOgImage:     'landing_seo_og_image',    // URL gambar share (og:image)
 };
 
 // Keys yang nilainya JSON-encoded — di-parse saat baca, di-stringify saat tulis.
@@ -92,6 +96,10 @@ const DEFAULTS = {
     ctaLabel: 'Daftar Sekarang',
   }),
   metaPixelId: '',
+  seoTitle:       'SembaPOS — Sistem Manajemen Barbershop Modern',
+  seoDescription: 'Kasir, antrian, booking online, multi-cabang, dan laporan pintar — semua dalam satu aplikasi yang dirancang khusus untuk barbershop. Coba gratis 14 hari, tanpa kartu kredit.',
+  seoKeywords:    'aplikasi barbershop, POS barbershop, manajemen barbershop, kasir barbershop, booking barbershop, antrian barbershop',
+  seoOgImage:     '',
 };
 
 async function getSetting(key) {
@@ -212,6 +220,10 @@ const heroUpdateSchema = z.object({
     ctaLabel: z.string().max(50),
   }).optional(),
   metaPixelId:  z.string().regex(/^\d*$/, 'Pixel ID hanya boleh berisi angka').max(20).optional(),
+  seoTitle:       z.string().max(120).optional(),
+  seoDescription: z.string().max(320).optional(),
+  seoKeywords:    z.string().max(400).optional(),
+  seoOgImage:     z.string().max(500).optional(),
 });
 
 // PATCH /api/landing/hero — super_admin update branding/hero
