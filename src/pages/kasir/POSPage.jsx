@@ -1219,12 +1219,14 @@ function POSPageInner() {
           </div>
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-1 flex-shrink-0 snap-x">
+        {/* flex-wrap: semua chip kategori terlihat penuh di mobile tanpa
+            terpotong/geser-horizontal; di desktop tetap muat satu baris. */}
+        <div className="flex flex-wrap gap-2 flex-shrink-0">
           {CATEGORIES.map(cat => (
             <button
               key={cat.id}
               onClick={() => setCategory(cat.id)}
-              className={`snap-start px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all flex-shrink-0 active:scale-95 ${
+              className={`px-3.5 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all flex-shrink-0 active:scale-95 ${
                 category === cat.id ? 'bg-gold text-dark' : 'bg-dark-card border border-dark-border text-muted hover:text-off-white'
               }`}
             >
