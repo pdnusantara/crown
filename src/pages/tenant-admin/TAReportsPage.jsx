@@ -438,7 +438,38 @@ export default function TAReportsPage() {
             ? <CardBody><Skeleton className="h-40" /></CardBody>
             : barbers.length === 0
               ? <CardBody><p className="text-muted text-sm text-center py-6">{t('tenantAdmin.reports.noBarberData')}</p></CardBody>
-              : <Table columns={barberColumns} data={barbers} sortable />}
+              : (
+                <>
+                  {/* Desktop: tabel penuh */}
+                  <div className="hidden md:block">
+                    <Table columns={barberColumns} data={barbers} sortable />
+                  </div>
+                  {/* Mobile: kartu — semua data termasuk Komisi terlihat tanpa scroll samping */}
+                  <div className="md:hidden divide-y divide-dark-border">
+                    {barbers.map(b => (
+                      <div key={b.barberId} className="p-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-medium text-off-white text-sm truncate">{b.barberName}</p>
+                          {b.averageRating != null && (
+                            <span className="text-xs text-amber-400 flex-shrink-0">⭐ {b.averageRating.toFixed(1)}</span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-muted mt-0.5">{b.servicesCount} transaksi</p>
+                        <div className="grid grid-cols-2 gap-2 mt-2.5">
+                          <div className="bg-dark-surface rounded-lg px-2.5 py-1.5">
+                            <p className="text-[10px] text-muted">Omzet</p>
+                            <p className="text-sm font-semibold text-gold whitespace-nowrap tabular-nums">{formatRupiahShort(b.revenue || 0)}</p>
+                          </div>
+                          <div className="bg-dark-surface rounded-lg px-2.5 py-1.5">
+                            <p className="text-[10px] text-muted">Komisi · {Math.round((b.commissionRate || 0) * 100)}%</p>
+                            <p className="text-sm font-semibold text-off-white whitespace-nowrap tabular-nums">{formatRupiahShort(b.commission || 0)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
         </Card>
       )}
     </div>
