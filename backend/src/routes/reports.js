@@ -2,7 +2,7 @@ const router = require('express').Router();
 const { z } = require('zod');
 const prisma = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
-const { buildTenantDateRange, formatYmdInTz, normalizeTimezone, DEFAULT_TZ } = require('../utils/timezone');
+const { buildTenantDateRange, formatYmdInTz, normalizeTimezone, tenantDayStart, DEFAULT_TZ } = require('../utils/timezone');
 
 const dateRangeSchema = z.object({
   startDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
@@ -23,6 +23,56 @@ async function resolveTenantTz(tenantId) {
 
 function buildDateRange(startDate, endDate, tz = DEFAULT_TZ) {
   return buildTenantDateRange(startDate, endDate, tz);
+}
+
+// ── Calendar-period helpers (laporan wilayah) ──────────────────────────────────
+const pad2 = (n) => String(n).padStart(2, '0');
+
+// Geser string "YYYY-MM-DD" sebanyak N hari (N bisa negatif).
+function shiftYmd(ymd, days) {
+  const dt = new Date(`${ymd}T00:00:00.000Z`);
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
+
+// Tanggal-1 dari bulan (year, month 1-12) yang digeser N bulan.
+function firstOfMonthShifted(year, month, deltaMonths) {
+  const idx = year * 12 + (month - 1) + deltaMonths;
+  return `${Math.floor(idx / 12)}-${pad2((idx % 12) + 1)}-01`;
+}
+
+const WILAYAH_PERIODS = ['yesterday', 'today', 'month', 'year', 'all'];
+
+// Resolve periode kalender (TZ tenant) → { curStart, curEnd, prevStart, prevEnd }.
+// Range half-open [start, end). Untuk 'all' semua null (tanpa filter & pembanding).
+function resolveWilayahPeriod(period, tz) {
+  const todayYmd = formatYmdInTz(new Date(), tz);
+  const [y, m] = todayYmd.split('-').map(Number);
+  const ds = (ymd) => tenantDayStart(ymd, tz);
+  let curStart = null, curEnd = null, prevStart = null, prevEnd = null;
+
+  if (period === 'today') {
+    curStart  = ds(todayYmd);
+    curEnd    = ds(shiftYmd(todayYmd, 1));
+    prevStart = ds(shiftYmd(todayYmd, -1));
+    prevEnd   = curStart;
+  } else if (period === 'yesterday') {
+    curStart  = ds(shiftYmd(todayYmd, -1));
+    curEnd    = ds(todayYmd);
+    prevStart = ds(shiftYmd(todayYmd, -2));
+    prevEnd   = curStart;
+  } else if (period === 'month') {
+    curStart  = ds(firstOfMonthShifted(y, m, 0));
+    curEnd    = ds(firstOfMonthShifted(y, m, 1));
+    prevStart = ds(firstOfMonthShifted(y, m, -1));
+    prevEnd   = curStart;
+  } else if (period === 'year') {
+    curStart  = ds(`${y}-01-01`);
+    curEnd    = ds(`${y + 1}-01-01`);
+    prevStart = ds(`${y - 1}-01-01`);
+    prevEnd   = curStart;
+  }
+  return { curStart, curEnd, prevStart, prevEnd };
 }
 
 // Resolve branchId aman: kalau dipassing tapi bukan milik tenant ybs → ignore
@@ -392,31 +442,17 @@ router.get('/services', authenticate, requireRole('super_admin', 'tenant_admin')
 // GET /api/reports/wilayah - kunjungan per kecamatan & kelurahan
 router.get('/wilayah', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
   try {
-    const { kabupatenId, period = '30d' } = req.query;
+    const { kabupatenId } = req.query;
+    const period = WILAYAH_PERIODS.includes(req.query.period) ? req.query.period : 'month';
     const tenantId = req.user.role === 'super_admin' ? req.query.tenantId : req.user.tenantId;
 
     if (!kabupatenId) {
       return res.status(400).json({ success: false, error: 'kabupatenId is required' });
     }
 
-    const now = new Date();
-    let curStart = null;
-    let prevStart = null;
-    let prevEnd = null;
-
-    if (period === '30d') {
-      curStart  = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      prevStart = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
-      prevEnd   = curStart;
-    } else if (period === '90d') {
-      curStart  = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-      prevStart = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
-      prevEnd   = curStart;
-    } else if (period === '1y') {
-      curStart  = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-      prevStart = new Date(now.getTime() - 730 * 24 * 60 * 60 * 1000);
-      prevEnd   = curStart;
-    }
+    // Periode kalender dihitung di TZ tenant (Hari Ini / Kemarin / Bulan Ini / Tahun Ini).
+    const tz = await resolveTenantTz(tenantId);
+    const { curStart, curEnd, prevStart, prevEnd } = resolveWilayahPeriod(period, tz);
 
     const customerWhere = {
       deletedAt: null,
@@ -434,7 +470,7 @@ router.get('/wilayah', authenticate, requireRole('super_admin', 'tenant_admin'),
         transactions: {
           where: {
             status: 'completed',
-            ...(curStart ? { createdAt: { gte: curStart } } : {}),
+            ...(curStart ? { createdAt: { gte: curStart, lt: curEnd } } : {}),
           },
           select: { id: true, total: true },
         },
@@ -530,6 +566,7 @@ router.get('/wilayah', authenticate, requireRole('super_admin', 'tenant_admin'),
       success: true,
       data: {
         period,
+        timezone: tz,
         summary: {
           totalCustomers,
           totalVisits,

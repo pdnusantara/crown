@@ -23,11 +23,20 @@ import { formatRupiah, formatRupiahShort } from '../../utils/format.js'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const PERIODS = [
-  { value: '30d', label: '30 Hari' },
-  { value: '90d', label: '90 Hari' },
-  { value: '1y',  label: '1 Tahun' },
-  { value: 'all', label: 'Semua' },
+  { value: 'yesterday', label: 'Kemarin' },
+  { value: 'today',     label: 'Hari Ini' },
+  { value: 'month',     label: 'Bulan Ini' },
+  { value: 'year',      label: 'Tahun Ini' },
+  { value: 'all',       label: 'Semua' },
 ]
+
+// Label pembanding chip perubahan — per periode kalender. 'all' tanpa pembanding.
+const PREV_LABELS = {
+  today:     'vs kemarin',
+  yesterday: 'vs hari sebelumnya',
+  month:     'vs bulan lalu',
+  year:      'vs tahun lalu',
+}
 
 const BAR_COLORS = [
   '#C9A84C', '#D4B96A', '#B8943A', '#E5C87E', '#F0D898',
@@ -498,7 +507,7 @@ export default function TAWilayahReportPage() {
   const wilayah = user?.tenant?.wilayah
   const config = wilayah?.kabupatenId ? wilayah : null
 
-  const [period, setPeriod]           = useState('30d')
+  const [period, setPeriod]           = useState('month')
   const [showConfig, setShowConfig]   = useState(false)
   const [expandedKec, setExpandedKec] = useState(null)
   const [sort, setSort]               = useState({ key: 'visitCount', dir: 'desc' })
@@ -670,7 +679,7 @@ export default function TAWilayahReportPage() {
       </AnimatePresence>
 
       {/* Period selector */}
-      <div className="flex gap-1 p-1 bg-dark-card border border-dark-border rounded-xl w-fit">
+      <div className="flex flex-wrap gap-1 p-1 bg-dark-card border border-dark-border rounded-xl w-fit max-w-full">
         {PERIODS.map(p => (
           <button
             key={p.value}
@@ -707,9 +716,9 @@ export default function TAWilayahReportPage() {
           label="Total Kunjungan"
           value={isLoading ? '—' : (summary?.totalVisits ?? 0)}
           changeValue={summary?.totalVisits ?? 0}
-          prev={period !== 'all' ? summary?.prevVisits : undefined}
+          prev={PREV_LABELS[period] ? summary?.prevVisits : undefined}
           color="text-gold"
-          sub={period !== 'all' ? 'vs periode sebelumnya' : undefined}
+          sub={PREV_LABELS[period]}
         />
         <StatCard
           icon={DollarSign}
@@ -721,9 +730,9 @@ export default function TAWilayahReportPage() {
             </>
           )}
           changeValue={summary?.totalRevenue ?? 0}
-          prev={period !== 'all' ? summary?.prevRevenue : undefined}
+          prev={PREV_LABELS[period] ? summary?.prevRevenue : undefined}
           color="text-green-400"
-          sub={period !== 'all' ? 'vs periode sebelumnya' : undefined}
+          sub={PREV_LABELS[period]}
         />
         <StatCard
           icon={TrendingUp}
