@@ -34,6 +34,7 @@ const SETTING_KEYS = {
   steps:        'landing_steps',        // JSON: array {title,desc} "cara mulai"
   sections:     'landing_sections',     // JSON: heading per-section
   closingCta:   'landing_closing_cta',  // JSON: {title,subtitle,ctaLabel}
+  metaPixelId:  'landing_meta_pixel_id',// Meta (Facebook) Pixel ID untuk iklan
 };
 
 // Keys yang nilainya JSON-encoded — di-parse saat baca, di-stringify saat tulis.
@@ -90,6 +91,7 @@ const DEFAULTS = {
     subtitle: 'Coba gratis 14 hari. Tanpa kartu kredit, tanpa biaya tersembunyi. Kalau cocok, lanjut — kalau enggak, ya sudah.',
     ctaLabel: 'Daftar Sekarang',
   }),
+  metaPixelId: '',
 };
 
 async function getSetting(key) {
@@ -209,6 +211,7 @@ const heroUpdateSchema = z.object({
     subtitle: z.string().max(400),
     ctaLabel: z.string().max(50),
   }).optional(),
+  metaPixelId:  z.string().regex(/^\d*$/, 'Pixel ID hanya boleh berisi angka').max(20).optional(),
 });
 
 // PATCH /api/landing/hero — super_admin update branding/hero

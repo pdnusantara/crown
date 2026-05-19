@@ -4,6 +4,7 @@ import { motion, useInView, useScroll, useTransform, AnimatePresence } from 'fra
 import * as Lucide from 'lucide-react'
 import { useLanding } from '../hooks/useLanding.js'
 import { useAuthStore } from '../store/authStore.js'
+import { initMetaPixel, trackPixel } from '../lib/metaPixel.js'
 import { formatRupiah } from '../utils/format.js'
 
 // ── Catatan tema ────────────────────────────────────────────────────────────
@@ -210,6 +211,15 @@ export default function LandingPage() {
   }, [])
 
   const hero = data?.hero || {}
+
+  // Meta Pixel — aktif saat super-admin sudah mengisi Pixel ID. Dilewati di
+  // mode preview builder supaya statistik iklan tidak tercemar kunjungan admin.
+  const metaPixelId = hero.metaPixelId
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('preview') === '1') return
+    if (metaPixelId) initMetaPixel(metaPixelId)
+  }, [metaPixelId])
+
   const features = (hero.features?.length ? hero.features : FALLBACK_FEATURES)
   const steps = (hero.steps?.length ? hero.steps : FALLBACK_STEPS)
   const sections = { ...FALLBACK_SECTIONS, ...(hero.sections || {}) }
@@ -343,7 +353,11 @@ function HeroSection({ hero, isAuthenticated, homePath }) {
           transition={{ duration: 0.6, delay: 0.22 }}
           className="flex flex-wrap items-center justify-center gap-3 mt-9"
         >
-          <Link to={isAuthenticated ? homePath : '/register'} className="btn-gold group">
+          <Link
+            to={isAuthenticated ? homePath : '/register'}
+            onClick={() => { if (!isAuthenticated) trackPixel('Lead') }}
+            className="btn-gold group"
+          >
             {isAuthenticated ? 'Buka Dashboard' : (hero.heroCtaLabel || 'Coba Gratis 14 Hari')}
             <Lucide.ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
           </Link>
@@ -673,7 +687,7 @@ function ClosingCtaSection({ ctx }) {
             {closing.subtitle}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <Link to="/register" className="btn-gold group">
+            <Link to="/register" onClick={() => trackPixel('Lead')} className="btn-gold group">
               {closing.ctaLabel}
               <Lucide.ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </Link>
@@ -900,7 +914,7 @@ function Nav({ isAuthed, userRole }) {
               <Link to="/login" className="hidden sm:inline-flex px-4 py-2 rounded-lg text-sm font-medium text-[#1C1A17] hover:bg-[#F0EADC] transition-colors">
                 Masuk
               </Link>
-              <Link to="/register" className="px-4 py-2 rounded-lg bg-[#C9A84C] text-[#1C1A17] text-sm font-semibold hover:bg-[#E8C875] transition-colors">
+              <Link to="/register" onClick={() => trackPixel('Lead')} className="px-4 py-2 rounded-lg bg-[#C9A84C] text-[#1C1A17] text-sm font-semibold hover:bg-[#E8C875] transition-colors">
                 Daftar Gratis
               </Link>
             </>

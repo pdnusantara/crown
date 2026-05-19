@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { useRegisterTenant, useCheckSlug } from '../hooks/useRegister.js'
 import { useLanding } from '../hooks/useLanding.js'
+import { initMetaPixel, trackPixel } from '../lib/metaPixel.js'
 import { formatRupiah } from '../utils/format.js'
 import { tenantHostname, tenantLoginUrl, PLATFORM_NAME } from '../utils/platform.js'
 
@@ -90,6 +91,14 @@ export default function RegisterPage() {
   const selectedPkg = packages.find(p => p.name === form.packageName)
   const pwStrength = useMemo(() => passwordStrength(form.password), [form.password])
 
+  // Meta Pixel — aktif bila super-admin sudah mengonfigurasi Pixel ID. Halaman
+  // /register juga memuat pixel supaya konversi tetap tercatat saat pengunjung
+  // masuk langsung dari iklan tanpa melewati landing page.
+  const metaPixelId = landingData?.hero?.metaPixelId
+  useEffect(() => {
+    if (metaPixelId) initMetaPixel(metaPixelId)
+  }, [metaPixelId])
+
   function update(field, value) {
     setForm(f => ({ ...f, [field]: value }))
     setError(null)
@@ -144,6 +153,12 @@ export default function RegisterPage() {
         slug:         result.tenant?.slug || form.slug.trim().toLowerCase(),
         email:        result.user?.email || form.email.trim().toLowerCase(),
         trial:        result.trial || null,
+      })
+      // Konversi utama untuk Meta Ads — pendaftaran tenant berhasil.
+      trackPixel('CompleteRegistration', {
+        content_name: form.packageName,
+        value:        selectedPkg?.price || 0,
+        currency:     'IDR',
       })
     } catch (err) {
       setError(err?.response?.data?.error || 'Pendaftaran gagal. Coba lagi.')

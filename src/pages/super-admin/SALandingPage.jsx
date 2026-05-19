@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   Globe, Edit3, Trash2, Plus, Save, MessageSquare, HelpCircle, Star, Eye, EyeOff, ExternalLink,
-  LayoutTemplate, Layers,
+  LayoutTemplate, Layers, Target,
 } from 'lucide-react'
 import LandingLayoutBuilder from './LandingLayoutBuilder.jsx'
 import {
@@ -23,6 +23,7 @@ const TABS = [
   { id: 'content',      label: 'Section & Footer', icon: LayoutTemplate },
   { id: 'testimonials', label: 'Testimoni',        icon: MessageSquare },
   { id: 'faqs',         label: 'FAQ',              icon: HelpCircle },
+  { id: 'tracking',     label: 'Pelacakan',        icon: Target },
 ]
 
 export default function SALandingPage() {
@@ -74,6 +75,113 @@ export default function SALandingPage() {
       {tab === 'content' && <ContentEditor />}
       {tab === 'testimonials' && <TestimonialsEditor />}
       {tab === 'faqs' && <FAQEditor />}
+      {tab === 'tracking' && <TrackingEditor />}
+    </div>
+  )
+}
+
+// ── Pelacakan / Meta Pixel editor ────────────────────────────────────────
+// Mengatur Meta (Facebook) Pixel ID. Disimpan lewat PATCH /landing/hero yang
+// sama; landing page & halaman /register menyuntik pixel saat nilainya ada.
+function TrackingEditor() {
+  const toast = useToast()
+  const { data, isLoading } = useLanding()
+  const updateHero = useUpdateHero()
+
+  const [pixelId, setPixelId] = useState(null)
+
+  useEffect(() => {
+    if (data?.hero && pixelId === null) {
+      setPixelId(data.hero.metaPixelId || '')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data])
+
+  if (isLoading || pixelId === null) return <div className="h-64 bg-dark-card rounded-2xl animate-pulse" />
+
+  const savedId = data?.hero?.metaPixelId || ''
+  const cleaned = pixelId.replace(/\D/g, '')
+  const formatOk = cleaned.length === 0 || (cleaned.length >= 15 && cleaned.length <= 16)
+  const active = savedId.length > 0
+
+  async function handleSave() {
+    if (!formatOk) {
+      toast.error('Pixel ID Meta umumnya 15–16 digit angka')
+      return
+    }
+    try {
+      await updateHero.mutateAsync({ metaPixelId: cleaned })
+      toast.success(cleaned ? 'Meta Pixel tersimpan & aktif' : 'Meta Pixel dinonaktifkan')
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal menyimpan')
+    }
+  }
+
+  return (
+    <div className="grid lg:grid-cols-2 gap-6">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-off-white">Meta Pixel (Facebook & Instagram Ads)</h3>
+            <Badge variant={active ? 'success' : 'muted'} className="text-[10px]">
+              {active ? 'Aktif' : 'Nonaktif'}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardBody className="space-y-4">
+          <p className="text-sm text-muted">
+            Pasang Meta Pixel untuk melacak pengunjung & konversi dari iklan
+            Facebook/Instagram. Kosongkan kolom lalu simpan untuk menonaktifkan.
+          </p>
+          <Input
+            label="Meta Pixel ID"
+            placeholder="Contoh: 1234567890123456"
+            value={pixelId}
+            onChange={e => setPixelId(e.target.value.replace(/\D/g, '').slice(0, 20))}
+            inputMode="numeric"
+            hint={
+              !formatOk
+                ? 'Pixel ID Meta umumnya 15–16 digit angka'
+                : 'Ambil dari Meta Events Manager → Data Sources → Pixel Anda'
+            }
+          />
+          <a
+            href="https://www.facebook.com/events_manager2"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-sm text-gold hover:underline"
+          >
+            <ExternalLink size={13} /> Buka Meta Events Manager
+          </a>
+          <Button onClick={handleSave} loading={updateHero.isPending} icon={Save} fullWidth>
+            Simpan Pengaturan Pixel
+          </Button>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader><h3 className="font-semibold text-off-white">Event yang Dilacak</h3></CardHeader>
+        <CardBody className="space-y-3">
+          <p className="text-sm text-muted">
+            Saat pixel aktif, event berikut otomatis terkirim ke Meta:
+          </p>
+          {[
+            { ev: 'PageView',             desc: 'Setiap kunjungan landing page & halaman pendaftaran.' },
+            { ev: 'Lead',                 desc: 'Pengunjung menekan tombol ajakan daftar di landing page.' },
+            { ev: 'CompleteRegistration', desc: 'Pendaftaran tenant berhasil — konversi utama untuk iklan.' },
+          ].map(item => (
+            <div key={item.ev} className="p-3 bg-dark-surface rounded-xl border border-dark-border">
+              <code className="text-xs font-semibold text-gold">{item.ev}</code>
+              <p className="text-xs text-muted mt-1">{item.desc}</p>
+            </div>
+          ))}
+          <p className="text-xs text-muted leading-relaxed">
+            Mode preview builder tidak ikut terlacak. Pakai ekstensi
+            <span className="text-off-white"> Meta Pixel Helper </span>
+            di browser untuk memverifikasi pixel berfungsi.
+          </p>
+        </CardBody>
+      </Card>
     </div>
   )
 }
