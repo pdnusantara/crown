@@ -22,7 +22,7 @@ import { useIsFeatureEnabled } from '../../hooks/useFeatureFlags.js'
 import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
 import Avatar from '../../components/ui/Avatar.jsx'
 import Badge from '../../components/ui/Badge.jsx'
-import { formatRupiah } from '../../utils/format.js'
+import { formatRupiah, formatRupiahShort } from '../../utils/format.js'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function getGreeting() {
@@ -102,7 +102,7 @@ function TrendChip({ trend }) {
 }
 
 // ── Stat Card ─────────────────────────────────────────────────────────────────
-function StatCard({ title, value, icon: Icon, trend, loading, delay = 0 }) {
+function StatCard({ title, value, valueShort, icon: Icon, trend, loading, delay = 0 }) {
   const { t } = useTranslation()
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}>
@@ -117,7 +117,14 @@ function StatCard({ title, value, icon: Icon, trend, loading, delay = 0 }) {
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
               <p className="text-sm text-muted mb-1">{title}</p>
-              <p className="text-2xl font-bold text-off-white">{value}</p>
+              <p className="text-xl sm:text-2xl font-bold text-off-white whitespace-nowrap">
+                {valueShort != null ? (
+                  <>
+                    <span className="sm:hidden">{valueShort}</span>
+                    <span className="hidden sm:inline">{value}</span>
+                  </>
+                ) : value}
+              </p>
               {trend && (
                 <div className="flex items-center gap-1 mt-1">
                   <TrendChip trend={trend} />
@@ -362,6 +369,7 @@ export default function TADashboard() {
         <StatCard
           title={t('tenantAdmin.dashboard.todayRevenue')}
           value={formatRupiah(revenue)}
+          valueShort={formatRupiahShort(revenue)}
           icon={DollarSign}
           trend={trendRevenue}
           loading={loadingToday}
@@ -386,6 +394,7 @@ export default function TADashboard() {
         <StatCard
           title="Rata-rata Transaksi"
           value={formatRupiah(avgTx)}
+          valueShort={formatRupiahShort(avgTx)}
           icon={TrendingUp}
           trend={trendAvg}
           loading={loadingToday}

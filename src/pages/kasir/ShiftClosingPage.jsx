@@ -18,7 +18,7 @@ import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import LiveBadge from '../../components/ui/LiveBadge.jsx'
 import ErrorBoundary from '../../components/ui/ErrorBoundary.jsx'
-import { formatRupiah } from '../../utils/format.js'
+import { formatRupiah, formatRupiahShort } from '../../utils/format.js'
 import { getBranchSlug } from '../../utils/branchSlug.js'
 import { formatInTenantTz, formatTimeInTz, formatDateTimeInTz, formatDateInTz } from '../../utils/timezone.js'
 
@@ -171,7 +171,7 @@ function OpenShiftScreen({ branchId, branchName }) {
 }
 
 // ── KPI tile (responsive nominal) ──────────────────────────────────────────
-function Kpi({ icon: Icon, label, value, color = 'text-off-white' }) {
+function Kpi({ icon: Icon, label, value, valueShort, color = 'text-off-white' }) {
   return (
     <Card className="p-3 sm:p-4 min-w-0">
       <div className="flex items-center gap-1.5 mb-1.5">
@@ -179,7 +179,12 @@ function Kpi({ icon: Icon, label, value, color = 'text-off-white' }) {
         <span className="text-[10px] sm:text-xs text-muted truncate">{label}</span>
       </div>
       <p className="font-bold text-off-white text-base sm:text-lg lg:text-xl truncate" title={typeof value === 'string' ? value : ''}>
-        {value}
+        {valueShort != null ? (
+          <>
+            <span className="sm:hidden">{valueShort}</span>
+            <span className="hidden sm:inline">{value}</span>
+          </>
+        ) : value}
       </p>
     </Card>
   )
@@ -433,8 +438,8 @@ function ShiftClosingPageInner() {
       {/* KPI row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
         <Kpi icon={Receipt}      label="Total Transaksi"  value={totalTransactions} color="text-blue-400" />
-        <Kpi icon={DollarSign}   label="Total Pendapatan" value={formatRupiah(totalRevenue)} color="text-gold" />
-        <Kpi icon={TrendingUp}   label="Rata-rata"        value={formatRupiah(avgPerTx)} color="text-green-400" />
+        <Kpi icon={DollarSign}   label="Total Pendapatan" value={formatRupiah(totalRevenue)} valueShort={formatRupiahShort(totalRevenue)} color="text-gold" />
+        <Kpi icon={TrendingUp}   label="Rata-rata"        value={formatRupiah(avgPerTx)} valueShort={formatRupiahShort(avgPerTx)} color="text-green-400" />
         <Kpi icon={Clock}        label="Durasi Shift"     value={durationLabel(activeShift.openedAt)} color="text-purple-400" />
       </div>
 

@@ -19,7 +19,7 @@ import LiveBadge from '../../components/ui/LiveBadge.jsx'
 import Modal from '../../components/ui/Modal.jsx'
 import Input from '../../components/ui/Input.jsx'
 import Button from '../../components/ui/Button.jsx'
-import { formatRupiah } from '../../utils/format.js'
+import { formatRupiah, formatRupiahShort } from '../../utils/format.js'
 import { format, isToday, parseISO, subDays, differenceInMinutes } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
 
@@ -55,7 +55,7 @@ const ACCENTS = {
   amber: { grad: 'from-amber-400/20 to-amber-400/0', icon: 'text-amber-300', iconBg: 'bg-amber-500/15 border-amber-500/30' },
 }
 
-function StatCard({ icon: Icon, label, value, accent = 'gold', delay = 0, onClick }) {
+function StatCard({ icon: Icon, label, value, valueShort, accent = 'gold', delay = 0, onClick }) {
   const a = ACCENTS[accent] || ACCENTS.gold
   return (
     <motion.button
@@ -75,7 +75,12 @@ function StatCard({ icon: Icon, label, value, accent = 'gold', delay = 0, onClic
           <div className="min-w-0 flex-1">
             <p className="text-[11px] sm:text-xs text-muted leading-tight truncate">{label}</p>
             <p className="text-lg sm:text-xl font-bold text-off-white mt-0.5 leading-tight tabular-nums truncate">
-              {value}
+              {valueShort != null ? (
+                <>
+                  <span className="sm:hidden">{valueShort}</span>
+                  <span className="hidden sm:inline">{value}</span>
+                </>
+              ) : value}
             </p>
           </div>
         </div>
@@ -663,7 +668,7 @@ export default function BarberDashboard() {
           delay={0.06}
           onClick={() => navigate(`/barber/commission?start=${todayStr}&end=${todayStr}`)}
         />
-        <StatCard icon={DollarSign} label="Komisi Hari Ini" value={formatRupiah(todayCommission)} accent="gold" delay={0.08} onClick={() => navigate('/barber/commission')} />
+        <StatCard icon={DollarSign} label="Komisi Hari Ini" value={formatRupiah(todayCommission)} valueShort={formatRupiahShort(todayCommission)} accent="gold" delay={0.08} onClick={() => navigate('/barber/commission')} />
       </div>
 
       {/* ── Now Serving spotlight ──────────────────────────────────────────── */}

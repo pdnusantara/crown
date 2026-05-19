@@ -22,7 +22,7 @@ import { useToast } from '../../components/ui/Toast.jsx'
 import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import Button from '../../components/ui/Button.jsx'
-import { formatRupiah, formatDate } from '../../utils/format.js'
+import { formatRupiah, formatRupiahShort, formatDate } from '../../utils/format.js'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const PKG_COLOR  = { Basic: '#3B82F6', Pro: '#C9A84C', Enterprise: '#8B5CF6' }
@@ -82,7 +82,7 @@ function ChartTooltip({ active, payload, label, formatter }) {
 }
 
 // ── KPI Card ──────────────────────────────────────────────────────────────────
-function KpiCard({ label, value, sub, icon: Icon, iconColor = 'text-gold', delta, delay = 0, onClick }) {
+function KpiCard({ label, value, valueShort, sub, icon: Icon, iconColor = 'text-gold', delta, delay = 0, onClick }) {
   return (
     <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}>
       <Card className={`p-3.5 sm:p-4 h-full ${onClick ? 'cursor-pointer hover:border-gold/30 transition-colors' : ''}`} onClick={onClick}>
@@ -90,7 +90,14 @@ function KpiCard({ label, value, sub, icon: Icon, iconColor = 'text-gold', delta
           <p className="text-[11px] sm:text-xs text-muted leading-tight">{label}</p>
           <Icon size={15} className={`${iconColor} flex-shrink-0`} />
         </div>
-        <p className="text-lg sm:text-2xl font-bold text-off-white tabular-nums truncate">{value}</p>
+        <p className="text-lg sm:text-2xl font-bold text-off-white tabular-nums truncate">
+          {valueShort != null ? (
+            <>
+              <span className="sm:hidden">{valueShort}</span>
+              <span className="hidden sm:inline">{value}</span>
+            </>
+          ) : value}
+        </p>
         {sub && <p className="text-[11px] sm:text-xs text-muted mt-0.5 truncate">{sub}</p>}
         {delta != null && (
           <div className={`flex items-center gap-1 mt-1 text-xs font-medium ${delta >= 0 ? 'text-green-400' : 'text-red-400'}`}>
@@ -295,7 +302,7 @@ export default function SADashboard() {
       {/* KPI Row */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
         <KpiCard label="Total Tenant"   value={metrics.total}        icon={Building2}    iconColor="text-off-white" delta={metrics.newThisMonth} delay={0}    onClick={() => navigate('/super-admin/tenants')} />
-        <KpiCard label="MRR"            value={formatRupiah(metrics.mrr)}  icon={DollarSign}   iconColor="text-gold"    sub={`${formatRupiah(metrics.arr)}/tahun`} delay={0.04} />
+        <KpiCard label="MRR"            value={formatRupiah(metrics.mrr)}  valueShort={formatRupiahShort(metrics.mrr)} icon={DollarSign}   iconColor="text-gold"    sub={`${formatRupiahShort(metrics.arr)}/tahun`} delay={0.04} />
         <KpiCard label="Sub Aktif"      value={metrics.activeCount}   icon={CheckCircle}  iconColor="text-green-400" delay={0.08} onClick={() => navigate('/super-admin/billing')} />
         <KpiCard label="Trial"          value={metrics.trialCount}    icon={Clock}        iconColor="text-blue-400"  delay={0.12} onClick={() => navigate('/super-admin/billing')} />
         <KpiCard label="Overdue"        value={metrics.overdueCount}  icon={AlertTriangle} iconColor="text-amber-400" delay={0.16} onClick={() => navigate('/super-admin/billing')} />

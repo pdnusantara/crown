@@ -7,7 +7,7 @@ import { useAuthStore } from '../../store/authStore.js'
 import { useBranches } from '../../hooks/useBranches.js'
 import { useBranchSummary, useBranchDaily } from '../../hooks/useReports.js'
 import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
-import { formatRupiah } from '../../utils/format.js'
+import { formatRupiah, formatRupiahShort } from '../../utils/format.js'
 
 function todayStr() { return new Date().toISOString().split('T')[0] }
 function daysAgoStr(n) { return new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString().split('T')[0] }
@@ -75,10 +75,10 @@ export default function TABranchComparisonPage() {
   const sB = summaryB?.summary
 
   const metrics = [
-    { label: t('tenantAdmin.branchComparison.metricRevenueMtd'),       aVal: sA?.totalRevenue             ?? 0, bVal: sB?.totalRevenue             ?? 0, fmt: formatRupiah },
+    { label: t('tenantAdmin.branchComparison.metricRevenueMtd'),       aVal: sA?.totalRevenue             ?? 0, bVal: sB?.totalRevenue             ?? 0, fmt: formatRupiahShort },
     { label: t('tenantAdmin.branchComparison.metricTotalTransactions'), aVal: sA?.totalTransactions        ?? 0, bVal: sB?.totalTransactions        ?? 0, fmt: v => v },
     { label: t('tenantAdmin.branchComparison.metricNewCustomers'),      aVal: sA?.totalNewCustomers        ?? 0, bVal: sB?.totalNewCustomers        ?? 0, fmt: v => v },
-    { label: t('tenantAdmin.branchComparison.metricAvgTransaction'),    aVal: sA?.averageTransactionValue  ?? 0, bVal: sB?.averageTransactionValue  ?? 0, fmt: formatRupiah },
+    { label: t('tenantAdmin.branchComparison.metricAvgTransaction'),    aVal: sA?.averageTransactionValue  ?? 0, bVal: sB?.averageTransactionValue  ?? 0, fmt: formatRupiahShort },
   ]
 
   const handleExport = () => {
@@ -152,11 +152,11 @@ export default function TABranchComparisonPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className={`p-3 rounded-xl ${aWins ? 'bg-green-500/10 border border-green-500/20' : 'bg-dark-card'}`}>
                     <p className="text-xs text-muted mb-1 truncate">{branchA?.name || 'A'}</p>
-                    <p className={`font-bold text-base ${aWins ? 'text-green-400' : 'text-off-white'}`}>{m.fmt(m.aVal)}</p>
+                    <p className={`font-bold text-base whitespace-nowrap ${aWins ? 'text-green-400' : 'text-off-white'}`}>{m.fmt(m.aVal)}</p>
                   </div>
                   <div className={`p-3 rounded-xl ${bWins ? 'bg-green-500/10 border border-green-500/20' : 'bg-dark-card'}`}>
                     <p className="text-xs text-muted mb-1 truncate">{branchB?.name || 'B'}</p>
-                    <p className={`font-bold text-base ${bWins ? 'text-green-400' : 'text-off-white'}`}>{m.fmt(m.bVal)}</p>
+                    <p className={`font-bold text-base whitespace-nowrap ${bWins ? 'text-green-400' : 'text-off-white'}`}>{m.fmt(m.bVal)}</p>
                   </div>
                 </div>
               )}

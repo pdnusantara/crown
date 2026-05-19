@@ -20,7 +20,7 @@ import Modal from '../../components/ui/Modal.jsx'
 import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx'
 import { useToast } from '../../components/ui/Toast.jsx'
 import { getSocket } from '../../lib/socket.js'
-import { formatRupiah } from '../../utils/format.js'
+import { formatRupiah, formatRupiahShort } from '../../utils/format.js'
 import { formatDateTimeInTz } from '../../utils/timezone.js'
 
 const PAYMENT_LABELS = {
@@ -634,17 +634,22 @@ export default function TransactionsPage() {
 function StatsGrid({ summary, loading }) {
   const stats = [
     { label: 'Transaksi',   value: summary ? summary.count.toLocaleString('id-ID') : '—' },
-    { label: 'Pendapatan',  value: summary ? formatRupiah(summary.totalRevenue) : '—' },
-    { label: 'Rata-rata',   value: summary ? formatRupiah(summary.avgTicket || 0) : '—' },
-    { label: 'Diskon',      value: summary ? formatRupiah(summary.totalDiscount || 0) : '—' },
+    { label: 'Pendapatan',  value: summary ? formatRupiah(summary.totalRevenue) : '—',          valueShort: summary ? formatRupiahShort(summary.totalRevenue) : '—' },
+    { label: 'Rata-rata',   value: summary ? formatRupiah(summary.avgTicket || 0) : '—',        valueShort: summary ? formatRupiahShort(summary.avgTicket || 0) : '—' },
+    { label: 'Diskon',      value: summary ? formatRupiah(summary.totalDiscount || 0) : '—',    valueShort: summary ? formatRupiahShort(summary.totalDiscount || 0) : '—' },
   ]
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
       {stats.map((s, i) => (
         <div key={i} className="p-3 sm:p-4 rounded-2xl bg-dark-surface border border-dark-border">
           <p className="text-[11px] sm:text-xs text-muted">{s.label}</p>
-          <p className={`mt-1 text-base sm:text-lg font-bold tabular-nums truncate ${loading ? 'text-muted' : 'text-off-white'}`}>
-            {s.value}
+          <p className={`mt-1 text-base sm:text-lg font-bold tabular-nums truncate whitespace-nowrap ${loading ? 'text-muted' : 'text-off-white'}`}>
+            {s.valueShort != null ? (
+              <>
+                <span className="sm:hidden">{s.valueShort}</span>
+                <span className="hidden sm:inline">{s.value}</span>
+              </>
+            ) : s.value}
           </p>
         </div>
       ))}

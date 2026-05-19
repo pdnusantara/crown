@@ -16,7 +16,7 @@ import { useToast } from '../../components/ui/Toast.jsx'
 import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import Button from '../../components/ui/Button.jsx'
-import { formatRupiah } from '../../utils/format.js'
+import { formatRupiah, formatRupiahShort } from '../../utils/format.js'
 
 const PACKAGE_COLORS = {
   Basic:      'text-blue-400 bg-blue-400/10 border-blue-400/20',
@@ -161,16 +161,23 @@ export default function SATenantsDetailPage() {
         {[
           { label: t('superAdmin.tenantDetail.branches'),     value: tenant.totalBranches, icon: Building2, color: 'text-blue-400' },
           { label: t('superAdmin.tenantDetail.staff'),        value: tenant.totalStaff, icon: Users, color: 'text-purple-400' },
-          { label: t('superAdmin.tenantDetail.revenueMtd'),   value: formatRupiah(tenant.monthlyRevenue || 0), icon: TrendingUp, color: 'text-gold' },
+          { label: t('superAdmin.tenantDetail.revenueMtd'),   value: formatRupiah(tenant.monthlyRevenue || 0), valueShort: formatRupiahShort(tenant.monthlyRevenue || 0), icon: TrendingUp, color: 'text-gold' },
           { label: t('superAdmin.tenantDetail.openTickets'),  value: tickets.filter(tk => tk.status === 'open').length, icon: MessageSquare, color: 'text-amber-400' },
         ].map((item, i) => (
           <motion.div key={item.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
             <Card className="p-5">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs text-muted">{item.label}</p>
-                <item.icon size={15} className={item.color} />
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <p className="text-xs text-muted truncate">{item.label}</p>
+                <item.icon size={15} className={`${item.color} flex-shrink-0`} />
               </div>
-              <p className="text-xl font-bold text-off-white">{item.value}</p>
+              <p className="text-lg sm:text-xl font-bold text-off-white whitespace-nowrap">
+                {item.valueShort != null ? (
+                  <>
+                    <span className="sm:hidden">{item.valueShort}</span>
+                    <span className="hidden sm:inline">{item.value}</span>
+                  </>
+                ) : item.value}
+              </p>
             </Card>
           </motion.div>
         ))}
