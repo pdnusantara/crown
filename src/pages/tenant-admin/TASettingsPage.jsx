@@ -99,7 +99,7 @@ export default function TASettingsPage() {
   const uploadBookingImage = async (file) => {
     const fd = new FormData()
     fd.append('image', file)
-    const res = await api.post('/tenants/upload-image', fd)
+    const res = await api.upload('/tenants/upload-image', fd)
     return res.data?.data?.url
   }
 

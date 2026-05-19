@@ -129,6 +129,11 @@ api.interceptors.response.use(
 
 export const get   = (url, params) => api.get(url, { params })
 export const post  = (url, data)   => api.post(url, data)
+// Upload FormData (gambar/file). WAJIB override Content-Type — kalau dibiarkan
+// default 'application/json', axios v1 transformRequest mengubah FormData jadi
+// JSON kosong sehingga server tak menerima file.
+export const upload = (url, formData) =>
+  api.post(url, formData, { headers: { 'Content-Type': 'multipart/form-data' } })
 export const put   = (url, data)   => api.put(url, data)
 export const patch = (url, data)   => api.patch(url, data)
 export const del   = (url)         => api.delete(url)
