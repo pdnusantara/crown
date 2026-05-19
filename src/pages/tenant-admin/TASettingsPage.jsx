@@ -5,6 +5,7 @@ import { useAuthStore } from '../../store/authStore.js'
 import { useTenant, useUpdateMyTenant } from '../../hooks/useTenants.js'
 import { useSubscription } from '../../hooks/useSubscription.js'
 import { useAuditLogs, useAuditActions } from '../../hooks/useAuditLogs.js'
+import { useIsFeatureEnabled } from '../../hooks/useFeatureFlags.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
 import Button from '../../components/ui/Button.jsx'
@@ -31,6 +32,8 @@ export default function TASettingsPage() {
 
   const { data: tenant } = useTenant(user?.tenantId)
   const { data: sub } = useSubscription(user?.tenantId)
+  // Tab WhatsApp hanya untuk tenant yang paketnya mengaktifkan flag `whatsapp`.
+  const whatsappEnabled = useIsFeatureEnabled(user?.tenantId, 'whatsapp')
   const [form, setForm] = useState({
     name: '',
     phone: '',
@@ -403,7 +406,7 @@ export default function TASettingsPage() {
   const TABS = [
     { id: 'general', label: t('tenantAdmin.settings.tabGeneral') },
     { id: 'bookingPage', label: 'Halaman Booking' },
-    { id: 'whatsapp', label: 'WhatsApp Beta' },
+    ...(whatsappEnabled ? [{ id: 'whatsapp', label: 'WhatsApp Beta' }] : []),
     { id: 'backup', label: t('tenantAdmin.settings.tabBackup') },
     { id: 'audit', label: t('tenantAdmin.settings.tabAudit') },
   ]

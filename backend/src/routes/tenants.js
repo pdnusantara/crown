@@ -584,6 +584,13 @@ router.delete('/:id', authenticate, requireRole('super_admin'), async (req, res,
       data: { deletedAt: new Date() },
     });
 
+    // Lepas device WhatsApp tenant dari WA Gateway agar tidak jadi device
+    // hantu yang menumpuk & memakan kuota plan. Best-effort — kegagalan di
+    // sini tidak boleh menggagalkan penghapusan tenant.
+    require('../services/whatsappService')
+      .removeTenantDevice(existing.id)
+      .catch((err) => console.error(`[WA] cleanup device tenant=${existing.id} gagal:`, err.message));
+
     await recordAudit(req, {
       action: 'tenant.delete',
       target: `tenant:${existing.id}`,

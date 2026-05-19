@@ -26,6 +26,7 @@ const navConfig = {
     { labelKey: 'nav.packages',     icon: Package,         path: '/super-admin/packages' },
     { labelKey: 'nav.billing',          icon: DollarSign,  path: '/super-admin/billing' },
     { labelKey: 'nav.paymentSettings',  icon: Landmark,    path: '/super-admin/payment-settings' },
+    { labelKey: 'nav.whatsappSettings', icon: MessageSquare, path: '/super-admin/whatsapp-settings' },
     { labelKey: 'nav.promotions',       icon: Tag,         path: '/super-admin/promotions' },
     { labelKey: 'nav.landing',          icon: Megaphone,   path: '/super-admin/landing' },
     { labelKey: 'nav.broadcast',        icon: Megaphone,   path: '/super-admin/broadcast' },

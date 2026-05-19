@@ -40,6 +40,16 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-Slug'],
 }));
 
+// Webhook WA Gateway — dipasang SEBELUM express.json global karena verifikasi
+// HMAC butuh raw body. Parser khusus di sini menyimpan raw body di req.rawBody;
+// express.json global setelahnya akan melewati request yang sudah ter-parse.
+const whatsappWebhookRoutes = require('./src/routes/whatsappWebhook');
+app.use(
+  '/api/whatsapp/webhook',
+  express.json({ limit: '1mb', verify: (req, _res, buf) => { req.rawBody = buf.toString('utf8'); } }),
+  whatsappWebhookRoutes
+);
+
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
