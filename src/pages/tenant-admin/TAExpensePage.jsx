@@ -1,35 +1,56 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Trash2, Pencil, TrendingDown, TrendingUp, Wallet, ChevronLeft, ChevronRight, Search, AlertCircle } from 'lucide-react'
+import {
+  Plus, Trash2, Pencil, TrendingDown, TrendingUp, Wallet, ChevronLeft, ChevronRight,
+  Search, AlertCircle, Download, RefreshCw, X, Receipt, CheckSquare, Square, Loader2,
+} from 'lucide-react'
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, parseISO } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
 import { useAuthStore } from '../../store/authStore.js'
-import { useExpenseStore, EXPENSE_CATEGORIES } from '../../store/expenseStore.js'
 import { useFeatureFlags } from '../../hooks/useFeatureFlags.js'
 import { useReportSummary } from '../../hooks/useReports.js'
 import { useBranches } from '../../hooks/useBranches.js'
-import { formatRupiah } from '../../utils/format.js'
+import {
+  useExpenses, useExpenseStats, useCreateExpense, useUpdateExpense,
+  useDeleteExpense, useBulkDeleteExpenses,
+} from '../../hooks/useExpenses.js'
+import { EXPENSE_CATEGORIES, catById } from '../../utils/expenseCategories.js'
+import { formatRupiah, formatRupiahShort } from '../../utils/format.js'
+import api from '../../lib/api.js'
 import Button from '../../components/ui/Button.jsx'
 import Modal from '../../components/ui/Modal.jsx'
-import Input from '../../components/ui/Input.jsx'
+import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx'
+import ErrorBoundary from '../../components/ui/ErrorBoundary.jsx'
+import { useToast } from '../../components/ui/Toast.jsx'
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Constants ───────────────────────────────────────────────────────────────────
+const PAGE_LIMIT = 12
 
-const catById = (id) => EXPENSE_CATEGORIES.find(c => c.id === id) || EXPENSE_CATEGORIES[5]
+const SORT_OPTIONS = [
+  { value: 'date-desc',   label: 'Terbaru' },
+  { value: 'date-asc',    label: 'Terlama' },
+  { value: 'amount-desc', label: 'Nominal ↓' },
+  { value: 'amount-asc',  label: 'Nominal ↑' },
+]
 
-function ProfitChip({ value }) {
-  if (value == null) return null
-  const pos = value >= 0
-  return (
-    <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${pos ? 'bg-green-500/15 text-green-400' : 'bg-red-500/15 text-red-400'}`}>
-      {pos ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
-      {pos ? '+' : ''}{formatRupiah(value)}
-    </span>
-  )
+const EMPTY_FORM = () => ({
+  date: format(new Date(), 'yyyy-MM-dd'),
+  category: 'gaji',
+  description: '',
+  amount: '',
+  branchId: '',
+  note: '',
+})
+
+// Tanggal pengeluaran disimpan UTC-midnight — ambil bagian kalender saja
+// supaya tidak bergeser hari karena timezone browser.
+const ymd = (iso) => (iso ? String(iso).slice(0, 10) : '')
+const fmtDate = (iso) => {
+  try { return format(parseISO(ymd(iso)), 'd MMM yyyy', { locale: idLocale }) }
+  catch { return '—' }
 }
 
-// ── Paywall (feature not enabled) ────────────────────────────────────────────
-
+// ── Paywall ─────────────────────────────────────────────────────────────────────
 function Paywall() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center p-8">
@@ -38,8 +59,9 @@ function Paywall() {
       </div>
       <h2 className="text-xl font-semibold text-off-white">Manajemen Pengeluaran</h2>
       <p className="text-muted max-w-sm text-sm">
-        Fitur ini tersedia di paket <strong className="text-gold">Pro</strong> dan <strong className="text-gold">Enterprise</strong>.
-        Upgrade paket untuk mencatat biaya operasional dan melihat laba bersih bisnis Anda.
+        Fitur ini tersedia di paket <strong className="text-gold">Pro</strong> dan{' '}
+        <strong className="text-gold">Enterprise</strong>. Upgrade paket untuk mencatat biaya
+        operasional dan melihat laba bersih bisnis Anda.
       </p>
       <a href="/admin/billing" className="px-5 py-2.5 bg-gold text-dark rounded-xl font-semibold text-sm hover:bg-gold/90 transition-colors">
         Lihat Paket
@@ -48,39 +70,54 @@ function Paywall() {
   )
 }
 
-// ── Category bar chart ────────────────────────────────────────────────────────
+// ── Summary card ────────────────────────────────────────────────────────────────
+function SummaryCard({ label, value, sub, accent, icon: Icon, loading }) {
+  return (
+    <div className="bg-dark-card border border-dark-border rounded-2xl p-4">
+      <div className="flex items-center justify-between mb-2 gap-2">
+        <p className="text-[11px] text-muted uppercase tracking-wider font-medium">{label}</p>
+        <Icon size={18} className={`${accent} flex-shrink-0`} />
+      </div>
+      {loading
+        ? <div className="h-7 w-24 bg-dark-surface rounded-lg animate-pulse" />
+        : <p className={`text-xl sm:text-2xl font-bold leading-tight break-words ${accent}`}>{value}</p>}
+      <p className="text-xs text-muted mt-1">{sub}</p>
+    </div>
+  )
+}
 
-function CategoryBreakdown({ catTotals, total }) {
-  if (!total) return null
-  const sorted = EXPENSE_CATEGORIES
-    .map(c => ({ ...c, amount: catTotals[c.id] || 0 }))
+// ── Category breakdown ──────────────────────────────────────────────────────────
+function CategoryBreakdown({ byCategory, total }) {
+  const sorted = useMemo(() => EXPENSE_CATEGORIES
+    .map(c => ({ ...c, amount: byCategory?.[c.id] || 0 }))
     .filter(c => c.amount > 0)
-    .sort((a, b) => b.amount - a.amount)
+    .sort((a, b) => b.amount - a.amount), [byCategory])
+
+  if (!total || sorted.length === 0) return null
 
   return (
     <div className="bg-dark-card border border-dark-border rounded-2xl p-4 space-y-3">
-      <p className="text-xs text-muted uppercase tracking-wider font-medium">Breakdown Kategori</p>
+      <p className="text-[11px] text-muted uppercase tracking-wider font-medium">Breakdown Kategori</p>
       {sorted.map(c => {
         const pct = Math.round((c.amount / total) * 100)
         return (
           <div key={c.id}>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-off-white flex items-center gap-1.5">
-                <span>{c.icon}</span>
-                {c.label}
+            <div className="flex items-center justify-between mb-1 gap-2">
+              <span className="text-xs text-off-white flex items-center gap-1.5 min-w-0">
+                <span className="flex-shrink-0">{c.icon}</span>
+                <span className="truncate">{c.label}</span>
               </span>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted">{pct}%</span>
-                <span className="text-xs font-semibold text-off-white">{formatRupiah(c.amount)}</span>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-xs text-muted tabular-nums">{pct}%</span>
+                <span className="text-xs font-semibold text-off-white tabular-nums">{formatRupiah(c.amount)}</span>
               </div>
             </div>
-            <div className="h-1.5 bg-dark-border rounded-full overflow-hidden">
+            <div className="h-1.5 bg-dark-surface rounded-full overflow-hidden">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${pct}%` }}
-                transition={{ duration: 0.6, ease: 'easeOut' }}
-                className={`h-full rounded-full ${c.bg.replace('/10', '')} opacity-70`}
-                style={{ background: 'currentColor' }}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
+                className={`h-full rounded-full ${c.color.replace('text-', 'bg-')}`}
               />
             </div>
           </div>
@@ -90,35 +127,69 @@ function CategoryBreakdown({ catTotals, total }) {
   )
 }
 
-// ── Expense form modal ────────────────────────────────────────────────────────
-
-const EMPTY_FORM = { date: new Date().toISOString().split('T')[0], category: 'gaji', description: '', amount: '', branchId: '' }
-
-function ExpenseFormModal({ open, onClose, initial, tenantId, branches }) {
-  const { addExpense, updateExpense } = useExpenseStore()
-  const [form, setForm] = useState(initial || EMPTY_FORM)
+// ── Expense form modal ──────────────────────────────────────────────────────────
+function ExpenseFormModal({ open, onClose, initial, branches, onSaved }) {
+  const toast = useToast()
+  const createExpense = useCreateExpense()
+  const updateExpense = useUpdateExpense()
+  const [form, setForm] = useState(EMPTY_FORM())
   const [error, setError] = useState('')
 
-  React.useEffect(() => {
-    setForm(initial || EMPTY_FORM)
+  useEffect(() => {
+    if (!open) return
+    if (initial?.id) {
+      setForm({
+        date: ymd(initial.date),
+        category: initial.category,
+        description: initial.description,
+        amount: String(initial.amount),
+        branchId: initial.branchId || '',
+        note: initial.note || '',
+      })
+    } else {
+      setForm(EMPTY_FORM())
+    }
     setError('')
   }, [open, initial])
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const saving = createExpense.isPending || updateExpense.isPending
+  const amountNum = Number(form.amount)
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.description.trim()) return setError('Deskripsi wajib diisi')
-    if (!form.amount || isNaN(Number(form.amount)) || Number(form.amount) <= 0) return setError('Nominal harus lebih dari 0')
-    const data = { ...form, amount: Number(form.amount), tenantId, branchId: form.branchId || null }
-    if (initial?.id) updateExpense(initial.id, data)
-    else addExpense(data)
-    onClose()
+    if (!form.amount || isNaN(amountNum) || amountNum <= 0) return setError('Nominal harus lebih dari 0')
+    if (!form.date) return setError('Tanggal wajib diisi')
+    setError('')
+
+    const payload = {
+      category: form.category,
+      description: form.description.trim(),
+      amount: Math.round(amountNum),
+      date: form.date,
+      branchId: form.branchId || null,
+      note: form.note.trim() || null,
+    }
+    try {
+      if (initial?.id) {
+        await updateExpense.mutateAsync({ id: initial.id, ...payload })
+        toast.success('Pengeluaran diperbarui')
+      } else {
+        await createExpense.mutateAsync(payload)
+        toast.success('Pengeluaran ditambahkan')
+      }
+      onSaved?.()
+      onClose()
+    } catch (err) {
+      const msg = err?.response?.data?.error || 'Gagal menyimpan pengeluaran'
+      setError(msg)
+      toast.error(msg)
+    }
   }
 
   return (
     <Modal isOpen={open} onClose={onClose} title={initial?.id ? 'Edit Pengeluaran' : 'Tambah Pengeluaran'} size="sm">
       <div className="space-y-4">
-        {/* Date */}
         <div>
           <label className="block text-xs text-muted mb-1.5">Tanggal</label>
           <input
@@ -129,18 +200,19 @@ function ExpenseFormModal({ open, onClose, initial, tenantId, branches }) {
           />
         </div>
 
-        {/* Category */}
         <div>
           <label className="block text-xs text-muted mb-1.5">Kategori</label>
           <div className="grid grid-cols-3 gap-2">
             {EXPENSE_CATEGORIES.map(c => (
               <button
                 key={c.id}
+                type="button"
                 onClick={() => set('category', c.id)}
+                aria-pressed={form.category === c.id}
                 className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border text-xs transition-all ${
                   form.category === c.id
                     ? 'border-gold/50 bg-gold/10 text-gold'
-                    : 'border-dark-border bg-dark-card text-muted hover:border-dark-border/80'
+                    : 'border-dark-border bg-dark-surface text-muted hover:border-gold/30'
                 }`}
               >
                 <span className="text-lg">{c.icon}</span>
@@ -150,33 +222,38 @@ function ExpenseFormModal({ open, onClose, initial, tenantId, branches }) {
           </div>
         </div>
 
-        {/* Description */}
         <div>
           <label className="block text-xs text-muted mb-1.5">Deskripsi</label>
           <input
             value={form.description}
             onChange={e => set('description', e.target.value)}
+            maxLength={200}
             placeholder="Contoh: Gaji barber bulan Mei"
             className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/60"
           />
         </div>
 
-        {/* Amount */}
         <div>
           <label className="block text-xs text-muted mb-1.5">Nominal (Rp)</label>
           <input
             type="number"
+            inputMode="numeric"
+            min="0"
             value={form.amount}
             onChange={e => set('amount', e.target.value)}
             placeholder="500000"
             className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/60"
           />
+          {form.amount && !isNaN(amountNum) && amountNum > 0 && (
+            <p className="text-xs text-gold mt-1">{formatRupiah(Math.round(amountNum))}</p>
+          )}
         </div>
 
-        {/* Branch (optional) */}
         {branches.length > 0 && (
           <div>
-            <label className="block text-xs text-muted mb-1.5">Cabang <span className="opacity-50">(opsional)</span></label>
+            <label className="block text-xs text-muted mb-1.5">
+              Cabang <span className="opacity-50">(opsional)</span>
+            </label>
             <select
               value={form.branchId}
               onChange={e => set('branchId', e.target.value)}
@@ -188,67 +265,271 @@ function ExpenseFormModal({ open, onClose, initial, tenantId, branches }) {
           </div>
         )}
 
+        <div>
+          <label className="block text-xs text-muted mb-1.5">
+            Catatan <span className="opacity-50">(opsional)</span>
+          </label>
+          <input
+            value={form.note}
+            onChange={e => set('note', e.target.value)}
+            maxLength={500}
+            placeholder="Catatan tambahan…"
+            className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/60"
+          />
+        </div>
+
         {error && (
           <p className="flex items-center gap-1.5 text-xs text-red-400">
-            <AlertCircle size={13} />{error}
+            <AlertCircle size={13} className="flex-shrink-0" />{error}
           </p>
         )}
 
         <div className="flex gap-3 pt-1">
-          <Button variant="outline" fullWidth onClick={onClose}>Batal</Button>
-          <Button fullWidth onClick={handleSave}>{initial?.id ? 'Simpan' : 'Tambah'}</Button>
+          <Button variant="outline" fullWidth onClick={onClose} disabled={saving}>Batal</Button>
+          <Button fullWidth onClick={handleSave} loading={saving}>
+            {initial?.id ? 'Simpan' : 'Tambah'}
+          </Button>
         </div>
       </div>
     </Modal>
   )
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+// ── Expense list item (desktop row + mobile card share this) ────────────────────
+function ExpenseItem({ expense, selected, onToggleSelect, onEdit, onDelete }) {
+  const cat = catById(expense.category)
+  const branchName = expense.branch?.name
 
-export default function TAExpensePage() {
+  return (
+    <div className="flex items-center gap-3 px-3 sm:px-4 py-3 hover:bg-dark-surface/40 transition-colors">
+      <button
+        type="button"
+        onClick={() => onToggleSelect(expense.id)}
+        aria-label={selected ? 'Batal pilih' : 'Pilih'}
+        className="flex-shrink-0 text-muted hover:text-gold transition-colors"
+      >
+        {selected ? <CheckSquare size={18} className="text-gold" /> : <Square size={18} />}
+      </button>
+
+      <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base ${cat.bg}`}>
+        {cat.icon}
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-off-white truncate">{expense.description}</p>
+        <div className="flex items-center gap-x-2 gap-y-0.5 mt-0.5 flex-wrap">
+          <span className={`text-[10px] font-medium ${cat.color}`}>{cat.label}</span>
+          {branchName && <span className="text-[10px] text-muted">· {branchName}</span>}
+          <span className="text-[10px] text-muted">· {fmtDate(expense.date)}</span>
+        </div>
+      </div>
+
+      <p className="text-sm font-semibold text-red-400 flex-shrink-0 tabular-nums">
+        <span className="sm:hidden">{formatRupiahShort(expense.amount)}</span>
+        <span className="hidden sm:inline">{formatRupiah(expense.amount)}</span>
+      </p>
+
+      <div className="flex items-center gap-0.5 flex-shrink-0">
+        <button
+          type="button"
+          onClick={() => onEdit(expense)}
+          aria-label="Edit pengeluaran"
+          className="p-1.5 rounded-lg text-muted hover:text-gold hover:bg-dark-surface transition-colors"
+        >
+          <Pencil size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={() => onDelete(expense)}
+          aria-label="Hapus pengeluaran"
+          className="p-1.5 rounded-lg text-muted hover:text-red-400 hover:bg-dark-surface transition-colors"
+        >
+          <Trash2 size={14} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Skeleton rows ───────────────────────────────────────────────────────────────
+function ListSkeleton() {
+  return (
+    <div className="divide-y divide-dark-border">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3 px-4 py-3.5">
+          <div className="w-9 h-9 rounded-xl bg-dark-surface animate-pulse flex-shrink-0" />
+          <div className="flex-1 space-y-2">
+            <div className="h-3.5 w-1/2 bg-dark-surface rounded animate-pulse" />
+            <div className="h-2.5 w-1/3 bg-dark-surface rounded animate-pulse" />
+          </div>
+          <div className="h-4 w-20 bg-dark-surface rounded animate-pulse" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ── Main page ───────────────────────────────────────────────────────────────────
+function ExpensePageInner() {
   const { user } = useAuthStore()
-  const { getByPeriod, deleteExpense, getTotalByPeriod, getCategoryTotals } = useExpenseStore()
+  const toast = useToast()
+  const tenantId = user?.tenantId
 
-  const tenantId   = user?.tenantId
-  // Gate fitur dibaca dari backend (TenantFeatureFlag) lewat useFeatureFlags —
-  // BUKAN dari zustand seed — supaya perubahan fitur paket di
-  // /super-admin/packages langsung berlaku di halaman ini.
+  // Gate fitur dari backend (TenantFeatureFlag) — bukan seed lokal.
   const { data: featureFlags = [], isLoading: flagsLoading } = useFeatureFlags(tenantId)
-  const isAllowed  = featureFlags.includes('expense_tracking')
+  const isAllowed = featureFlags.includes('expense_tracking')
   const { data: branches = [] } = useBranches(tenantId)
 
-  // Period state — default to current month
-  const [activeMonth, setActiveMonth] = useState(new Date())
-  const startDate = format(startOfMonth(activeMonth), 'yyyy-MM-dd')
-  const endDate   = format(endOfMonth(activeMonth),   'yyyy-MM-dd')
+  // Periode = bulan aktif.
+  const [activeMonth, setActiveMonth] = useState(() => new Date())
+  const startDate = useMemo(() => format(startOfMonth(activeMonth), 'yyyy-MM-dd'), [activeMonth])
+  const endDate   = useMemo(() => format(endOfMonth(activeMonth),   'yyyy-MM-dd'), [activeMonth])
+  const monthLabel = format(activeMonth, 'MMMM yyyy', { locale: idLocale })
+  const isCurrentMonth = format(activeMonth, 'yyyy-MM') === format(new Date(), 'yyyy-MM')
 
-  // Revenue from reports API
+  // Filter & search (debounced).
+  const [searchInput, setSearchInput] = useState('')
+  const [search, setSearch]           = useState('')
+  const [catFilter, setCatFilter]     = useState('all')
+  const [branchFilter, setBranchFilter] = useState('all')
+  const [sortBy, setSortBy]           = useState('date-desc')
+  const [page, setPage]               = useState(1)
+
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput.trim()), 350)
+    return () => clearTimeout(t)
+  }, [searchInput])
+
+  // Reset ke halaman 1 saat filter/periode berubah.
+  useEffect(() => { setPage(1) }, [search, catFilter, branchFilter, sortBy, startDate])
+
+  const filters = useMemo(() => ({
+    page,
+    limit: PAGE_LIMIT,
+    startDate,
+    endDate,
+    sortBy,
+    ...(search ? { search } : {}),
+    ...(catFilter !== 'all' ? { category: catFilter } : {}),
+    ...(branchFilter !== 'all' ? { branchId: branchFilter } : {}),
+  }), [page, startDate, endDate, sortBy, search, catFilter, branchFilter])
+
+  const { data: listData, isLoading, isError, isFetching, refetch } = useExpenses(filters)
+  const { data: stats, refetch: refetchStats } = useExpenseStats({ startDate, endDate })
   const { data: reportData } = useReportSummary(tenantId, startDate, endDate)
-  const totalRevenue = reportData?.summary?.totalRevenue ?? null
 
-  // Expenses from store
-  const expenses      = getByPeriod(tenantId, startDate, endDate)
-  const totalExpenses = getTotalByPeriod(tenantId, startDate, endDate)
-  const catTotals     = getCategoryTotals(tenantId, startDate, endDate)
+  const expenses    = listData?.data || []
+  const total       = listData?.total || 0
+  const totalPages  = listData?.totalPages || 0
+  const totalExpenses = stats?.total ?? 0
+  const totalRevenue  = reportData?.summary?.totalRevenue ?? null
   const netProfit     = totalRevenue != null ? totalRevenue - totalExpenses : null
 
-  // Filters
-  const [catFilter,  setCatFilter]  = useState('all')
-  const [search,     setSearch]     = useState('')
-  // Modal
-  const [formOpen,    setFormOpen]    = useState(false)
-  const [editTarget,  setEditTarget]  = useState(null)
-  const [deleteConfirm, setDeleteConfirm] = useState(null)
+  // Mutations.
+  const deleteExpense     = useDeleteExpense()
+  const bulkDeleteExpenses = useBulkDeleteExpenses()
 
-  const filtered = useMemo(() => expenses.filter(e => {
-    const matchCat  = catFilter === 'all' || e.category === catFilter
-    const matchText = !search || e.description.toLowerCase().includes(search.toLowerCase())
-    return matchCat && matchText
-  }), [expenses, catFilter, search])
+  // Selection (bulk action) — reset saat data/periode berganti.
+  const [selected, setSelected] = useState(() => new Set())
+  useEffect(() => { setSelected(new Set()) }, [page, startDate, search, catFilter, branchFilter, sortBy])
 
-  const monthLabel = format(activeMonth, 'MMMM yyyy', { locale: idLocale })
+  const toggleSelect = useCallback((id) => {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }, [])
+  const pageIds = expenses.map(e => e.id)
+  const allOnPageSelected = pageIds.length > 0 && pageIds.every(id => selected.has(id))
+  const toggleSelectAll = () => {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (allOnPageSelected) pageIds.forEach(id => next.delete(id))
+      else pageIds.forEach(id => next.add(id))
+      return next
+    })
+  }
 
-  // Tunggu status flag termuat dulu — hindari Paywall berkedip lalu hilang.
+  // Modals.
+  const [formOpen, setFormOpen]       = useState(false)
+  const [editTarget, setEditTarget]   = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [bulkConfirm, setBulkConfirm] = useState(false)
+  const [exporting, setExporting]     = useState(false)
+
+  const openCreate = () => { setEditTarget(null); setFormOpen(true) }
+  const openEdit   = (e) => { setEditTarget(e); setFormOpen(true) }
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    try {
+      await deleteExpense.mutateAsync(deleteTarget.id)
+      toast.success('Pengeluaran dihapus')
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal menghapus')
+    } finally {
+      setDeleteTarget(null)
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    const ids = [...selected]
+    if (ids.length === 0) return
+    try {
+      const res = await bulkDeleteExpenses.mutateAsync(ids)
+      toast.success(`${res?.deleted ?? ids.length} pengeluaran dihapus`)
+      setSelected(new Set())
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal menghapus massal')
+    } finally {
+      setBulkConfirm(false)
+    }
+  }
+
+  const handleRefresh = () => { refetch(); refetchStats() }
+
+  // Export CSV — ambil seluruh baris periode (dengan filter aktif), bukan 1 halaman.
+  const handleExport = async () => {
+    if (total === 0) { toast.error('Tidak ada data untuk diekspor'); return }
+    setExporting(true)
+    try {
+      const res = await api.get('/expenses', {
+        params: { ...filters, page: 1, limit: 1000 },
+      })
+      const rows = res.data?.data?.data || []
+      const header = ['Tanggal', 'Kategori', 'Deskripsi', 'Cabang', 'Nominal', 'Catatan']
+      const body = rows.map(e => [
+        ymd(e.date),
+        catById(e.category).label,
+        e.description,
+        e.branch?.name || 'Semua Cabang',
+        e.amount,
+        e.note || '',
+      ])
+      const escape = (v) => {
+        const s = String(v ?? '')
+        return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+      }
+      const csv = [header, ...body].map(r => r.map(escape).join(',')).join('\r\n')
+      const blob = new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `pengeluaran-${format(activeMonth, 'yyyy-MM')}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success(`Berhasil ekspor ${rows.length} pengeluaran`)
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal mengekspor')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const hasFilter = !!search || catFilter !== 'all' || branchFilter !== 'all'
+
+  // Tunggu status flag — hindari Paywall berkedip.
   if (flagsLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -261,166 +542,272 @@ export default function TAExpensePage() {
   return (
     <div className="space-y-5 max-w-5xl mx-auto">
       {/* ── Header ── */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-xl font-semibold text-off-white">Pengeluaran</h1>
-          <p className="text-sm text-muted mt-0.5">Kelola biaya operasional & hitung laba bersih</p>
+      <div className="flex flex-col gap-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-semibold text-off-white">Pengeluaran</h1>
+            <p className="text-sm text-muted mt-0.5">Kelola biaya operasional &amp; hitung laba bersih</p>
+          </div>
+          <Button icon={Plus} onClick={openCreate} className="flex-shrink-0">
+            <span className="hidden sm:inline">Tambah</span>
+          </Button>
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex flex-wrap items-center gap-2">
           {/* Month picker */}
           <div className="flex items-center gap-1 bg-dark-card border border-dark-border rounded-xl px-1 py-1">
-            <button onClick={() => setActiveMonth(m => subMonths(m, 1))} className="p-1.5 text-muted hover:text-off-white transition-colors rounded-lg hover:bg-dark-surface">
+            <button
+              onClick={() => setActiveMonth(m => subMonths(m, 1))}
+              aria-label="Bulan sebelumnya"
+              className="p-1.5 text-muted hover:text-off-white transition-colors rounded-lg hover:bg-dark-surface"
+            >
               <ChevronLeft size={16} />
             </button>
-            <span className="text-sm font-medium text-off-white px-2 min-w-[120px] text-center capitalize">{monthLabel}</span>
-            <button onClick={() => setActiveMonth(m => addMonths(m, 1))} className="p-1.5 text-muted hover:text-off-white transition-colors rounded-lg hover:bg-dark-surface">
+            <span className="text-sm font-medium text-off-white px-2 min-w-[116px] text-center capitalize">
+              {monthLabel}
+            </span>
+            <button
+              onClick={() => setActiveMonth(m => addMonths(m, 1))}
+              disabled={isCurrentMonth}
+              aria-label="Bulan berikutnya"
+              className="p-1.5 text-muted hover:text-off-white transition-colors rounded-lg hover:bg-dark-surface disabled:opacity-30 disabled:cursor-not-allowed"
+            >
               <ChevronRight size={16} />
             </button>
           </div>
-          <Button icon={Plus} onClick={() => { setEditTarget(null); setFormOpen(true) }}>
-            Tambah
-          </Button>
+
+          <button
+            onClick={handleRefresh}
+            disabled={isFetching}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs text-muted hover:border-gold/30 hover:text-off-white transition-all disabled:opacity-40"
+          >
+            <RefreshCw size={13} className={isFetching ? 'animate-spin' : ''} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+          <button
+            onClick={handleExport}
+            disabled={exporting || total === 0}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs text-muted hover:border-gold/30 hover:text-off-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {exporting ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+            <span className="hidden sm:inline">Ekspor CSV</span>
+          </button>
         </div>
       </div>
 
       {/* ── Summary cards ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <SummaryCard
           label="Total Pengeluaran"
           value={formatRupiah(totalExpenses)}
-          sub={`${expenses.length} item`}
+          sub={`${stats?.count ?? 0} item bulan ini`}
           accent="text-red-400"
-          icon={<TrendingDown size={18} className="text-red-400" />}
+          icon={TrendingDown}
         />
         <SummaryCard
           label="Total Pemasukan"
           value={totalRevenue != null ? formatRupiah(totalRevenue) : '—'}
-          sub={totalRevenue == null ? 'Memuat data...' : 'dari transaksi'}
+          sub={totalRevenue == null ? 'Memuat data…' : 'dari transaksi'}
           accent="text-green-400"
-          icon={<TrendingUp size={18} className="text-green-400" />}
+          icon={TrendingUp}
+          loading={totalRevenue == null}
         />
-        <div className="bg-dark-card border border-dark-border rounded-2xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-muted uppercase tracking-wider">Laba Bersih</p>
-            <Wallet size={18} className={netProfit == null ? 'text-muted' : netProfit >= 0 ? 'text-gold' : 'text-red-400'} />
-          </div>
-          <p className={`text-2xl font-bold ${netProfit == null ? 'text-muted' : netProfit >= 0 ? 'text-gold' : 'text-red-400'}`}>
-            {netProfit == null ? '—' : formatRupiah(netProfit)}
-          </p>
-          <p className="text-xs text-muted mt-1">
-            {netProfit == null ? 'Memuat...' :
-             netProfit >= 0 ? 'Bisnis kamu profitable 🎉' : 'Pengeluaran melebihi pemasukan'}
-          </p>
-        </div>
+        <SummaryCard
+          label="Laba Bersih"
+          value={netProfit == null ? '—' : formatRupiah(netProfit)}
+          sub={netProfit == null ? 'Memuat…'
+            : netProfit >= 0 ? 'Bisnis kamu profitable 🎉' : 'Pengeluaran melebihi pemasukan'}
+          accent={netProfit == null ? 'text-muted' : netProfit >= 0 ? 'text-gold' : 'text-red-400'}
+          icon={Wallet}
+          loading={netProfit == null}
+        />
       </div>
 
       {/* ── Category breakdown ── */}
-      {totalExpenses > 0 && (
-        <CategoryBreakdown catTotals={catTotals} total={totalExpenses} />
-      )}
+      <CategoryBreakdown byCategory={stats?.byCategory} total={totalExpenses} />
 
       {/* ── Expense list ── */}
       <div className="bg-dark-card border border-dark-border rounded-2xl overflow-hidden">
-        {/* List header + filters */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-dark-border flex-wrap">
-          <p className="text-sm font-medium text-off-white flex-1">Daftar Pengeluaran</p>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
-              <input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Cari..."
-                className="bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg pl-8 pr-3 py-1.5 text-xs outline-none focus:border-gold/50 w-36"
-              />
-            </div>
-            <select
-              value={catFilter}
-              onChange={e => setCatFilter(e.target.value)}
-              className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-1.5 text-xs outline-none focus:border-gold/50"
-            >
-              <option value="all">Semua Kategori</option>
-              {EXPENSE_CATEGORIES.map(c => (
-                <option key={c.id} value={c.id}>{c.icon} {c.label}</option>
-              ))}
-            </select>
+        {/* Toolbar */}
+        <div className="flex items-center gap-2 px-3 sm:px-4 py-3 border-b border-dark-border flex-wrap">
+          <p className="text-sm font-medium text-off-white mr-auto">
+            Daftar Pengeluaran
+            {total > 0 && <span className="text-muted font-normal"> · {total}</span>}
+          </p>
+          <div className="relative">
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+            <input
+              type="text"
+              inputMode="search"
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
+              placeholder="Cari deskripsi…"
+              className="bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg pl-8 pr-7 py-1.5 text-xs outline-none focus:border-gold/50 w-36 sm:w-44"
+            />
+            {searchInput && (
+              <button
+                onClick={() => setSearchInput('')}
+                aria-label="Hapus pencarian"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-off-white"
+              >
+                <X size={13} />
+              </button>
+            )}
           </div>
+          <select
+            value={catFilter}
+            onChange={e => setCatFilter(e.target.value)}
+            aria-label="Filter kategori"
+            className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold/50"
+          >
+            <option value="all">Semua Kategori</option>
+            {EXPENSE_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
+          </select>
+          {branches.length > 0 && (
+            <select
+              value={branchFilter}
+              onChange={e => setBranchFilter(e.target.value)}
+              aria-label="Filter cabang"
+              className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold/50"
+            >
+              <option value="all">Semua Cabang</option>
+              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          )}
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value)}
+            aria-label="Urutkan"
+            className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold/50"
+          >
+            {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
         </div>
 
-        {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-14 gap-3 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-dark-surface border border-dark-border flex items-center justify-center text-2xl">
-              📋
-            </div>
-            <p className="text-muted text-sm">Belum ada pengeluaran dicatat bulan ini</p>
-            <button
-              onClick={() => { setEditTarget(null); setFormOpen(true) }}
-              className="text-xs text-gold hover:text-gold/80 transition-colors"
+        {/* Bulk action bar */}
+        <AnimatePresence>
+          {selected.size > 0 && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden bg-gold/5 border-b border-gold/20"
             >
-              + Tambah pengeluaran pertama
+              <div className="flex items-center gap-3 px-3 sm:px-4 py-2.5">
+                <span className="text-xs text-gold font-medium">{selected.size} dipilih</span>
+                <button
+                  onClick={() => setSelected(new Set())}
+                  className="text-xs text-muted hover:text-off-white"
+                >
+                  Batal
+                </button>
+                <Button
+                  variant="danger"
+                  size="xs"
+                  icon={Trash2}
+                  className="ml-auto"
+                  loading={bulkDeleteExpenses.isPending}
+                  onClick={() => setBulkConfirm(true)}
+                >
+                  Hapus
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Select-all row */}
+        {!isLoading && !isError && expenses.length > 0 && (
+          <div className="flex items-center gap-2 px-3 sm:px-4 py-2 border-b border-dark-border bg-dark-surface/30">
+            <button
+              type="button"
+              onClick={toggleSelectAll}
+              className="flex items-center gap-2 text-xs text-muted hover:text-off-white transition-colors"
+            >
+              {allOnPageSelected
+                ? <CheckSquare size={15} className="text-gold" />
+                : <Square size={15} />}
+              Pilih semua di halaman ini
             </button>
+          </div>
+        )}
+
+        {/* Body: loading / error / empty / list */}
+        {isLoading ? (
+          <ListSkeleton />
+        ) : isError ? (
+          <div className="flex flex-col items-center justify-center py-14 gap-3 text-center px-4">
+            <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+              <AlertCircle size={22} className="text-red-400" />
+            </div>
+            <p className="text-sm text-muted">Gagal memuat data pengeluaran</p>
+            <Button variant="outline" size="sm" icon={RefreshCw} onClick={() => refetch()}>Coba lagi</Button>
+          </div>
+        ) : expenses.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-14 gap-3 text-center px-4">
+            <div className="w-12 h-12 rounded-2xl bg-dark-surface border border-dark-border flex items-center justify-center">
+              <Receipt size={22} className="text-muted" />
+            </div>
+            <p className="text-muted text-sm">
+              {hasFilter
+                ? 'Tidak ada pengeluaran yang cocok dengan filter'
+                : `Belum ada pengeluaran dicatat di ${monthLabel}`}
+            </p>
+            {hasFilter ? (
+              <button
+                onClick={() => { setSearchInput(''); setCatFilter('all'); setBranchFilter('all') }}
+                className="text-xs text-gold hover:text-gold/80 transition-colors"
+              >
+                Reset filter
+              </button>
+            ) : (
+              <button onClick={openCreate} className="text-xs text-gold hover:text-gold/80 transition-colors">
+                + Tambah pengeluaran pertama
+              </button>
+            )}
           </div>
         ) : (
           <div className="divide-y divide-dark-border">
             <AnimatePresence initial={false}>
-              {filtered.map(e => {
-                const cat = catById(e.category)
-                const branch = e.branchId ? branches.find(b => b.id === e.branchId) : null
-                return (
-                  <motion.div
-                    key={e.id}
-                    layout
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="flex items-center gap-3 px-4 py-3 hover:bg-dark-surface/40 transition-colors group"
-                  >
-                    {/* Icon */}
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base ${cat.bg}`}>
-                      {cat.icon}
-                    </div>
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-off-white truncate">{e.description}</p>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <span className={`text-[10px] font-medium ${cat.color}`}>{cat.label}</span>
-                        {branch && <span className="text-[10px] text-muted">· {branch.name}</span>}
-                        <span className="text-[10px] text-muted">
-                          · {format(parseISO(e.date), 'd MMM yyyy', { locale: idLocale })}
-                        </span>
-                      </div>
-                    </div>
-                    {/* Amount */}
-                    <p className="text-sm font-semibold text-red-400 flex-shrink-0">{formatRupiah(e.amount)}</p>
-                    {/* Actions */}
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                      <button
-                        onClick={() => { setEditTarget(e); setFormOpen(true) }}
-                        className="p-1.5 rounded-lg text-muted hover:text-gold transition-colors hover:bg-dark-surface"
-                      >
-                        <Pencil size={13} />
-                      </button>
-                      <button
-                        onClick={() => setDeleteConfirm(e.id)}
-                        className="p-1.5 rounded-lg text-muted hover:text-red-400 transition-colors hover:bg-dark-surface"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </motion.div>
-                )
-              })}
+              {expenses.map(e => (
+                <motion.div key={e.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                  <ExpenseItem
+                    expense={e}
+                    selected={selected.has(e.id)}
+                    onToggleSelect={toggleSelect}
+                    onEdit={openEdit}
+                    onDelete={setDeleteTarget}
+                  />
+                </motion.div>
+              ))}
             </AnimatePresence>
           </div>
         )}
 
-        {/* Footer total */}
-        {filtered.length > 0 && (
-          <div className="flex justify-between items-center px-4 py-3 border-t border-dark-border bg-dark-surface/40">
-            <span className="text-xs text-muted">{filtered.length} item</span>
-            <span className="text-sm font-semibold text-red-400">
-              {formatRupiah(filtered.reduce((s, e) => s + e.amount, 0))}
+        {/* Pagination footer */}
+        {!isLoading && !isError && totalPages > 1 && (
+          <div className="flex items-center justify-between gap-3 px-3 sm:px-4 py-3 border-t border-dark-border bg-dark-surface/40">
+            <span className="text-xs text-muted">
+              Hal <span className="text-off-white">{page}</span> / {totalPages}
             </span>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                aria-label="Halaman sebelumnya"
+                className="p-1.5 rounded-lg border border-dark-border text-muted hover:text-off-white hover:border-gold/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft size={15} />
+              </button>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                aria-label="Halaman berikutnya"
+                className="p-1.5 rounded-lg border border-dark-border text-muted hover:text-off-white hover:border-gold/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                <ChevronRight size={15} />
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -430,39 +817,37 @@ export default function TAExpensePage() {
         open={formOpen}
         onClose={() => setFormOpen(false)}
         initial={editTarget}
-        tenantId={tenantId}
         branches={branches}
       />
 
-      <Modal
-        isOpen={!!deleteConfirm}
-        onClose={() => setDeleteConfirm(null)}
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
         title="Hapus Pengeluaran?"
-        size="sm"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-muted">Tindakan ini tidak dapat dibatalkan.</p>
-          <div className="flex gap-3">
-            <Button variant="outline" fullWidth onClick={() => setDeleteConfirm(null)}>Batal</Button>
-            <Button variant="danger" fullWidth onClick={() => { deleteExpense(deleteConfirm); setDeleteConfirm(null) }}>
-              Hapus
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        description="Tindakan ini tidak dapat dibatalkan."
+        highlight={deleteTarget?.description}
+        confirmText="Ya, Hapus"
+        variant="danger"
+      />
+
+      <ConfirmDialog
+        isOpen={bulkConfirm}
+        onClose={() => setBulkConfirm(false)}
+        onConfirm={handleBulkDelete}
+        title="Hapus Pengeluaran Terpilih?"
+        description={`${selected.size} pengeluaran akan dihapus permanen.`}
+        confirmText={`Hapus ${selected.size} item`}
+        variant="danger"
+      />
     </div>
   )
 }
 
-function SummaryCard({ label, value, sub, accent, icon }) {
+export default function TAExpensePage() {
   return (
-    <div className="bg-dark-card border border-dark-border rounded-2xl p-4">
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-xs text-muted uppercase tracking-wider">{label}</p>
-        {icon}
-      </div>
-      <p className={`text-2xl font-bold ${accent}`}>{value}</p>
-      <p className="text-xs text-muted mt-1">{sub}</p>
-    </div>
+    <ErrorBoundary>
+      <ExpensePageInner />
+    </ErrorBoundary>
   )
 }

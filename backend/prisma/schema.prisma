@@ -170,6 +170,7 @@ model Tenant {
   featureFlags TenantFeatureFlag[]
   tickets      Ticket[]
   broadcasts   BroadcastRecipient[]
+  expenses     Expense[]
 }
 
 model Branch {
@@ -192,6 +193,7 @@ model Branch {
   queues       Queue[]
   bookings     Booking[]
   shifts       Shift[]
+  expenses     Expense[]
 
   @@unique([tenantId, code])
 }
@@ -378,6 +380,28 @@ model Voucher {
   tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, code])
+}
+
+// Pengeluaran operasional tenant — gaji, sewa, supplies, dll. Dipakai halaman
+// /admin/expenses untuk hitung laba bersih (pemasukan transaksi − biaya).
+model Expense {
+  id          String   @id @default(cuid())
+  tenantId    String
+  branchId    String?
+  category    String
+  description String
+  amount      Int
+  // Tanggal kalender pengeluaran, disimpan UTC-midnight agar filter periode
+  // konsisten lintas timezone (lihat catatan di routes/expenses.js).
+  date        DateTime
+  note        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch      Branch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, date])
+  @@index([tenantId, category])
 }
 
 model Package {
