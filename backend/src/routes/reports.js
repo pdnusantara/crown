@@ -283,7 +283,7 @@ router.get('/barbers', authenticate, requireRole('super_admin', 'tenant_admin'),
     const barberIds = barberStats.map((b) => b.barberId).filter(Boolean);
     const barbers = await prisma.user.findMany({
       where: { id: { in: barberIds } },
-      select: { id: true, name: true, phone: true },
+      select: { id: true, name: true, phone: true, commissionRate: true },
     });
     const barberMap = {};
     barbers.forEach((b) => { barberMap[b.id] = b; });
@@ -298,14 +298,21 @@ router.get('/barbers', authenticate, requireRole('super_admin', 'tenant_admin'),
     const ratingMap = {};
     ratings.forEach((r) => { ratingMap[r.barberId] = r; });
 
-    const result = barberStats.map((stat) => ({
-      barberId: stat.barberId,
-      barberName: barberMap[stat.barberId]?.name || 'Unknown',
-      revenue: stat._sum.price || 0,
-      servicesCount: stat._count.id,
-      averageRating: ratingMap[stat.barberId]?._avg.rating || null,
-      totalRatings: ratingMap[stat.barberId]?._count.id || 0,
-    }));
+    const result = barberStats.map((stat) => {
+      const rate = barberMap[stat.barberId]?.commissionRate ?? 0.35;
+      const revenue = stat._sum.price || 0;
+      return {
+        barberId: stat.barberId,
+        barberName: barberMap[stat.barberId]?.name || 'Unknown',
+        revenue,
+        servicesCount: stat._count.id,
+        // Rate & komisi per barber — dipakai fitur "Gaji Barber" di /admin/expenses.
+        commissionRate: rate,
+        commission: Math.round(revenue * rate),
+        averageRating: ratingMap[stat.barberId]?._avg.rating || null,
+        totalRatings: ratingMap[stat.barberId]?._count.id || 0,
+      };
+    });
 
     result.sort((a, b) => b.revenue - a.revenue);
 

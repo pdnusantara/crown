@@ -4,13 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Trash2, Pencil, TrendingDown, TrendingUp, Wallet, ChevronLeft, ChevronRight,
   Search, AlertCircle, Download, RefreshCw, X, Receipt, CheckSquare, Square, Loader2,
-  CopyPlus, ArrowUp, ArrowDown, Minus,
+  CopyPlus, ArrowUp, ArrowDown, Minus, Scissors,
 } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, parseISO } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
 import { useAuthStore } from '../../store/authStore.js'
 import { useFeatureFlags } from '../../hooks/useFeatureFlags.js'
-import { useReportSummary } from '../../hooks/useReports.js'
+import { useReportSummary, useBarberReport } from '../../hooks/useReports.js'
 import { useBranches } from '../../hooks/useBranches.js'
 import {
   useExpenses, useExpenseStats, useCreateExpense, useUpdateExpense,
@@ -173,6 +173,9 @@ function ExpenseFormModal({ open, onClose, initial, branches, onSaved }) {
         branchId: initial.branchId || '',
         note: initial.note || '',
       })
+    } else if (initial) {
+      // Prefill pengeluaran baru (mis. dari "Gaji Barber") — sudah berbentuk form.
+      setForm({ ...EMPTY_FORM(), ...initial })
     } else {
       setForm(EMPTY_FORM())
     }
@@ -548,6 +551,83 @@ function ListSkeleton() {
   )
 }
 
+// ── Barber payroll modal ────────────────────────────────────────────────────────
+// Jembatan Komisi → Pengeluaran. Komisi barber TIDAK otomatis jadi pengeluaran —
+// modal ini menampilkan komisi tiap barber periode berjalan, lalu "Catat" mengisi
+// form pengeluaran (kategori Gaji & Honor) otomatis untuk di-review & disimpan.
+function BarberPayrollModal({ open, onClose, monthLabel, startDate, endDate, onPick }) {
+  const { user } = useAuthStore()
+  const { data, isLoading, isError } = useBarberReport(
+    open ? user?.tenantId : undefined,
+    { startDate, endDate },
+  )
+  const barbers = useMemo(
+    () => (Array.isArray(data) ? data : []).filter(b => (b.commission || 0) > 0),
+    [data],
+  )
+  const totalCommission = barbers.reduce((s, b) => s + (b.commission || 0), 0)
+
+  return (
+    <Modal isOpen={open} onClose={onClose} title="Gaji / Komisi Barber" size="md">
+      <div className="space-y-3">
+        <p className="text-xs text-muted">
+          Komisi tiap barber dari transaksi <span className="text-off-white font-medium capitalize">{monthLabel}</span>.
+          Klik <span className="text-gold">Catat</span> untuk mengisi form pengeluaran otomatis —
+          nominal tetap bisa diubah sebelum disimpan.
+        </p>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 size={22} className="animate-spin text-gold" />
+          </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center gap-2 py-10 text-center">
+            <AlertCircle size={22} className="text-red-400" />
+            <p className="text-sm text-muted">Gagal memuat data komisi</p>
+          </div>
+        ) : barbers.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-10 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-dark-surface border border-dark-border flex items-center justify-center">
+              <Scissors size={20} className="text-muted" />
+            </div>
+            <p className="text-sm text-muted capitalize">Belum ada komisi barber di {monthLabel}</p>
+          </div>
+        ) : (
+          <>
+            <div className="max-h-[44vh] overflow-y-auto -mx-1 divide-y divide-dark-border">
+              {barbers.map(b => (
+                <div key={b.barberId} className="flex items-center gap-3 px-1 py-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-blue-400/10 flex items-center justify-center flex-shrink-0">
+                    <Scissors size={15} className="text-blue-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-off-white truncate">{b.barberName}</p>
+                    <p className="text-[10px] text-muted">
+                      Omzet {formatRupiahShort(b.revenue)} · {Math.round((b.commissionRate || 0) * 100)}% · {b.servicesCount} layanan
+                    </p>
+                  </div>
+                  <span className="text-sm font-semibold text-off-white flex-shrink-0 tabular-nums">
+                    {formatRupiahShort(b.commission)}
+                  </span>
+                  <Button size="xs" variant="secondary" onClick={() => onPick(b)} className="flex-shrink-0">
+                    Catat
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-between gap-2 pt-2 text-xs border-t border-dark-border">
+              <span className="text-muted">{barbers.length} barber</span>
+              <span className="text-off-white font-semibold tabular-nums">
+                Total komisi {formatRupiah(totalCommission)}
+              </span>
+            </div>
+          </>
+        )}
+      </div>
+    </Modal>
+  )
+}
+
 // ── Main page ───────────────────────────────────────────────────────────────────
 function ExpensePageInner() {
   const { user } = useAuthStore()
@@ -644,9 +724,25 @@ function ExpensePageInner() {
   const [bulkConfirm, setBulkConfirm] = useState(false)
   const [exporting, setExporting]     = useState(false)
   const [copyOpen, setCopyOpen]       = useState(false)
+  const [payrollOpen, setPayrollOpen] = useState(false)
 
   const openCreate = () => { setEditTarget(null); setFormOpen(true) }
   const openEdit   = (e) => { setEditTarget(e); setFormOpen(true) }
+
+  // Dari modal Gaji Barber → buka form pengeluaran terisi otomatis (komisi
+  // barber). Bukan edit (tanpa id) → ExpenseFormModal memperlakukannya prefill.
+  const handlePickPayroll = (barber) => {
+    setPayrollOpen(false)
+    setEditTarget({
+      category: 'gaji',
+      description: `Komisi ${barber.barberName} ${monthLabel}`,
+      amount: String(barber.commission || 0),
+      date: format(new Date(), 'yyyy-MM-dd'),
+      branchId: '',
+      note: `Komisi ${Math.round((barber.commissionRate || 0) * 100)}% dari omzet ${formatRupiah(barber.revenue || 0)}`,
+    })
+    setFormOpen(true)
+  }
 
   const handleDelete = async () => {
     if (!deleteTarget) return
@@ -770,6 +866,14 @@ function ExpensePageInner() {
             <CopyPlus size={13} />
             <span className="hidden sm:inline">Salin Bulan Lalu</span>
             <span className="sm:hidden">Salin</span>
+          </button>
+          <button
+            onClick={() => setPayrollOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs text-muted hover:border-gold/30 hover:text-off-white transition-all"
+          >
+            <Scissors size={13} />
+            <span className="hidden sm:inline">Gaji Barber</span>
+            <span className="sm:hidden">Gaji</span>
           </button>
           <button
             onClick={handleRefresh}
@@ -1021,6 +1125,15 @@ function ExpensePageInner() {
         onClose={() => setCopyOpen(false)}
         fromMonth={subMonths(activeMonth, 1)}
         toMonth={activeMonth}
+      />
+
+      <BarberPayrollModal
+        open={payrollOpen}
+        onClose={() => setPayrollOpen(false)}
+        monthLabel={monthLabel}
+        startDate={startDate}
+        endDate={endDate}
+        onPick={handlePickPayroll}
       />
 
       <ConfirmDialog
