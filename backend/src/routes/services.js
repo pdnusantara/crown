@@ -3,6 +3,17 @@ const { z } = require('zod');
 const prisma = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { parsePagination, paginatedResponse } = require('../utils/pagination');
+const { getIO, tenantRoom } = require('../config/socket');
+
+// Broadcast perubahan layanan ke seluruh klien tenant (kasir, booking, queue,
+// admin) supaya POS & halaman lain ikut tersinkron otomatis tanpa reload.
+const emitService = (event, payload, tenantId) => {
+  if (!tenantId) return;
+  try {
+    const io = getIO();
+    if (io) io.to(tenantRoom(tenantId)).emit(event, payload);
+  } catch { /* socket optional */ }
+};
 
 const serviceSelect = {
   id: true,
@@ -159,6 +170,7 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin'), async
       select: serviceSelect,
     });
 
+    emitService('service:created', service, service.tenantId);
     res.status(201).json({ success: true, data: service });
   } catch (err) {
     next(err);
@@ -182,6 +194,7 @@ router.put('/:id', authenticate, requireRole('super_admin', 'tenant_admin'), asy
       select: serviceSelect,
     });
 
+    emitService('service:updated', service, service.tenantId);
     res.json({ success: true, data: service });
   } catch (err) {
     next(err);
@@ -203,6 +216,7 @@ router.delete('/:id', authenticate, requireRole('super_admin', 'tenant_admin'), 
       data: { deletedAt: new Date() },
     });
 
+    emitService('service:deleted', { id: req.params.id }, existing.tenantId);
     res.json({ success: true, data: { message: 'Service deleted successfully' } });
   } catch (err) {
     next(err);

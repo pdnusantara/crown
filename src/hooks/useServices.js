@@ -1,12 +1,34 @@
+import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import api from '../lib/api.js'
+import { getSocket } from '../lib/socket.js'
 import { useAuthStore } from '../store/authStore.js'
+
+// Event realtime layanan — di-emit backend ke room tenant saat layanan
+// dibuat/diubah/dihapus dari /admin/services.
+const REALTIME_EVENTS = ['service:created', 'service:updated', 'service:deleted']
+
+// Dengarkan perubahan layanan dan invalidasi cache supaya halaman yang
+// memakai layanan (POS kasir, Bookings, Queue, admin) ikut tersinkron
+// otomatis tanpa perlu reload.
+function useServicesRealtime() {
+  const qc = useQueryClient()
+  useEffect(() => {
+    const socket = getSocket()
+    const onChange = () => {
+      qc.invalidateQueries({ queryKey: ['services'] })
+    }
+    REALTIME_EVENTS.forEach(evt => socket.on(evt, onChange))
+    return () => REALTIME_EVENTS.forEach(evt => socket.off(evt, onChange))
+  }, [qc])
+}
 
 // useServices — paginated. Backend mengembalikan paginatedResponse:
 // { data, total, page, limit, totalPages }. Hook expose itu apa adanya
 // supaya pemanggil bisa kontrol pagination UI sekaligus tetap kompatibel
 // dengan callsite lama yang langsung pakai array (legacy).
 export function useServices(filters = {}) {
+  useServicesRealtime()
   const { user } = useAuthStore()
   const tenantId = user?.tenantId
 
