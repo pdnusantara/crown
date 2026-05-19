@@ -233,6 +233,11 @@ export const usePosStore = create(
           ...payload,
           customer: state.selectedCustomer,
           customerName: state.selectedCustomer?.name || 'Walk-in Customer',
+          // Notifikasi WA otomatis ke pelanggan sudah/akan dikirim server →
+          // struk tak perlu tampilkan tombol "Share WA" manual.
+          customerWhatsappQueued: !!res.data.customerWhatsappQueued,
+          // Penutup kustom untuk pesan WA share manual (null = pakai default).
+          waShareMessage: res.data.waShareMessage || null,
           services: state.cartItems.map(item => ({
             serviceId: item.serviceId,
             name: item.name,

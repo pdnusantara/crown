@@ -43,6 +43,7 @@ const tenantSelect = {
   timezone: true,
   bookingPage: true,
   wilayah: true,
+  transactionMessages: true,
   isSuspended: true,
   createdAt: true,
   updatedAt: true,
@@ -333,6 +334,13 @@ const wilayahSchema = z.object({
   kabupaten:   z.string().max(120).nullish(),
 }).strict().nullish();
 
+// Teks/pesan otomatis setelah transaksi. Dibatasi panjangnya supaya pesan WA
+// tetap ringkas; placeholder {nama}/{toko} di-render saat pengiriman.
+const transactionMessagesSchema = z.object({
+  waCustomerMessage: z.string().max(500).nullish(),
+  waShareMessage:    z.string().max(500).nullish(),
+}).strict().nullish();
+
 const selfUpdateSchema = z.object({
   name:        z.string().min(1).max(255).optional(),
   phone:       z.string().max(50).nullish(),
@@ -344,6 +352,7 @@ const selfUpdateSchema = z.object({
   timezone:    tzSchema.optional(),
   bookingPage: bookingPageSchema,
   wilayah:     wilayahSchema,
+  transactionMessages: transactionMessagesSchema,
 });
 // ── Upload gambar tenant (hero & galeri halaman booking) ───────────────────────
 // Gambar disimpan sebagai FILE di disk, bukan base64 di JSON tenant — supaya

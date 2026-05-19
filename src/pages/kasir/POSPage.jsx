@@ -1538,6 +1538,10 @@ function POSPageInner() {
             <Button variant="secondary" icon={Printer} fullWidth onClick={() => window.print()}>
               {t('pos.print')}
             </Button>
+            {/* Tombol share WA manual disembunyikan bila notifikasi WA otomatis
+                ke pelanggan sudah dikirim server — agar pelanggan tak dapat
+                dua pesan untuk transaksi yang sama. */}
+            {!lastTxn?.customerWhatsappQueued && (
             <button
               onClick={() => {
                 if (!lastTxn) return
@@ -1545,6 +1549,14 @@ function POSPageInner() {
                   .map(s => `• ${s.name}${s.barberName ? ` (${s.barberName})` : ''} — ${formatRupiah(s.price)}`)
                   .join('\n')
                 const headerLine = branchName ? `${tenantName} — ${branchName}` : tenantName
+                // Penutup pesan: pakai teks kustom tenant bila ada (placeholder
+                // {nama}/{toko} dirender), jika tidak pakai teks default.
+                const shareClosing = lastTxn.waShareMessage
+                  ? String(lastTxn.waShareMessage).replace(/\{(\w+)\}/g, (m, k) =>
+                      k === 'nama' ? (lastTxn.customer?.name || '')
+                      : k === 'toko' ? tenantName
+                      : m)
+                  : `${t('pos.receiptThanksLong')} 🙏`
                 const msg = `*${headerLine}*\n` +
                   (branchAddr ? `${branchAddr}\n` : '') +
                   `\n${t('pos.receiptNo')}: #${lastTxn.id.slice(-8).toUpperCase()}\n` +
@@ -1555,7 +1567,7 @@ function POSPageInner() {
                   (lastTxn.pointsRedeemed > 0 ? `${t('pos.receiptPointsRedeemed', { points: lastTxn.pointsRedeemed })}: -${formatRupiah(calcRedeemValue(lastTxn.pointsRedeemed))}\n` : '') +
                   `*TOTAL: ${formatRupiah(lastTxn.total)}*\n` +
                   `${t('pos.receiptPaymentRow')}: ${methodLabel(lastTxn.paymentMethod)}\n\n` +
-                  `${t('pos.receiptThanksLong')} 🙏`
+                  shareClosing
                 const phone = lastTxn.customer?.phone?.replace(/\D/g, '') || ''
                 const intlPhone = phone.startsWith('0') ? '62' + phone.slice(1) : phone
                 if (!intlPhone) {
@@ -1571,6 +1583,7 @@ function POSPageInner() {
               <MessageCircle size={16} />
               {t('pos.whatsapp')}
             </button>
+            )}
             <Button fullWidth onClick={handleNewTransaction}>{t('pos.newTransaction')}</Button>
           </div>
         </div>

@@ -488,6 +488,14 @@ async function findTenantByDeviceId(deviceId) {
 
 // ── Pengiriman pesan ──────────────────────────────────────────────────────────
 
+// Render placeholder sederhana pada teks pesan kustom tenant: {nama} = nama
+// pelanggan, {toko} = nama tenant. Placeholder tak dikenal dibiarkan apa adanya.
+function renderTemplate(text, vars = {}) {
+  return String(text || '').replace(/\{(\w+)\}/g, (m, key) =>
+    Object.prototype.hasOwnProperty.call(vars, key) ? String(vars[key] ?? '') : m
+  );
+}
+
 function buildTransactionMessage(transaction) {
   const lines = [
     'Transaksi baru (MVP Beta)',
@@ -557,11 +565,21 @@ async function sendTransactionNotification(tenantId, transaction) {
   }
 
   if (settings.notifyCustomer && transaction.customer?.phone) {
+    // Pembuka pesan bisa dikustom tenant di /admin/settings → Pesan Transaksi.
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { name: true, transactionMessages: true },
+    }).catch(() => null);
+    const customOpening = tenant?.transactionMessages?.waCustomerMessage;
+    const opening = renderTemplate(
+      (customOpening && customOpening.trim()) || 'Terima kasih sudah bertransaksi.',
+      { nama: transaction.customer?.name || '', toko: tenant?.name || '' }
+    );
     try {
       const r = await dispatchMessage(
         tenantId,
         transaction.customer.phone,
-        `Terima kasih sudah bertransaksi.\n${summary}`,
+        `${opening}\n\n${summary}`,
         `tx-${txId}-cust`
       );
       if (r.sent) {

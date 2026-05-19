@@ -58,6 +58,7 @@ function buildCategories(slug) {
             'Masukkan voucher atau tukar poin loyalti bila ada.',
             'Pilih metode pembayaran dan tekan Bayar.',
             'Struk tercetak dan transaksi tersimpan.',
+            'Di struk Anda bisa mencetak atau membagikan ke WhatsApp pelanggan. Tombol share WhatsApp tidak muncul bila notifikasi WhatsApp otomatis sudah aktif — pesan dikirim sendiri oleh sistem.',
           ],
           to: pos,
           toLabel: 'Buka Kasir',

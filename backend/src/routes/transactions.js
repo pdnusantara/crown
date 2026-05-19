@@ -3,7 +3,7 @@ const { z } = require('zod');
 const prisma = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { parsePagination, paginatedResponse } = require('../utils/pagination');
-const { sendTransactionNotification } = require('../services/whatsappService');
+const { sendTransactionNotification, getTenantSettings } = require('../services/whatsappService');
 const { requireLicensedBranch } = require('../middleware/requireLicensedBranch');
 const { getIO, branchRoom, tenantRoom, userRoom } = require('../config/socket');
 const { upsertCustomerByPhone } = require('../services/customerService');
@@ -506,7 +506,29 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir
       return transaction;
     });
 
-    res.status(201).json({ success: true, data: result });
+    // Info untuk struk kasir:
+    //  - customerWhatsappQueued: notifikasi WA otomatis ke pelanggan akan dikirim
+    //    (WA aktif + notifikasi pelanggan ON + pelanggan punya nomor) → kasir
+    //    tak perlu tombol "Share WA" manual.
+    //  - waShareMessage: penutup kustom pesan WA share manual (bila masih relevan).
+    let customerWhatsappQueued = false;
+    let waShareMessage = null;
+    try {
+      const [waSettings, tenantRow] = await Promise.all([
+        getTenantSettings(body.tenantId),
+        prisma.tenant.findUnique({
+          where: { id: body.tenantId },
+          select: { transactionMessages: true },
+        }),
+      ]);
+      customerWhatsappQueued = !!(waSettings.enabled && waSettings.notifyCustomer && result.customer?.phone);
+      const sm = tenantRow?.transactionMessages?.waShareMessage;
+      waShareMessage = sm && String(sm).trim() ? sm : null;
+    } catch (err) {
+      console.error('Gagal memuat info pesan transaksi:', err?.message || err);
+    }
+
+    res.status(201).json({ success: true, data: result, customerWhatsappQueued, waShareMessage });
 
     // Emit real-time notification to relevant rooms
     const io = getIO();

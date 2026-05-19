@@ -66,6 +66,21 @@ export default function TASettingsPage() {
   const [notifications, setNotifications] = useState({ newBooking: true, queueFull: true, dailyReport: false })
   const [activeTab, setActiveTab] = useState('general')
 
+  // ── Pesan transaksi (teks otomatis setelah transaksi) ──────────────────────
+  // waCustomerMessage = pembuka notifikasi WA otomatis ke pelanggan.
+  // waShareMessage    = penutup pesan WA yang dibagikan kasir dari struk.
+  const [txMsgForm, setTxMsgForm] = useState({ waCustomerMessage: '', waShareMessage: '' })
+  const [txMsgSaving, setTxMsgSaving] = useState(false)
+  useEffect(() => {
+    const tm = tenant?.transactionMessages
+    if (tm) {
+      setTxMsgForm({
+        waCustomerMessage: tm.waCustomerMessage || '',
+        waShareMessage:    tm.waShareMessage || '',
+      })
+    }
+  }, [tenant?.transactionMessages])
+
   // ── Booking Page config (synced with /api/public/info) ─────────────────────
   // Default disusun supaya tenant baru langsung dapat tampilan rapi tanpa perlu
   // isi semua field — hanya logo & alamat yang dipakai dari general tab.
@@ -230,6 +245,26 @@ export default function TASettingsPage() {
       toast.success(t('tenantAdmin.settings.settingsSaved'))
     } catch (err) {
       toast.error(err?.response?.data?.error || 'Gagal menyimpan pengaturan')
+    }
+  }
+
+  const handleSaveTransactionMessages = async () => {
+    setTxMsgSaving(true)
+    try {
+      // String kosong → null supaya backend tak menyimpan noise & pengiriman
+      // jatuh ke teks default.
+      const clean = (v) => { const s = (v || '').trim(); return s || null }
+      await updateMyTenant.mutateAsync({
+        transactionMessages: {
+          waCustomerMessage: clean(txMsgForm.waCustomerMessage),
+          waShareMessage:    clean(txMsgForm.waShareMessage),
+        },
+      })
+      toast.success('Pesan transaksi tersimpan')
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal menyimpan')
+    } finally {
+      setTxMsgSaving(false)
     }
   }
 
@@ -407,6 +442,7 @@ export default function TASettingsPage() {
     { id: 'general', label: t('tenantAdmin.settings.tabGeneral') },
     { id: 'bookingPage', label: 'Halaman Booking' },
     ...(whatsappEnabled ? [{ id: 'whatsapp', label: 'WhatsApp Beta' }] : []),
+    { id: 'transactionMsg', label: 'Pesan Transaksi' },
     { id: 'backup', label: t('tenantAdmin.settings.tabBackup') },
     { id: 'audit', label: t('tenantAdmin.settings.tabAudit') },
   ]
@@ -637,6 +673,82 @@ export default function TASettingsPage() {
             onSaveSettings={saveWhatsAppSettings}
             onSendTest={sendWhatsAppTest}
           />
+        </div>
+      )}
+
+      {activeTab === 'transactionMsg' && (
+        <div className="max-w-2xl">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <MessageCircle className="w-5 h-5 text-gold" />
+                <h3 className="font-semibold text-off-white">Pesan Otomatis Setelah Transaksi</h3>
+              </div>
+            </CardHeader>
+            <CardBody className="space-y-6">
+              <p className="text-sm text-muted">
+                Sesuaikan teks pesan WhatsApp yang dikirim ke pelanggan setelah transaksi.
+                Gunakan <code className="text-gold bg-dark-surface px-1 py-0.5 rounded">{'{nama}'}</code> untuk
+                menyisipkan nama pelanggan dan <code className="text-gold bg-dark-surface px-1 py-0.5 rounded">{'{toko}'}</code> untuk
+                nama toko.
+              </p>
+
+              {/* Pesan WA otomatis ke pelanggan */}
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-off-white">
+                  Pesan WhatsApp otomatis ke pelanggan
+                </label>
+                <textarea
+                  value={txMsgForm.waCustomerMessage}
+                  onChange={e => setTxMsgForm(f => ({ ...f, waCustomerMessage: e.target.value }))}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Terima kasih sudah bertransaksi."
+                  className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60 resize-none"
+                />
+                <div className="flex justify-between gap-3">
+                  <p className="text-[11px] text-muted">
+                    Kalimat pembuka notifikasi otomatis. Rincian transaksi (total, cabang, waktu)
+                    ditambahkan otomatis di bawahnya.
+                    {!whatsappEnabled && ' Memerlukan fitur WhatsApp Beta aktif & notifikasi pelanggan dinyalakan.'}
+                  </p>
+                  <span className="text-[11px] text-muted flex-shrink-0 tabular-nums">{txMsgForm.waCustomerMessage.length}/500</span>
+                </div>
+              </div>
+
+              {/* Penutup pesan WA share manual */}
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-off-white">
+                  Penutup pesan WhatsApp share manual (kasir)
+                </label>
+                <textarea
+                  value={txMsgForm.waShareMessage}
+                  onChange={e => setTxMsgForm(f => ({ ...f, waShareMessage: e.target.value }))}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Terima kasih sudah berkunjung! 🙏"
+                  className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60 resize-none"
+                />
+                <div className="flex justify-between gap-3">
+                  <p className="text-[11px] text-muted">
+                    Kalimat penutup saat kasir membagikan struk lewat tombol WhatsApp di halaman kasir.
+                    Tombol share manual otomatis disembunyikan bila notifikasi otomatis di atas sudah aktif —
+                    agar pelanggan tak menerima dua pesan.
+                  </p>
+                  <span className="text-[11px] text-muted flex-shrink-0 tabular-nums">{txMsgForm.waShareMessage.length}/500</span>
+                </div>
+              </div>
+
+              <Button
+                icon={MessageCircle}
+                onClick={handleSaveTransactionMessages}
+                loading={txMsgSaving}
+                disabled={txMsgSaving}
+              >
+                Simpan Pesan
+              </Button>
+            </CardBody>
+          </Card>
         </div>
       )}
 

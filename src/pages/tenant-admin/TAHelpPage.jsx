@@ -214,7 +214,20 @@ const CATEGORIES = [
       {
         id: 's-pengaturan',
         q: 'Apa yang bisa diatur di menu Pengaturan?',
-        a: 'Pengaturan mencakup profil toko, tampilan halaman booking publik, zona waktu, serta notifikasi WhatsApp.',
+        a: 'Pengaturan mencakup profil toko, tampilan halaman booking publik, zona waktu, notifikasi WhatsApp, serta pesan otomatis setelah transaksi.',
+        to: '/admin/settings',
+        toLabel: 'Buka Pengaturan',
+      },
+      {
+        id: 's-pesan-transaksi',
+        q: 'Bagaimana menyesuaikan pesan WhatsApp setelah transaksi?',
+        a: 'Di Pengaturan → tab Pesan Transaksi Anda bisa menulis sendiri teks pesan WhatsApp untuk pelanggan. Gunakan {nama} untuk nama pelanggan dan {toko} untuk nama toko.',
+        steps: [
+          'Buka Pengaturan lalu pilih tab Pesan Transaksi.',
+          'Isi "Pesan WhatsApp otomatis ke pelanggan" — kalimat pembuka notifikasi otomatis (rincian transaksi ditambahkan otomatis).',
+          'Isi "Penutup pesan WhatsApp share manual" — kalimat penutup saat kasir membagikan struk lewat tombol WhatsApp.',
+          'Klik Simpan Pesan. Bila notifikasi otomatis aktif, tombol share manual di kasir otomatis disembunyikan agar pelanggan tak dapat dua pesan.',
+        ],
         to: '/admin/settings',
         toLabel: 'Buka Pengaturan',
       },
