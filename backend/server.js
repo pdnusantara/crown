@@ -13,6 +13,7 @@ const tenantResolver = require('./src/middleware/tenantResolver');
 const { resolveBranchAliasMiddleware } = require('./src/utils/branchResolver');
 const { initSocket } = require('./src/config/socket');
 const { initRenewalJob } = require('./src/jobs/subscriptionRenewal');
+const { initVisitReminderJob } = require('./src/jobs/visitReminder');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -164,6 +165,7 @@ initSocket(httpServer);
 httpServer.listen(PORT, () => {
   console.log(`BarberOS backend running on port ${PORT} [${process.env.NODE_ENV || 'development'}] (HTTP + Socket.io)`);
   initRenewalJob();
+  initVisitReminderJob();
 });
 
 module.exports = app;

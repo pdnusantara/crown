@@ -6,6 +6,7 @@ const { authenticate, requireRole } = require('../middleware/auth');
 const { parsePagination, paginatedResponse } = require('../utils/pagination');
 const { recordAudit } = require('../utils/auditLog');
 const { getIO, tenantRoom } = require('../config/socket');
+const { runForTenant } = require('../jobs/visitReminder');
 
 const emitCustomer = (event, customer) => {
   if (!customer?.tenantId) return;
@@ -317,6 +318,54 @@ router.get('/stats', authenticate, requireRole('super_admin', 'tenant_admin', 'k
       },
     });
   } catch (err) {
+    next(err);
+  }
+});
+
+// ── Pengingat kunjungan otomatis (WhatsApp) ─────────────────────────────────
+// Endpoint khusus untuk halaman Pengaturan → Pengingat Kunjungan.
+
+// GET /api/customers/visit-reminder/preview — perkiraan jumlah pelanggan yang
+// akan diingatkan dengan konfigurasi saat ini (tidak mengirim apa pun).
+router.get('/visit-reminder/preview', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
+  try {
+    const tenantId = req.user.role === 'super_admin' ? req.query.tenantId : req.user.tenantId;
+    if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId wajib' });
+    const result = await runForTenant(tenantId, { dryRun: true });
+    res.json({
+      success: true,
+      data: { eligible: result.eligible, config: result.config },
+    });
+  } catch (err) {
+    if (err.code === 'TENANT_NOT_FOUND') {
+      return res.status(404).json({ success: false, error: err.message });
+    }
+    next(err);
+  }
+});
+
+// POST /api/customers/visit-reminder/run — kirim pengingat sekarang juga,
+// mengabaikan jadwal jam. Mengembalikan jumlah pesan terkirim.
+router.post('/visit-reminder/run', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
+  try {
+    const tenantId = req.user.role === 'super_admin' ? req.body.tenantId : req.user.tenantId;
+    if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId wajib' });
+    const result = await runForTenant(tenantId, {});
+    if (result.skipped === 'not_connected') {
+      return res.status(400).json({
+        success: false,
+        error: 'WhatsApp belum tersambung. Hubungkan WhatsApp dulu di tab WhatsApp Beta.',
+        code: 'NOT_CONNECTED',
+      });
+    }
+    res.json({
+      success: true,
+      data: { eligible: result.eligible || 0, sent: result.sent || 0, failed: result.failed || 0 },
+    });
+  } catch (err) {
+    if (err.code === 'TENANT_NOT_FOUND') {
+      return res.status(404).json({ success: false, error: err.message });
+    }
     next(err);
   }
 });

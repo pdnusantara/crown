@@ -81,6 +81,81 @@ export default function TASettingsPage() {
     }
   }, [tenant?.transactionMessages])
 
+  // ── Pengingat kunjungan otomatis (WhatsApp) ────────────────────────────────
+  const [reminderForm, setReminderForm] = useState({
+    enabled: false, inactiveDays: 30, repeat: false, sendHour: 10, message: '',
+  })
+  const [reminderSaving, setReminderSaving]                 = useState(false)
+  const [reminderRunning, setReminderRunning]               = useState(false)
+  const [reminderPreview, setReminderPreview]               = useState(null)
+  const [reminderPreviewLoading, setReminderPreviewLoading] = useState(false)
+  useEffect(() => {
+    const vr = tenant?.visitReminder
+    if (vr) {
+      setReminderForm({
+        enabled:      !!vr.enabled,
+        inactiveDays: vr.inactiveDays || 30,
+        repeat:       !!vr.repeat,
+        sendHour:     typeof vr.sendHour === 'number' ? vr.sendHour : 10,
+        message:      vr.message || '',
+      })
+    }
+  }, [tenant?.visitReminder])
+
+  // Perkiraan jumlah pelanggan yang akan diingatkan — pakai konfigurasi yang
+  // SUDAH tersimpan di server (refetch setelah simpan / kirim).
+  const loadReminderPreview = async () => {
+    setReminderPreviewLoading(true)
+    try {
+      const res = await api.get('/customers/visit-reminder/preview')
+      setReminderPreview(res.data?.data?.eligible ?? null)
+    } catch {
+      setReminderPreview(null)
+    } finally {
+      setReminderPreviewLoading(false)
+    }
+  }
+  useEffect(() => {
+    if (activeTab === 'visitReminder') loadReminderPreview()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab])
+
+  const handleSaveReminder = async () => {
+    setReminderSaving(true)
+    try {
+      await updateMyTenant.mutateAsync({
+        visitReminder: {
+          enabled:      reminderForm.enabled,
+          inactiveDays: Math.min(365, Math.max(1, Number(reminderForm.inactiveDays) || 30)),
+          repeat:       reminderForm.repeat,
+          sendHour:     Math.min(23, Math.max(0, Number(reminderForm.sendHour) || 0)),
+          message:      (reminderForm.message || '').trim() || null,
+        },
+      })
+      toast.success('Pengaturan pengingat kunjungan tersimpan')
+      loadReminderPreview()
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal menyimpan')
+    } finally {
+      setReminderSaving(false)
+    }
+  }
+
+  const handleRunReminder = async () => {
+    if (reminderRunning) return
+    setReminderRunning(true)
+    try {
+      const res = await api.post('/customers/visit-reminder/run', {})
+      const d = res.data?.data || {}
+      toast.success(`Pengingat terkirim — ${d.sent || 0} pesan${d.failed ? `, ${d.failed} gagal` : ''}`)
+      loadReminderPreview()
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal mengirim pengingat')
+    } finally {
+      setReminderRunning(false)
+    }
+  }
+
   // ── Booking Page config (synced with /api/public/info) ─────────────────────
   // Default disusun supaya tenant baru langsung dapat tampilan rapi tanpa perlu
   // isi semua field — hanya logo & alamat yang dipakai dari general tab.
@@ -443,6 +518,7 @@ export default function TASettingsPage() {
     { id: 'bookingPage', label: 'Halaman Booking' },
     ...(whatsappEnabled ? [{ id: 'whatsapp', label: 'WhatsApp Beta' }] : []),
     { id: 'transactionMsg', label: 'Pesan Transaksi' },
+    ...(whatsappEnabled ? [{ id: 'visitReminder', label: 'Pengingat Kunjungan' }] : []),
     { id: 'backup', label: t('tenantAdmin.settings.tabBackup') },
     { id: 'audit', label: t('tenantAdmin.settings.tabAudit') },
   ]
@@ -747,6 +823,150 @@ export default function TASettingsPage() {
               >
                 Simpan Pesan
               </Button>
+            </CardBody>
+          </Card>
+        </div>
+      )}
+
+      {activeTab === 'visitReminder' && (
+        <div className="max-w-2xl">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Bell className="w-5 h-5 text-gold" />
+                <h3 className="font-semibold text-off-white">Pengingat Kunjungan Otomatis</h3>
+              </div>
+            </CardHeader>
+            <CardBody className="space-y-6">
+              <p className="text-sm text-muted">
+                Kirim pesan WhatsApp otomatis ke pelanggan yang sudah lama tidak berkunjung,
+                agar mereka kembali. Pesan dikirim dari nomor WhatsApp toko yang tersambung
+                di tab WhatsApp Beta.
+              </p>
+
+              {/* Aktifkan */}
+              <label className="flex items-start gap-2.5 p-3 bg-dark-surface rounded-xl border border-dark-border cursor-pointer hover:border-gold/30 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={reminderForm.enabled}
+                  onChange={e => setReminderForm(f => ({ ...f, enabled: e.target.checked }))}
+                  className="mt-0.5 accent-gold"
+                />
+                <div className="text-sm">
+                  <p className="text-off-white font-medium">Aktifkan pengingat kunjungan</p>
+                  <p className="text-xs text-muted mt-0.5">Job berjalan otomatis tiap hari pada jam yang Anda tentukan.</p>
+                </div>
+              </label>
+
+              {/* Ambang hari + jam kirim */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-medium text-off-white">
+                    Ingatkan setelah tidak berkunjung
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      max={365}
+                      value={reminderForm.inactiveDays}
+                      onChange={e => setReminderForm(f => ({ ...f, inactiveDays: e.target.value }))}
+                      className="w-24 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60"
+                    />
+                    <span className="text-sm text-muted">hari</span>
+                  </div>
+                  <p className="text-[11px] text-muted">Mis. 30 = pelanggan yang sudah 30 hari tak datang.</p>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-medium text-off-white">
+                    Jam kirim (zona waktu toko)
+                  </label>
+                  <select
+                    value={reminderForm.sendHour}
+                    onChange={e => setReminderForm(f => ({ ...f, sendHour: Number(e.target.value) }))}
+                    className="w-full bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60"
+                  >
+                    {Array.from({ length: 24 }, (_, h) => (
+                      <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-muted">Zona waktu toko: {tenant?.timezone || DEFAULT_TZ}.</p>
+                </div>
+              </div>
+
+              {/* Mode frekuensi */}
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-off-white">Frekuensi pengingat</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {[
+                    { val: false, title: 'Sekali saja', desc: 'Diingatkan 1× per masa nonaktif. Anti-spam.' },
+                    { val: true,  title: 'Berulang',   desc: `Kirim ulang tiap ${reminderForm.inactiveDays || 30} hari selama nonaktif.` },
+                  ].map(opt => (
+                    <button
+                      key={String(opt.val)}
+                      type="button"
+                      onClick={() => setReminderForm(f => ({ ...f, repeat: opt.val }))}
+                      className={`text-left p-3 rounded-xl border transition-colors ${reminderForm.repeat === opt.val ? 'border-gold bg-gold/10' : 'border-dark-border bg-dark-surface hover:border-gold/30'}`}
+                    >
+                      <p className="text-sm font-medium text-off-white">{opt.title}</p>
+                      <p className="text-[11px] text-muted mt-0.5">{opt.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Teks pesan */}
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-off-white">Teks pesan pengingat</label>
+                <textarea
+                  value={reminderForm.message}
+                  onChange={e => setReminderForm(f => ({ ...f, message: e.target.value }))}
+                  rows={4}
+                  maxLength={600}
+                  placeholder="Halo {nama}! Sudah {hari} hari sejak kunjungan terakhir Anda di {toko}. Kami tunggu kunjungan Anda berikutnya 😊"
+                  className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60 resize-none"
+                />
+                <div className="flex justify-between gap-3">
+                  <p className="text-[11px] text-muted">
+                    Placeholder: <code className="text-gold bg-dark-surface px-1 py-0.5 rounded">{'{nama}'}</code> nama
+                    pelanggan, <code className="text-gold bg-dark-surface px-1 py-0.5 rounded">{'{toko}'}</code> nama
+                    toko, <code className="text-gold bg-dark-surface px-1 py-0.5 rounded">{'{hari}'}</code> jumlah hari
+                    sejak kunjungan terakhir. Dikosongkan = pakai teks bawaan.
+                  </p>
+                  <span className="text-[11px] text-muted flex-shrink-0 tabular-nums">{reminderForm.message.length}/600</span>
+                </div>
+              </div>
+
+              {/* Perkiraan jumlah penerima */}
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-dark-surface border border-dark-border text-sm">
+                <Bell className="w-4 h-4 text-gold flex-shrink-0" />
+                <span className="text-muted">
+                  {reminderPreviewLoading
+                    ? 'Menghitung perkiraan penerima…'
+                    : reminderPreview == null
+                      ? 'Perkiraan penerima belum tersedia.'
+                      : <>Saat ini <span className="text-off-white font-semibold">{reminderPreview} pelanggan</span> memenuhi kriteria pengingat (berdasarkan pengaturan tersimpan).</>}
+                </span>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button onClick={handleSaveReminder} loading={reminderSaving} disabled={reminderSaving}>
+                  Simpan Pengaturan
+                </Button>
+                <Button
+                  variant="secondary"
+                  icon={Send}
+                  onClick={handleRunReminder}
+                  loading={reminderRunning}
+                  disabled={reminderRunning}
+                >
+                  Kirim Pengingat Sekarang
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted -mt-2">
+                "Kirim Sekarang" mengirim langsung ke pelanggan yang memenuhi kriteria tersimpan,
+                tanpa menunggu jadwal. WhatsApp toko harus tersambung.
+              </p>
             </CardBody>
           </Card>
         </div>

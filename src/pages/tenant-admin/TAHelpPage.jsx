@@ -232,6 +232,21 @@ const CATEGORIES = [
         toLabel: 'Buka Pengaturan',
       },
       {
+        id: 's-pengingat-kunjungan',
+        q: 'Bagaimana mengingatkan pelanggan lama yang belum kembali?',
+        a: 'Di Pengaturan → tab Pengingat Kunjungan, sistem dapat mengirim pesan WhatsApp otomatis ke pelanggan yang sudah sekian hari tidak berkunjung. Memerlukan WhatsApp toko tersambung di tab WhatsApp Beta.',
+        steps: [
+          'Sambungkan WhatsApp toko lebih dulu di tab WhatsApp Beta.',
+          'Buka tab Pengingat Kunjungan, nyalakan "Aktifkan pengingat kunjungan".',
+          'Tentukan ambang hari (mis. 30 hari tanpa kunjungan) dan jam kirim harian.',
+          'Pilih frekuensi: "Sekali saja" (1× per masa nonaktif) atau "Berulang" (kirim ulang tiap ambang hari).',
+          'Tulis teks pesan — gunakan {nama}, {toko}, dan {hari} sebagai placeholder.',
+          'Simpan. Gunakan "Kirim Pengingat Sekarang" untuk mengirim langsung tanpa menunggu jadwal.',
+        ],
+        to: '/admin/settings',
+        toLabel: 'Buka Pengaturan',
+      },
+      {
         id: 's-jadwal',
         q: 'Bagaimana mengatur jadwal kerja barber?',
         a: 'Menu Jadwal menentukan hari dan jam kerja tiap barber. Jadwal ini memengaruhi slot yang tersedia di halaman booking publik.',

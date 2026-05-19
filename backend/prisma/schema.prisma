@@ -166,6 +166,13 @@ model Tenant {
   // waShareMessage    = penutup pesan WA yang dibagikan kasir dari struk.
   // Mendukung placeholder {nama} (nama pelanggan) & {toko} (nama tenant).
   transactionMessages Json?
+  // Pengingat kunjungan otomatis via WhatsApp untuk pelanggan yang sudah lama
+  // tak datang. { enabled, inactiveDays, repeat, sendHour, message }.
+  //   inactiveDays = ambang hari tanpa kunjungan
+  //   repeat       = true: kirim ulang tiap inactiveDays | false: sekali saja
+  //   sendHour     = jam (0-23, zona waktu tenant) job dijalankan
+  //   message      = teks pesan, placeholder {nama} {toko} {hari}
+  visitReminder Json?
   isSuspended  Boolean  @default(false)
   deletedAt    DateTime?
   createdAt    DateTime @default(now())
@@ -235,6 +242,9 @@ model Customer {
   loyaltyPoints Int       @default(0)
   visitCount    Int       @default(0)
   notes         String?
+  // Kapan pengingat kunjungan WhatsApp terakhir dikirim ke pelanggan ini —
+  // dipakai job visitReminder untuk cegah pesan berulang/spam.
+  lastReminderAt DateTime?
   deletedAt     DateTime?
   createdAt     DateTime  @default(now())
   tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)

@@ -44,6 +44,7 @@ const tenantSelect = {
   bookingPage: true,
   wilayah: true,
   transactionMessages: true,
+  visitReminder: true,
   isSuspended: true,
   createdAt: true,
   updatedAt: true,
@@ -341,6 +342,17 @@ const transactionMessagesSchema = z.object({
   waShareMessage:    z.string().max(500).nullish(),
 }).strict().nullish();
 
+// Pengingat kunjungan otomatis via WhatsApp. inactiveDays = ambang hari tanpa
+// kunjungan; repeat = kirim ulang tiap ambang vs sekali; sendHour = jam (zona
+// waktu tenant) job dijalankan; message mendukung {nama} {toko} {hari}.
+const visitReminderSchema = z.object({
+  enabled:      z.boolean().optional(),
+  inactiveDays: z.number().int().min(1).max(365).optional(),
+  repeat:       z.boolean().optional(),
+  sendHour:     z.number().int().min(0).max(23).optional(),
+  message:      z.string().max(600).nullish(),
+}).strict().nullish();
+
 const selfUpdateSchema = z.object({
   name:        z.string().min(1).max(255).optional(),
   phone:       z.string().max(50).nullish(),
@@ -353,6 +365,7 @@ const selfUpdateSchema = z.object({
   bookingPage: bookingPageSchema,
   wilayah:     wilayahSchema,
   transactionMessages: transactionMessagesSchema,
+  visitReminder: visitReminderSchema,
 });
 // ── Upload gambar tenant (hero & galeri halaman booking) ───────────────────────
 // Gambar disimpan sebagai FILE di disk, bukan base64 di JSON tenant — supaya
