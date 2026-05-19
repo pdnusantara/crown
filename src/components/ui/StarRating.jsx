@@ -13,7 +13,7 @@ export function StarRating({ value = 0, onChange, readonly = false, size = 20 })
         >
           <Star
             size={size}
-            className={star <= value ? 'text-gold fill-gold' : 'text-dark-border'}
+            className={star <= value ? 'text-gold fill-gold' : 'text-muted/40'}
           />
         </button>
       ))}

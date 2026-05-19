@@ -1479,7 +1479,7 @@ function POSPageInner() {
                   if (!barber) return null
                   const rating = barberRatings[barberId] || 0
                   return (
-                    <div key={barberId} className="p-3 bg-dark-surface/60 border border-dark-border rounded-lg space-y-2">
+                    <div key={barberId} className="p-3 bg-dark-surface border border-dark-border rounded-lg space-y-2">
                       <div className="flex items-center justify-between gap-3 flex-wrap">
                         <span className="text-sm text-off-white font-medium truncate flex-1 min-w-0">{barber.name}</span>
                         <StarRating
