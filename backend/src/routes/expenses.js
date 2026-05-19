@@ -47,6 +47,17 @@ function currentMonthRange() {
   return { start, end };
 }
 
+// Rentang bulan TEPAT SEBELUM bulan dari `startYmd` — dipakai chip "vs bln lalu".
+function prevMonthRange(startYmd) {
+  const [y, m] = startYmd.split('-').map(Number);
+  const d = new Date(Date.UTC(y, m - 2, 1)); // m-2: bulan 0-indexed, mundur 1 bulan
+  const py = d.getUTCFullYear();
+  const pm = d.getUTCMonth();
+  const start = `${py}-${String(pm + 1).padStart(2, '0')}-01`;
+  const end = new Date(Date.UTC(py, pm + 1, 0)).toISOString().slice(0, 10);
+  return { start, end };
+}
+
 // Resolve tenantId yang berlaku — tenant non-SA selalu dipin ke miliknya.
 function resolveTenantId(req, fromBody = false) {
   if (req.user.role === 'super_admin') {
@@ -87,6 +98,15 @@ async function assertBranchOwnership(branchId, tenantId) {
   return !!branch;
 }
 
+// Tanggal kalender valid — regex saja tak cukup: "2026-04-31" lolos regex tapi
+// `new Date` menggulirkannya ke 1 Mei. Round-trip memastikan tanggal benar ada.
+const calendarDate = z.string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Tanggal tidak valid')
+  .refine((s) => {
+    const d = new Date(`${s}T00:00:00.000Z`);
+    return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+  }, 'Tanggal tidak valid');
+
 // ── Validation schemas ──────────────────────────────────────────────────────────
 const createExpenseSchema = z.object({
   tenantId:    z.string().optional(),
@@ -94,7 +114,7 @@ const createExpenseSchema = z.object({
   category:    z.enum(VALID_CATEGORIES),
   description: z.string().trim().min(1, 'Deskripsi wajib diisi').max(200),
   amount:      z.number().int('Nominal harus bilangan bulat').min(1, 'Nominal harus lebih dari 0').max(100_000_000_000),
-  date:        z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Tanggal tidak valid'),
+  date:        calendarDate,
   note:        z.string().trim().max(500).nullable().optional(),
 });
 const updateExpenseSchema = createExpenseSchema.partial().omit({ tenantId: true });
@@ -163,9 +183,15 @@ router.get('/stats', async (req, res, next) => {
       date: { gte: toDayStart(startDate), lte: toDayEnd(endDate) },
     };
 
-    const [agg, byCat] = await Promise.all([
+    const prev = prevMonthRange(startDate);
+
+    const [agg, byCat, prevAgg] = await Promise.all([
       prisma.expense.aggregate({ where, _sum: { amount: true }, _count: true }),
       prisma.expense.groupBy({ by: ['category'], where, _sum: { amount: true } }),
+      prisma.expense.aggregate({
+        where: { tenantId, date: { gte: toDayStart(prev.start), lte: toDayEnd(prev.end) } },
+        _sum: { amount: true },
+      }),
     ]);
 
     const byCategory = {};
@@ -177,6 +203,7 @@ router.get('/stats', async (req, res, next) => {
         total: agg._sum.amount || 0,
         count: agg._count || 0,
         byCategory,
+        prevTotal: prevAgg._sum.amount || 0,
         period: { startDate, endDate },
       },
     });
@@ -273,6 +300,62 @@ router.put('/:id', async (req, res, next) => {
     });
     emitExpense('expense:updated', expense, expense.tenantId);
     res.json({ success: true, data: expense });
+  } catch (err) {
+    if (err instanceof z.ZodError) return res.status(400).json({ success: false, error: err.errors[0]?.message });
+    next(err);
+  }
+});
+
+// ── POST /api/expenses/copy-month — salin pengeluaran ke bulan lain ─────────────
+// Dipakai tombol "Salin dari Bulan Lalu": menyalin baris terpilih ke `toMonth`
+// dengan tanggal hari-yang-sama (di-clamp ke hari terakhir bila bulan lebih pendek).
+router.post('/copy-month', async (req, res, next) => {
+  try {
+    const body = z.object({
+      ids:     z.array(z.string().min(1)).min(1).max(500),
+      toMonth: z.string()
+        .regex(/^\d{4}-\d{2}$/, 'Bulan tujuan tidak valid')
+        .refine((s) => { const m = Number(s.slice(5, 7)); return m >= 1 && m <= 12; }, 'Bulan tujuan tidak valid'),
+    }).parse(req.body);
+
+    const tenantId = resolveTenantId(req, true);
+    if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId wajib' });
+
+    // Tenant-scoped: hanya baris milik tenant ini yang bisa disalin.
+    const sources = await prisma.expense.findMany({
+      where: { id: { in: body.ids }, tenantId },
+    });
+    if (sources.length === 0) {
+      return res.status(404).json({ success: false, error: 'Tidak ada pengeluaran untuk disalin' });
+    }
+
+    const [ty, tm] = body.toMonth.split('-').map(Number);
+    const lastDay = new Date(Date.UTC(ty, tm, 0)).getUTCDate();
+
+    const rows = sources.map(s => {
+      const srcDay = new Date(s.date).getUTCDate();
+      const day = String(Math.min(srcDay, lastDay)).padStart(2, '0');
+      return {
+        tenantId,
+        branchId:    s.branchId,
+        category:    s.category,
+        description: s.description,
+        amount:      s.amount,
+        date:        toDayStart(`${body.toMonth}-${day}`),
+        note:        s.note,
+      };
+    });
+
+    const result = await prisma.expense.createMany({ data: rows });
+
+    await recordAudit(req, {
+      action: 'expense.copy_month',
+      target: `tenant:${tenantId}`,
+      detail: `Salin ${result.count} pengeluaran ke ${body.toMonth}`,
+      severity: 'info',
+    });
+    emitExpense('expense:bulk_changed', { tenantId, count: result.count }, tenantId);
+    res.status(201).json({ success: true, data: { created: result.count } });
   } catch (err) {
     if (err instanceof z.ZodError) return res.status(400).json({ success: false, error: err.errors[0]?.message });
     next(err);

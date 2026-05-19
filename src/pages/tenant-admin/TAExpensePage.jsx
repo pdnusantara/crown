@@ -1,8 +1,10 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Trash2, Pencil, TrendingDown, TrendingUp, Wallet, ChevronLeft, ChevronRight,
   Search, AlertCircle, Download, RefreshCw, X, Receipt, CheckSquare, Square, Loader2,
+  CopyPlus, ArrowUp, ArrowDown, Minus,
 } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, parseISO } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
@@ -12,7 +14,7 @@ import { useReportSummary } from '../../hooks/useReports.js'
 import { useBranches } from '../../hooks/useBranches.js'
 import {
   useExpenses, useExpenseStats, useCreateExpense, useUpdateExpense,
-  useDeleteExpense, useBulkDeleteExpenses,
+  useDeleteExpense, useBulkDeleteExpenses, useCopyMonthExpenses,
 } from '../../hooks/useExpenses.js'
 import { EXPENSE_CATEGORIES, catById } from '../../utils/expenseCategories.js'
 import { formatRupiah, formatRupiahShort } from '../../utils/format.js'
@@ -70,8 +72,30 @@ function Paywall() {
   )
 }
 
+// ── Delta chip — perubahan biaya vs bulan lalu ──────────────────────────────────
+// Untuk pengeluaran: KENAIKAN biaya = buruk (merah), penurunan = baik (hijau).
+function DeltaChip({ pct }) {
+  if (pct == null) return null
+  if (pct === 0) return (
+    <span title="Sama dengan bulan lalu"
+      className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-dark-surface text-muted">
+      <Minus size={10} />0%
+    </span>
+  )
+  const up = pct > 0
+  return (
+    <span title="Dibandingkan bulan lalu"
+      className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+        up ? 'bg-red-500/15 text-red-400' : 'bg-green-500/15 text-green-400'
+      }`}>
+      {up ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
+      {Math.abs(pct)}%
+    </span>
+  )
+}
+
 // ── Summary card ────────────────────────────────────────────────────────────────
-function SummaryCard({ label, value, sub, accent, icon: Icon, loading }) {
+function SummaryCard({ label, value, sub, accent, icon: Icon, loading, delta }) {
   return (
     <div className="bg-dark-card border border-dark-border rounded-2xl p-4">
       <div className="flex items-center justify-between mb-2 gap-2">
@@ -81,7 +105,10 @@ function SummaryCard({ label, value, sub, accent, icon: Icon, loading }) {
       {loading
         ? <div className="h-7 w-24 bg-dark-surface rounded-lg animate-pulse" />
         : <p className={`text-xl sm:text-2xl font-bold leading-tight break-words ${accent}`}>{value}</p>}
-      <p className="text-xs text-muted mt-1">{sub}</p>
+      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+        {delta}
+        <p className="text-xs text-muted">{sub}</p>
+      </div>
     </div>
   )
 }
@@ -295,6 +322,158 @@ function ExpenseFormModal({ open, onClose, initial, branches, onSaved }) {
   )
 }
 
+// ── Copy-from-last-month modal ──────────────────────────────────────────────────
+// Menarik pengeluaran bulan sebelumnya untuk di-review (checklist) lalu disalin
+// sekaligus ke bulan aktif — hemat input rutin (gaji, sewa, listrik).
+const EMPTY_ROWS = []
+
+function CopyMonthModal({ open, onClose, fromMonth, toMonth }) {
+  const toast = useToast()
+  const copyMonth = useCopyMonthExpenses()
+
+  const fromStart  = format(startOfMonth(fromMonth), 'yyyy-MM-dd')
+  const fromEnd    = format(endOfMonth(fromMonth), 'yyyy-MM-dd')
+  const fromLabel  = format(fromMonth, 'MMMM yyyy', { locale: idLocale })
+  const toLabel    = format(toMonth, 'MMMM yyyy', { locale: idLocale })
+  const toMonthStr = format(toMonth, 'yyyy-MM')
+
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['expenses-copy-source', fromStart, fromEnd],
+    queryFn: () => api
+      .get('/expenses', { params: { startDate: fromStart, endDate: fromEnd, limit: 1000, sortBy: 'date-asc' } })
+      .then(r => r.data?.data?.data || []),
+    enabled: open,
+    staleTime: 15_000,
+  })
+  const rows = data || EMPTY_ROWS
+
+  const [selected, setSelected] = useState(() => new Set())
+  // Pilih semua secara default begitu data termuat / modal dibuka.
+  useEffect(() => {
+    if (open && data) setSelected(new Set(data.map(r => r.id)))
+  }, [open, data])
+
+  const toggle = (id) => setSelected(prev => {
+    const next = new Set(prev)
+    next.has(id) ? next.delete(id) : next.add(id)
+    return next
+  })
+  const allSelected = rows.length > 0 && rows.every(r => selected.has(r.id))
+  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(rows.map(r => r.id)))
+
+  const selectedTotal = useMemo(
+    () => rows.filter(r => selected.has(r.id)).reduce((s, r) => s + r.amount, 0),
+    [rows, selected],
+  )
+
+  const handleCopy = async () => {
+    const ids = [...selected]
+    if (ids.length === 0) return
+    try {
+      const res = await copyMonth.mutateAsync({ ids, toMonth: toMonthStr })
+      toast.success(`${res?.created ?? ids.length} pengeluaran disalin ke ${toLabel}`)
+      onClose()
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal menyalin pengeluaran')
+    }
+  }
+
+  return (
+    <Modal isOpen={open} onClose={onClose} title="Salin Pengeluaran" size="md">
+      <div className="space-y-3">
+        <p className="text-xs text-muted">
+          Pilih pengeluaran dari <span className="text-off-white font-medium capitalize">{fromLabel}</span> untuk
+          disalin ke <span className="text-gold font-medium capitalize">{toLabel}</span>.
+        </p>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 size={22} className="animate-spin text-gold" />
+          </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center gap-2 py-10 text-center">
+            <AlertCircle size={22} className="text-red-400" />
+            <p className="text-sm text-muted">Gagal memuat data bulan lalu</p>
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-10 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-dark-surface border border-dark-border flex items-center justify-center">
+              <Receipt size={22} className="text-muted" />
+            </div>
+            <p className="text-sm text-muted capitalize">Tidak ada pengeluaran di {fromLabel}</p>
+          </div>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={toggleAll}
+              className="flex items-center gap-2 text-xs text-muted hover:text-off-white transition-colors"
+            >
+              {allSelected ? <CheckSquare size={15} className="text-gold" /> : <Square size={15} />}
+              {allSelected ? 'Batalkan semua' : 'Pilih semua'}
+            </button>
+
+            <div className="max-h-[44vh] overflow-y-auto -mx-1 divide-y divide-dark-border">
+              {rows.map(r => {
+                const cat = catById(r.category)
+                const isSel = selected.has(r.id)
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => toggle(r.id)}
+                    className="w-full flex items-center gap-3 px-1 py-2.5 text-left hover:bg-dark-surface/40 transition-colors"
+                  >
+                    {isSel
+                      ? <CheckSquare size={17} className="text-gold flex-shrink-0" />
+                      : <Square size={17} className="text-muted flex-shrink-0" />}
+                    <span className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm ${cat.bg}`}>
+                      {cat.icon}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-off-white truncate">{r.description}</p>
+                      <p className="text-[10px] text-muted">
+                        {cat.label}
+                        {r.branch?.name && ` · ${r.branch.name}`}
+                        {' · '}{fmtDate(r.date)}
+                      </p>
+                    </div>
+                    <span className="text-sm font-semibold text-red-400 flex-shrink-0 tabular-nums">
+                      {formatRupiahShort(r.amount)}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="flex items-center justify-between gap-2 pt-1 text-xs">
+              <span className="text-muted">
+                <span className="text-off-white font-medium">{selected.size}</span> dipilih
+              </span>
+              <span className="text-red-400 font-semibold tabular-nums">{formatRupiah(selectedTotal)}</span>
+            </div>
+          </>
+        )}
+
+        <div className="flex gap-3 pt-1">
+          <Button variant="outline" fullWidth onClick={onClose} disabled={copyMonth.isPending}>
+            Batal
+          </Button>
+          <Button
+            fullWidth
+            icon={CopyPlus}
+            onClick={handleCopy}
+            loading={copyMonth.isPending}
+            disabled={selected.size === 0 || isLoading}
+          >
+            Salin {selected.size > 0 ? `(${selected.size})` : ''}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
 // ── Expense list item (desktop row + mobile card share this) ────────────────────
 function ExpenseItem({ expense, selected, onToggleSelect, onEdit, onDelete }) {
   const cat = catById(expense.category)
@@ -425,6 +604,13 @@ function ExpensePageInner() {
   const totalRevenue  = reportData?.summary?.totalRevenue ?? null
   const netProfit     = totalRevenue != null ? totalRevenue - totalExpenses : null
 
+  // Perubahan biaya vs bulan lalu — null bila bulan lalu nol (tak ada acuan).
+  const prevTotal = stats?.prevTotal ?? 0
+  const expenseDeltaPct = useMemo(() => {
+    if (!prevTotal || prevTotal <= 0) return null
+    return Math.round(((totalExpenses - prevTotal) / prevTotal) * 100)
+  }, [totalExpenses, prevTotal])
+
   // Mutations.
   const deleteExpense     = useDeleteExpense()
   const bulkDeleteExpenses = useBulkDeleteExpenses()
@@ -457,6 +643,7 @@ function ExpensePageInner() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [bulkConfirm, setBulkConfirm] = useState(false)
   const [exporting, setExporting]     = useState(false)
+  const [copyOpen, setCopyOpen]       = useState(false)
 
   const openCreate = () => { setEditTarget(null); setFormOpen(true) }
   const openEdit   = (e) => { setEditTarget(e); setFormOpen(true) }
@@ -577,6 +764,14 @@ function ExpensePageInner() {
           </div>
 
           <button
+            onClick={() => setCopyOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gold/30 text-xs text-gold hover:bg-gold/10 transition-all"
+          >
+            <CopyPlus size={13} />
+            <span className="hidden sm:inline">Salin Bulan Lalu</span>
+            <span className="sm:hidden">Salin</span>
+          </button>
+          <button
             onClick={handleRefresh}
             disabled={isFetching}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs text-muted hover:border-gold/30 hover:text-off-white transition-all disabled:opacity-40"
@@ -603,6 +798,7 @@ function ExpensePageInner() {
           sub={`${stats?.count ?? 0} item bulan ini`}
           accent="text-red-400"
           icon={TrendingDown}
+          delta={<DeltaChip pct={expenseDeltaPct} />}
         />
         <SummaryCard
           label="Total Pemasukan"
@@ -818,6 +1014,13 @@ function ExpensePageInner() {
         onClose={() => setFormOpen(false)}
         initial={editTarget}
         branches={branches}
+      />
+
+      <CopyMonthModal
+        open={copyOpen}
+        onClose={() => setCopyOpen(false)}
+        fromMonth={subMonths(activeMonth, 1)}
+        toMonth={activeMonth}
       />
 
       <ConfirmDialog

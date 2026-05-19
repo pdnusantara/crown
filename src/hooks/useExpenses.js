@@ -124,3 +124,13 @@ export function useBulkDeleteExpenses() {
     onSuccess: () => invalidateAll(qc),
   })
 }
+
+// Salin pengeluaran terpilih ke bulan lain (tombol "Salin dari Bulan Lalu").
+export function useCopyMonthExpenses() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ ids, toMonth }) =>
+      api.post('/expenses/copy-month', { ids, toMonth }).then(r => r.data.data),
+    onSuccess: () => invalidateAll(qc),
+  })
+}
