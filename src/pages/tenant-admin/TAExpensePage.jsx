@@ -915,7 +915,7 @@ function ExpensePageInner() {
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs text-muted hover:border-gold/30 hover:text-off-white transition-all disabled:opacity-40"
           >
             <RefreshCw size={13} className={isFetching ? 'animate-spin' : ''} />
-            <span className="hidden sm:inline">Refresh</span>
+            <span>Refresh</span>
           </button>
           <button
             onClick={handleExport}
@@ -924,6 +924,7 @@ function ExpensePageInner() {
           >
             {exporting ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
             <span className="hidden sm:inline">Ekspor CSV</span>
+            <span className="sm:hidden">Ekspor</span>
           </button>
         </div>
       </div>
