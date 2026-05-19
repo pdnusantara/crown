@@ -26,7 +26,6 @@ const PERIODS = [
   { value: 'yesterday', label: 'Kemarin' },
   { value: 'today',     label: 'Hari Ini' },
   { value: 'month',     label: 'Bulan Ini' },
-  { value: 'year',      label: 'Tahun Ini' },
   { value: 'all',       label: 'Semua' },
 ]
 
@@ -35,7 +34,6 @@ const PREV_LABELS = {
   today:     'vs kemarin',
   yesterday: 'vs hari sebelumnya',
   month:     'vs bulan lalu',
-  year:      'vs tahun lalu',
 }
 
 const BAR_COLORS = [
