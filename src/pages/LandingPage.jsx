@@ -888,7 +888,6 @@ function Nav({ isAuthed, userRole }) {
         <nav className="hidden md:flex items-center gap-7 text-sm font-medium">
           <a href="#fitur" className="text-[#6B6459] hover:text-[#1C1A17] transition-colors">Fitur</a>
           <a href="#harga" className="text-[#6B6459] hover:text-[#1C1A17] transition-colors">Harga</a>
-          <Link to="/book" className="text-[#6B6459] hover:text-[#1C1A17] transition-colors">Booking</Link>
         </nav>
 
         <div className="flex items-center gap-2">
