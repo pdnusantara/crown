@@ -90,52 +90,46 @@ export default function TASettingsPage() {
     }
   }, [tenant?.bookingPage])
 
-  // Compress an image File to base64 within `maxBytes` so the JSON payload
-  // doesn't blow past the express body limit. Resizes longest edge to 1600px,
-  // re-encodes to JPEG starting at 0.85 quality, falls back stepwise.
-  const fileToCompressedDataUrl = (file, maxLong = 1600, maxBytes = 1_500_000) => new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const img = new Image()
-      img.onload = () => {
-        const ratio = Math.min(1, maxLong / Math.max(img.width, img.height))
-        const w = Math.round(img.width * ratio)
-        const h = Math.round(img.height * ratio)
-        const canvas = document.createElement('canvas')
-        canvas.width = w; canvas.height = h
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h)
-        let q = 0.85
-        let dataUrl = canvas.toDataURL('image/jpeg', q)
-        while (dataUrl.length > maxBytes && q > 0.4) {
-          q -= 0.1
-          dataUrl = canvas.toDataURL('image/jpeg', q)
-        }
-        resolve(dataUrl)
-      }
-      img.onerror = reject
-      img.src = e.target.result
-    }
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
+  // Unggah satu gambar ke server → balik URL. Gambar booking disimpan sebagai
+  // FILE (bukan base64 di JSON tenant) supaya payload kecil & tak menabrak
+  // limit body request — penyebab foto besar gagal tersimpan sebelumnya.
+  const [heroUploading, setHeroUploading] = useState(false)
+  const [galleryUploading, setGalleryUploading] = useState(false)
+
+  const uploadBookingImage = async (file) => {
+    const fd = new FormData()
+    fd.append('image', file)
+    const res = await api.post('/tenants/upload-image', fd)
+    return res.data?.data?.url
+  }
 
   const handlePickHero = async (file) => {
     if (!file) return
+    setHeroUploading(true)
     try {
-      const dataUrl = await fileToCompressedDataUrl(file)
-      setBookingForm(f => ({ ...f, heroImage: dataUrl }))
-    } catch {
-      toast.error('Gagal memproses gambar')
+      const url = await uploadBookingImage(file)
+      if (url) setBookingForm(f => ({ ...f, heroImage: url }))
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal mengunggah gambar')
+    } finally {
+      setHeroUploading(false)
     }
   }
   const handleAddGalleryFiles = async (files) => {
-    if (!files?.length) return
+    const list = Array.from(files || [])
+    if (list.length === 0) return
+    setGalleryUploading(true)
     try {
-      const arr = []
-      for (const f of files) arr.push(await fileToCompressedDataUrl(f))
-      setBookingForm(f => ({ ...f, gallery: [...f.gallery, ...arr].slice(0, 12) }))
-    } catch {
-      toast.error('Gagal memproses gambar')
+      const urls = []
+      for (const file of list) {
+        const url = await uploadBookingImage(file)
+        if (url) urls.push(url)
+      }
+      if (urls.length) setBookingForm(f => ({ ...f, gallery: [...f.gallery, ...urls].slice(0, 12) }))
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal mengunggah gambar')
+    } finally {
+      setGalleryUploading(false)
     }
   }
   const handleRemoveGallery = (idx) => {
@@ -625,6 +619,8 @@ export default function TASettingsPage() {
           onPickHero={handlePickHero}
           onAddGalleryFiles={handleAddGalleryFiles}
           onRemoveGallery={handleRemoveGallery}
+          heroUploading={heroUploading}
+          galleryUploading={galleryUploading}
         />
       )}
 
@@ -1054,7 +1050,7 @@ function WhatsAppCard({ waState, setWaState, onConnect, onDisconnect, onSaveSett
 }
 
 // ── Booking Page configuration tab ────────────────────────────────────────────
-function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave, onPickHero, onAddGalleryFiles, onRemoveGallery }) {
+function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave, onPickHero, onAddGalleryFiles, onRemoveGallery, heroUploading, galleryUploading }) {
   const heroInputRef = React.useRef(null)
   const galleryInputRef = React.useRef(null)
   const set = (patch) => setForm(f => ({ ...f, ...patch }))
@@ -1148,10 +1144,20 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
               ) : (
                 <button
                   onClick={() => heroInputRef.current?.click()}
-                  className="w-full h-48 rounded-xl border-2 border-dashed border-dark-border hover:border-gold/40 flex flex-col items-center justify-center gap-2 text-muted hover:text-gold transition-colors"
+                  disabled={heroUploading}
+                  className="w-full h-48 rounded-xl border-2 border-dashed border-dark-border hover:border-gold/40 flex flex-col items-center justify-center gap-2 text-muted hover:text-gold transition-colors disabled:opacity-60"
                 >
-                  <Upload className="w-6 h-6" />
-                  <p className="text-sm">Klik untuk upload (JPG/PNG, max 1.5 MB setelah kompres)</p>
+                  {heroUploading ? (
+                    <>
+                      <Loader2 className="w-6 h-6 animate-spin text-gold" />
+                      <p className="text-sm">Mengunggah…</p>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-6 h-6" />
+                      <p className="text-sm">Klik untuk unggah foto (JPG/PNG/WebP, maks 5 MB)</p>
+                    </>
+                  )}
                 </button>
               )}
               <input
@@ -1204,10 +1210,20 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
               {form.gallery.length < 12 && (
                 <button
                   onClick={() => galleryInputRef.current?.click()}
-                  className="aspect-square rounded-lg border-2 border-dashed border-dark-border hover:border-gold/40 flex flex-col items-center justify-center gap-1 text-muted hover:text-gold transition-colors"
+                  disabled={galleryUploading}
+                  className="aspect-square rounded-lg border-2 border-dashed border-dark-border hover:border-gold/40 flex flex-col items-center justify-center gap-1 text-muted hover:text-gold transition-colors disabled:opacity-60"
                 >
-                  <Upload className="w-5 h-5" />
-                  <span className="text-[10px]">Tambah</span>
+                  {galleryUploading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin text-gold" />
+                      <span className="text-[10px]">Mengunggah…</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-5 h-5" />
+                      <span className="text-[10px]">Tambah</span>
+                    </>
+                  )}
                 </button>
               )}
             </div>

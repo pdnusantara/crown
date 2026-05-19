@@ -8,6 +8,10 @@ const { isValidTimezone, DEFAULT_TZ, SUPPORTED_TIMEZONES } = require('../utils/t
 const { getIO, tenantRoom, userRoom } = require('../config/socket');
 const { recordAudit } = require('../utils/auditLog');
 const { seedTenantFlags } = require('../services/featureFlagSync');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
 
 const tzSchema = z.string().refine(isValidTimezone, {
   message: 'Invalid IANA timezone string',
@@ -341,6 +345,40 @@ const selfUpdateSchema = z.object({
   bookingPage: bookingPageSchema,
   wilayah:     wilayahSchema,
 });
+// ── Upload gambar tenant (hero & galeri halaman booking) ───────────────────────
+// Gambar disimpan sebagai FILE di disk, bukan base64 di JSON tenant — supaya
+// payload `bookingPage` tetap kecil & tak menabrak limit body request.
+const TENANT_UPLOAD_DIR = path.join(__dirname, '../../uploads/tenant');
+fs.mkdirSync(TENANT_UPLOAD_DIR, { recursive: true });
+
+const ALLOWED_IMG_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const uploadTenantImage = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, TENANT_UPLOAD_DIR),
+    filename:    (req, file, cb) => {
+      const ext = (path.extname(file.originalname) || '.jpg').toLowerCase();
+      cb(null, `${crypto.randomUUID()}${ext}`);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (req, file, cb) => {
+    if (ALLOWED_IMG_MIME.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Format gambar harus JPG, PNG, WebP, atau GIF'));
+  },
+}).single('image');
+
+// POST /api/tenants/upload-image — unggah satu gambar, balas URL publiknya.
+router.post('/upload-image', authenticate, requireRole('tenant_admin', 'super_admin'), (req, res) => {
+  uploadTenantImage(req, res, (err) => {
+    if (err) {
+      const msg = err.code === 'LIMIT_FILE_SIZE' ? 'Ukuran gambar maksimal 5 MB' : err.message;
+      return res.status(400).json({ success: false, error: msg });
+    }
+    if (!req.file) return res.status(400).json({ success: false, error: 'File gambar wajib diunggah (field "image")' });
+    res.json({ success: true, data: { url: `/api/uploads/tenant/${req.file.filename}` } });
+  });
+});
+
 router.patch('/me', authenticate, requireRole('tenant_admin', 'super_admin'), async (req, res, next) => {
   try {
     const tenantId = req.user.role === 'super_admin' ? req.body.tenantId : req.user.tenantId;
