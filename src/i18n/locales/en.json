@@ -147,7 +147,7 @@
     "categoryCombo": "Combo",
     "minutesShort": "min",
     "inCart": "In cart",
-    "selectCustomerOptional": "Select customer (optional)",
+    "selectCustomerOptional": "Select customer (required)",
     "cartEmptyHint": "Pick a service on the left",
     "selectBarberOption": "Select barber...",
     "manualDiscount": "Manual Discount",

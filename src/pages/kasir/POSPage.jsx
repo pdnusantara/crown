@@ -444,6 +444,8 @@ function POSPageInner() {
   // Transaksi tidak boleh diproses kalau ada layanan di keranjang yang belum
   // punya barber — komisi & laporan barber harus tercatat.
   const missingBarber = posStore.cartItems.length > 0 && posStore.cartItems.some(it => !it.barberId)
+  // Pelanggan wajib dipilih sebelum bayar — tidak boleh transaksi tanpa identitas.
+  const missingCustomer = posStore.cartItems.length > 0 && !posStore.selectedCustomer
 
   // Local UI state
   const [search, setSearch] = useState('')
@@ -620,6 +622,10 @@ function POSPageInner() {
     if (missingBarber) {
       setShowPayModal(false)
       return toast.error(t('pos.barberRequired'))
+    }
+    if (missingCustomer) {
+      setShowPayModal(false)
+      return toast.error('Pilih pelanggan terlebih dahulu')
     }
     if (posStore.paymentMethod === 'cash' && posStore.cashReceived < posStore.getTotal()) {
       return toast.error(t('pos.cashNotEnough'))
@@ -1142,9 +1148,18 @@ function POSPageInner() {
           </div>
         </div>
       )}
+      {!noActiveShift && !missingBarber && missingCustomer && (
+        <div className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 flex items-start gap-2.5">
+          <User size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-amber-300">Pelanggan belum dipilih</p>
+            <p className="text-xs text-muted mt-0.5">Pilih atau tambahkan pelanggan dulu untuk memproses transaksi.</p>
+          </div>
+        </div>
+      )}
       <Button
         fullWidth size="lg"
-        disabled={posStore.cartItems.length === 0 || noActiveShift || missingBarber}
+        disabled={posStore.cartItems.length === 0 || noActiveShift || missingBarber || missingCustomer}
         onClick={() => setShowPayModal(true)}
       >
         {t('pos.payAmount', { amount: formatRupiah(posStore.getTotal()) })}

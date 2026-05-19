@@ -120,10 +120,15 @@ export const AppLayout = () => {
     if (user.branchId) joinBranchRoom(user.branchId)
 
     const handleTransactionCreated = (data) => {
+      // Notifikasi transaksi ditujukan ke admin tenant & barber terkait.
+      // - Jangan notifikasi pembuat transaksi (mereka sudah lihat struk).
+      // - Kasir lain tak perlu — fokus ke admin & barber.
+      if (data.cashierId && data.cashierId === user.id) return
+      if (user.role === 'kasir') return
       const isBarber = user.role === 'barber'
       if (isBarber && !(data.barberIds || []).includes(user.id)) return
 
-      const title = isBarber ? 'Komisi Baru' : 'Transaksi Baru'
+      const title = isBarber ? '✂️ Komisi Baru' : '💰 Transaksi Baru'
       const message = isBarber
         ? `${data.customerName} — ${formatRupiah(data.total)} di ${data.branchName}`
         : `${data.customerName} — ${formatRupiah(data.total)} via ${data.paymentMethod || 'cash'} (${data.branchName})`
@@ -137,6 +142,8 @@ export const AppLayout = () => {
         refId: data.id,
         severity: 'success',
       })
+      // Toast popup supaya benar-benar terlihat (sebelumnya hanya masuk lonceng).
+      toast.success(`${title} — ${message}`, 4000)
     }
 
     // Filter relevansi event antrian per role.

@@ -522,6 +522,9 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir
         customerName: result.customer?.name || 'Walk-in',
         itemCount: result.items?.length || 0,
         barberIds,
+        // Pembuat transaksi — frontend memakai ini agar tak menotifikasi
+        // diri sendiri (notifikasi ditujukan ke admin tenant & barber).
+        cashierId: req.user.id,
         createdAt: result.createdAt,
       };
       // All users in this tenant (admin, kasir, barber) are auto-joined to tenant room;
