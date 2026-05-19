@@ -473,7 +473,33 @@ function HeroEditor() {
   }
 
   return (
-    <div className="grid lg:grid-cols-2 gap-6">
+    <div className="space-y-6">
+      <Card>
+        <CardHeader><h3 className="font-semibold text-off-white">Logo & Favicon</h3></CardHeader>
+        <CardBody className="grid sm:grid-cols-2 gap-5">
+          <ImageUploadField
+            label="Logo (header & footer landing)"
+            value={form.siteLogo}
+            accept="image/png,image/jpeg,image/webp"
+            onChange={url => setForm(f => ({ ...f, siteLogo: url }))}
+            hint="PNG transparan disarankan. Tampil di header (latar terang) & footer (latar gelap) — pilih warna yang kontras di keduanya. Kosongkan untuk logo bawaan."
+          />
+          <ImageUploadField
+            label="Favicon (ikon tab browser)"
+            value={form.siteFavicon}
+            accept="image/png"
+            onChange={url => setForm(f => ({ ...f, siteFavicon: url }))}
+            hint="PNG persegi, disarankan 48×48 px atau lebih. Kosongkan untuk ikon bawaan."
+          />
+        </CardBody>
+        <CardBody className="pt-0">
+          <Button onClick={handleSave} loading={updateHero.isPending} icon={Save} variant="secondary">
+            Simpan Logo & Favicon
+          </Button>
+        </CardBody>
+      </Card>
+
+      <div className="grid lg:grid-cols-2 gap-6">
       <Card>
         <CardHeader>
           <h3 className="font-semibold text-off-white">Hero & Branding</h3>
@@ -629,6 +655,7 @@ function HeroEditor() {
           </Button>
         </CardBody>
       </Card>
+      </div>
     </div>
   )
 }
