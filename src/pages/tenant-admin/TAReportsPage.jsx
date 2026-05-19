@@ -165,8 +165,12 @@ export default function TAReportsPage() {
       },
       {
         title: 'Performa Barber',
-        header: ['Barber', 'Transaksi', 'Revenue', 'Avg Rating'],
-        rows: barbers.map(b => [b.barberName, b.servicesCount, b.revenue, b.averageRating ? b.averageRating.toFixed(1) : '']),
+        header: ['Barber', 'Transaksi', 'Revenue', 'Komisi', 'Rate', 'Avg Rating'],
+        rows: barbers.map(b => [
+          b.barberName, b.servicesCount, b.revenue, b.commission || 0,
+          `${Math.round((b.commissionRate || 0) * 100)}%`,
+          b.averageRating ? b.averageRating.toFixed(1) : '',
+        ]),
       },
       {
         title: 'Revenue per Cabang',
@@ -186,7 +190,14 @@ export default function TAReportsPage() {
   const barberColumns = [
     { key: 'barberName',   label: t('tenantAdmin.reports.colBarber'),    render: v => <span className="font-medium text-off-white">{v}</span> },
     { key: 'servicesCount', label: t('common.transactions'), sortable: true, render: v => <span className="text-off-white">{v}</span> },
-    { key: 'revenue',      label: t('common.revenue'), sortable: true, render: v => <span className="text-gold font-medium">{formatRupiah(v)}</span> },
+    { key: 'revenue',      label: t('common.revenue'), sortable: true, render: v => <span className="text-gold font-medium whitespace-nowrap">{formatRupiah(v)}</span> },
+    // Komisi riil per barber (revenue × rate barber) — acuan penggajian.
+    { key: 'commission',   label: 'Komisi', sortable: true, render: (v, row) => (
+      <span className="whitespace-nowrap">
+        <span className="text-off-white font-medium">{formatRupiah(v || 0)}</span>
+        <span className="text-muted text-[11px] ml-1">{Math.round((row.commissionRate || 0) * 100)}%</span>
+      </span>
+    ) },
     { key: 'averageRating', label: t('tenantAdmin.reports.colRating'),   render: v => v ? <span className="text-amber-400">⭐ {v?.toFixed(1)}</span> : '-' },
   ]
 
