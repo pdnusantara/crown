@@ -832,16 +832,16 @@ export default function TASettingsPage() {
 // agar admin tidak perlu menebak.
 const WA_STATUS_META = {
   idle:               { label: 'Belum aktif',                                      color: 'text-muted',     bg: 'bg-dark-surface',    border: 'border-dark-border',     Icon: PowerOff },
-  connecting:         { label: 'Memulai…',                                         color: 'text-blue-300',  bg: 'bg-blue-500/10',     border: 'border-blue-500/30',     Icon: Loader2,     spin: true },
-  awaiting_qr:        { label: 'Menunggu scan QR',                                 color: 'text-amber-300', bg: 'bg-amber-500/10',    border: 'border-amber-500/30',    Icon: QrCode },
-  authenticated:      { label: 'Tertaut, memuat data…',                            color: 'text-blue-300',  bg: 'bg-blue-500/10',     border: 'border-blue-500/30',     Icon: Loader2,     spin: true },
-  loading:            { label: 'Memuat data WhatsApp…',                            color: 'text-blue-300',  bg: 'bg-blue-500/10',     border: 'border-blue-500/30',     Icon: Loader2,     spin: true },
-  connected:          { label: 'Terhubung',                                        color: 'text-green-300', bg: 'bg-green-500/10',    border: 'border-green-500/30',    Icon: CheckCircle2 },
-  idle_sleeping:      { label: 'Standby (otomatis bangun saat ada notifikasi)',    color: 'text-slate-300', bg: 'bg-slate-500/10',    border: 'border-slate-500/30',    Icon: PowerOff },
-  auth_failed:        { label: 'Gagal autentikasi',                                color: 'text-red-300',   bg: 'bg-red-500/10',      border: 'border-red-500/30',      Icon: XCircle },
+  connecting:         { label: 'Memulai…',                                         color: 'text-blue-400',  bg: 'bg-blue-500/10',     border: 'border-blue-500/30',     Icon: Loader2,     spin: true },
+  awaiting_qr:        { label: 'Menunggu scan QR',                                 color: 'text-amber-400', bg: 'bg-amber-500/10',    border: 'border-amber-500/30',    Icon: QrCode },
+  authenticated:      { label: 'Tertaut, memuat data…',                            color: 'text-blue-400',  bg: 'bg-blue-500/10',     border: 'border-blue-500/30',     Icon: Loader2,     spin: true },
+  loading:            { label: 'Memuat data WhatsApp…',                            color: 'text-blue-400',  bg: 'bg-blue-500/10',     border: 'border-blue-500/30',     Icon: Loader2,     spin: true },
+  connected:          { label: 'Terhubung',                                        color: 'text-green-400', bg: 'bg-emerald-500/10',  border: 'border-emerald-500/30',  Icon: CheckCircle2 },
+  idle_sleeping:      { label: 'Standby (otomatis bangun saat ada notifikasi)',    color: 'text-muted',     bg: 'bg-dark-surface',    border: 'border-dark-border',     Icon: PowerOff },
+  auth_failed:        { label: 'Gagal autentikasi',                                color: 'text-red-400',   bg: 'bg-red-500/10',      border: 'border-red-500/30',      Icon: XCircle },
   disconnected:       { label: 'Terputus',                                         color: 'text-muted',     bg: 'bg-dark-surface',    border: 'border-dark-border',     Icon: PowerOff },
-  capacity_exceeded:  { label: 'Server penuh — coba lagi nanti',                   color: 'text-amber-300', bg: 'bg-amber-500/10',    border: 'border-amber-500/30',    Icon: AlertTriangle },
-  error:              { label: 'Error',                                            color: 'text-red-300',   bg: 'bg-red-500/10',      border: 'border-red-500/30',      Icon: XCircle },
+  capacity_exceeded:  { label: 'Server penuh — coba lagi nanti',                   color: 'text-amber-400', bg: 'bg-amber-500/10',    border: 'border-amber-500/30',    Icon: AlertTriangle },
+  error:              { label: 'Error',                                            color: 'text-red-400',   bg: 'bg-red-500/10',      border: 'border-red-500/30',      Icon: XCircle },
 }
 
 function getWaStatusMeta(status) {
@@ -918,7 +918,7 @@ function WhatsAppCard({ waState, setWaState, onConnect, onDisconnect, onSaveSett
               </p>
             )}
             {waState.lastError && !isConnected && (
-              <p className="text-xs text-red-300/90 mt-0.5 break-words">{waState.lastError}</p>
+              <p className="text-xs text-red-400 mt-0.5 break-words">{waState.lastError}</p>
             )}
           </div>
         </div>
@@ -949,7 +949,7 @@ function WhatsAppCard({ waState, setWaState, onConnect, onDisconnect, onSaveSett
                 <li>Tap <span className="text-off-white">Tautkan perangkat / Link a Device</span>.</li>
                 <li>Arahkan kamera ke QR di samping.</li>
               </ol>
-              <p className="text-xs text-amber-300/90 flex items-start gap-1">
+              <p className="text-xs text-amber-400 flex items-start gap-1">
                 <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
                 Jangan pakai nomor pribadi — gunakan nomor khusus operasional.
               </p>
@@ -1034,11 +1034,11 @@ function WhatsAppCard({ waState, setWaState, onConnect, onDisconnect, onSaveSett
 
         {/* Beta limitations */}
         <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-          <p className="text-xs text-amber-300 font-medium mb-1 flex items-center gap-1.5">
+          <p className="text-xs text-amber-400 font-medium mb-1 flex items-center gap-1.5">
             <AlertTriangle className="w-3.5 h-3.5" />
             Batasan fase Beta:
           </p>
-          <ul className="text-xs text-amber-200/90 space-y-1 list-disc list-inside">
+          <ul className="text-xs text-amber-400 space-y-1 list-disc list-inside">
             {(waState.limitations || []).map((item, idx) => (
               <li key={idx}>{item}</li>
             ))}
@@ -1203,7 +1203,7 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
                   <img src={src} alt={`Gallery ${i+1}`} className="w-full h-full object-cover rounded-lg border border-dark-border" />
                   <button
                     onClick={() => onRemoveGallery(i)}
-                    className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center text-red-300 text-xs font-medium transition-opacity"
+                    className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center text-red-400 text-xs font-medium transition-opacity"
                   >Hapus</button>
                 </div>
               ))}
