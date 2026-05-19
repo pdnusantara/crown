@@ -15,27 +15,49 @@ const { getTenantStatus, sendSystemMessage } = require('../services/whatsappServ
 const DAY_MS = 86400 * 1000;
 // Batas aman pesan per tenant per eksekusi — cegah membanjiri gateway.
 const MAX_PER_RUN = 150;
-// Jeda antar pengiriman supaya tidak memicu rate-limit gateway.
-const SEND_GAP_MS = 1200;
+// Batas atas jeda yang boleh dikonfigurasi (detik).
+const MAX_DELAY_SEC = 600;
 
 const DEFAULTS = {
   enabled: false,
   inactiveDays: 30,
   repeat: false,
   sendHour: 10,
+  // Jeda ACAK antar pesan (detik) — tiap pesan menunggu durasi acak antara
+  // min & max. Mencegah pola pengiriman beruntun yang memicu blokir WhatsApp.
+  minDelaySec: 8,
+  maxDelaySec: 30,
   message: 'Halo {nama}! Sudah {hari} hari sejak kunjungan terakhir Anda di {toko}. Kami tunggu kunjungan Anda berikutnya 😊',
 };
+
+// Ambil integer aman dari nilai apa pun, dengan fallback bila tidak valid.
+function intOr(value, fallback) {
+  const n = parseInt(value, 10);
+  return Number.isFinite(n) ? n : fallback;
+}
 
 // Gabungkan konfigurasi tenant dengan default + sanitasi nilai.
 function resolveConfig(raw) {
   const c = { ...DEFAULTS, ...(raw && typeof raw === 'object' ? raw : {}) };
   c.enabled = !!c.enabled;
   c.repeat = !!c.repeat;
-  c.inactiveDays = Math.min(365, Math.max(1, parseInt(c.inactiveDays, 10) || DEFAULTS.inactiveDays));
-  c.sendHour = Math.min(23, Math.max(0, parseInt(c.sendHour, 10) ?? DEFAULTS.sendHour));
+  c.inactiveDays = Math.min(365, Math.max(1, intOr(c.inactiveDays, DEFAULTS.inactiveDays)));
+  c.sendHour = Math.min(23, Math.max(0, intOr(c.sendHour, DEFAULTS.sendHour)));
+  // Jeda: kunci ke [1, MAX_DELAY_SEC]; pastikan max ≥ min.
+  let lo = Math.min(MAX_DELAY_SEC, Math.max(1, intOr(c.minDelaySec, DEFAULTS.minDelaySec)));
+  let hi = Math.min(MAX_DELAY_SEC, Math.max(1, intOr(c.maxDelaySec, DEFAULTS.maxDelaySec)));
+  if (hi < lo) hi = lo;
+  c.minDelaySec = lo;
+  c.maxDelaySec = hi;
   const msg = typeof c.message === 'string' ? c.message.trim() : '';
   c.message = msg || DEFAULTS.message;
   return c;
+}
+
+// Durasi jeda acak (ms) antara min & max detik konfigurasi.
+function randomDelayMs(cfg) {
+  const { minDelaySec: lo, maxDelaySec: hi } = cfg;
+  return Math.round((lo + Math.random() * (hi - lo)) * 1000);
 }
 
 // Render placeholder {nama} {toko} {hari}. Placeholder tak dikenal dibiarkan.
@@ -164,7 +186,8 @@ async function processTenant(tenant, opts = {}) {
       failed++;
       console.error(`[VisitReminder] tenant=${tenant.id} cust=${cust.id} gagal:`, err?.message || err);
     }
-    if (i < batch.length - 1) await sleep(SEND_GAP_MS);
+    // Jeda acak sebelum pesan berikutnya — anti-pola, anti-blokir.
+    if (i < batch.length - 1) await sleep(randomDelayMs(cfg));
   }
 
   console.log(`[VisitReminder] tenant=${tenant.id} eligible=${eligible.length} sent=${sent} failed=${failed}`);
@@ -184,6 +207,28 @@ async function runForTenant(tenantId, opts = {}) {
     throw e;
   }
   return processTenant(tenant, { force: true, ...opts });
+}
+
+// Pratinjau untuk satu tenant: jumlah pelanggan layak + status koneksi WA +
+// konfigurasi efektif. Tidak mengirim apa pun. Dipakai endpoint pengaturan.
+async function previewForTenant(tenantId) {
+  const tenant = await prisma.tenant.findFirst({
+    where: { id: tenantId, deletedAt: null },
+    select: { id: true, name: true, visitReminder: true },
+  });
+  if (!tenant) {
+    const e = new Error('Tenant tidak ditemukan.');
+    e.code = 'TENANT_NOT_FOUND';
+    throw e;
+  }
+  const cfg = resolveConfig(tenant.visitReminder);
+  const eligible = await collectEligible(tenant.id, cfg, Date.now());
+  let connected = false;
+  try {
+    const s = await getTenantStatus(tenant.id);
+    connected = s?.status === 'connected';
+  } catch { /* anggap tidak tersambung */ }
+  return { eligible: eligible.length, connected, config: cfg };
 }
 
 // Eksekusi terjadwal: proses semua tenant yang jam lokalnya == sendHour.
@@ -230,6 +275,7 @@ module.exports = {
   initVisitReminderJob,
   runVisitReminderJob,
   runForTenant,
+  previewForTenant,
   resolveConfig,
   DEFAULTS,
 };

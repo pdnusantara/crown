@@ -350,6 +350,9 @@ const visitReminderSchema = z.object({
   inactiveDays: z.number().int().min(1).max(365).optional(),
   repeat:       z.boolean().optional(),
   sendHour:     z.number().int().min(0).max(23).optional(),
+  // Jeda acak antar pesan (detik) — anti-blokir WhatsApp.
+  minDelaySec:  z.number().int().min(1).max(600).optional(),
+  maxDelaySec:  z.number().int().min(1).max(600).optional(),
   message:      z.string().max(600).nullish(),
 }).strict().nullish();
 

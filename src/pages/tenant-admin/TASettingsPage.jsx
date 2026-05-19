@@ -83,11 +83,13 @@ export default function TASettingsPage() {
 
   // ── Pengingat kunjungan otomatis (WhatsApp) ────────────────────────────────
   const [reminderForm, setReminderForm] = useState({
-    enabled: false, inactiveDays: 30, repeat: false, sendHour: 10, message: '',
+    enabled: false, inactiveDays: 30, repeat: false, sendHour: 10,
+    minDelaySec: 8, maxDelaySec: 30, message: '',
   })
   const [reminderSaving, setReminderSaving]                 = useState(false)
   const [reminderRunning, setReminderRunning]               = useState(false)
   const [reminderPreview, setReminderPreview]               = useState(null)
+  const [reminderConnected, setReminderConnected]           = useState(null)
   const [reminderPreviewLoading, setReminderPreviewLoading] = useState(false)
   useEffect(() => {
     const vr = tenant?.visitReminder
@@ -97,6 +99,8 @@ export default function TASettingsPage() {
         inactiveDays: vr.inactiveDays || 30,
         repeat:       !!vr.repeat,
         sendHour:     typeof vr.sendHour === 'number' ? vr.sendHour : 10,
+        minDelaySec:  typeof vr.minDelaySec === 'number' ? vr.minDelaySec : 8,
+        maxDelaySec:  typeof vr.maxDelaySec === 'number' ? vr.maxDelaySec : 30,
         message:      vr.message || '',
       })
     }
@@ -109,8 +113,10 @@ export default function TASettingsPage() {
     try {
       const res = await api.get('/customers/visit-reminder/preview')
       setReminderPreview(res.data?.data?.eligible ?? null)
+      setReminderConnected(res.data?.data?.connected ?? null)
     } catch {
       setReminderPreview(null)
+      setReminderConnected(null)
     } finally {
       setReminderPreviewLoading(false)
     }
@@ -123,15 +129,22 @@ export default function TASettingsPage() {
   const handleSaveReminder = async () => {
     setReminderSaving(true)
     try {
+      // Jeda: kunci [1,600] & pastikan max ≥ min.
+      const lo = Math.min(600, Math.max(1, Number(reminderForm.minDelaySec) || 8))
+      const hi = Math.max(lo, Math.min(600, Math.max(1, Number(reminderForm.maxDelaySec) || 30)))
       await updateMyTenant.mutateAsync({
         visitReminder: {
           enabled:      reminderForm.enabled,
           inactiveDays: Math.min(365, Math.max(1, Number(reminderForm.inactiveDays) || 30)),
           repeat:       reminderForm.repeat,
           sendHour:     Math.min(23, Math.max(0, Number(reminderForm.sendHour) || 0)),
+          minDelaySec:  lo,
+          maxDelaySec:  hi,
           message:      (reminderForm.message || '').trim() || null,
         },
       })
+      // Selaraskan kembali nilai yang dinormalisasi ke form.
+      setReminderForm(f => ({ ...f, minDelaySec: lo, maxDelaySec: hi }))
       toast.success('Pengaturan pengingat kunjungan tersimpan')
       loadReminderPreview()
     } catch (err) {
@@ -147,7 +160,11 @@ export default function TASettingsPage() {
     try {
       const res = await api.post('/customers/visit-reminder/run', {})
       const d = res.data?.data || {}
-      toast.success(`Pengingat terkirim — ${d.sent || 0} pesan${d.failed ? `, ${d.failed} gagal` : ''}`)
+      if (d.started) {
+        toast.success(`Pengiriman dimulai di latar belakang — ${d.eligible} pelanggan akan diingatkan bertahap dengan jeda acak.`)
+      } else {
+        toast.success('Tidak ada pelanggan yang memenuhi kriteria pengingat saat ini.')
+      }
       loadReminderPreview()
     } catch (err) {
       toast.error(err?.response?.data?.error || 'Gagal mengirim pengingat')
@@ -915,6 +932,36 @@ export default function TASettingsPage() {
                 </div>
               </div>
 
+              {/* Jeda acak antar pesan — anti-blokir WhatsApp */}
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-off-white">Jeda acak antar pesan</label>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <input
+                    type="number"
+                    min={1}
+                    max={600}
+                    value={reminderForm.minDelaySec}
+                    onChange={e => setReminderForm(f => ({ ...f, minDelaySec: e.target.value }))}
+                    className="w-24 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60"
+                  />
+                  <span className="text-sm text-muted">sampai</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={600}
+                    value={reminderForm.maxDelaySec}
+                    onChange={e => setReminderForm(f => ({ ...f, maxDelaySec: e.target.value }))}
+                    className="w-24 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60"
+                  />
+                  <span className="text-sm text-muted">detik</span>
+                </div>
+                <p className="text-[11px] text-muted">
+                  Tiap pesan dikirim dengan jeda <span className="text-off-white">acak</span> dalam rentang ini —
+                  mencegah pola pengiriman beruntun yang berisiko memicu blokir nomor WhatsApp.
+                  Disarankan minimal 5 detik. Untuk daftar penerima besar, gunakan jeda lebih panjang.
+                </p>
+              </div>
+
               {/* Teks pesan */}
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-off-white">Teks pesan pengingat</label>
@@ -936,6 +983,14 @@ export default function TASettingsPage() {
                   <span className="text-[11px] text-muted flex-shrink-0 tabular-nums">{reminderForm.message.length}/600</span>
                 </div>
               </div>
+
+              {/* Peringatan WhatsApp belum tersambung */}
+              {reminderConnected === false && (
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-sm text-amber-300">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <span>WhatsApp toko belum tersambung — pengingat tidak akan terkirim sampai WhatsApp dihubungkan di tab WhatsApp Beta.</span>
+                </div>
+              )}
 
               {/* Perkiraan jumlah penerima */}
               <div className="flex items-center gap-2 p-3 rounded-xl bg-dark-surface border border-dark-border text-sm">

@@ -6,7 +6,7 @@ const { authenticate, requireRole } = require('../middleware/auth');
 const { parsePagination, paginatedResponse } = require('../utils/pagination');
 const { recordAudit } = require('../utils/auditLog');
 const { getIO, tenantRoom } = require('../config/socket');
-const { runForTenant } = require('../jobs/visitReminder');
+const { runForTenant, previewForTenant } = require('../jobs/visitReminder');
 
 const emitCustomer = (event, customer) => {
   if (!customer?.tenantId) return;
@@ -331,10 +331,10 @@ router.get('/visit-reminder/preview', authenticate, requireRole('super_admin', '
   try {
     const tenantId = req.user.role === 'super_admin' ? req.query.tenantId : req.user.tenantId;
     if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId wajib' });
-    const result = await runForTenant(tenantId, { dryRun: true });
+    const result = await previewForTenant(tenantId);
     res.json({
       success: true,
-      data: { eligible: result.eligible, config: result.config },
+      data: { eligible: result.eligible, connected: result.connected, config: result.config },
     });
   } catch (err) {
     if (err.code === 'TENANT_NOT_FOUND') {
@@ -345,23 +345,30 @@ router.get('/visit-reminder/preview', authenticate, requireRole('super_admin', '
 });
 
 // POST /api/customers/visit-reminder/run — kirim pengingat sekarang juga,
-// mengabaikan jadwal jam. Mengembalikan jumlah pesan terkirim.
+// mengabaikan jadwal jam. Pengiriman berjalan di LATAR BELAKANG karena jeda
+// acak antar pesan bisa membuat durasi total panjang — respons langsung
+// dikembalikan setelah pra-pemeriksaan.
 router.post('/visit-reminder/run', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
   try {
     const tenantId = req.user.role === 'super_admin' ? req.body.tenantId : req.user.tenantId;
     if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId wajib' });
-    const result = await runForTenant(tenantId, {});
-    if (result.skipped === 'not_connected') {
+
+    const preview = await previewForTenant(tenantId);
+    if (!preview.connected) {
       return res.status(400).json({
         success: false,
         error: 'WhatsApp belum tersambung. Hubungkan WhatsApp dulu di tab WhatsApp Beta.',
         code: 'NOT_CONNECTED',
       });
     }
-    res.json({
-      success: true,
-      data: { eligible: result.eligible || 0, sent: result.sent || 0, failed: result.failed || 0 },
-    });
+    if (preview.eligible === 0) {
+      return res.json({ success: true, data: { eligible: 0, started: false } });
+    }
+    // Fire-and-forget — pengiriman + jeda acak berjalan di latar belakang.
+    runForTenant(tenantId, {}).catch((err) =>
+      console.error('[VisitReminder] run latar belakang gagal:', err?.message || err)
+    );
+    res.json({ success: true, data: { eligible: preview.eligible, started: true } });
   } catch (err) {
     if (err.code === 'TENANT_NOT_FOUND') {
       return res.status(404).json({ success: false, error: err.message });
