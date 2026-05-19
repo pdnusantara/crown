@@ -69,13 +69,13 @@ export function useBarberReport(tenantId, filters = {}) {
   })
 }
 
-// Daftar gaji barber periode (semua skema: komisi / pokok / pokok+komisi) —
-// dipakai fitur "Gaji Barber" di /admin/expenses.
-export function useBarberPayroll(tenantId, filters = {}) {
+// Daftar gaji staf (barber + kasir) periode untuk semua skema —
+// dipakai fitur "Gaji Staf" di /admin/expenses.
+export function useStaffPayroll(tenantId, filters = {}) {
   return useQuery({
-    queryKey: ['reports', 'barberPayroll', tenantId, filters],
+    queryKey: ['reports', 'staffPayroll', tenantId, filters],
     queryFn: async () => {
-      const res = await api.get('/reports/barber-payroll', { params: { tenantId, ...filters } })
+      const res = await api.get('/reports/staff-payroll', { params: { tenantId, ...filters } })
       return res.data.data
     },
     enabled: !!tenantId,

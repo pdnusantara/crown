@@ -4,13 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Trash2, Pencil, TrendingDown, TrendingUp, Wallet, ChevronLeft, ChevronRight,
   Search, AlertCircle, Download, RefreshCw, X, Receipt, CheckSquare, Square, Loader2,
-  CopyPlus, ArrowUp, ArrowDown, Minus, Scissors, Check,
+  CopyPlus, ArrowUp, ArrowDown, Minus, Users, Check,
 } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, parseISO } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
 import { useAuthStore } from '../../store/authStore.js'
 import { useFeatureFlags } from '../../hooks/useFeatureFlags.js'
-import { useReportSummary, useBarberPayroll } from '../../hooks/useReports.js'
+import { useReportSummary, useStaffPayroll } from '../../hooks/useReports.js'
 import { useBranches } from '../../hooks/useBranches.js'
 import {
   useExpenses, useExpenseStats, useCreateExpense, useUpdateExpense,
@@ -176,7 +176,7 @@ function ExpenseFormModal({ open, onClose, initial, branches, onSaved }) {
         barberId: initial.barberId || '',
       })
     } else if (initial) {
-      // Prefill pengeluaran baru (mis. dari "Gaji Barber") — sudah berbentuk form.
+      // Prefill pengeluaran baru (mis. dari "Gaji Staf") — sudah berbentuk form.
       setForm({ ...EMPTY_FORM(), ...initial })
     } else {
       setForm(EMPTY_FORM())
@@ -558,31 +558,29 @@ function ListSkeleton() {
 // Jembatan Komisi → Pengeluaran. Komisi barber TIDAK otomatis jadi pengeluaran —
 // modal ini menampilkan komisi tiap barber periode berjalan, lalu "Catat" mengisi
 // form pengeluaran (kategori Gaji & Honor) otomatis untuk di-review & disimpan.
-// Label & rincian per skema gaji untuk modal Gaji Barber.
-const SALARY_LABEL = { commission: 'Komisi', fixed: 'Gaji Pokok', hybrid: 'Pokok + Komisi' }
-function payDetail(b) {
-  if (b.salaryType === 'fixed') return 'Gaji pokok bulanan tetap'
-  if (b.salaryType === 'hybrid') {
-    return `Pokok ${formatRupiahShort(b.baseSalary)} + komisi ${formatRupiahShort(b.commission)}`
+// Rincian per skema gaji untuk modal Gaji Staf.
+function payDetail(s) {
+  if (s.salaryType === 'fixed') return 'Gaji pokok bulanan tetap'
+  if (s.salaryType === 'hybrid') {
+    return `Pokok ${formatRupiahShort(s.baseSalary)} + komisi ${formatRupiahShort(s.commission)}`
   }
-  return `Omzet ${formatRupiahShort(b.revenue)} · ${Math.round((b.commissionRate || 0) * 100)}% · ${b.servicesCount} layanan`
+  return `Omzet ${formatRupiahShort(s.revenue)} · ${Math.round((s.commissionRate || 0) * 100)}% · ${s.servicesCount} layanan`
 }
 
-function BarberPayrollModal({ open, onClose, monthLabel, startDate, endDate, onPick }) {
+function StaffPayrollModal({ open, onClose, monthLabel, startDate, endDate, onPick }) {
   const { user } = useAuthStore()
-  const { data, isLoading, isError } = useBarberPayroll(
+  const { data, isLoading, isError } = useStaffPayroll(
     open ? user?.tenantId : undefined,
     { startDate, endDate },
   )
-  // Tampilkan barber dengan gaji > 0 (komisi / gaji pokok / kombinasi).
-  const barbers = useMemo(
-    () => (Array.isArray(data) ? data : []).filter(b => (b.pay || 0) > 0),
+  // Tampilkan staf dengan gaji > 0 (barber komisi/pokok/kombinasi, kasir pokok).
+  const staff = useMemo(
+    () => (Array.isArray(data) ? data : []).filter(s => (s.pay || 0) > 0),
     [data],
   )
-  const totalPay = barbers.reduce((s, b) => s + (b.pay || 0), 0)
+  const totalPay = staff.reduce((sum, s) => sum + (s.pay || 0), 0)
 
-  // Penanda "sudah dicatat": cek pengeluaran kategori gaji bulan ini yang
-  // ber-barberId → barber tsb gajinya sudah masuk pengeluaran.
+  // Penanda "sudah dicatat": cek pengeluaran kategori gaji bulan ini.
   const { data: gajiExpenses } = useQuery({
     queryKey: ['expenses', 'payroll-paid', startDate, endDate],
     queryFn: () => api
@@ -591,20 +589,19 @@ function BarberPayrollModal({ open, onClose, monthLabel, startDate, endDate, onP
     enabled: open,
     staleTime: 10_000,
   })
-  const paidBarberIds = useMemo(
+  const paidIds = useMemo(
     () => new Set((gajiExpenses || []).map(e => e.barberId).filter(Boolean)),
     [gajiExpenses],
   )
-  const paidCount = barbers.filter(b => paidBarberIds.has(b.barberId)).length
+  const paidCount = staff.filter(s => paidIds.has(s.barberId)).length
 
   return (
-    <Modal isOpen={open} onClose={onClose} title="Gaji Barber" size="md">
+    <Modal isOpen={open} onClose={onClose} title="Gaji Staf" size="md">
       <div className="space-y-3">
         <p className="text-xs text-muted">
-          Gaji tiap barber untuk <span className="text-off-white font-medium capitalize">{monthLabel}</span> sesuai
-          skema masing-masing (komisi / gaji pokok / kombinasi). Klik <span className="text-gold">Catat</span> untuk
-          mengisi form pengeluaran otomatis. Tanda <span className="text-green-400">✓ Dicatat</span> = sudah masuk
-          pengeluaran bulan ini.
+          Gaji tiap staf (barber &amp; kasir) untuk <span className="text-off-white font-medium capitalize">{monthLabel}</span> sesuai
+          skema masing-masing. Klik <span className="text-gold">Catat</span> untuk mengisi form pengeluaran
+          otomatis. Tanda <span className="text-green-400">✓ Dicatat</span> = sudah masuk pengeluaran bulan ini.
         </p>
 
         {isLoading ? (
@@ -614,43 +611,46 @@ function BarberPayrollModal({ open, onClose, monthLabel, startDate, endDate, onP
         ) : isError ? (
           <div className="flex flex-col items-center gap-2 py-10 text-center">
             <AlertCircle size={22} className="text-red-400" />
-            <p className="text-sm text-muted">Gagal memuat data gaji barber</p>
+            <p className="text-sm text-muted">Gagal memuat data gaji staf</p>
           </div>
-        ) : barbers.length === 0 ? (
+        ) : staff.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-10 text-center">
             <div className="w-12 h-12 rounded-2xl bg-dark-surface border border-dark-border flex items-center justify-center">
-              <Scissors size={20} className="text-muted" />
+              <Users size={20} className="text-muted" />
             </div>
-            <p className="text-sm text-muted capitalize">Belum ada gaji barber untuk dibayar di {monthLabel}</p>
+            <p className="text-sm text-muted capitalize">Belum ada gaji staf untuk dibayar di {monthLabel}</p>
           </div>
         ) : (
           <>
             <div className="max-h-[44vh] overflow-y-auto -mx-1 divide-y divide-dark-border">
-              {barbers.map(b => {
-                const paid = paidBarberIds.has(b.barberId)
+              {staff.map(s => {
+                const paid = paidIds.has(s.barberId)
+                const isKasir = s.role === 'kasir'
                 return (
-                  <div key={b.barberId} className={`flex items-center gap-3 px-1 py-2.5 ${paid ? 'opacity-55' : ''}`}>
+                  <div key={s.barberId} className={`flex items-center gap-3 px-1 py-2.5 ${paid ? 'opacity-55' : ''}`}>
                     <div className="w-8 h-8 rounded-lg bg-blue-400/10 flex items-center justify-center flex-shrink-0">
-                      <Scissors size={15} className="text-blue-400" />
+                      <Wallet size={15} className="text-blue-400" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <p className="text-sm text-off-white truncate">{b.barberName}</p>
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-dark-surface text-muted flex-shrink-0 whitespace-nowrap">
-                          {SALARY_LABEL[b.salaryType] || 'Komisi'}
+                        <p className="text-sm text-off-white truncate">{s.barberName}</p>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded flex-shrink-0 whitespace-nowrap ${
+                          isKasir ? 'bg-blue-400/15 text-blue-300' : 'bg-dark-surface text-muted'
+                        }`}>
+                          {isKasir ? 'Kasir' : 'Barber'}
                         </span>
                       </div>
-                      <p className="text-[10px] text-muted truncate">{payDetail(b)}</p>
+                      <p className="text-[10px] text-muted truncate">{payDetail(s)}</p>
                     </div>
                     <span className="text-sm font-semibold text-off-white flex-shrink-0 tabular-nums">
-                      {formatRupiahShort(b.pay)}
+                      {formatRupiahShort(s.pay)}
                     </span>
                     {paid ? (
                       <span className="inline-flex items-center gap-1 text-[10px] font-medium text-green-400 bg-green-500/10 border border-green-500/20 px-2 py-1 rounded-lg flex-shrink-0">
                         <Check size={12} /> Dicatat
                       </span>
                     ) : (
-                      <Button size="xs" variant="secondary" onClick={() => onPick(b)} className="flex-shrink-0">
+                      <Button size="xs" variant="secondary" onClick={() => onPick(s)} className="flex-shrink-0">
                         Catat
                       </Button>
                     )}
@@ -660,7 +660,7 @@ function BarberPayrollModal({ open, onClose, monthLabel, startDate, endDate, onP
             </div>
             <div className="flex items-center justify-between gap-2 pt-2 text-xs border-t border-dark-border">
               <span className="text-muted">
-                {barbers.length} barber
+                {staff.length} staf
                 {paidCount > 0 && <span className="text-green-400"> · {paidCount} sudah dicatat</span>}
               </span>
               <span className="text-off-white font-semibold tabular-nums">
@@ -775,27 +775,27 @@ function ExpensePageInner() {
   const openCreate = () => { setEditTarget(null); setFormOpen(true) }
   const openEdit   = (e) => { setEditTarget(e); setFormOpen(true) }
 
-  // Dari modal Gaji Barber → buka form pengeluaran terisi otomatis sesuai
-  // skema gaji barber. Bukan edit (tanpa id) → ExpenseFormModal prefill.
-  const handlePickPayroll = (barber) => {
+  // Dari modal Gaji Staf → buka form pengeluaran terisi otomatis sesuai
+  // skema gaji staf. Bukan edit (tanpa id) → ExpenseFormModal prefill.
+  const handlePickPayroll = (staff) => {
     setPayrollOpen(false)
-    const ratePct = Math.round((barber.commissionRate || 0) * 100)
+    const ratePct = Math.round((staff.commissionRate || 0) * 100)
     let note
-    if (barber.salaryType === 'fixed') {
+    if (staff.salaryType === 'fixed') {
       note = 'Gaji pokok bulanan'
-    } else if (barber.salaryType === 'hybrid') {
-      note = `Gaji pokok ${formatRupiah(barber.baseSalary || 0)} + komisi ${ratePct}% (${formatRupiah(barber.commission || 0)})`
+    } else if (staff.salaryType === 'hybrid') {
+      note = `Gaji pokok ${formatRupiah(staff.baseSalary || 0)} + komisi ${ratePct}% (${formatRupiah(staff.commission || 0)})`
     } else {
-      note = `Komisi ${ratePct}% dari omzet ${formatRupiah(barber.revenue || 0)}`
+      note = `Komisi ${ratePct}% dari omzet ${formatRupiah(staff.revenue || 0)}`
     }
     setEditTarget({
       category: 'gaji',
-      description: `Gaji ${barber.barberName} ${monthLabel}`,
-      amount: String(barber.pay || 0),
+      description: `Gaji ${staff.barberName} ${monthLabel}`,
+      amount: String(staff.pay || 0),
       // Tanggal akhir bulan → masuk laporan bulan tsb & terdeteksi "sudah dicatat".
       date: endDate,
       branchId: '',
-      barberId: barber.barberId,
+      barberId: staff.barberId,
       note,
     })
     setFormOpen(true)
@@ -928,8 +928,8 @@ function ExpensePageInner() {
             onClick={() => setPayrollOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs text-muted hover:border-gold/30 hover:text-off-white transition-all"
           >
-            <Scissors size={13} />
-            <span className="hidden sm:inline">Gaji Barber</span>
+            <Users size={13} />
+            <span className="hidden sm:inline">Gaji Staf</span>
             <span className="sm:hidden">Gaji</span>
           </button>
           <button
@@ -1185,7 +1185,7 @@ function ExpensePageInner() {
         toMonth={activeMonth}
       />
 
-      <BarberPayrollModal
+      <StaffPayrollModal
         open={payrollOpen}
         onClose={() => setPayrollOpen(false)}
         monthLabel={monthLabel}

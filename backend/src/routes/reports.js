@@ -413,10 +413,10 @@ router.get('/customers', authenticate, requireRole('super_admin', 'tenant_admin'
 });
 
 // GET /api/reports/services - service popularity report
-// GET /api/reports/barber-payroll — daftar gaji barber periode untuk semua
-// skema. Berbeda dari /barbers: menyertakan barber TANPA transaksi (gaji
-// pokok tetap dibayar), dan menghitung `pay` per skema gaji tiap barber.
-router.get('/barber-payroll', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
+// GET /api/reports/staff-payroll — daftar gaji staf (barber + kasir) periode
+// untuk semua skema. Menyertakan staf TANPA transaksi (gaji pokok tetap
+// dibayar). Kasir realistis hanya skema 'fixed' (tak punya omzet pribadi).
+router.get('/staff-payroll', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
   try {
     const tenantId = req.user.role === 'super_admin' ? req.query.tenantId : req.user.tenantId;
     if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId wajib' });
@@ -426,14 +426,13 @@ router.get('/barber-payroll', authenticate, requireRole('super_admin', 'tenant_a
     const startDate = req.query.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const endDate = req.query.endDate || new Date().toISOString();
 
-    // Semua barber aktif tenant — termasuk yang nol transaksi (skema gaji
-    // pokok tetap perlu dibayar).
-    const barbers = await prisma.user.findMany({
-      where: { tenantId, role: 'barber', deletedAt: null, isActive: true },
-      select: { id: true, name: true, commissionRate: true, salaryType: true, baseSalary: true },
-      orderBy: { name: 'asc' },
+    // Semua staf aktif (barber + kasir) — termasuk yang nol transaksi.
+    const staff = await prisma.user.findMany({
+      where: { tenantId, role: { in: ['barber', 'kasir'] }, deletedAt: null, isActive: true },
+      select: { id: true, name: true, role: true, commissionRate: true, salaryType: true, baseSalary: true },
+      orderBy: [{ role: 'asc' }, { name: 'asc' }],
     });
-    if (barbers.length === 0) return res.json({ success: true, data: [] });
+    if (staff.length === 0) return res.json({ success: true, data: [] });
 
     const txWhere = {
       status: 'completed',
@@ -444,24 +443,26 @@ router.get('/barber-payroll', authenticate, requireRole('super_admin', 'tenant_a
 
     const stats = await prisma.transactionItem.groupBy({
       by: ['barberId'],
-      where: { barberId: { in: barbers.map(b => b.id) }, transaction: txWhere },
+      where: { barberId: { in: staff.map(s => s.id) }, transaction: txWhere },
       _sum: { price: true },
       _count: { id: true },
     });
     const statMap = {};
     stats.forEach((s) => { statMap[s.barberId] = s; });
 
-    const data = barbers.map((b) => {
-      const revenue = statMap[b.id]?._sum.price || 0;
-      const servicesCount = statMap[b.id]?._count.id || 0;
-      const rate = b.commissionRate ?? 0.35;
-      const salaryType = b.salaryType || 'commission';
+    const data = staff.map((s) => {
+      const revenue = statMap[s.id]?._sum.price || 0;
+      const servicesCount = statMap[s.id]?._count.id || 0;
+      const rate = s.commissionRate ?? 0.35;
+      // Kasir tak punya omzet pribadi → selalu skema 'fixed'.
+      const salaryType = s.role === 'kasir' ? 'fixed' : (s.salaryType || 'commission');
       // Komisi-only → baseSalary tak relevan; fixed → tak ada komisi.
-      const baseSalary = salaryType === 'commission' ? 0 : (b.baseSalary || 0);
+      const baseSalary = salaryType === 'commission' ? 0 : (s.baseSalary || 0);
       const commission = salaryType === 'fixed' ? 0 : Math.round(revenue * rate);
       return {
-        barberId: b.id,
-        barberName: b.name,
+        barberId: s.id,
+        barberName: s.name,
+        role: s.role,
         salaryType,
         revenue,
         servicesCount,

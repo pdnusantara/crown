@@ -74,7 +74,7 @@ export default function TAStaffPage() {
 
   const openEdit = (member) => {
     setEditStaff(member)
-    setForm({ name: member.name, email: member.email || '', role: member.role, branchId: member.branchId, commissionRate: member.commissionRate, salaryType: member.salaryType || 'commission', baseSalary: member.baseSalary || 0, photo: member.photo || '' })
+    setForm({ name: member.name, email: member.email || '', role: member.role, branchId: member.branchId, commissionRate: member.commissionRate, salaryType: member.role === 'kasir' ? 'fixed' : (member.salaryType || 'commission'), baseSalary: member.baseSalary || 0, photo: member.photo || '' })
     setFormError({})
     setShowModal(true)
   }
@@ -97,7 +97,7 @@ export default function TAStaffPage() {
     try {
       if (editStaff) {
         // Saat edit, jangan kirim email (untuk hindari bentrok unique) kecuali memang berubah.
-        const patch = { name: form.name, role: form.role, branchId: form.branchId, commissionRate: form.commissionRate, salaryType: form.salaryType, baseSalary: form.baseSalary, photo: form.photo || null }
+        const patch = { name: form.name, role: form.role, branchId: form.branchId, commissionRate: form.commissionRate, salaryType: form.role === 'kasir' ? 'fixed' : form.salaryType, baseSalary: form.baseSalary, photo: form.photo || null }
         if (form.email && form.email !== editStaff.email) patch.email = form.email
         await updateUser.mutateAsync({ id: editStaff.id, ...patch, tenantId: user.tenantId })
         toast.success(t('tenantAdmin.staff.staffUpdated'))
@@ -110,11 +110,11 @@ export default function TAStaffPage() {
           branchId: form.branchId,
           tenantId: user.tenantId,
           photo: form.photo || undefined,
-          ...(form.role === 'barber' ? {
-            commissionRate: form.commissionRate,
-            salaryType: form.salaryType,
-            baseSalary: form.baseSalary,
-          } : {}),
+          ...(form.role === 'barber'
+            ? { commissionRate: form.commissionRate, salaryType: form.salaryType, baseSalary: form.baseSalary }
+            : form.role === 'kasir'
+              ? { salaryType: 'fixed', baseSalary: form.baseSalary }
+              : {}),
         })
         toast.success(t('tenantAdmin.staff.staffAdded'))
         setShowModal(false)
@@ -315,7 +315,18 @@ export default function TAStaffPage() {
             error={formError.email}
             hint={editStaff ? 'Mengubah email akan mengubah login staf.' : 'Staf akan login dengan email ini. Password akan dibuat otomatis dan ditampilkan setelah simpan.'}
           />
-          <Select label={t('tenantAdmin.staff.role')} value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} options={ROLES} placeholder="" />
+          <Select
+            label={t('tenantAdmin.staff.role')}
+            value={form.role}
+            onChange={e => setForm(f => ({
+              ...f,
+              role: e.target.value,
+              // Kasir tak punya omzet pribadi → skemanya selalu gaji pokok.
+              salaryType: e.target.value === 'kasir' ? 'fixed' : f.salaryType,
+            }))}
+            options={ROLES}
+            placeholder=""
+          />
           <Select
             label={t('tenantAdmin.staff.branch')}
             value={form.branchId}
@@ -323,35 +334,48 @@ export default function TAStaffPage() {
             options={branches.map(b => ({ value: b.id, label: b.name }))}
             error={formError.branchId}
           />
-          {form.role === 'barber' && (
+          {(form.role === 'barber' || form.role === 'kasir') && (
             <div className="space-y-3 p-3 rounded-xl bg-dark-surface border border-dark-border">
-              <Select
-                label="Skema Gaji"
-                value={form.salaryType}
-                onChange={e => setForm(f => ({ ...f, salaryType: e.target.value }))}
-                options={[
-                  { value: 'commission', label: 'Komisi (% omzet)' },
-                  { value: 'fixed',      label: 'Gaji Pokok (tetap)' },
-                  { value: 'hybrid',     label: 'Pokok + Komisi' },
-                ]}
-                placeholder=""
-              />
-              {(form.salaryType === 'commission' || form.salaryType === 'hybrid') && (
-                <Input
-                  label={t('tenantAdmin.staff.commissionRateLabel')}
-                  type="number" step="0.01" min="0" max="1"
-                  value={form.commissionRate}
-                  onChange={e => setForm(f => ({ ...f, commissionRate: parseFloat(e.target.value) || 0 }))}
-                  hint="Contoh 0.35 = 35% dari omzet barber."
-                />
-              )}
-              {(form.salaryType === 'fixed' || form.salaryType === 'hybrid') && (
+              {form.role === 'barber' ? (
+                <>
+                  <Select
+                    label="Skema Gaji"
+                    value={form.salaryType}
+                    onChange={e => setForm(f => ({ ...f, salaryType: e.target.value }))}
+                    options={[
+                      { value: 'commission', label: 'Komisi (% omzet)' },
+                      { value: 'fixed',      label: 'Gaji Pokok (tetap)' },
+                      { value: 'hybrid',     label: 'Pokok + Komisi' },
+                    ]}
+                    placeholder=""
+                  />
+                  {(form.salaryType === 'commission' || form.salaryType === 'hybrid') && (
+                    <Input
+                      label={t('tenantAdmin.staff.commissionRateLabel')}
+                      type="number" step="0.01" min="0" max="1"
+                      value={form.commissionRate}
+                      onChange={e => setForm(f => ({ ...f, commissionRate: parseFloat(e.target.value) || 0 }))}
+                      hint="Contoh 0.35 = 35% dari omzet barber."
+                    />
+                  )}
+                  {(form.salaryType === 'fixed' || form.salaryType === 'hybrid') && (
+                    <Input
+                      label="Gaji Pokok per Bulan (Rp)"
+                      type="number" min="0" step="50000"
+                      value={form.baseSalary}
+                      onChange={e => setForm(f => ({ ...f, baseSalary: parseInt(e.target.value, 10) || 0 }))}
+                      hint="Dibayar tetap tiap bulan, tak tergantung omzet."
+                    />
+                  )}
+                </>
+              ) : (
+                // Kasir: hanya gaji pokok (komisi tak relevan untuk kasir).
                 <Input
                   label="Gaji Pokok per Bulan (Rp)"
                   type="number" min="0" step="50000"
                   value={form.baseSalary}
                   onChange={e => setForm(f => ({ ...f, baseSalary: parseInt(e.target.value, 10) || 0 }))}
-                  hint="Dibayar tetap tiap bulan, tak tergantung omzet."
+                  hint="Kasir digaji pokok tetap tiap bulan."
                 />
               )}
             </div>
