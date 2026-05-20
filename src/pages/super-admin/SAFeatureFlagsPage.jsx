@@ -4,9 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Flag, RotateCcw, Loader2, Search, CheckSquare, Square,
   Copy, ChevronDown, AlertTriangle, Sparkles, X, Radio, RefreshCw,
+  Package as PackageIcon, ShieldCheck, ChevronRight,
 } from 'lucide-react'
 import { useTenants } from '../../hooks/useTenants.js'
-import { useFeatureFlags, useUpdateFeatureFlags } from '../../hooks/useFeatureFlags.js'
+import {
+  useFeatureFlags, useUpdateFeatureFlags,
+  useSyncTenantToPackage, useFeatureFlagAudit, useSyncAllTenants,
+} from '../../hooks/useFeatureFlags.js'
 import { ALL_FEATURE_FLAGS, PACKAGE_FLAG_DEFAULTS } from '../../store/featureFlagStore.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
@@ -122,6 +126,9 @@ export default function SAFeatureFlagsPage() {
 
   const { data: flags = [], isLoading: loadingFlags } = useFeatureFlags(effectiveTenantId)
   const updateFlags = useUpdateFeatureFlags()
+  const syncOne     = useSyncTenantToPackage()
+  const syncAll     = useSyncAllTenants()
+  const { data: audit, isLoading: loadingAudit, refetch: refetchAudit } = useFeatureFlagAudit()
   const isSaving    = updateFlags.isPending
 
   const selectedTenant = tenants.find(tt => tt.id === effectiveTenantId)
@@ -309,6 +316,46 @@ export default function SAFeatureFlagsPage() {
         <KpiCard label={t('superAdmin.featureFlags.kpiCustomized')}    value={deviationStats.custom > 0 ? '1+' : '0'} color="text-emerald-400" delay={0.1} />
       </div>
 
+      {/* Audit panel — fitur per tenant vs Package.features (source of truth) */}
+      <AuditPanel
+        audit={audit}
+        loading={loadingAudit}
+        onRefresh={refetchAudit}
+        onSyncOne={(tenantId) =>
+          setConfirmAction({
+            title: 'Sinkronkan fitur ke paket?',
+            description: 'Semua flag tenant ini akan disetel ulang sesuai daftar fitur paketnya. Override manual akan dihapus.',
+            run: async () => {
+              try {
+                await syncOne.mutateAsync(tenantId)
+                toast.info('Fitur disinkronkan ke paket.')
+                refetchAudit()
+              } catch (err) {
+                toast.error(err?.response?.data?.error || 'Gagal sinkronisasi.')
+              }
+            },
+          })
+        }
+        onSyncAll={() =>
+          setConfirmAction({
+            title: 'Sinkronkan SEMUA tenant?',
+            description: 'Semua flag tenant aktif akan disetel ulang sesuai daftar fitur paket masing-masing dan flag tak dikenal dihapus. Pakai saat perlu cleanup massal — override manual akan hilang.',
+            run: async () => {
+              try {
+                const res = await syncAll.mutateAsync()
+                toast.info(`Selesai: ${res?.synced ?? '?'} tenant disync, ${res?.orphansRemoved ?? 0} flag tak dikenal dihapus.`)
+                refetchAudit()
+              } catch (err) {
+                toast.error(err?.response?.data?.error || 'Gagal sinkronisasi massal.')
+              }
+            },
+          })
+        }
+        onPickTenant={(id) => setSelectedTenantId(id)}
+        syncingId={syncOne.isPending ? syncOne.variables : null}
+        syncingAll={syncAll.isPending}
+      />
+
       {/* Tenant Selector with search */}
       <Card className="p-4">
         <div className="flex items-center gap-2 mb-3">
@@ -384,6 +431,29 @@ export default function SAFeatureFlagsPage() {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <CopyFromMenu tenants={tenants} currentTenantId={effectiveTenantId} onPick={askCopyFrom} t={t} />
+            <Button
+              variant="secondary"
+              icon={syncOne.isPending ? Loader2 : ShieldCheck}
+              size="sm"
+              onClick={() =>
+                setConfirmAction({
+                  title: 'Sinkronkan fitur ke paket?',
+                  description: `Semua flag ${selectedTenant?.name} akan disetel ulang sesuai daftar fitur paket ${selectedTenant?.package}. Override manual hilang.`,
+                  run: async () => {
+                    try {
+                      await syncOne.mutateAsync(effectiveTenantId)
+                      toast.info('Fitur disinkronkan ke paket.')
+                      refetchAudit()
+                    } catch (err) {
+                      toast.error(err?.response?.data?.error || 'Gagal sinkronisasi.')
+                    }
+                  },
+                })
+              }
+              disabled={syncOne.isPending || loadingFlags || !selectedTenant?.package}
+            >
+              Sync ke Paket
+            </Button>
             <Button
               variant="secondary"
               icon={isSaving ? Loader2 : RotateCcw}
@@ -521,6 +591,126 @@ export default function SAFeatureFlagsPage() {
         variant="danger"
       />
     </div>
+  )
+}
+
+// Panel audit drift — bandingkan TenantFeatureFlag vs Package.features (DB).
+// Tampil hanya jika ada drift agar tidak ribet saat semuanya sehat.
+function AuditPanel({ audit, loading, onRefresh, onSyncOne, onSyncAll, onPickTenant, syncingId, syncingAll }) {
+  const [open, setOpen] = useState(true)
+  if (loading) {
+    return (
+      <Card className="p-3 flex items-center gap-2 text-xs text-muted">
+        <Loader2 size={12} className="animate-spin" /> Memuat audit fitur tenant…
+      </Card>
+    )
+  }
+  if (!audit) return null
+  const { driftCount = 0, totalActive = 0, rows = [] } = audit
+  const allGood = driftCount === 0
+
+  return (
+    <Card className={`p-0 overflow-hidden border ${allGood ? 'border-emerald-500/20 bg-emerald-500/[0.03]' : 'border-amber-500/30 bg-amber-500/[0.04]'}`}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-dark-card/30 transition-colors text-left"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          {allGood
+            ? <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+            : <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />}
+          <div className="min-w-0">
+            <p className="font-semibold text-off-white text-sm">
+              {allGood
+                ? 'Fitur semua tenant sesuai paketnya'
+                : `${driftCount} tenant fiturnya TIDAK sesuai paket`}
+            </p>
+            <p className="text-[11px] text-muted">
+              {totalActive} tenant aktif diperiksa terhadap Package.features di /super-admin/packages
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onRefresh() }}
+            className="p-1.5 rounded-lg text-muted hover:text-off-white hover:bg-dark-card"
+            aria-label="Refresh audit"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+          <ChevronDown className={`w-4 h-4 text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
+        </div>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && !allGood && (
+          <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+            <div className="px-4 pb-4 space-y-2 border-t border-dark-border/60 pt-3">
+              <div className="flex items-center justify-end mb-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={syncingAll ? Loader2 : ShieldCheck}
+                  onClick={onSyncAll}
+                  disabled={syncingAll}
+                >
+                  Sinkronkan Semua ({driftCount})
+                </Button>
+              </div>
+              <div className="space-y-1.5 max-h-[40vh] overflow-y-auto pr-1">
+                {rows.map((r) => (
+                  <div key={r.tenantId} className="rounded-lg border border-dark-border bg-dark-card/40 p-3">
+                    <div className="flex items-start justify-between gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => onPickTenant(r.tenantId)}
+                        className="text-left flex items-center gap-2 min-w-0 hover:text-gold transition-colors"
+                      >
+                        <PackageIcon className="w-3.5 h-3.5 text-gold shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-off-white truncate">{r.name}</p>
+                          <p className="text-[10px] text-muted truncate">
+                            {r.slug} · paket {r.package} · {r.status}{r.isSuspended ? ' · suspend' : ''}
+                          </p>
+                        </div>
+                        <ChevronRight className="w-3 h-3 text-muted shrink-0" />
+                      </button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        icon={syncingId === r.tenantId ? Loader2 : ShieldCheck}
+                        onClick={() => onSyncOne(r.tenantId)}
+                        disabled={!!syncingId}
+                      >
+                        Sync
+                      </Button>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+                      {r.missing.map((f) => (
+                        <span key={`m-${f}`} className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                          tidak ada: {f}
+                        </span>
+                      ))}
+                      {r.extra.map((f) => (
+                        <span key={`e-${f}`} className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                          ekstra: {f}
+                        </span>
+                      ))}
+                      {r.orphans.map((o) => (
+                        <span key={`o-${o.flagId}`} className="px-1.5 py-0.5 rounded bg-red-500/15 text-red-300 border border-red-500/30">
+                          tak dikenal: {o.flagId}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </Card>
   )
 }
 

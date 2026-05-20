@@ -63,3 +63,36 @@ export function useUpdateFeatureFlags() {
       qc.invalidateQueries({ queryKey: ['featureFlags', variables.tenantId] }),
   })
 }
+
+// Sinkronkan flag SATU tenant ke Package.features (DB) — reset semua override.
+export function useSyncTenantToPackage() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (tenantId) =>
+      api.post(`/feature-flags/${tenantId}/sync-package`).then((r) => r.data?.data),
+    onSuccess: (_data, tenantId) => {
+      qc.invalidateQueries({ queryKey: ['featureFlags', tenantId] })
+      qc.invalidateQueries({ queryKey: ['featureFlags', 'audit'] })
+    },
+  })
+}
+
+// Drift report — list tenant yang flag-nya tidak sesuai Package.features.
+export function useFeatureFlagAudit() {
+  return useQuery({
+    queryKey: ['featureFlags', 'audit'],
+    queryFn: async () => (await api.get('/feature-flags/audit')).data?.data,
+    staleTime: 30_000,
+  })
+}
+
+// Sinkronkan SEMUA tenant aktif sekaligus + bersihkan orphan flag.
+export function useSyncAllTenants() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.post('/feature-flags/sync-all').then((r) => r.data?.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['featureFlags'] })
+    },
+  })
+}

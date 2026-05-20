@@ -34,8 +34,20 @@ const PACKAGE_FLAG_DEFAULTS = {
 // Seed seluruh flag untuk satu tenant baru sesuai paketnya. `client` boleh
 // prisma transaction (tx) maupun instance prisma global. Idempotent
 // (skipDuplicates) sehingga aman dipanggil ulang.
+//
+// PRIMARY SOURCE: Package.features di DB (yang diedit super-admin via
+// /super-admin/packages). PACKAGE_FLAG_DEFAULTS hanya fallback bila row
+// Package belum ada (mis. seed awal). Ini menghindari drift "akun pro
+// tapi fiturnya tidak ada".
 async function seedTenantFlags(client, tenantId, packageName) {
-  const enabled = new Set(PACKAGE_FLAG_DEFAULTS[packageName] || PACKAGE_FLAG_DEFAULTS.Basic);
+  const pkg = await client.package.findUnique({
+    where: { name: packageName },
+    select: { features: true },
+  });
+  const source = (pkg?.features?.length ? pkg.features : null)
+    ?? PACKAGE_FLAG_DEFAULTS[packageName]
+    ?? PACKAGE_FLAG_DEFAULTS.Basic;
+  const enabled = new Set(source.filter((f) => KNOWN.has(f)));
   await client.tenantFeatureFlag.createMany({
     data: KNOWN_FLAG_IDS.map((flagId) => ({ tenantId, flagId, enabled: enabled.has(flagId) })),
     skipDuplicates: true,
