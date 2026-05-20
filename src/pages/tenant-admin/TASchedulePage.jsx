@@ -6,6 +6,7 @@ import {
   Copy, CalendarDays, Search, Download, CheckSquare, Square, X,
   LayoutGrid, List as ListIcon, Eraser, ArrowDownAZ, Users, Clock,
   Fingerprint, Sliders, Save, RotateCcw,
+  CheckCircle2, Circle, UserCircle, ListChecks,
 } from 'lucide-react'
 import { startOfWeek, addDays, format, addWeeks, subWeeks } from 'date-fns'
 import { id as idLocale, enUS as enLocale } from 'date-fns/locale'
@@ -96,6 +97,20 @@ function TASchedulePageInner() {
     return raw.map((p, i) => ({ ...p, color: PRESET_COLORS[i % PRESET_COLORS.length] }))
   }, [tenant?.shiftPresets])
   const [showPresetEditor, setShowPresetEditor] = useState(false)
+
+  // Onboarding wizard: tampil saat minggu kosong kecuali admin sudah menutup.
+  const wizardKey = `schedule_wizard_dismissed_${user?.tenantId || 'na'}`
+  const [wizardDismissed, setWizardDismissed] = useState(() => {
+    try { return localStorage.getItem(wizardKey) === '1' } catch { return false }
+  })
+  const dismissWizard = () => {
+    try { localStorage.setItem(wizardKey, '1') } catch {}
+    setWizardDismissed(true)
+  }
+  const showWizard = () => {
+    try { localStorage.removeItem(wizardKey) } catch {}
+    setWizardDismissed(false)
+  }
 
   // Lookup WorkSchedule per (staffId, dayOfWeek=0..6).
   const wsLookup = useMemo(() => {
@@ -1013,18 +1028,34 @@ function TASchedulePageInner() {
             </div>
           )}
 
-          {/* Empty week */}
+          {/* Empty week — wizard / panduan onboarding */}
           {!isLoading && weekSchedules.length === 0 && (
-            <Card className="p-6 sm:p-8 text-center">
-              <CalendarDays size={28} className="mx-auto mb-3 text-muted" />
-              <h3 className="font-semibold text-off-white mb-1 text-sm">{t('tenantAdmin.schedule.noSchedules')}</h3>
-              <p className="text-muted text-xs mb-4">{t('tenantAdmin.schedule.emptyCta')}</p>
-              <div className="flex items-center justify-center gap-2">
-                <Button variant="secondary" size="sm" icon={Copy} onClick={() => setConfirmCopy(true)} loading={copyWeekMut.isPending}>
-                  {t('tenantAdmin.schedule.copyLastWeek')}
-                </Button>
-              </div>
-            </Card>
+            wizardDismissed ? (
+              <Card className="p-6 sm:p-8 text-center">
+                <CalendarDays size={28} className="mx-auto mb-3 text-muted" />
+                <h3 className="font-semibold text-off-white mb-1 text-sm">{t('tenantAdmin.schedule.noSchedules')}</h3>
+                <p className="text-muted text-xs mb-4">{t('tenantAdmin.schedule.emptyCta')}</p>
+                <div className="flex items-center justify-center gap-2 flex-wrap">
+                  <Button variant="secondary" size="sm" icon={Copy} onClick={() => setConfirmCopy(true)} loading={copyWeekMut.isPending}>
+                    {t('tenantAdmin.schedule.copyLastWeek')}
+                  </Button>
+                  <button type="button" onClick={showWizard} className="text-xs text-gold hover:underline">
+                    Buka panduan
+                  </button>
+                </div>
+              </Card>
+            ) : (
+              <OnboardingPanel
+                hasBarber={allUsers.length > 0}
+                hasWeeklyPattern={(attSchedules || []).some((row) => (row.schedule || []).some((d) => !d.isDayOff))}
+                hasCustomPresets={Array.isArray(tenant?.shiftPresets) && tenant.shiftPresets.length > 0}
+                onOpenPresets={() => setShowPresetEditor(true)}
+                onCopyLastWeek={() => setConfirmCopy(true)}
+                onAddFirst={() => handleCellClick(weekDays[0], TIME_SLOTS[0])}
+                onDismiss={dismissWizard}
+                copyLoading={copyWeekMut.isPending}
+              />
+            )
           )}
 
           {/* Hours summary */}
@@ -1289,6 +1320,149 @@ function TASchedulePageInner() {
           </div>
         </div>
       </Modal>
+    </div>
+  )
+}
+
+// Wizard panduan saat minggu kosong. 4 langkah dengan status auto-detect.
+function OnboardingPanel({
+  hasBarber, hasWeeklyPattern, hasCustomPresets,
+  onOpenPresets, onCopyLastWeek, onAddFirst, onDismiss, copyLoading,
+}) {
+  const steps = [
+    {
+      id: 'staff', icon: UserCircle, done: hasBarber,
+      title: 'Tambahkan barber',
+      desc: hasBarber ? 'Sudah ada barber aktif.' : 'Belum ada barber. Tambahkan dulu di Karyawan.',
+      action: hasBarber ? null : { label: 'Kelola Karyawan', to: '/admin/users' },
+    },
+    {
+      id: 'pattern', icon: CalendarClock, done: hasWeeklyPattern,
+      title: 'Atur Pola Mingguan',
+      desc: hasWeeklyPattern
+        ? 'Pola jam kerja mingguan sudah terisi. Pola ini akan muncul sebagai chip "default" di kalender.'
+        : 'Tentukan jam masuk/keluar default per hari. Pola ini jadi dasar perhitungan terlambat & chip default di kalender.',
+      action: { label: hasWeeklyPattern ? 'Lihat Pola' : 'Atur Pola', to: '/admin/attendance?tab=jadwal' },
+    },
+    {
+      id: 'preset', icon: Sliders, done: true, // selalu ada (default ada bawaan)
+      title: hasCustomPresets ? 'Preset Shift sudah disesuaikan' : 'Preset Shift bawaan aktif',
+      desc: hasCustomPresets
+        ? 'Preset shift mengikuti pengaturan tenant.'
+        : 'Pagi 08–14, Sore 14–22, Full 08–22. Bisa disesuaikan kalau jam buka toko berbeda.',
+      action: { label: 'Atur Preset', onClick: onOpenPresets },
+    },
+    {
+      id: 'add', icon: ListChecks, done: false,
+      title: 'Tambah shift pertama',
+      desc: 'Klik sel kalender kosong, atau pakai tombol di bawah. Bila ada chip bergaris putus-putus, klik untuk pakai jam pola mingguan.',
+      action: hasBarber ? { label: 'Tambah Sekarang', onClick: onAddFirst, primary: true } : null,
+    },
+  ]
+
+  const completedCount = steps.filter((s) => s.done).length
+
+  return (
+    <div className="rounded-2xl border border-gold/20 bg-gradient-to-b from-gold/[0.04] to-transparent p-5 sm:p-6">
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <h3 className="font-display text-lg sm:text-xl font-bold text-off-white">Panduan Cepat: Mulai Jadwal Shift</h3>
+          <p className="text-xs text-muted mt-1">
+            Minggu ini belum ada jadwal. Ikuti {steps.length} langkah ringkas berikut — kebanyakan sudah otomatis bila data dasar sudah ada.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="text-[11px] text-muted hover:text-off-white whitespace-nowrap"
+          title="Sembunyikan panduan minggu ini"
+        >
+          Sembunyikan
+        </button>
+      </div>
+
+      {/* Progress bar */}
+      <div className="mb-5">
+        <div className="flex items-center justify-between text-[11px] text-muted mb-1.5">
+          <span>{completedCount} dari {steps.length} langkah siap</span>
+          <span className="tabular-nums">{Math.round((completedCount / steps.length) * 100)}%</span>
+        </div>
+        <div className="h-1.5 rounded-full bg-dark-card overflow-hidden">
+          <div
+            className="h-full bg-gold transition-all"
+            style={{ width: `${(completedCount / steps.length) * 100}%` }}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2.5">
+        {steps.map((step, i) => {
+          const Icon = step.icon
+          return (
+            <div
+              key={step.id}
+              className={`flex items-start gap-3 rounded-xl border p-3.5 transition-colors ${
+                step.done
+                  ? 'border-emerald-500/20 bg-emerald-500/5'
+                  : 'border-dark-border bg-dark-surface/40 hover:border-gold/30'
+              }`}
+            >
+              <div className="shrink-0 mt-0.5">
+                {step.done
+                  ? <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                  : <Circle className="w-5 h-5 text-muted" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <Icon className={`w-3.5 h-3.5 ${step.done ? 'text-emerald-400' : 'text-gold'}`} />
+                  <p className="text-sm font-medium text-off-white">
+                    <span className="text-muted mr-1">{i + 1}.</span>{step.title}
+                  </p>
+                </div>
+                <p className="text-xs text-muted mt-1">{step.desc}</p>
+              </div>
+              {step.action && (
+                <div className="shrink-0">
+                  {step.action.to ? (
+                    <Link
+                      to={step.action.to}
+                      className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                        step.action.primary
+                          ? 'bg-gold text-dark hover:bg-gold-light'
+                          : 'border border-dark-border text-muted hover:text-gold hover:border-gold/40'
+                      }`}
+                    >
+                      {step.action.label} <ChevronRight className="w-3.5 h-3.5" />
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={step.action.onClick}
+                      className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                        step.action.primary
+                          ? 'bg-gold text-dark hover:bg-gold-light'
+                          : 'border border-dark-border text-muted hover:text-gold hover:border-gold/40'
+                      }`}
+                    >
+                      {step.action.label} <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Shortcut Copy Minggu Lalu — selalu ada di bawah */}
+      <div className="mt-5 pt-5 border-t border-dark-border/60 flex items-center justify-between gap-3 flex-wrap">
+        <p className="text-xs text-muted">
+          Sudah pernah atur sebelumnya?
+        </p>
+        <Button variant="secondary" size="sm" icon={Copy} onClick={onCopyLastWeek} loading={copyLoading}>
+          Salin Minggu Lalu
+        </Button>
+      </div>
     </div>
   )
 }

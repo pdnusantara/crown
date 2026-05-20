@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   Fingerprint, CalendarClock, BarChart3, Settings2, Download,
   Loader2, AlertTriangle, Pencil, X, Navigation, ClipboardList, Save, MapPin,
@@ -50,7 +50,15 @@ const TABS = [
 
 export default function TAAttendancePage() {
   const { user } = useAuthStore()
-  const [tab, setTab] = useState('rekap')
+  const [sp, setSp] = useSearchParams()
+  const initialTab = TABS.some((t) => t.id === sp.get('tab')) ? sp.get('tab') : 'rekap'
+  const [tab, _setTab] = useState(initialTab)
+  const setTab = (id) => {
+    _setTab(id)
+    const next = new URLSearchParams(sp)
+    if (id === 'rekap') next.delete('tab'); else next.set('tab', id)
+    setSp(next, { replace: true })
+  }
 
   return (
     <div className="flex-1 p-4 sm:p-6 space-y-5">
