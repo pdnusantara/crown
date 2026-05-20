@@ -492,6 +492,44 @@ router.patch('/me', authenticate, requireRole('tenant_admin', 'super_admin'), as
       });
     }
 
+    // Audit log — supaya tab Log Aktivitas /admin/settings menerima entri
+    // realtime tiap kali tenant_admin simpan pengaturan. Ringkas: satu entri per
+    // PATCH, detail menyebut bagian yang diubah supaya bermakna tanpa spam.
+    const sectionMap = {
+      ratingConfig:        'Rating Otomatis',
+      visitReminder:       'Pengingat Kunjungan',
+      attendanceConfig:    'Absensi',
+      transactionMessages: 'Pesan Transaksi',
+      shiftPresets:        'Preset Shift',
+      bookingPage:         'Halaman Booking',
+      wilayah:             'Wilayah',
+      timezone:            'Zona Waktu',
+      logo:                'Logo',
+    };
+    const identityKeys = ['name', 'phone', 'address', 'companyName', 'npwp', 'taxAddress'];
+    const sections = [];
+    for (const [k, label] of Object.entries(sectionMap)) {
+      if (body[k] !== undefined) sections.push(label);
+    }
+    if (identityKeys.some(k => body[k] !== undefined)) sections.push('Identitas Toko');
+
+    // Sebutkan transisi enabled Rating Otomatis biar log informatif.
+    let ratingToggleNote = '';
+    if (body.ratingConfig !== undefined) {
+      const was = !!(before?.ratingConfig && before.ratingConfig.enabled);
+      const now = !!(body.ratingConfig && body.ratingConfig.enabled);
+      if (was !== now) ratingToggleNote = now ? ' — Rating Otomatis: AKTIF' : ' — Rating Otomatis: NONAKTIF';
+    }
+
+    if (sections.length > 0) {
+      await recordAudit(req, {
+        action: 'tenant.settings_update',
+        target: `tenant:${tenant.id}`,
+        detail: `Memperbarui pengaturan: ${sections.join(', ')}${ratingToggleNote}`,
+        severity: 'info',
+      });
+    }
+
     res.json({ success: true, data: tenant });
   } catch (err) {
     if (err instanceof z.ZodError) return res.status(400).json({ success: false, error: err.errors[0]?.message });
