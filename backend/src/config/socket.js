@@ -91,43 +91,36 @@ function getIO() {
 
 function emitQueueEvent(event, queueEntry) {
   if (!io || !queueEntry?.branchId) return;
-  io.to(branchRoom(queueEntry.branchId)).emit(event, queueEntry);
-  // Tenant-level dashboards (mis. TADashboard) ikut menerima
-  if (queueEntry.tenantId) {
-    io.to(tenantRoom(queueEntry.tenantId)).emit(event, queueEntry);
-  }
+  // Socket.io v4 `.to([rooms])` mengirim sekali ke setiap socket yang join
+  // di salah satu room — auto-dedupe. Sebelumnya dua `.to().emit()` terpisah
+  // bikin socket yang join keduanya (mis. kasir di branchRoom + tenantRoom)
+  // menerima event GANDA → notifikasi & toast dobel.
+  const rooms = [branchRoom(queueEntry.branchId)];
+  if (queueEntry.tenantId) rooms.push(tenantRoom(queueEntry.tenantId));
+  io.to(rooms).emit(event, queueEntry);
 }
 
 function emitBookingEvent(event, booking) {
   if (!io || !booking?.branchId) return;
-  io.to(branchRoom(booking.branchId)).emit(event, booking);
-  if (booking.tenantId) {
-    io.to(tenantRoom(booking.tenantId)).emit(event, booking);
-  }
-  // Kalau booking di-assign ke barber, kirim juga ke personal room
-  // supaya barber yang sedang offline-from-branch tetap dapat notifikasi.
-  if (booking.barberId) {
-    io.to(userRoom(booking.barberId)).emit(event, booking);
-  }
+  const rooms = [branchRoom(booking.branchId)];
+  if (booking.tenantId) rooms.push(tenantRoom(booking.tenantId));
+  // Barber yang ditugaskan: juga di-emit lewat personal room supaya tetap
+  // dapat notifikasi saat sedang tidak join branch room. Tetap aman dari
+  // dobel karena `.to([rooms])` dedupe per-socket.
+  if (booking.barberId) rooms.push(userRoom(booking.barberId));
+  io.to(rooms).emit(event, booking);
 }
 
 function emitTicketEvent(event, ticket, opts = {}) {
   if (!io || !ticket) return;
-  // Broadcast ke pembuat tiket (siapa pun perannya)
-  if (ticket.createdById) {
-    io.to(userRoom(ticket.createdById)).emit(event, ticket);
-  }
-  // Broadcast ke semua super_admin via tenant room global; untuk simplicity,
-  // emit ke tenant room tiket itu (super_admin biasanya tidak join tenant room).
-  // Solusi: tambahkan room khusus 'support'. Lihat di bawah.
-  io.to('support').emit(event, ticket);
-  // Tenant admin yang login (di-room tenant) juga ikut menerima
-  if (ticket.tenantId) {
-    io.to(tenantRoom(ticket.tenantId)).emit(event, ticket);
-  }
-  if (opts.toUserId) {
-    io.to(userRoom(opts.toUserId)).emit(event, ticket);
-  }
+  // Gabung semua room target ke array supaya socket.io dedupe per-socket
+  // (sebelumnya 4 panggilan .to().emit() terpisah → bisa dobel bila socket
+  // pengguna join beberapa room sekaligus).
+  const rooms = ['support'];
+  if (ticket.createdById) rooms.push(userRoom(ticket.createdById));
+  if (ticket.tenantId)    rooms.push(tenantRoom(ticket.tenantId));
+  if (opts.toUserId)      rooms.push(userRoom(opts.toUserId));
+  io.to(rooms).emit(event, ticket);
 }
 
 module.exports = {

@@ -11,7 +11,7 @@
 
 const cron = require('node-cron');
 const prisma = require('../config/database');
-const { getIO, tenantRoom, emitQueueEvent } = require('../config/socket');
+const { emitQueueEvent, emitBookingEvent } = require('../config/socket');
 const { upsertCustomerByPhone } = require('../services/customerService');
 
 // "YYYY-MM-DD" tanggal lokal tenant saat ini.
@@ -35,13 +35,8 @@ function tenantNowHHMM(tz) {
   }
 }
 
-function emitBookingChange(booking) {
-  try {
-    const io = getIO();
-    if (!io || !booking?.tenantId) return;
-    io.to(tenantRoom(booking.tenantId)).emit('booking:updated', booking);
-  } catch { /* observability only */ }
-}
+// Pakai helper bersama supaya dedupe room konsisten dengan endpoint lain.
+const emitBookingChange = (booking) => emitBookingEvent('booking:updated', booking);
 
 async function processTenant(tenant) {
   const todayYmd = tenantTodayYmd(tenant.timezone);
