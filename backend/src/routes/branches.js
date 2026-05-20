@@ -18,6 +18,7 @@ const branchSelect = {
   latitude: true,
   longitude: true,
   attendanceRadius: true,
+  closedDates: true,
   isActive: true,
   createdAt: true,
   tenant: { select: { id: true, name: true } },
@@ -295,6 +296,85 @@ router.put('/:id', authenticate, requireRole('super_admin', 'tenant_admin'), res
     }
     next(err);
   }
+});
+
+// ── Penutupan cabang per-tanggal (libur Lebaran, cuti bersama, dll) ─────────
+const calDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Tanggal harus YYYY-MM-DD');
+const closureBodySchema = z.object({
+  date: calDate,
+  note: z.string().trim().max(200).optional().nullable(),
+});
+
+function sanitizeClosedDates(raw) {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set();
+  const out = [];
+  for (const e of raw) {
+    if (!e || typeof e !== 'object') continue;
+    const date = String(e.date || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || seen.has(date)) continue;
+    seen.add(date);
+    out.push({ date, ...(e.note ? { note: String(e.note).slice(0, 200) } : {}) });
+    if (out.length >= 365) break;
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+// POST /api/branches/:id/closures — tambahkan/timpa tanggal tutup. Hapus
+// BarberSchedule untuk tanggal+cabang sekalian.
+router.post('/:id/closures', authenticate, requireRole('super_admin', 'tenant_admin'), resolveIdParam, async (req, res, next) => {
+  try {
+    const body = closureBodySchema.parse(req.body);
+    const existing = await prisma.branch.findFirst({ where: { id: req.params.id, deletedAt: null } });
+    if (!existing) return res.status(404).json({ success: false, error: 'Branch not found' });
+    if (req.user.role === 'tenant_admin' && existing.tenantId !== req.user.tenantId) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    const current = sanitizeClosedDates(existing.closedDates);
+    const filtered = current.filter((e) => e.date !== body.date);
+    filtered.push({ date: body.date, ...(body.note ? { note: body.note } : {}) });
+    const next = sanitizeClosedDates(filtered);
+
+    const [updated, cleared] = await prisma.$transaction([
+      prisma.branch.update({
+        where: { id: existing.id },
+        data: { closedDates: next },
+        select: branchSelect,
+      }),
+      prisma.barberSchedule.deleteMany({
+        where: { tenantId: existing.tenantId, branchId: existing.id, date: body.date },
+      }),
+    ]);
+
+    res.json({ success: true, data: { branch: updated, clearedSchedules: cleared.count } });
+  } catch (err) {
+    if (err instanceof z.ZodError) return res.status(400).json({ success: false, error: err.errors[0]?.message });
+    next(err);
+  }
+});
+
+// DELETE /api/branches/:id/closures?date=YYYY-MM-DD — buka kembali tanggal.
+router.delete('/:id/closures', authenticate, requireRole('super_admin', 'tenant_admin'), resolveIdParam, async (req, res, next) => {
+  try {
+    const date = String(req.query.date || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ success: false, error: 'Param ?date=YYYY-MM-DD wajib' });
+    }
+    const existing = await prisma.branch.findFirst({ where: { id: req.params.id, deletedAt: null } });
+    if (!existing) return res.status(404).json({ success: false, error: 'Branch not found' });
+    if (req.user.role === 'tenant_admin' && existing.tenantId !== req.user.tenantId) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+    const current = sanitizeClosedDates(existing.closedDates);
+    const next = current.filter((e) => e.date !== date);
+    const updated = await prisma.branch.update({
+      where: { id: existing.id },
+      data: { closedDates: next },
+      select: branchSelect,
+    });
+    res.json({ success: true, data: updated });
+  } catch (err) { next(err); }
 });
 
 // DELETE /api/branches/:id (soft delete)

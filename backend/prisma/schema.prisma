@@ -73,8 +73,8 @@ enum BookingStatus {
 }
 
 enum BookingSource {
-  online   // dibuat oleh pelanggan via halaman publik / aplikasi customer
-  walk_in  // diinput langsung oleh kasir di counter
+  online // dibuat oleh pelanggan via halaman publik / aplikasi customer
+  walk_in // diinput langsung oleh kasir di counter
 }
 
 enum TransactionStatus {
@@ -103,28 +103,28 @@ enum PaymentMethod {
 }
 
 model User {
-  id             String   @id @default(cuid())
-  email          String   @unique
+  id             String         @id @default(cuid())
+  email          String         @unique
   password       String
   name           String
   role           Role
   phone          String?
   photo          String?
-  commissionRate Float    @default(0.35)
+  commissionRate Float          @default(0.35)
   // Skema gaji barber: 'commission' (% omzet) | 'fixed' (gaji pokok bulanan)
   // | 'hybrid' (gaji pokok + komisi). baseSalary = gaji pokok per bulan (Rp).
-  salaryType     String   @default("commission")
-  baseSalary     Int      @default(0)
+  salaryType     String         @default("commission")
+  baseSalary     Int            @default(0)
   tenantId       String?
   branchId       String?
-  isActive       Boolean  @default(true)
+  isActive       Boolean        @default(true)
   deletedAt      DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  tenant        Tenant?  @relation(fields: [tenantId], references: [id])
-  branch        Branch?  @relation(fields: [branchId], references: [id])
-  refreshTokens RefreshToken[]
-  ratings       BarberRating[] @relation("BarberRatings")
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  tenant         Tenant?        @relation(fields: [tenantId], references: [id])
+  branch         Branch?        @relation(fields: [branchId], references: [id])
+  refreshTokens  RefreshToken[]
+  ratings        BarberRating[] @relation("BarberRatings")
   ticketsCreated Ticket[]
   ticketReplies  TicketReply[]
   attendances    Attendance[]
@@ -141,28 +141,28 @@ model RefreshToken {
 }
 
 model Tenant {
-  id           String   @id @default(cuid())
-  name         String
-  slug         String?  @unique
-  email        String   @unique
-  phone        String?
-  address      String?
-  logo         String?
+  id                  String               @id @default(cuid())
+  name                String
+  slug                String?              @unique
+  email               String               @unique
+  phone               String?
+  address             String?
+  logo                String?
   // Tax / billing identity — dipakai di faktur & metadata Duitku.
-  companyName  String?
-  npwp         String?
-  taxAddress   String?
+  companyName         String?
+  npwp                String?
+  taxAddress          String?
   // Timezone IANA (mis. "Asia/Jakarta", "Asia/Makassar", "Asia/Jayapura").
   // Dipakai untuk format tanggal & grouping laporan harian agar konsisten
   // antar viewer (kasir di Jakarta vs admin di laptop saat di luar negeri).
-  timezone     String   @default("Asia/Jakarta")
+  timezone            String               @default("Asia/Jakarta")
   // Konfigurasi tampilan halaman booking publik (/book) — disimpan sebagai
   // JSON agar field-field marketing (tagline, hero image, gallery, sosmed)
   // bisa diperluas tanpa migrasi schema setiap kali.
-  bookingPage  Json?
+  bookingPage         Json?
   // Wilayah fokus toko { provinsiId, provinsi, kabupatenId, kabupaten } —
   // acuan Laporan Wilayah & pemilih kecamatan/desa di kasir & booking.
-  wilayah      Json?
+  wilayah             Json?
   // Teks/pesan otomatis setelah transaksi { waCustomerMessage, waShareMessage }.
   // waCustomerMessage = pembuka notifikasi WA otomatis ke pelanggan;
   // waShareMessage    = penutup pesan WA yang dibagikan kasir dari struk.
@@ -174,69 +174,78 @@ model Tenant {
   //   repeat       = true: kirim ulang tiap inactiveDays | false: sekali saja
   //   sendHour     = jam (0-23, zona waktu tenant) job dijalankan
   //   message      = teks pesan, placeholder {nama} {toko} {hari}
-  visitReminder Json?
+  visitReminder       Json?
   // Konfigurasi absensi digital staf (kasir & barber) — disimpan JSON agar
   // bisa diperluas tanpa migrasi.
   //   lateToleranceMin = toleransi menit sebelum dihitung terlambat
   //   autoCheckOut     = true: job menutup absen yang lupa di-checkout
   //   maxAccuracyM     = akurasi GPS maksimum (meter) yang diterima
   //   requireSelfie    = true: staf wajib unggah foto selfie saat check-in/out
-  attendanceConfig Json?
+  attendanceConfig    Json?
   // Preset shift untuk /admin/schedule. Array {value,startTime,endTime}.
   // Bila null → frontend pakai default Pagi/Sore/Full.
-  shiftPresets Json?
-  isSuspended  Boolean  @default(false)
-  deletedAt    DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  branches     Branch[]
-  users        User[]
-  services     Service[]
-  customers    Customer[]
-  vouchers     Voucher[]
-  subscription Subscription?
-  featureFlags TenantFeatureFlag[]
-  tickets      Ticket[]
-  broadcasts   BroadcastRecipient[]
-  expenses     Expense[]
-  attendances   Attendance[]
-  workSchedules WorkSchedule[]
+  shiftPresets        Json?
+  // Konfigurasi rating otomatis via WhatsApp setelah transaksi.
+  // { enabled, autoSendMinutes, messageTemplate }
+  //   enabled            = aktifkan kirim link rating otomatis ke pelanggan
+  //   autoSendMinutes    = delay sebelum link dikirim (default 15 menit)
+  //   messageTemplate    = teks pesan, placeholder {nama} {toko} {link}
+  ratingConfig        Json?
+  isSuspended         Boolean              @default(false)
+  deletedAt           DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  branches            Branch[]
+  users               User[]
+  services            Service[]
+  customers           Customer[]
+  vouchers            Voucher[]
+  subscription        Subscription?
+  featureFlags        TenantFeatureFlag[]
+  tickets             Ticket[]
+  broadcasts          BroadcastRecipient[]
+  expenses            Expense[]
+  attendances         Attendance[]
+  workSchedules       WorkSchedule[]
 }
 
 model Branch {
-  id           String   @id @default(cuid())
-  tenantId     String
+  id               String        @id @default(cuid())
+  tenantId         String
   // Kode pendek per cabang dipakai di URL (mis. "main", "cab1") — unik per tenant.
   // Nullable supaya branch lama tetap valid sebelum di-backfill.
-  code         String?
-  name         String
-  address      String?
-  phone        String?
-  openTime     String   @default("09:00")
-  closeTime    String   @default("21:00")
+  code             String?
+  name             String
+  address          String?
+  phone            String?
+  openTime         String        @default("09:00")
+  closeTime        String        @default("21:00")
   // Titik koordinat cabang untuk geofence absensi digital. Staf hanya bisa
   // check-in bila berada dalam radius `attendanceRadius` meter dari titik ini.
   // Null = absensi belum dikonfigurasi untuk cabang ini.
   latitude         Float?
   longitude        Float?
-  attendanceRadius Int      @default(100)
-  isActive     Boolean  @default(true)
-  deletedAt    DateTime?
-  createdAt    DateTime @default(now())
-  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  users        User[]
-  transactions Transaction[]
-  queues       Queue[]
-  bookings     Booking[]
-  shifts       Shift[]
-  expenses     Expense[]
-  attendances  Attendance[]
+  attendanceRadius Int           @default(100)
+  // Tanggal-tanggal cabang tutup (libur Lebaran, cuti bersama, dst).
+  // Array of {date: "YYYY-MM-DD", note?: string}. Maks 365 entri.
+  closedDates      Json?
+  isActive         Boolean       @default(true)
+  deletedAt        DateTime?
+  createdAt        DateTime      @default(now())
+  tenant           Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  users            User[]
+  transactions     Transaction[]
+  queues           Queue[]
+  bookings         Booking[]
+  shifts           Shift[]
+  expenses         Expense[]
+  attendances      Attendance[]
 
   @@unique([tenantId, code])
 }
 
 model Service {
-  id               String   @id @default(cuid())
+  id               String            @id @default(cuid())
   tenantId         String
   name             String
   description      String?
@@ -244,34 +253,34 @@ model Service {
   duration         Int
   category         String
   icon             String?
-  isActive         Boolean  @default(true)
+  isActive         Boolean           @default(true)
   deletedAt        DateTime?
-  createdAt        DateTime @default(now())
-  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt        DateTime          @default(now())
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   transactionItems TransactionItem[]
 }
 
 model Customer {
-  id            String    @id @default(cuid())
-  tenantId      String
-  name          String
-  phone         String
-  email         String?
-  gender        String?
-  birthDate     DateTime?
-  address       Json?
-  loyaltyPoints Int       @default(0)
-  visitCount    Int       @default(0)
-  notes         String?
+  id             String         @id @default(cuid())
+  tenantId       String
+  name           String
+  phone          String
+  email          String?
+  gender         String?
+  birthDate      DateTime?
+  address        Json?
+  loyaltyPoints  Int            @default(0)
+  visitCount     Int            @default(0)
+  notes          String?
   // Kapan pengingat kunjungan WhatsApp terakhir dikirim ke pelanggan ini —
   // dipakai job visitReminder untuk cegah pesan berulang/spam.
   lastReminderAt DateTime?
-  deletedAt     DateTime?
-  createdAt     DateTime  @default(now())
-  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  transactions  Transaction[]
-  bookings      Booking[]
-  pointHistory  PointHistory[]
+  deletedAt      DateTime?
+  createdAt      DateTime       @default(now())
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  transactions   Transaction[]
+  bookings       Booking[]
+  pointHistory   PointHistory[]
 }
 
 // Ledger imutabel pergerakan loyalty points — single source of truth untuk
@@ -282,63 +291,66 @@ model Customer {
 //   - redeem: poin dipakai (future)
 //   - expire: poin kadaluwarsa (future)
 model PointHistory {
-  id          String   @id @default(cuid())
-  tenantId    String
-  customerId  String
-  delta       Int      // positif = nambah, negatif = kurang
-  balanceAfter Int     // snapshot saldo SETELAH operasi → audit-friendly
-  type        String   // 'earn' | 'adjust' | 'redeem' | 'expire'
-  reason      String?  // konteks (mis. "kompensasi keluhan", "ulang tahun")
-  refType     String?  // 'transaction' | 'admin' | 'system'
-  refId       String?  // id transaksi atau user yang adjust
-  actorId     String?  // user id yang melakukan adjust manual (null untuk auto)
-  createdAt   DateTime @default(now())
-  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  tenantId     String
+  customerId   String
+  delta        Int // positif = nambah, negatif = kurang
+  balanceAfter Int // snapshot saldo SETELAH operasi → audit-friendly
+  type         String // 'earn' | 'adjust' | 'redeem' | 'expire'
+  reason       String? // konteks (mis. "kompensasi keluhan", "ulang tahun")
+  refType      String? // 'transaction' | 'admin' | 'system'
+  refId        String? // id transaksi atau user yang adjust
+  actorId      String? // user id yang melakukan adjust manual (null untuk auto)
+  createdAt    DateTime @default(now())
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, customerId, createdAt])
   @@index([customerId, createdAt])
 }
 
 model Transaction {
-  id             String            @id @default(cuid())
-  tenantId       String
-  branchId       String
-  customerId     String?
+  id                  String            @id @default(cuid())
+  tenantId            String
+  branchId            String
+  customerId          String?
   // Snapshot identitas pelanggan — diisi saat walk-in tanpa registrasi atau
   // saat customer record kemudian dihapus, supaya struk & laporan tetap utuh.
-  customerName   String?
-  customerPhone  String?
-  shiftId        String?
+  customerName        String?
+  customerPhone       String?
+  shiftId             String?
   // Diisi kalau transaksi berasal dari booking (customer reservasi sebelumnya).
   // Kosong untuk walk-in murni di counter. Index agar query "transaksi per
   // booking" cepat.
-  bookingId      String?
-  subtotal       Int
-  discountType   String?
-  discountValue  Int               @default(0)
-  discountAmount Int               @default(0)
-  tax            Int               @default(0)
-  total          Int
-  paymentMethod  PaymentMethod     @default(cash)
-  cashReceived   Int?
-  change         Int?
+  bookingId           String?
+  subtotal            Int
+  discountType        String?
+  discountValue       Int               @default(0)
+  discountAmount      Int               @default(0)
+  tax                 Int               @default(0)
+  total               Int
+  paymentMethod       PaymentMethod     @default(cash)
+  cashReceived        Int?
+  change              Int?
   // Poin loyalti yang ditukar oleh pelanggan pada transaksi ini. Nilai diskonnya
   // sudah masuk di `discountAmount`. Disimpan terpisah supaya laporan bisa
   // memisahkan "diskon dari poin" vs "diskon manual/voucher".
-  pointsRedeemed Int               @default(0)
+  pointsRedeemed      Int               @default(0)
   // Poin loyalti yang DIPEROLEH pelanggan dari transaksi ini. Disimpan agar
   // bisa di-reverse persis saat transaksi dibatalkan / refund.
-  loyaltyPointsEarned Int          @default(0)
+  loyaltyPointsEarned Int               @default(0)
   // Kode voucher yang dipakai (kalau ada) — disimpan supaya usedCount voucher
   // bisa dikembalikan saat transaksi dibatalkan.
-  voucherCode    String?
-  status         TransactionStatus @default(completed)
-  createdAt      DateTime          @default(now())
-  branch         Branch            @relation(fields: [branchId], references: [id])
-  customer       Customer?         @relation(fields: [customerId], references: [id])
-  shift          Shift?            @relation(fields: [shiftId], references: [id])
-  booking        Booking?          @relation(fields: [bookingId], references: [id])
-  items          TransactionItem[]
+  voucherCode         String?
+  status              TransactionStatus @default(completed)
+  // Timestamp WA rating link dikirim ke pelanggan — null = belum dikirim.
+  // Cron `ratingLinkDispatch` pakai field ini untuk hindari kirim dobel.
+  ratingLinkSentAt    DateTime?
+  createdAt           DateTime          @default(now())
+  branch              Branch            @relation(fields: [branchId], references: [id])
+  customer            Customer?         @relation(fields: [customerId], references: [id])
+  shift               Shift?            @relation(fields: [shiftId], references: [id])
+  booking             Booking?          @relation(fields: [bookingId], references: [id])
+  items               TransactionItem[]
 
   @@index([bookingId])
   @@index([branchId, createdAt])
@@ -363,7 +375,7 @@ model Queue {
   customerName  String
   customerPhone String?
   serviceId     String?
-  serviceNames  String?     // pipe-separated names (denormalized for now; pivot table if needed later)
+  serviceNames  String? // pipe-separated names (denormalized for now; pivot table if needed later)
   barberId      String?
   barberName    String?
   type          QueueType   @default(walk_in)
@@ -448,17 +460,17 @@ model Expense {
 }
 
 model Package {
-  name             SubscriptionPackage @id
-  price            Int
-  maxBranches      Int                 @default(1)
-  maxStaff         Int                 @default(5)
-  branchAddonPrice Int                 @default(0)
-  branchAddonType  BranchAddonType     @default(monthly)
+  name                  SubscriptionPackage @id
+  price                 Int
+  maxBranches           Int                 @default(1)
+  maxStaff              Int                 @default(5)
+  branchAddonPrice      Int                 @default(0)
+  branchAddonType       BranchAddonType     @default(monthly)
   // Diskon untuk pembayaran tahunan (% dari harga 12 bulan). Default 17 ≈ 2 bulan gratis.
-  annualDiscountPercent Int             @default(17)
-  description      String?
-  features         String[]            @default([])
-  updatedAt        DateTime            @updatedAt
+  annualDiscountPercent Int                 @default(17)
+  description           String?
+  features              String[]            @default([])
+  updatedAt             DateTime            @updatedAt
 }
 
 model Subscription {
@@ -483,20 +495,20 @@ model Subscription {
 }
 
 model Invoice {
-  id             String       @id @default(cuid())
+  id             String        @id @default(cuid())
   subscriptionId String
   period         String
   amount         Int
   // Untuk audit & faktur: nilai sebelum diskon (kalau ada promo/annual).
   originalAmount Int?
-  discountAmount Int          @default(0)
+  discountAmount Int           @default(0)
   promotionCode  String?
   billingCycle   BillingCycle?
-  type           String       @default("subscription")
-  status         String       @default("pending")
+  type           String        @default("subscription")
+  status         String        @default("pending")
   paidAt         DateTime?
-  createdAt      DateTime     @default(now())
-  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  createdAt      DateTime      @default(now())
+  subscription   Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 }
 
 model TenantFeatureFlag {
@@ -537,12 +549,12 @@ model TicketReply {
 }
 
 model Broadcast {
-  id         String              @id @default(cuid())
+  id         String               @id @default(cuid())
   title      String
   message    String
-  type       BroadcastType       @default(info)
-  active     Boolean             @default(true)
-  sentAt     DateTime            @default(now())
+  type       BroadcastType        @default(info)
+  active     Boolean              @default(true)
+  sentAt     DateTime             @default(now())
   recipients BroadcastRecipient[]
 }
 
@@ -565,10 +577,10 @@ model BarberSchedule {
   tenantId  String
   branchId  String?
   staffId   String
-  date      String   // "YYYY-MM-DD" tenant-local — sama format seperti Booking.date
-  shift     String   // 'Pagi' | 'Sore' | 'Full' — label simbolik utk preset
-  startTime String   // "HH:MM"
-  endTime   String   // "HH:MM"
+  date      String // "YYYY-MM-DD" tenant-local — sama format seperti Booking.date
+  shift     String // 'Pagi' | 'Sore' | 'Full' — label simbolik utk preset
+  startTime String // "HH:MM"
+  endTime   String // "HH:MM"
   notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -578,25 +590,25 @@ model BarberSchedule {
 }
 
 model Shift {
-  id                String      @id @default(cuid())
+  id                String        @id @default(cuid())
   branchId          String
   kasirId           String
   // Snapshot nama kasir saat shift dibuka — supaya audit trail tetap valid
   // walau user di-rename atau di-deactivate.
   kasirName         String?
-  status            ShiftStatus @default(open)
-  openedAt          DateTime    @default(now())
+  status            ShiftStatus   @default(open)
+  openedAt          DateTime      @default(now())
   closedAt          DateTime?
   // Kas drawer reconciliation — semua nullable supaya kompatibel dengan
   // data lama yang belum diisi.
-  openingCash       Int?        @default(0)
+  openingCash       Int?          @default(0)
   closingCash       Int?
   expectedCash      Int?
   cashDifference    Int?
   notes             String?
   totalRevenue      Int?
   totalTransactions Int?
-  branch            Branch      @relation(fields: [branchId], references: [id])
+  branch            Branch        @relation(fields: [branchId], references: [id])
   transactions      Transaction[]
 
   @@index([branchId, status])
@@ -606,29 +618,51 @@ model Shift {
 // Rating per barber yang diberikan customer (via kasir) saat selesai transaksi.
 // Dedup constraint: 1 barber hanya bisa di-rate sekali per transaksi.
 model BarberRating {
-  id            String   @id @default(cuid())
-  tenantId      String?  // null untuk legacy data sebelum migrasi 2026-05-15
-  branchId      String?  // opsional, untuk filter per cabang di laporan
+  id            String    @id @default(cuid())
+  tenantId      String? // null untuk legacy data sebelum migrasi 2026-05-15
+  branchId      String? // opsional, untuk filter per cabang di laporan
   barberId      String
-  transactionId String?  // null kalau rating diberikan di luar konteks transaksi
-  customerId    String?  // null untuk walk-in tanpa registrasi
-  rating        Int      // 1..5
-  comment       String?  // catatan opsional dari pelanggan/kasir
-  submittedById String?  // user.id yang submit (kasir/admin)
+  transactionId String? // null kalau rating diberikan di luar konteks transaksi
+  customerId    String? // null untuk walk-in tanpa registrasi
+  rating        Int // 1..5
+  comment       String? // catatan opsional dari pelanggan/kasir
+  submittedById String? // user.id yang submit (kasir/admin)
   // === Moderation & Auto-Action (iter 2 2026-05-15) ===
-  ticketId      String?  // link ke ticket yang auto-dibuat saat rating <=2
+  ticketId      String? // link ke ticket yang auto-dibuat saat rating <=2
   // publishStatus: 'pending' (default, tidak public), 'published' (tampil di /book), 'hidden' (admin sembunyikan)
-  publishStatus String   @default("pending")
+  publishStatus String    @default("pending")
   publishedAt   DateTime?
-  publishedById String?  // admin yang approve untuk testimoni public
-  createdAt     DateTime @default(now())
-  barber        User     @relation("BarberRatings", fields: [barberId], references: [id])
+  publishedById String? // admin yang approve untuk testimoni public
+  createdAt     DateTime  @default(now())
+  barber        User      @relation("BarberRatings", fields: [barberId], references: [id])
 
   @@unique([transactionId, barberId])
   @@index([tenantId, createdAt])
   @@index([barberId, createdAt])
   @@index([branchId, createdAt])
   @@index([tenantId, publishStatus]) // untuk query public testimoni cepat
+}
+
+// Rating "barbershop" overall yang diisi pelanggan via halaman publik
+// (/rating/:transactionId). Satu transaksi punya maksimum satu ShopRating;
+// per-barber rating tetap pakai BarberRating. Submission via public link →
+// tidak butuh auth, jadi ada audit IP/UA untuk anti-spam ringan.
+model ShopRating {
+  id            String   @id @default(cuid())
+  tenantId      String
+  branchId      String
+  transactionId String   @unique
+  customerId    String?
+  rating        Int // 1..5 keseluruhan toko
+  comment       String? // opsional dari pelanggan
+  // Anti-spam audit ringan — kalau ada IP yang submit > N kali dlm 1 jam,
+  // operator bisa investigasi via /admin/ratings.
+  ipAddress     String?
+  userAgent     String?  @db.VarChar(500)
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([branchId, createdAt])
 }
 
 model AuditLog {
@@ -651,59 +685,59 @@ model SystemSetting {
 
 // Tracks payment orders created via Duitku
 model PaymentOrder {
-  id              String   @id @default(cuid())
-  merchantOrderId String   @unique
+  id              String               @id @default(cuid())
+  merchantOrderId String               @unique
   // Idempotency: jika frontend kirim key yang sama, kembalikan order existing
   // alih-alih membuat baru (mencegah double-charge dari double-click).
-  idempotencyKey  String?  @unique
+  idempotencyKey  String?              @unique
   tenantId        String
   invoiceId       String?
   subscriptionId  String?
-  type            String   // subscription | branch_addon | upgrade
+  type            String // subscription | branch_addon | upgrade
   targetPackage   SubscriptionPackage? // diisi hanya untuk type=upgrade — paket tujuan
   billingCycle    BillingCycle? // monthly | annual untuk subscription/upgrade
   promotionCode   String?
-  discountAmount  Int      @default(0)
-  amount          Int      // total final yang dibayar (sudah dikurangi diskon)
-  status          String   @default("pending") // pending | success | failed | expired | cancelled
+  discountAmount  Int                  @default(0)
+  amount          Int // total final yang dibayar (sudah dikurangi diskon)
+  status          String               @default("pending") // pending | success | failed | expired | cancelled
   paymentUrl      String?
   reference       String?
   paymentMethod   String?
   expiresAt       DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
 }
 
 // Promo / kupon — super_admin yang membuat, tenant_admin yang redeem.
 model Promotion {
-  id            String   @id @default(cuid())
-  code          String   @unique
+  id            String                @id @default(cuid())
+  code          String                @unique
   description   String?
-  discountType  String   // percent | flat
-  discountValue Int      // jika percent: 0-100. jika flat: nominal IDR.
+  discountType  String // percent | flat
+  discountValue Int // jika percent: 0-100. jika flat: nominal IDR.
   validFrom     DateTime?
   validUntil    DateTime?
-  maxUses       Int?     // total redemption maksimum (null = unlimited)
-  usedCount     Int      @default(0)
+  maxUses       Int? // total redemption maksimum (null = unlimited)
+  usedCount     Int                   @default(0)
   // Kosong = berlaku semua. Diisi = hanya berlaku pada nilai-nilai yang terdaftar.
-  appliesTo     String[] @default([]) // 'subscription' | 'upgrade' | 'branch_addon'
-  packageScope  String[] @default([]) // 'Basic' | 'Pro' | 'Enterprise'
-  cycleScope    String[] @default([]) // 'monthly' | 'annual'
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  appliesTo     String[]              @default([]) // 'subscription' | 'upgrade' | 'branch_addon'
+  packageScope  String[]              @default([]) // 'Basic' | 'Pro' | 'Enterprise'
+  cycleScope    String[]              @default([]) // 'monthly' | 'annual'
+  isActive      Boolean               @default(true)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
   redemptions   PromotionRedemption[]
 }
 
 model PromotionRedemption {
-  id             String    @id @default(cuid())
-  promotionId    String
-  tenantId       String
-  paymentOrderId String?
-  invoiceId      String?
-  discountApplied Int      @default(0)
-  redeemedAt     DateTime  @default(now())
-  promotion      Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  id              String    @id @default(cuid())
+  promotionId     String
+  tenantId        String
+  paymentOrderId  String?
+  invoiceId       String?
+  discountApplied Int       @default(0)
+  redeemedAt      DateTime  @default(now())
+  promotion       Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
 
   @@index([tenantId])
   @@index([promotionId])
@@ -713,8 +747,8 @@ model PromotionRedemption {
 model LandingTestimonial {
   id           String   @id @default(cuid())
   name         String
-  role         String?  // jabatan pemilik
-  businessName String?  // nama barbershop
+  role         String? // jabatan pemilik
+  businessName String? // nama barbershop
   message      String
   rating       Int      @default(5) // 1-5
   photoUrl     String?
@@ -758,41 +792,41 @@ model ErrorLog {
 // terhadap koordinat cabang. Status & menit terlambat diturunkan dari
 // WorkSchedule staf pada hari tersebut.
 model Attendance {
-  id            String   @id @default(cuid())
-  tenantId      String
-  branchId      String?
-  staffId       String
+  id                String    @id @default(cuid())
+  tenantId          String
+  branchId          String?
+  staffId           String
   // Snapshot identitas staf saat absen — audit trail tetap valid walau user
   // di-rename / di-deactivate / pindah cabang.
-  staffName     String?
-  staffRole     String?
+  staffName         String?
+  staffRole         String?
   // Tanggal kalender (UTC-midnight, mewakili hari lokal tenant).
-  date          DateTime
-  checkInAt     DateTime?
-  checkOutAt    DateTime?
-  checkInLat       Float?
-  checkInLng       Float?
-  checkInDistance  Float?   // meter dari titik cabang saat check-in
-  checkInPhoto     String?  // URL foto selfie check-in (bila requireSelfie aktif)
-  checkOutLat      Float?
-  checkOutLng      Float?
-  checkOutDistance Float?
-  checkOutPhoto    String?
+  date              DateTime
+  checkInAt         DateTime?
+  checkOutAt        DateTime?
+  checkInLat        Float?
+  checkInLng        Float?
+  checkInDistance   Float? // meter dari titik cabang saat check-in
+  checkInPhoto      String? // URL foto selfie check-in (bila requireSelfie aktif)
+  checkOutLat       Float?
+  checkOutLng       Float?
+  checkOutDistance  Float?
+  checkOutPhoto     String?
   // present | late | absent | leave  — 'absent'/'leave' bisa diisi manual admin.
-  status        String   @default("present")
-  lateMinutes       Int   @default(0)
-  earlyLeaveMinutes Int   @default(0)
-  workedMinutes Int?               // checkOut - checkIn (menit)
+  status            String    @default("present")
+  lateMinutes       Int       @default(0)
+  earlyLeaveMinutes Int       @default(0)
+  workedMinutes     Int? // checkOut - checkIn (menit)
   // Snapshot jadwal kerja efektif hari itu — supaya rekap historis tak berubah
   // saat admin mengedit WorkSchedule di kemudian hari.
-  scheduleStart String?
-  scheduleEnd   String?
-  note          String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  branch        Branch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  staff         User     @relation(fields: [staffId], references: [id])
+  scheduleStart     String?
+  scheduleEnd       String?
+  note              String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  branch            Branch?   @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  staff             User      @relation(fields: [staffId], references: [id])
 
   @@unique([staffId, date])
   @@index([tenantId, date])

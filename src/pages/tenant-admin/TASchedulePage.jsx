@@ -7,12 +7,13 @@ import {
   LayoutGrid, List as ListIcon, Eraser, ArrowDownAZ, Users, Clock,
   Fingerprint, Sliders, Save, RotateCcw,
   CheckCircle2, Circle, UserCircle, ListChecks, CalendarClock,
+  Lock, Unlock,
 } from 'lucide-react'
 import { startOfWeek, addDays, format, addWeeks, subWeeks } from 'date-fns'
 import { id as idLocale, enUS as enLocale } from 'date-fns/locale'
 import { useAuthStore } from '../../store/authStore.js'
 import { useUsers } from '../../hooks/useUsers.js'
-import { useBranches } from '../../hooks/useBranches.js'
+import { useBranches, useCloseBranchDate, useReopenBranchDate } from '../../hooks/useBranches.js'
 import { useTenant, useUpdateMyTenant } from '../../hooks/useTenants.js'
 import {
   useBarberSchedules, useCreateBarberSchedule, useDeleteBarberSchedule,
@@ -89,6 +90,8 @@ function TASchedulePageInner() {
   const { data: branches = [] } = useBranches(user?.tenantId)
   const { data: tenant } = useTenant(user?.tenantId)
   const updateTenant = useUpdateMyTenant()
+  const closeBranchDate = useCloseBranchDate()
+  const reopenBranchDate = useReopenBranchDate()
   // Pola kerja mingguan barber (WorkSchedule) — untuk peringatan "hari libur" saat
   // admin assign shift di tanggal yang dipola mingguannya libur. Gracefully fail
   // bila fitur attendance tidak aktif di tenant.
@@ -104,6 +107,39 @@ function TASchedulePageInner() {
     return raw.map((p, i) => ({ ...p, color: PRESET_COLORS[i % PRESET_COLORS.length] }))
   }, [tenant?.shiftPresets])
   const [showPresetEditor, setShowPresetEditor] = useState(false)
+  // Modal "Tutup/Buka Cabang" — { date: Date, mode: 'close'|'reopen' }
+  const [closureModal, setClosureModal] = useState(null)
+
+  // Lookup penutupan: { branchId → { ymd → {date, note} } }
+  const closureLookup = useMemo(() => {
+    const map = {}
+    for (const b of branches) {
+      const arr = Array.isArray(b.closedDates) ? b.closedDates : []
+      const byDate = {}
+      for (const c of arr) {
+        if (c?.date) byDate[c.date] = c
+      }
+      map[b.id] = byDate
+    }
+    return map
+  }, [branches])
+
+  // Apakah seluruh cabang yg relevan tutup di tanggal ini?
+  // - Bila branchFilter spesifik: tutup hanya jika cabang itu tutup.
+  // - Bila 'all': tutup hanya jika SEMUA cabang tutup (jarang). Untuk UI
+  //   kami tandai "sebagian tutup" bila >=1 cabang tutup.
+  const closureStatusForDate = (ymd) => {
+    if (branchFilter && branchFilter !== 'all') {
+      const c = closureLookup[branchFilter]?.[ymd]
+      return c ? { allClosed: true, partial: false, note: c.note || null, branchIds: [branchFilter] } : { allClosed: false, partial: false }
+    }
+    const closedBranches = branches.filter((b) => closureLookup[b.id]?.[ymd]).map((b) => b.id)
+    if (closedBranches.length === 0) return { allClosed: false, partial: false }
+    if (closedBranches.length === branches.length) {
+      return { allClosed: true, partial: false, branchIds: closedBranches, note: closureLookup[closedBranches[0]]?.[ymd]?.note || null }
+    }
+    return { allClosed: false, partial: true, branchIds: closedBranches }
+  }
 
   // Onboarding wizard: tampil saat minggu kosong kecuali admin sudah menutup.
   const wizardKey = `schedule_wizard_dismissed_${user?.tenantId || 'na'}`
@@ -232,6 +268,10 @@ function TASchedulePageInner() {
     }
     for (const day of weekDays) {
       const dateStr = format(day, 'yyyy-MM-dd')
+      // Skip ghost untuk hari yang cabang relevan tutup — supaya tidak menggoda
+      // admin mengisi shift di hari libur.
+      const cs = closureStatusForDate(dateStr)
+      if (cs.allClosed) continue
       const dow = day.getDay() // 0=Minggu, sesuai dengan WorkSchedule.dayOfWeek
       // Set staf yang sudah punya BarberSchedule di tanggal ini.
       const taken = new Set(weekSchedules.filter((s) => s.date === dateStr).map((s) => s.staffId))
@@ -259,7 +299,8 @@ function TASchedulePageInner() {
       }
     }
     return map
-  }, [allUsers, weekDays, weekSchedules, wsLookup, branchFilter, roleFilter])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allUsers, weekDays, weekSchedules, wsLookup, branchFilter, roleFilter, branches, closureLookup])
 
   // Tambah shift dari ghost chip — sama seperti handleCellClick tapi
   // pre-fill staf & jam dari WorkSchedule.
@@ -890,13 +931,47 @@ function TASchedulePageInner() {
                   <div className="grid border-b border-dark-border" style={{ gridTemplateColumns: '80px repeat(7, 1fr)' }}>
                     <div className="p-3 text-xs text-muted" />
                     {weekDays.map((day, i) => {
-                      const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
+                      const dateStr = format(day, 'yyyy-MM-dd')
+                      const isToday = dateStr === format(new Date(), 'yyyy-MM-dd')
+                      const cs = closureStatusForDate(dateStr)
                       return (
-                        <div key={i} className={`p-3 text-center text-xs font-medium border-l border-dark-border ${isToday ? 'text-gold' : 'text-muted'}`}>
+                        <div key={i} className={`p-2 text-center text-xs font-medium border-l border-dark-border relative ${
+                          cs.allClosed ? 'bg-red-500/10' : cs.partial ? 'bg-amber-500/5' : ''
+                        } ${isToday ? 'text-gold' : 'text-muted'}`}>
                           <div>{DAY_NAMES[i]}</div>
                           <div className={`text-base font-bold mt-0.5 ${isToday ? 'w-7 h-7 bg-gold text-dark rounded-full flex items-center justify-center mx-auto' : 'text-off-white'}`}>
                             {format(day, 'd')}
                           </div>
+                          {cs.allClosed && (
+                            <button
+                              type="button"
+                              onClick={() => setClosureModal({ date: day, mode: 'reopen' })}
+                              className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] bg-red-500/20 border border-red-500/40 text-red-300 hover:bg-red-500/30 transition-colors"
+                              title={cs.note || 'Cabang tutup tanggal ini'}
+                            >
+                              <Lock className="w-2.5 h-2.5" /> TUTUP
+                            </button>
+                          )}
+                          {!cs.allClosed && cs.partial && (
+                            <button
+                              type="button"
+                              onClick={() => setClosureModal({ date: day, mode: 'close' })}
+                              className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 transition-colors"
+                              title="Sebagian cabang tutup"
+                            >
+                              <Lock className="w-2.5 h-2.5" /> {cs.branchIds.length}
+                            </button>
+                          )}
+                          {!cs.allClosed && !cs.partial && !bulkMode && (
+                            <button
+                              type="button"
+                              onClick={() => setClosureModal({ date: day, mode: 'close' })}
+                              className="mt-1 text-[9px] text-muted/60 hover:text-red-300 transition-colors"
+                              title="Tutup cabang tanggal ini"
+                            >
+                              Tutup?
+                            </button>
+                          )}
                         </div>
                       )
                     })}
@@ -909,18 +984,21 @@ function TASchedulePageInner() {
                       {weekDays.map((day, di) => {
                         const cellScheds = getScheduleForCell(day, slot)
                         const dateKey = format(day, 'yyyy-MM-dd')
-                        const cellGhosts = bulkMode ? [] : (ghostMap[`${dateKey}|${slot}`] || [])
+                        const dayClosure = closureStatusForDate(dateKey)
+                        const cellGhosts = bulkMode || dayClosure.allClosed ? [] : (ghostMap[`${dateKey}|${slot}`] || [])
                         const isDropHover = dropHover === dateKey && !!draggedId
                         return (
                           <div
                             key={di}
-                            onClick={() => handleCellClick(day, slot)}
-                            onDragOver={(e) => handleDragOver(e, dateKey)}
+                            onClick={() => !dayClosure.allClosed && handleCellClick(day, slot)}
+                            onDragOver={(e) => !dayClosure.allClosed && handleDragOver(e, dateKey)}
                             onDragLeave={() => dropHover === dateKey && setDropHover(null)}
-                            onDrop={(e) => handleDrop(e, day)}
+                            onDrop={(e) => !dayClosure.allClosed && handleDrop(e, day)}
                             className={`min-h-[56px] border-l border-dark-border/50 p-1 transition-colors relative ${
-                              bulkMode ? '' : 'cursor-pointer'
-                            } ${isDropHover ? 'bg-gold/15 ring-2 ring-gold/40 ring-inset' : 'hover:bg-dark-card/30'}`}
+                              dayClosure.allClosed
+                                ? 'bg-red-500/[0.04] cursor-not-allowed'
+                                : bulkMode ? '' : 'cursor-pointer'
+                            } ${isDropHover ? 'bg-gold/15 ring-2 ring-gold/40 ring-inset' : (dayClosure.allClosed ? '' : 'hover:bg-dark-card/30')}`}
                           >
                             {cellScheds.map(sch => <ChipSchedule key={sch.id} sch={sch} dense />)}
                             {cellGhosts.map((g) => (
@@ -963,23 +1041,30 @@ function TASchedulePageInner() {
                   const isToday = dateStr === format(new Date(), 'yyyy-MM-dd')
                   const isActive = i === activeDayIdx
                   const count = weekSchedules.filter(s => s.date === dateStr).length
+                  const cs = closureStatusForDate(dateStr)
                   return (
                     <button
                       key={i}
                       onClick={() => setActiveDayIdx(i)}
                       className={`snap-start flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2 rounded-xl border transition-all min-w-[64px] ${
                         isActive
-                          ? 'bg-gold text-dark border-gold'
-                          : `bg-dark-card border-dark-border ${isToday ? 'text-gold' : 'text-muted'}`
+                          ? cs.allClosed ? 'bg-red-500/80 text-white border-red-500' : 'bg-gold text-dark border-gold'
+                          : cs.allClosed
+                            ? 'bg-red-500/10 border-red-500/30 text-red-300'
+                            : `bg-dark-card border-dark-border ${isToday ? 'text-gold' : 'text-muted'}`
                       }`}
                     >
                       <span className="text-[10px] uppercase tracking-wide font-medium">{DAY_NAMES[i]}</span>
-                      <span className={`text-lg font-bold tabular-nums ${isActive ? '' : isToday ? 'text-gold' : 'text-off-white'}`}>{format(day, 'd')}</span>
-                      {count > 0 && (
+                      <span className={`text-lg font-bold tabular-nums ${isActive ? '' : isToday ? 'text-gold' : 'text-off-white'} ${cs.allClosed && !isActive ? 'text-red-300' : ''}`}>{format(day, 'd')}</span>
+                      {cs.allClosed ? (
+                        <span className={`text-[10px] inline-flex items-center gap-0.5 ${isActive ? 'text-white/90' : 'text-red-300'}`}>
+                          <Lock className="w-2.5 h-2.5" /> Tutup
+                        </span>
+                      ) : count > 0 ? (
                         <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isActive ? 'bg-dark/20 text-dark' : 'bg-gold/15 text-gold'}`}>
                           {count}
                         </span>
-                      )}
+                      ) : null}
                     </button>
                   )
                 })}
@@ -988,26 +1073,53 @@ function TASchedulePageInner() {
               {(() => {
                 const day = weekDays[activeDayIdx]
                 const dateStr = format(day, 'yyyy-MM-dd')
+                const dayCs = closureStatusForDate(dateStr)
                 const daySch = [...weekSchedules]
                   .filter(s => s.date === dateStr)
                   .sort((a, b) => a.startTime.localeCompare(b.startTime))
                 return (
-                  <Card className="p-4">
-                    <div className="flex items-center justify-between mb-3">
+                  <Card className={`p-4 ${dayCs.allClosed ? 'border-red-500/30 bg-red-500/[0.03]' : ''}`}>
+                    <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
                       <h3 className="font-semibold text-off-white text-sm">
                         {format(day, 'EEEE, d MMMM yyyy', { locale: dateLocale })}
                       </h3>
                       {!bulkMode && (
-                        <Button size="sm" icon={Plus} onClick={() => handleCellClick(day, TIME_SLOTS[0])}>
-                          <span className="hidden sm:inline">{t('tenantAdmin.schedule.addSchedule')}</span>
-                        </Button>
+                        dayCs.allClosed ? (
+                          <Button size="sm" variant="outline" icon={Unlock} onClick={() => setClosureModal({ date: day, mode: 'reopen' })}>
+                            Buka kembali
+                          </Button>
+                        ) : (
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" icon={Lock} onClick={() => setClosureModal({ date: day, mode: 'close' })}>
+                              <span className="hidden sm:inline">Tutup</span>
+                            </Button>
+                            <Button size="sm" icon={Plus} onClick={() => handleCellClick(day, TIME_SLOTS[0])}>
+                              <span className="hidden sm:inline">{t('tenantAdmin.schedule.addSchedule')}</span>
+                            </Button>
+                          </div>
+                        )
                       )}
                     </div>
+                    {dayCs.allClosed && (
+                      <div className="mb-3 flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+                        <Lock className="w-4 h-4 mt-0.5 shrink-0" />
+                        <span>
+                          <span className="font-semibold">Cabang tutup</span> tanggal ini.
+                          {dayCs.note && <> Catatan: <span className="italic">{dayCs.note}</span></>}
+                        </span>
+                      </div>
+                    )}
+                    {dayCs.partial && (
+                      <div className="mb-3 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                        <Lock className="w-4 h-4 mt-0.5 shrink-0" />
+                        <span>{dayCs.branchIds.length} dari {branches.length} cabang tutup tanggal ini.</span>
+                      </div>
+                    )}
                     {isLoading ? (
                       <div className="space-y-2">
                         {[0,1,2].map(i => <div key={i} className="h-12 rounded-lg bg-dark-card animate-pulse" />)}
                       </div>
-                    ) : daySch.length === 0 ? (
+                    ) : daySch.length === 0 && !dayCs.allClosed ? (
                       <button
                         onClick={() => handleCellClick(day, TIME_SLOTS[0])}
                         className="w-full py-8 rounded-xl border border-dashed border-dark-border text-center hover:border-gold/40 transition-colors"
@@ -1016,6 +1128,11 @@ function TASchedulePageInner() {
                         <p className="text-sm font-medium text-off-white">{t('tenantAdmin.schedule.noScheduleOnDay')}</p>
                         <p className="text-xs text-muted mt-0.5">{t('tenantAdmin.schedule.tapToAdd')}</p>
                       </button>
+                    ) : daySch.length === 0 && dayCs.allClosed ? (
+                      <div className="w-full py-8 rounded-xl border border-dashed border-red-500/30 text-center">
+                        <Lock size={20} className="mx-auto mb-2 text-red-400/70" />
+                        <p className="text-sm text-red-200/80">Tidak ada shift karena cabang tutup.</p>
+                      </div>
                     ) : (
                       <div className="space-y-2">
                         {daySch.map(sch => {
@@ -1260,6 +1377,37 @@ function TASchedulePageInner() {
         </div>
       </Modal>
 
+      {/* Modal — Tutup / Buka Cabang Tanggal Ini */}
+      <ClosureModal
+        isOpen={!!closureModal}
+        date={closureModal?.date || null}
+        mode={closureModal?.mode || 'close'}
+        branches={branches}
+        branchFilter={branchFilter}
+        closureLookup={closureLookup}
+        onClose={() => setClosureModal(null)}
+        onSubmit={async ({ branchIds, note }) => {
+          try {
+            const date = format(closureModal.date, 'yyyy-MM-dd')
+            if (closureModal.mode === 'close') {
+              for (const bid of branchIds) {
+                await closeBranchDate.mutateAsync({ branchId: bid, date, note: note || null })
+              }
+              toast.success(`Cabang ditandai TUTUP pada ${format(closureModal.date, 'd MMM yyyy', { locale: dateLocale })}.`)
+            } else {
+              for (const bid of branchIds) {
+                await reopenBranchDate.mutateAsync({ branchId: bid, date })
+              }
+              toast.success(`Cabang dibuka kembali pada ${format(closureModal.date, 'd MMM yyyy', { locale: dateLocale })}.`)
+            }
+            setClosureModal(null)
+          } catch (err) {
+            toast.error(err?.response?.data?.error || 'Gagal memperbarui penutupan cabang.')
+          }
+        }}
+        saving={closeBranchDate.isPending || reopenBranchDate.isPending}
+      />
+
       {/* Modal — Atur Preset Shift (tenant-level) */}
       <PresetEditorModal
         isOpen={showPresetEditor}
@@ -1366,6 +1514,125 @@ function TASchedulePageInner() {
         </div>
       </Modal>
     </div>
+  )
+}
+
+// Modal Tutup/Buka cabang per-tanggal. Mendukung multi-cabang dengan checkbox.
+function ClosureModal({ isOpen, date, mode, branches, branchFilter, closureLookup, onClose, onSubmit, saving }) {
+  // Pre-select: bila branchFilter spesifik → cabang itu saja.
+  // Bila mode 'reopen' → semua cabang yang tutup di tanggal ini.
+  const [selected, setSelected] = useState(() => new Set())
+  const [note, setNote] = useState('')
+
+  useEffect(() => {
+    if (!isOpen || !date) return
+    const ymd = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+    const initial = new Set()
+    if (mode === 'reopen') {
+      branches.forEach((b) => { if (closureLookup[b.id]?.[ymd]) initial.add(b.id) })
+    } else if (branchFilter && branchFilter !== 'all') {
+      initial.add(branchFilter)
+    } else if (branches.length === 1) {
+      initial.add(branches[0].id)
+    }
+    setSelected(initial)
+    // Pre-fill note from existing closure (any branch).
+    const existing = branches.map((b) => closureLookup[b.id]?.[ymd]?.note).find(Boolean)
+    setNote(mode === 'close' ? (existing || '') : '')
+  }, [isOpen, date, mode, branches, branchFilter, closureLookup])
+
+  if (!isOpen || !date) return null
+
+  const toggleBranch = (id) => setSelected((s) => {
+    const n = new Set(s)
+    if (n.has(id)) n.delete(id); else n.add(id)
+    return n
+  })
+  const toggleAll = () => setSelected((s) =>
+    s.size === branches.length ? new Set() : new Set(branches.map((b) => b.id))
+  )
+
+  const isClose = mode === 'close'
+  const title = isClose ? 'Tutup Cabang Tanggal Ini' : 'Buka Kembali Cabang'
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={title}>
+      <div className="space-y-4">
+        <div className={`rounded-lg border px-3 py-2 ${
+          isClose ? 'border-red-500/30 bg-red-500/5' : 'border-emerald-500/30 bg-emerald-500/5'
+        }`}>
+          <p className="text-sm text-off-white font-medium">
+            {date.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          </p>
+          <p className="text-xs text-muted mt-1">
+            {isClose
+              ? 'Semua shift terjadwal pada cabang & tanggal ini akan dihapus. Booking publik juga sebaiknya tidak menerima reservasi di tanggal ini (perlu integrasi /book).'
+              : 'Cabang akan menerima booking & jadwal lagi mulai tanggal ini.'}
+          </p>
+        </div>
+
+        {branches.length > 1 && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium text-muted">Pilih cabang</label>
+              <button type="button" onClick={toggleAll} className="text-[11px] text-gold hover:underline">
+                {selected.size === branches.length ? 'Kosongkan' : 'Pilih semua'}
+              </button>
+            </div>
+            <div className="space-y-1.5 max-h-[40vh] overflow-y-auto">
+              {branches.map((b) => {
+                const checked = selected.has(b.id)
+                return (
+                  <label
+                    key={b.id}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
+                      checked
+                        ? isClose ? 'border-red-500/40 bg-red-500/10' : 'border-emerald-500/40 bg-emerald-500/10'
+                        : 'border-dark-border hover:border-gold/30'
+                    }`}
+                  >
+                    <input type="checkbox" checked={checked} onChange={() => toggleBranch(b.id)} className="accent-gold w-4 h-4" />
+                    <span className="text-sm text-off-white flex-1 truncate">{b.name}</span>
+                    {mode === 'reopen' && closureLookup[b.id]?.[`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`] && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-300">Tutup</span>
+                    )}
+                  </label>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {isClose && (
+          <div>
+            <label className="block text-sm font-medium text-muted mb-1.5">Catatan (opsional)</label>
+            <input
+              type="text"
+              value={note}
+              onChange={(e) => setNote(e.target.value.slice(0, 200))}
+              placeholder="mis. Libur Lebaran, Pemeliharaan AC"
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60"
+              maxLength={200}
+            />
+            <p className="text-[11px] text-muted mt-1">Tampil di kalender saat staf/admin melihat tanggal ini.</p>
+          </div>
+        )}
+
+        <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2 border-t border-dark-border">
+          <Button variant="outline" fullWidth onClick={onClose} disabled={saving}>Batal</Button>
+          <Button
+            fullWidth
+            icon={isClose ? Lock : Unlock}
+            onClick={() => onSubmit({ branchIds: Array.from(selected), note: note.trim() })}
+            loading={saving}
+            disabled={selected.size === 0}
+            className={isClose ? '!bg-red-600 hover:!bg-red-500 !text-white' : ''}
+          >
+            {isClose ? 'Tutup Cabang' : 'Buka Kembali'}
+          </Button>
+        </div>
+      </div>
+    </Modal>
   )
 }
 

@@ -50,3 +50,30 @@ export function useDeleteBranch() {
       qc.invalidateQueries({ queryKey: ['branches', variables.tenantId] }),
   })
 }
+
+// Tutup cabang pada tanggal tertentu (mis. Lebaran, cuti bersama).
+// Sekaligus menghapus BarberSchedule untuk tanggal+cabang itu di backend.
+export function useCloseBranchDate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ branchId, date, note }) =>
+      api.post(`/branches/${branchId}/closures`, { date, note }).then(r => r.data.data),
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: ['branches'] })
+      qc.invalidateQueries({ queryKey: ['barberSchedules'] })
+      return variables
+    },
+  })
+}
+
+export function useReopenBranchDate() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ branchId, date }) =>
+      api.delete(`/branches/${branchId}/closures`, { params: { date } }).then(r => r.data.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['branches'] })
+      qc.invalidateQueries({ queryKey: ['barberSchedules'] })
+    },
+  })
+}
