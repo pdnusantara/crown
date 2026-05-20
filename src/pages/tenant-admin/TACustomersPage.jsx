@@ -13,6 +13,7 @@ import {
   useExportCustomers, useBulkDeleteCustomers, usePointHistory,
 } from '../../hooks/useCustomers.js'
 import { useToast } from '../../components/ui/Toast.jsx'
+import { useAuthStore } from '../../store/authStore.js'
 import { WilayahSelect } from '../../components/WilayahSelect.jsx'
 import Card from '../../components/ui/Card.jsx'
 import Badge, { getSegmentBadge, getStatusBadge } from '../../components/ui/Badge.jsx'
@@ -168,14 +169,16 @@ function CustomerMobileCard({ customer, onOpen, onEdit, onDelete, selected, onTo
       }`}
     >
       <div className="flex items-start gap-3 min-w-0">
-        <input
-          type="checkbox"
-          checked={selected}
-          onClick={(e) => e.stopPropagation()}
-          onChange={() => onToggleSelect(customer.id)}
-          className="mt-1 w-4 h-4 rounded border-dark-border bg-dark-surface text-gold focus:ring-gold/40 shrink-0 cursor-pointer"
-          aria-label={`Pilih ${customer.name}`}
-        />
+        {onToggleSelect && (
+          <input
+            type="checkbox"
+            checked={selected}
+            onClick={(e) => e.stopPropagation()}
+            onChange={() => onToggleSelect(customer.id)}
+            className="mt-1 w-4 h-4 rounded border-dark-border bg-dark-surface text-gold focus:ring-gold/40 shrink-0 cursor-pointer"
+            aria-label={`Pilih ${customer.name}`}
+          />
+        )}
         <Avatar name={customer.name} size="md" />
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
@@ -216,13 +219,15 @@ function CustomerMobileCard({ customer, onOpen, onEdit, onDelete, selected, onTo
               >
                 <Edit2 className="w-3 h-3" />
               </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); onDelete(customer) }}
-                className="p-1.5 rounded-lg bg-dark-card/40 border border-dark-border/60 text-muted hover:text-red-400 hover:border-red-500/30 transition-colors"
-                aria-label="Hapus"
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
+              {onDelete && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDelete(customer) }}
+                  className="p-1.5 rounded-lg bg-dark-card/40 border border-dark-border/60 text-muted hover:text-red-400 hover:border-red-500/30 transition-colors"
+                  aria-label="Hapus"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -244,14 +249,16 @@ function CustomerTableRow({ customer, onOpen, onEdit, onDelete, selected, onTogg
         selected ? 'bg-gold/15 border-l-4 border-l-gold pl-3' : 'border-l-4 border-l-transparent'
       }`}
     >
-      <input
-        type="checkbox"
-        checked={selected}
-        onClick={(e) => e.stopPropagation()}
-        onChange={() => onToggleSelect(customer.id)}
-        className="w-4 h-4 rounded border-dark-border bg-dark-surface accent-gold focus:ring-gold/40 shrink-0 cursor-pointer"
-        aria-label={`Pilih ${customer.name}`}
-      />
+      {onToggleSelect && (
+        <input
+          type="checkbox"
+          checked={selected}
+          onClick={(e) => e.stopPropagation()}
+          onChange={() => onToggleSelect(customer.id)}
+          className="w-4 h-4 rounded border-dark-border bg-dark-surface accent-gold focus:ring-gold/40 shrink-0 cursor-pointer"
+          aria-label={`Pilih ${customer.name}`}
+        />
+      )}
       <Avatar name={customer.name} size="sm" />
       <div className="flex-1 min-w-0">
         <p className="font-medium text-off-white text-sm truncate">{customer.name}</p>
@@ -303,13 +310,15 @@ function CustomerTableRow({ customer, onOpen, onEdit, onDelete, selected, onTogg
         >
           <Edit2 className="w-3.5 h-3.5" />
         </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); onDelete(customer) }}
-          className="p-1.5 rounded-lg hover:bg-dark-card text-muted hover:text-red-400 transition-colors"
-          aria-label="Hapus"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
+        {onDelete && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(customer) }}
+            className="p-1.5 rounded-lg hover:bg-dark-card text-muted hover:text-red-400 transition-colors"
+            aria-label="Hapus"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
     </div>
   )
@@ -767,9 +776,11 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
           <div className="flex gap-2 pt-2 border-t border-dark-border/60">
             <Button variant="outline" fullWidth onClick={onClose}>Tutup</Button>
             <Button variant="outline" fullWidth icon={Edit2} onClick={() => { onEdit(customer); onClose() }}>Edit</Button>
-            <Button variant="outline" fullWidth icon={Trash2} onClick={() => onDelete(customer)} className="text-red-400 border-red-500/40 hover:bg-red-500/10">
-              Hapus
-            </Button>
+            {onDelete && (
+              <Button variant="outline" fullWidth icon={Trash2} onClick={() => onDelete(customer)} className="text-red-400 border-red-500/40 hover:bg-red-500/10">
+                Hapus
+              </Button>
+            )}
           </div>
         </div>
       )}
@@ -990,6 +1001,12 @@ export default function TACustomersPage() {
     return [...new Set(items.filter(c => c.address?.provinsi).map(c => c.address.provinsi))].sort()
   }, [stats.byProvince, items])
 
+  // Halaman ini dipakai oleh tenant_admin DAN kasir. Kasir tak punya akses
+  // backend untuk delete/bulk-delete/export, jadi UI tombol-tombol itu
+  // disembunyikan untuk role kasir (defense-in-depth: backend juga 403).
+  const { user } = useAuthStore()
+  const canManage = user?.role !== 'kasir'
+
   // Mutations
   const createM = useCreateCustomer()
   const updateM = useUpdateCustomer()
@@ -1142,16 +1159,18 @@ export default function TACustomersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={exportCSV}
-            disabled={exporting || totalItems === 0}
-            title={totalItems > 0 ? `Ekspor ${totalItems} pelanggan terfilter` : 'Tidak ada data'}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-dark-card/60 border border-dark-border text-muted text-xs font-medium hover:text-off-white hover:border-gold/40 disabled:opacity-50 transition-colors"
-          >
-            {exporting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            <span className="hidden sm:inline">Ekspor CSV</span>
-          </button>
+          {canManage && (
+            <button
+              type="button"
+              onClick={exportCSV}
+              disabled={exporting || totalItems === 0}
+              title={totalItems > 0 ? `Ekspor ${totalItems} pelanggan terfilter` : 'Tidak ada data'}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-dark-card/60 border border-dark-border text-muted text-xs font-medium hover:text-off-white hover:border-gold/40 disabled:opacity-50 transition-colors"
+            >
+              {exporting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              <span className="hidden sm:inline">Ekspor CSV</span>
+            </button>
+          )}
           <Button icon={Plus} onClick={openAdd}>Tambah Pelanggan</Button>
         </div>
       </div>
@@ -1345,7 +1364,7 @@ export default function TACustomersPage() {
       </Card>
 
       {/* ── Bulk action bar ────────────────────────────────────────────────── */}
-      {selected.size > 0 && (
+      {canManage && selected.size > 0 && (
         <div className="flex items-center justify-between gap-3 px-3 sm:px-4 py-2.5 rounded-xl bg-dark-card border-2 border-gold shadow-gold">
           <div className="text-sm text-off-white inline-flex items-center gap-2">
             <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gold text-dark text-xs font-bold tabular-nums">
@@ -1418,25 +1437,27 @@ export default function TACustomersPage() {
           {/* Mobile list */}
           <div className="block md:hidden">
             <Card className="overflow-hidden">
-              <div className="flex items-center gap-2 px-3 py-2 border-b border-dark-border bg-dark-card text-[11px] text-off-white font-medium">
-                <input
-                  type="checkbox"
-                  checked={allOnPageSelected}
-                  onChange={() => allOnPageSelected ? clearSelection() : selectAllOnPage()}
-                  className="w-4 h-4 rounded border-dark-border bg-dark-surface accent-gold focus:ring-gold/40 cursor-pointer"
-                  aria-label="Pilih semua di halaman"
-                />
-                <span>Pilih semua di halaman ({items.length})</span>
-              </div>
+              {canManage && (
+                <div className="flex items-center gap-2 px-3 py-2 border-b border-dark-border bg-dark-card text-[11px] text-off-white font-medium">
+                  <input
+                    type="checkbox"
+                    checked={allOnPageSelected}
+                    onChange={() => allOnPageSelected ? clearSelection() : selectAllOnPage()}
+                    className="w-4 h-4 rounded border-dark-border bg-dark-surface accent-gold focus:ring-gold/40 cursor-pointer"
+                    aria-label="Pilih semua di halaman"
+                  />
+                  <span>Pilih semua di halaman ({items.length})</span>
+                </div>
+              )}
               {items.map(c => (
                 <CustomerMobileCard
                   key={c.id}
                   customer={c}
                   onOpen={openDetail}
                   onEdit={openEdit}
-                  onDelete={handleDelete}
+                  onDelete={canManage ? handleDelete : undefined}
                   selected={selected.has(c.id)}
-                  onToggleSelect={toggleSelect}
+                  onToggleSelect={canManage ? toggleSelect : undefined}
                 />
               ))}
             </Card>
@@ -1446,13 +1467,15 @@ export default function TACustomersPage() {
           <div className="hidden md:block">
             <Card className="overflow-hidden">
               <div className="flex items-center gap-3 px-4 py-2.5 border-b border-dark-border bg-dark-card text-[11px] font-semibold text-off-white uppercase tracking-wider">
-                <input
-                  type="checkbox"
-                  checked={allOnPageSelected}
-                  onChange={() => allOnPageSelected ? clearSelection() : selectAllOnPage()}
-                  className="w-4 h-4 rounded border-dark-border bg-dark-surface accent-gold focus:ring-gold/40 shrink-0 cursor-pointer"
-                  aria-label="Pilih semua di halaman"
-                />
+                {canManage && (
+                  <input
+                    type="checkbox"
+                    checked={allOnPageSelected}
+                    onChange={() => allOnPageSelected ? clearSelection() : selectAllOnPage()}
+                    className="w-4 h-4 rounded border-dark-border bg-dark-surface accent-gold focus:ring-gold/40 shrink-0 cursor-pointer"
+                    aria-label="Pilih semua di halaman"
+                  />
+                )}
                 <div className="w-8 shrink-0" />
                 <div className="flex-1 min-w-0">Pelanggan</div>
                 <div className="hidden xl:block w-28 shrink-0">Provinsi</div>
@@ -1469,9 +1492,9 @@ export default function TACustomersPage() {
                   customer={c}
                   onOpen={openDetail}
                   onEdit={openEdit}
-                  onDelete={handleDelete}
+                  onDelete={canManage ? handleDelete : undefined}
                   selected={selected.has(c.id)}
-                  onToggleSelect={toggleSelect}
+                  onToggleSelect={canManage ? toggleSelect : undefined}
                 />
               ))}
             </Card>
@@ -1532,7 +1555,7 @@ export default function TACustomersPage() {
         onClose={() => setDetailId(null)}
         customerId={detailId}
         onEdit={(c) => openEdit(c)}
-        onDelete={(c) => handleDelete(c)}
+        onDelete={canManage ? ((c) => handleDelete(c)) : undefined}
       />
 
       <ConfirmDialog

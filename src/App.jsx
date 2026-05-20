@@ -65,7 +65,10 @@ const BookingsPage     = lazy(() => import('./pages/kasir/BookingsPage.jsx'))
 const TransactionsPage = lazy(() => import('./pages/kasir/TransactionsPage.jsx'))
 const ShiftClosingPage = lazy(() => import('./pages/kasir/ShiftClosingPage.jsx'))
 const KasirHelpPage    = lazy(() => import('./pages/kasir/HelpPage.jsx'))
-const KasirCustomersPage = lazy(() => import('./pages/kasir/CustomersPage.jsx'))
+// Kasir pakai komponen yang sama dengan admin agar tampilan & fitur identik.
+// Kontrol admin-only (delete/bulk/export) disembunyikan di dalam TACustomersPage
+// via deteksi user.role; backend juga sudah membatasi endpoint terkait.
+const KasirCustomersPage = lazy(() => import('./pages/tenant-admin/TACustomersPage.jsx'))
 
 const BarberDashboard  = lazy(() => import('./pages/barber/BarberDashboard.jsx'))
 const BarberQueue      = lazy(() => import('./pages/barber/BarberQueue.jsx'))
