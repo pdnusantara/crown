@@ -29,6 +29,7 @@ const pageTitleKeys = {
   '/kasir/pos':             'nav.pos',
   '/kasir/queue':           'nav.queue',
   '/kasir/bookings':        'nav.booking',
+  '/kasir/customers':       'nav.customers',
   '/kasir/transactions':    'nav.transactions',
   '/kasir/shift-closing':   'nav.shiftClose',
   '/barber/dashboard':      'nav.dashboard',

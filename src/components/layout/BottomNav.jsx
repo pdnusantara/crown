@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import {
   LayoutDashboard, Building2, BarChart3, Settings,
   CreditCard, ListOrdered, CalendarDays, Receipt,
-  Star, TrendingUp, DollarSign, MessageSquare, Menu, Fingerprint,
+  Star, TrendingUp, DollarSign, MessageSquare, Menu, Fingerprint, Users,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useTicketStats } from '../../hooks/useTickets.js'
@@ -30,6 +30,7 @@ const navConfig = {
       { labelKey: 'nav.pos',          icon: CreditCard,    path: `/${slug}/kasir/pos` },
       { labelKey: 'nav.queue',        icon: ListOrdered,   path: `/${slug}/kasir/queue` },
       { labelKey: 'nav.booking',      icon: CalendarDays,  path: `/${slug}/kasir/bookings` },
+      { labelKey: 'nav.customers',    icon: Users,         path: `/${slug}/kasir/customers` },
       { labelKey: 'nav.transactions', icon: Receipt,       path: `/${slug}/kasir/transactions` },
     ]
   },

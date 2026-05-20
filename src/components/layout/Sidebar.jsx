@@ -63,6 +63,7 @@ const navConfig = {
       { labelKey: 'nav.pos',          icon: CreditCard,    path: `/${slug}/kasir/pos` },
       { labelKey: 'nav.queue',        icon: ListOrdered,   path: `/${slug}/kasir/queue` },
       { labelKey: 'nav.booking',      icon: CalendarDays,  path: `/${slug}/kasir/bookings` },
+      { labelKey: 'nav.customers',    icon: Users,         path: `/${slug}/kasir/customers` },
       { labelKey: 'nav.transactions', icon: Receipt,       path: `/${slug}/kasir/transactions` },
       { labelKey: 'nav.shiftClose',   icon: LogIn,         path: `/${slug}/kasir/shift-closing` },
       { labelKey: 'nav.attendance',   icon: Fingerprint,   path: `/${slug}/kasir/attendance`, flag: 'attendance' },

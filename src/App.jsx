@@ -65,6 +65,7 @@ const BookingsPage     = lazy(() => import('./pages/kasir/BookingsPage.jsx'))
 const TransactionsPage = lazy(() => import('./pages/kasir/TransactionsPage.jsx'))
 const ShiftClosingPage = lazy(() => import('./pages/kasir/ShiftClosingPage.jsx'))
 const KasirHelpPage    = lazy(() => import('./pages/kasir/HelpPage.jsx'))
+const KasirCustomersPage = lazy(() => import('./pages/kasir/CustomersPage.jsx'))
 
 const BarberDashboard  = lazy(() => import('./pages/barber/BarberDashboard.jsx'))
 const BarberQueue      = lazy(() => import('./pages/barber/BarberQueue.jsx'))
@@ -328,6 +329,7 @@ export default function App() {
                 <Route path="pos"           element={<POSPage />} />
                 <Route path="queue"         element={<QueuePage />} />
                 <Route path="bookings"      element={<BookingsPage />} />
+                <Route path="customers"     element={<KasirCustomersPage />} />
                 <Route path="transactions"  element={<TransactionsPage />} />
                 <Route path="shift-closing" element={<ShiftClosingPage />} />
                 <Route path="attendance"    element={<StaffAttendancePage />} />
