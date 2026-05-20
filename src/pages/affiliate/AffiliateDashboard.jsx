@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import {
   Users, Wallet, TrendingUp, Clock, Copy, ExternalLink,
   Share2, CheckCircle, ArrowUpRight, Sparkles, AlertCircle,
+  MessageCircle, Facebook,
 } from 'lucide-react'
 import {
   useAffiliateMe, useAffiliateSelfStats, useAffiliateChart,
@@ -15,6 +16,7 @@ import Badge from '../../components/ui/Badge.jsx'
 import Modal from '../../components/ui/Modal.jsx'
 import { useToast } from '../../components/ui/Toast.jsx'
 import { formatRupiah, formatRupiahShort } from '../../utils/format.js'
+import { PLATFORM_DOMAIN } from '../../utils/platform.js'
 
 export default function AffiliateDashboard() {
   const toast = useToast()
@@ -28,8 +30,14 @@ export default function AffiliateDashboard() {
   const [payoutNote, setPayoutNote] = useState('')
   const [copiedKind, setCopiedKind] = useState(null)
 
-  const baseHost = typeof window !== 'undefined' ? window.location.host.replace(/^[^.]+\./, '') : 'sembapos.com'
-  const refUrl  = me ? `https://${baseHost.replace(/^app\.|^www\./, '')}/register?ref=${me.referralCode}` : ''
+  // Selalu pakai PLATFORM_DOMAIN (sembapos.com) — landing & form register hanya
+  // tersedia di main domain, bukan subdomain tenant. Cara lama strip subdomain
+  // dari window.location.host bisa salah saat di main domain itu sendiri (mis.
+  // "sembapos.com" → "com").
+  const refUrl  = me ? `https://${PLATFORM_DOMAIN}/register?ref=${me.referralCode}` : ''
+  const shareMessage = me
+    ? `Halo! Lagi kelola barbershop? Coba SembaPOS — kasir, antrian, booking online, semua jadi satu aplikasi. Daftar via link saya, gratis 14 hari trial:\n${refUrl}`
+    : ''
 
   const handleCopy = async (text, kind) => {
     try {
@@ -40,13 +48,22 @@ export default function AffiliateDashboard() {
   }
 
   const handleShare = async () => {
-    const message = `Kelola barbershop kamu pakai BarberOS — daftar via link saya, gratis 14 hari trial:\n${refUrl}`
     if (navigator.share) {
-      try { await navigator.share({ title: 'BarberOS', text: message, url: refUrl }) } catch { /* canceled */ }
+      try { await navigator.share({ title: 'SembaPOS', text: shareMessage, url: refUrl }) } catch { /* canceled */ }
     } else {
-      handleCopy(message, 'message')
-      toast.success('Pesan tersalin')
+      handleCopy(shareMessage, 'message')
+      toast.success('Pesan tersalin — siap tempel ke chat/postingan')
     }
+  }
+
+  const shareWhatsApp = () => {
+    window.open(`https://wa.me/?text=${encodeURIComponent(shareMessage)}`, '_blank', 'noopener')
+  }
+  const shareFacebook = () => {
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(refUrl)}`, '_blank', 'noopener')
+  }
+  const shareTelegram = () => {
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(refUrl)}&text=${encodeURIComponent(shareMessage)}`, '_blank', 'noopener')
   }
 
   // Normalize chart for sparkline render.
@@ -105,26 +122,56 @@ export default function AffiliateDashboard() {
               <Sparkles size={14} className="text-gold" />
               <p className="text-xs text-gold uppercase tracking-wide font-semibold">Link rujukan Anda</p>
             </div>
+
+            {/* URL bar */}
             <div className="flex items-center gap-2 bg-dark-surface border border-dark-border rounded-xl p-3 mb-3">
-              <code className="flex-1 font-mono text-sm text-gold truncate">{refUrl}</code>
-              <button onClick={() => handleCopy(refUrl, 'link')} className="text-muted hover:text-off-white inline-flex items-center gap-1 text-xs">
+              <code className="flex-1 font-mono text-sm text-gold truncate select-all">{refUrl}</code>
+              <button onClick={() => handleCopy(refUrl, 'link')}
+                className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-dark-card border border-dark-border text-xs text-muted hover:text-off-white">
                 {copiedKind === 'link' ? <><CheckCircle size={12} className="text-green-400" /> Tersalin</> : <><Copy size={12} /> Salin</>}
               </button>
             </div>
+
+            {/* Share buttons */}
             <div className="flex items-center gap-2 flex-wrap">
-              <Button size="sm" icon={Share2} onClick={handleShare}>Bagikan link</Button>
+              <button onClick={shareWhatsApp}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-green-500/15 border border-green-500/30 text-green-300 text-xs hover:bg-green-500/25 transition-colors">
+                <MessageCircle size={12} /> WhatsApp
+              </button>
+              <button onClick={shareTelegram}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs hover:bg-blue-500/25 transition-colors">
+                <Share2 size={12} /> Telegram
+              </button>
+              <button onClick={shareFacebook}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs hover:bg-indigo-500/25 transition-colors">
+                <Facebook size={12} /> Facebook
+              </button>
+              <button onClick={handleShare}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-dark-card border border-dark-border text-xs text-muted hover:text-off-white">
+                <Share2 size={12} /> Lainnya
+              </button>
+              <button onClick={() => handleCopy(shareMessage, 'message')}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-dark-card border border-dark-border text-xs text-muted hover:text-off-white">
+                <Copy size={11} /> Salin pesan ajakan
+                {copiedKind === 'message' && <CheckCircle size={11} className="text-green-400" />}
+              </button>
+            </div>
+
+            {/* Code & open page */}
+            <div className="flex items-center gap-2 flex-wrap mt-3 pt-3 border-t border-dark-border">
               <button onClick={() => handleCopy(me.referralCode, 'code')}
-                className="px-3 py-1.5 rounded-xl bg-dark-card border border-dark-border text-xs text-muted hover:text-off-white inline-flex items-center gap-1.5">
+                className="px-3 py-1.5 rounded-xl bg-dark-surface border border-dark-border text-xs text-muted hover:text-off-white inline-flex items-center gap-1.5">
                 <Copy size={11} />
                 Kode: <span className="font-mono text-gold font-bold">{me.referralCode}</span>
                 {copiedKind === 'code' && <CheckCircle size={11} className="text-green-400" />}
               </button>
-              <a href={`https://${baseHost.replace(/^app\.|^www\./, '')}/register?ref=${me.referralCode}`} target="_blank" rel="noreferrer"
-                className="px-3 py-1.5 rounded-xl bg-dark-card border border-dark-border text-xs text-muted hover:text-off-white inline-flex items-center gap-1.5">
+              <a href={refUrl} target="_blank" rel="noreferrer"
+                className="px-3 py-1.5 rounded-xl bg-dark-surface border border-dark-border text-xs text-muted hover:text-off-white inline-flex items-center gap-1.5">
                 <ExternalLink size={11} /> Buka halaman daftar
               </a>
             </div>
-            <p className="text-[11px] text-muted mt-3">Setiap tenant yang daftar via link Anda dan membayar langganan, Anda dapat komisi {me ? Math.round(me.commissionRate * 100) : 0}% dari nilai invoice.</p>
+
+            <p className="text-[11px] text-muted mt-3">Setiap tenant yang daftar via link Anda dan membayar langganan, Anda dapat komisi {me ? Math.round(me.commissionRate * 100) : 0}% dari nilai invoice — selama mereka berlangganan.</p>
           </Card>
         </motion.div>
       )}
