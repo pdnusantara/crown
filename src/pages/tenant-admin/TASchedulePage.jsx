@@ -5,13 +5,14 @@ import {
   ChevronLeft, ChevronRight, Trash2, RefreshCw, AlertTriangle, Plus,
   Copy, CalendarDays, Search, Download, CheckSquare, Square, X,
   LayoutGrid, List as ListIcon, Eraser, ArrowDownAZ, Users, Clock,
-  Fingerprint,
+  Fingerprint, Sliders, Save, RotateCcw,
 } from 'lucide-react'
 import { startOfWeek, addDays, format, addWeeks, subWeeks } from 'date-fns'
 import { id as idLocale, enUS as enLocale } from 'date-fns/locale'
 import { useAuthStore } from '../../store/authStore.js'
 import { useUsers } from '../../hooks/useUsers.js'
 import { useBranches } from '../../hooks/useBranches.js'
+import { useTenant, useUpdateMyTenant } from '../../hooks/useTenants.js'
 import {
   useBarberSchedules, useCreateBarberSchedule, useDeleteBarberSchedule,
   useUpdateBarberSchedule, useCopyScheduleWeek,
@@ -25,10 +26,19 @@ import Card from '../../components/ui/Card.jsx'
 import LiveBadge from '../../components/ui/LiveBadge.jsx'
 import ErrorBoundary from '../../components/ui/ErrorBoundary.jsx'
 
-const SHIFT_TYPES = [
-  { value: 'Pagi', labelKey: 'tenantAdmin.schedule.shiftMorningLabel',   startTime: '08:00', endTime: '14:00', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
-  { value: 'Sore', labelKey: 'tenantAdmin.schedule.shiftAfternoonLabel', startTime: '14:00', endTime: '22:00', color: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
-  { value: 'Full', labelKey: 'tenantAdmin.schedule.shiftFullLabel',      startTime: '08:00', endTime: '22:00', color: 'bg-gold/20 text-gold border-gold/30' },
+// Preset bawaan — dipakai bila tenant belum mengatur shiftPresets sendiri.
+const DEFAULT_PRESETS = [
+  { value: 'Pagi', startTime: '08:00', endTime: '14:00' },
+  { value: 'Sore', startTime: '14:00', endTime: '22:00' },
+  { value: 'Full', startTime: '08:00', endTime: '22:00' },
+]
+const PRESET_COLORS = [
+  'bg-blue-500/20 text-blue-300 border-blue-500/30',
+  'bg-orange-500/20 text-orange-300 border-orange-500/30',
+  'bg-gold/20 text-gold border-gold/30',
+  'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+  'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
+  'bg-sky-500/20 text-sky-300 border-sky-500/30',
 ]
 
 const BARBER_COLORS = [
@@ -68,7 +78,19 @@ function TASchedulePageInner() {
   const { user } = useAuthStore()
   const { data: allUsers = [] } = useUsers({ role: 'barber', isActive: true })
   const { data: branches = [] } = useBranches(user?.tenantId)
+  const { data: tenant } = useTenant(user?.tenantId)
+  const updateTenant = useUpdateMyTenant()
   const toast = useToast()
+
+  // Preset shift efektif: dari tenant.shiftPresets bila ada, fallback default.
+  // Setiap preset diberi warna stabil berdasarkan urutan.
+  const presets = useMemo(() => {
+    const raw = Array.isArray(tenant?.shiftPresets) && tenant.shiftPresets.length > 0
+      ? tenant.shiftPresets
+      : DEFAULT_PRESETS
+    return raw.map((p, i) => ({ ...p, color: PRESET_COLORS[i % PRESET_COLORS.length] }))
+  }, [tenant?.shiftPresets])
+  const [showPresetEditor, setShowPresetEditor] = useState(false)
 
   const [currentWeek, setCurrentWeek] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
   const weekStartStr = format(currentWeek, 'yyyy-MM-dd')
@@ -93,7 +115,7 @@ function TASchedulePageInner() {
   const [showModal, setShowModal] = useState(false)
   const [selectedCell, setSelectedCell] = useState(null)
   const [selectedSchedule, setSelectedSchedule] = useState(null)
-  const [form, setForm] = useState({ staffId: '', shift: 'Pagi', branchId: '' })
+  const [form, setForm] = useState({ staffId: '', shift: '', branchId: '', startTime: '', endTime: '' })
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [confirmCopy, setConfirmCopy] = useState(false)
   const [confirmBulk, setConfirmBulk] = useState(false)
@@ -164,7 +186,14 @@ function TASchedulePageInner() {
     const defaultBranch =
       (branchFilter && branchFilter !== 'all' ? branchFilter : null) ||
       user?.branchId || branches[0]?.id || ''
-    setForm({ staffId: allUsers[0]?.id || '', shift: 'Pagi', branchId: defaultBranch })
+    const first = presets[0] || DEFAULT_PRESETS[0]
+    setForm({
+      staffId: allUsers[0]?.id || '',
+      shift: first.value,
+      branchId: defaultBranch,
+      startTime: first.startTime,
+      endTime: first.endTime,
+    })
     setShowModal(true)
   }
 
@@ -176,7 +205,21 @@ function TASchedulePageInner() {
     }
     setSelectedSchedule(schedule)
     setSelectedCell(null)
+    setForm({
+      staffId: schedule.staffId,
+      shift: schedule.shift || (presets[0]?.value ?? ''),
+      branchId: schedule.branchId || '',
+      startTime: schedule.startTime || '',
+      endTime: schedule.endTime || '',
+    })
     setShowModal(true)
+  }
+
+  // Saat user pilih preset, isi otomatis startTime/endTime (override edit manual sebelumnya).
+  const pickPreset = (value) => {
+    const p = presets.find((x) => x.value === value)
+    if (!p) return setForm((f) => ({ ...f, shift: value }))
+    setForm((f) => ({ ...f, shift: value, startTime: p.startTime, endTime: p.endTime }))
   }
 
   const toggleSelect = (id) => {
@@ -189,17 +232,34 @@ function TASchedulePageInner() {
 
   const handleSave = async () => {
     if (!form.staffId) return toast.error(t('tenantAdmin.schedule.selectBarber'))
-    const shiftConfig = SHIFT_TYPES.find(s => s.value === form.shift) || SHIFT_TYPES[0]
+    if (!/^\d{2}:\d{2}$/.test(form.startTime) || !/^\d{2}:\d{2}$/.test(form.endTime)) {
+      return toast.error('Jam shift tidak valid (HH:MM).')
+    }
+    if (form.startTime >= form.endTime) {
+      return toast.error('Jam selesai harus setelah jam mulai.')
+    }
     try {
-      await createMut.mutateAsync({
-        staffId:   form.staffId,
-        branchId:  form.branchId || user?.branchId || null,
-        date:      format(selectedCell.date, 'yyyy-MM-dd'),
-        shift:     form.shift,
-        startTime: shiftConfig.startTime,
-        endTime:   shiftConfig.endTime,
-      })
-      toast.success(t('tenantAdmin.schedule.scheduleAdded'))
+      if (selectedSchedule) {
+        await updateMut.mutateAsync({
+          id: selectedSchedule.id,
+          staffId:   form.staffId,
+          branchId:  form.branchId || null,
+          shift:     form.shift,
+          startTime: form.startTime,
+          endTime:   form.endTime,
+        })
+        toast.success('Jadwal diperbarui.')
+      } else {
+        await createMut.mutateAsync({
+          staffId:   form.staffId,
+          branchId:  form.branchId || user?.branchId || null,
+          date:      format(selectedCell.date, 'yyyy-MM-dd'),
+          shift:     form.shift,
+          startTime: form.startTime,
+          endTime:   form.endTime,
+        })
+        toast.success(t('tenantAdmin.schedule.scheduleAdded'))
+      }
       setShowModal(false)
     } catch (err) {
       toast.error(err?.response?.data?.error || t('tenantAdmin.schedule.saveFailed'))
@@ -425,6 +485,15 @@ function TASchedulePageInner() {
           <p className="text-muted text-xs sm:text-sm mt-1">{t('tenantAdmin.schedule.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setShowPresetEditor(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs sm:text-sm text-muted hover:text-gold hover:border-gold/40 transition-all"
+            title="Atur preset jam shift"
+          >
+            <Sliders className="w-4 h-4" />
+            <span className="hidden sm:inline">Atur Preset</span>
+          </button>
           <Link
             to="/admin/attendance"
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs sm:text-sm text-muted hover:text-gold hover:border-gold/40 transition-all"
@@ -869,97 +938,125 @@ function TASchedulePageInner() {
         </>
       )}
 
-      {/* Modal */}
+      {/* Modal — Tambah / Edit jadwal (unified form) */}
       <Modal isOpen={showModal} onClose={() => setShowModal(false)}
         title={selectedSchedule ? t('tenantAdmin.schedule.scheduleDetail') : t('tenantAdmin.schedule.addSchedule')}>
-        {selectedSchedule ? (
-          <div className="space-y-4">
-            <div className="p-4 bg-dark-card rounded-xl space-y-2 text-sm">
-              <div className="flex justify-between gap-3">
-                <span className="text-muted">{t('tenantAdmin.schedule.barber')}</span>
-                <span className="text-off-white text-right truncate">{allUsers.find(s => s.id === selectedSchedule.staffId)?.name || '-'}</span>
-              </div>
-              <div className="flex justify-between gap-3">
-                <span className="text-muted">{t('tenantAdmin.schedule.date')}</span>
-                <span className="text-off-white text-right">{format(new Date(selectedSchedule.date + 'T00:00:00'), 'EEEE, d MMM yyyy', { locale: dateLocale })}</span>
-              </div>
-              <div className="flex justify-between gap-3">
-                <span className="text-muted">{t('tenantAdmin.schedule.shift')}</span>
-                <span className="text-gold font-medium">{selectedSchedule.shift}</span>
-              </div>
-              <div className="flex justify-between gap-3">
-                <span className="text-muted">{t('tenantAdmin.schedule.hours')}</span>
-                <span className="text-off-white tabular-nums">{selectedSchedule.startTime} – {selectedSchedule.endTime}</span>
-              </div>
-              {selectedSchedule.branchId && (
-                <div className="flex justify-between gap-3">
-                  <span className="text-muted">{t('tenantAdmin.schedule.branch')}</span>
-                  <span className="text-off-white text-right truncate">{branches.find(b => b.id === selectedSchedule.branchId)?.name || '—'}</span>
-                </div>
-              )}
+        <div className="space-y-4">
+          {selectedSchedule ? (
+            <p className="text-sm text-muted">
+              {format(new Date(selectedSchedule.date + 'T00:00:00'), 'EEEE, d MMMM yyyy', { locale: dateLocale })}
+            </p>
+          ) : selectedCell && (
+            <p className="text-sm text-muted">
+              {format(selectedCell.date, 'EEEE, d MMMM yyyy', { locale: dateLocale })} — {t('tenantAdmin.schedule.slot')} {selectedCell.slot}
+            </p>
+          )}
+          <div>
+            <label className="block text-sm font-medium text-muted mb-1.5">{t('tenantAdmin.schedule.barber')}</label>
+            <select
+              value={form.staffId}
+              onChange={e => setForm(f => ({ ...f, staffId: e.target.value }))}
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60"
+            >
+              {allUsers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </div>
+          {branches.length > 1 && (
+            <div>
+              <label className="block text-sm font-medium text-muted mb-1.5">{t('tenantAdmin.schedule.branch')}</label>
+              <select
+                value={form.branchId}
+                onChange={e => setForm(f => ({ ...f, branchId: e.target.value }))}
+                className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60"
+              >
+                <option value="">— {t('tenantAdmin.schedule.branchNone')} —</option>
+                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
             </div>
-            <div className="flex gap-3">
-              <Button variant="outline" fullWidth onClick={() => setShowModal(false)}>{t('tenantAdmin.schedule.close')}</Button>
+          )}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-sm font-medium text-muted">{t('tenantAdmin.schedule.shiftType')}</label>
+              <button
+                type="button"
+                onClick={() => setShowPresetEditor(true)}
+                className="inline-flex items-center gap-1 text-[11px] text-gold hover:underline"
+                title="Atur preset jam shift untuk tenant ini"
+              >
+                <Sliders className="w-3 h-3" /> Atur Preset
+              </button>
+            </div>
+            <div className="space-y-2">
+              {presets.map(s => (
+                <button
+                  key={s.value}
+                  type="button"
+                  onClick={() => pickPreset(s.value)}
+                  className={`w-full text-left px-3 py-2.5 rounded-xl border text-sm transition-all ${
+                    form.shift === s.value ? s.color : 'border-dark-border text-muted hover:border-gold/30'
+                  }`}
+                >
+                  <span className="font-medium">{s.value}</span>
+                  <span className="ml-2 text-xs opacity-70 tabular-nums">{s.startTime}–{s.endTime}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-muted mb-1.5">Mulai</label>
+              <input
+                type="time"
+                value={form.startTime}
+                onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))}
+                className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60 tabular-nums"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-muted mb-1.5">Selesai</label>
+              <input
+                type="time"
+                value={form.endTime}
+                onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))}
+                className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60 tabular-nums"
+              />
+            </div>
+          </div>
+          <p className="text-[11px] text-muted">
+            Pilih preset untuk mengisi cepat, atau ubah jam manual di atas untuk shift khusus.
+          </p>
+          {selectedSchedule ? (
+            <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
               <Button variant="danger" fullWidth icon={Trash2} onClick={() => askDelete(selectedSchedule)} loading={deleteMut.isPending}>
                 {t('tenantAdmin.schedule.delete')}
               </Button>
+              <Button fullWidth icon={Save} onClick={handleSave} loading={updateMut.isPending}>Simpan Perubahan</Button>
             </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {selectedCell && (
-              <p className="text-sm text-muted">
-                {format(selectedCell.date, 'EEEE, d MMMM yyyy', { locale: dateLocale })} — {t('tenantAdmin.schedule.slot')} {selectedCell.slot}
-              </p>
-            )}
-            <div>
-              <label className="block text-sm font-medium text-muted mb-1.5">{t('tenantAdmin.schedule.barber')}</label>
-              <select
-                value={form.staffId}
-                onChange={e => setForm(f => ({ ...f, staffId: e.target.value }))}
-                className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60"
-              >
-                {allUsers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-            </div>
-            {branches.length > 1 && (
-              <div>
-                <label className="block text-sm font-medium text-muted mb-1.5">{t('tenantAdmin.schedule.branch')}</label>
-                <select
-                  value={form.branchId}
-                  onChange={e => setForm(f => ({ ...f, branchId: e.target.value }))}
-                  className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60"
-                >
-                  <option value="">— {t('tenantAdmin.schedule.branchNone')} —</option>
-                  {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                </select>
-              </div>
-            )}
-            <div>
-              <label className="block text-sm font-medium text-muted mb-1.5">{t('tenantAdmin.schedule.shiftType')}</label>
-              <div className="space-y-2">
-                {SHIFT_TYPES.map(s => (
-                  <button
-                    key={s.value}
-                    type="button"
-                    onClick={() => setForm(f => ({ ...f, shift: s.value }))}
-                    className={`w-full text-left px-3 py-2.5 rounded-xl border text-sm transition-all ${
-                      form.shift === s.value ? s.color : 'border-dark-border text-muted hover:border-gold/30'
-                    }`}
-                  >
-                    <span className="font-medium">{s.value}</span>
-                    <span className="ml-2 text-xs opacity-70">{t(s.labelKey)}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+          ) : (
             <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
               <Button variant="outline" fullWidth onClick={() => setShowModal(false)}>{t('tenantAdmin.schedule.cancel')}</Button>
               <Button fullWidth icon={Plus} onClick={handleSave} loading={createMut.isPending}>{t('tenantAdmin.schedule.save')}</Button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </Modal>
+
+      {/* Modal — Atur Preset Shift (tenant-level) */}
+      <PresetEditorModal
+        isOpen={showPresetEditor}
+        onClose={() => setShowPresetEditor(false)}
+        initial={tenant?.shiftPresets || DEFAULT_PRESETS}
+        onSave={async (next) => {
+          try {
+            await updateTenant.mutateAsync({ shiftPresets: next })
+            toast.success('Preset shift disimpan.')
+            setShowPresetEditor(false)
+          } catch (err) {
+            toast.error(err?.response?.data?.error || 'Gagal menyimpan preset.')
+          }
+        }}
+        saving={updateTenant.isPending}
+      />
 
       <ConfirmDialog
         isOpen={!!confirmDelete}
@@ -1050,6 +1147,102 @@ function TASchedulePageInner() {
         </div>
       </Modal>
     </div>
+  )
+}
+
+function PresetEditorModal({ isOpen, onClose, initial, onSave, saving }) {
+  const { t } = useTranslation()
+  // Salin state lokal — perubahan tidak menyentuh tenant sampai user tekan Simpan.
+  const [rows, setRows] = useState([])
+  useEffect(() => {
+    if (!isOpen) return
+    const src = Array.isArray(initial) && initial.length > 0 ? initial : DEFAULT_PRESETS
+    setRows(src.map((p) => ({ value: p.value, startTime: p.startTime, endTime: p.endTime })))
+  }, [isOpen, initial])
+
+  const update = (i, patch) => setRows((arr) => arr.map((r, idx) => (idx === i ? { ...r, ...patch } : r)))
+  const remove = (i) => setRows((arr) => arr.filter((_, idx) => idx !== i))
+  const add = () => {
+    if (rows.length >= 6) return
+    setRows((arr) => [...arr, { value: `Shift ${arr.length + 1}`, startTime: '08:00', endTime: '17:00' }])
+  }
+  const reset = () => setRows(DEFAULT_PRESETS.map((p) => ({ ...p })))
+
+  const validate = () => {
+    if (rows.length === 0) return 'Minimal satu preset.'
+    const seen = new Set()
+    for (const r of rows) {
+      const v = (r.value || '').trim()
+      if (!v) return 'Label preset tidak boleh kosong.'
+      if (v.length > 20) return `Label "${v}" terlalu panjang (maks 20 karakter).`
+      const key = v.toLowerCase()
+      if (seen.has(key)) return `Label "${v}" duplikat.`
+      seen.add(key)
+      if (!/^\d{2}:\d{2}$/.test(r.startTime) || !/^\d{2}:\d{2}$/.test(r.endTime)) return `Jam preset "${v}" tidak valid.`
+      if (r.startTime >= r.endTime) return `Pada "${v}": jam selesai harus setelah jam mulai.`
+    }
+    return null
+  }
+
+  const handleSave = () => {
+    const err = validate()
+    if (err) return alert(err)
+    onSave(rows.map((r) => ({ value: r.value.trim(), startTime: r.startTime, endTime: r.endTime })))
+  }
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Atur Preset Shift">
+      <div className="space-y-4">
+        <p className="text-xs text-muted">
+          Preset memudahkan admin mengisi jam shift dengan satu klik. Tetap bisa ubah jam manual saat tambah jadwal.
+          Maks 6 preset.
+        </p>
+        <div className="space-y-2">
+          {rows.map((r, i) => (
+            <div key={i} className="grid grid-cols-12 gap-2 items-center">
+              <input
+                type="text" value={r.value}
+                onChange={(e) => update(i, { value: e.target.value })}
+                placeholder="Label (mis. Pagi)"
+                className="col-span-5 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60"
+                maxLength={20}
+              />
+              <input
+                type="time" value={r.startTime}
+                onChange={(e) => update(i, { startTime: e.target.value })}
+                className="col-span-3 bg-dark-surface border border-dark-border text-off-white rounded-lg px-2 py-2 text-sm outline-none focus:border-gold/60 tabular-nums"
+              />
+              <input
+                type="time" value={r.endTime}
+                onChange={(e) => update(i, { endTime: e.target.value })}
+                className="col-span-3 bg-dark-surface border border-dark-border text-off-white rounded-lg px-2 py-2 text-sm outline-none focus:border-gold/60 tabular-nums"
+              />
+              <button
+                type="button"
+                onClick={() => remove(i)}
+                className="col-span-1 text-muted hover:text-red-400 inline-flex justify-center"
+                aria-label={`Hapus preset ${r.value || i + 1}`}
+                title="Hapus preset"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" size="sm" icon={Plus} onClick={add} disabled={rows.length >= 6}>
+            Tambah Preset
+          </Button>
+          <Button variant="ghost" size="sm" icon={RotateCcw} onClick={reset}>
+            Reset Default
+          </Button>
+        </div>
+        <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2 border-t border-dark-border">
+          <Button variant="outline" fullWidth onClick={onClose} disabled={saving}>{t('tenantAdmin.schedule.cancel')}</Button>
+          <Button fullWidth icon={Save} onClick={handleSave} loading={saving}>Simpan Preset</Button>
+        </div>
+      </div>
+    </Modal>
   )
 }
 

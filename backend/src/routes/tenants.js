@@ -46,6 +46,7 @@ const tenantSelect = {
   transactionMessages: true,
   visitReminder: true,
   attendanceConfig: true,
+  shiftPresets: true,
   isSuspended: true,
   createdAt: true,
   updatedAt: true,
@@ -367,6 +368,14 @@ const attendanceConfigSchema = z.object({
   requireSelfie:    z.boolean().optional(),
 }).strict().nullish();
 
+// Preset shift untuk /admin/schedule: label + jam mulai/akhir. Maks 6 preset.
+const hhmm = z.string().regex(/^\d{2}:\d{2}$/, 'Format jam HH:MM');
+const shiftPresetsSchema = z.array(z.object({
+  value:     z.string().trim().min(1).max(20),
+  startTime: hhmm,
+  endTime:   hhmm,
+}).strict()).max(6).nullish();
+
 const selfUpdateSchema = z.object({
   name:        z.string().min(1).max(255).optional(),
   phone:       z.string().max(50).nullish(),
@@ -381,6 +390,7 @@ const selfUpdateSchema = z.object({
   transactionMessages: transactionMessagesSchema,
   visitReminder: visitReminderSchema,
   attendanceConfig: attendanceConfigSchema,
+  shiftPresets: shiftPresetsSchema,
 });
 // ── Upload gambar tenant (hero & galeri halaman booking) ───────────────────────
 // Gambar disimpan sebagai FILE di disk, bukan base64 di JSON tenant — supaya

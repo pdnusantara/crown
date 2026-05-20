@@ -182,6 +182,9 @@ model Tenant {
   //   maxAccuracyM     = akurasi GPS maksimum (meter) yang diterima
   //   requireSelfie    = true: staf wajib unggah foto selfie saat check-in/out
   attendanceConfig Json?
+  // Preset shift untuk /admin/schedule. Array {value,startTime,endTime}.
+  // Bila null → frontend pakai default Pagi/Sore/Full.
+  shiftPresets Json?
   isSuspended  Boolean  @default(false)
   deletedAt    DateTime?
   createdAt    DateTime @default(now())
