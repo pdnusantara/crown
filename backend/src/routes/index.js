@@ -33,6 +33,8 @@ const shopRatingRoutes = require('./shopRatings');
 const expenseRoutes = require('./expenses');
 const auditLogRoutes = require('./auditLogs');
 const attendanceRoutes = require('./attendance');
+const affiliatesRoutes = require('./affiliates');
+const affiliateSelfRoutes = require('./affiliate');
 
 // Tolak operasi tulis dari tenant yang langganannya berakhir (allowlist:
 // auth/subscriptions/payment/public/landing). GET tetap lolos.
@@ -69,5 +71,7 @@ router.use('/shop-ratings',     shopRatingRoutes);
 router.use('/expenses',         expenseRoutes);
 router.use('/audit-logs',       auditLogRoutes);
 router.use('/attendance',       attendanceRoutes);
+router.use('/affiliates',       affiliatesRoutes);
+router.use('/affiliate',        affiliateSelfRoutes);
 
 module.exports = router;

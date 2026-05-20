@@ -96,7 +96,11 @@
     "whatsappSettings": "WhatsApp Gateway",
     "promotions": "Promo Codes",
     "landing": "Landing Page",
-    "help": "Help"
+    "help": "Help",
+    "affiliates": "Affiliates",
+    "referrals": "Referrals",
+    "commissions": "Commissions",
+    "payouts": "Payouts"
   },
   "auth": {
     "login": "Sign in",

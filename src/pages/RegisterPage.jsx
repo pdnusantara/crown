@@ -4,10 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft, ArrowRight, Building2, User, Mail, Phone, Lock, AtSign,
   CheckCircle, AlertCircle, Loader2, Sparkles, Eye, EyeOff, RefreshCw,
-  Copy, ExternalLink, PartyPopper,
+  Copy, ExternalLink, PartyPopper, Handshake,
 } from 'lucide-react'
 import { useRegisterTenant, useCheckSlug } from '../hooks/useRegister.js'
 import { useLanding } from '../hooks/useLanding.js'
+import { useReferralCodeLookup } from '../hooks/useAffiliates.js'
 import { initMetaPixel, trackPixel } from '../lib/metaPixel.js'
 import { formatRupiah } from '../utils/format.js'
 import { tenantHostname, tenantLoginUrl, PLATFORM_NAME } from '../utils/platform.js'
@@ -63,9 +64,18 @@ function passwordStrength(pw) {
 export default function RegisterPage() {
   const location = useLocation()
   const initialPkg = location.state?.packageName || null
+  // Affiliate referral — diambil dari query ?ref=XXXX. Diingat di state agar
+  // tampil di header & dikirim ke backend; jika kode tidak valid, backend
+  // diam-diam mengabaikan attribution-nya (pendaftaran tetap sukses).
+  const initialRef = useMemo(() => {
+    if (typeof window === 'undefined') return ''
+    const params = new URLSearchParams(window.location.search)
+    return (params.get('ref') || '').toUpperCase().trim().slice(0, 32)
+  }, [])
   // Daftar paket diambil dari /api/landing — endpoint PUBLIK. (/api/packages
   // butuh auth, jadi tidak bisa dipakai di halaman registrasi yang publik.)
   const { data: landingData, isLoading: pkgsLoading, isError: pkgsError, refetch: refetchPkgs } = useLanding()
+  const refInfo = useReferralCodeLookup(initialRef)
   const register = useRegisterTenant()
 
   const [step, setStep] = useState(initialPkg ? 1 : 0)
@@ -144,6 +154,7 @@ export default function RegisterPage() {
         email:        form.email.trim().toLowerCase(),
         phone:        form.phone.trim(),
         password:     form.password,
+        referralCode: initialRef || undefined,
       })
       // Akun tenant TIDAK boleh aktif di domain utama (sembapos.com) — login &
       // refresh di-enforce per subdomain. Maka jangan auto-login di sini;
@@ -193,6 +204,19 @@ export default function RegisterPage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+        {/* Referral banner — terlihat saat ?ref=XXX dan affiliate aktif */}
+        {refInfo.data && (
+          <div className="mb-6 p-3 rounded-xl bg-gold/10 border border-gold/30 flex items-center gap-3 text-sm">
+            <div className="w-9 h-9 rounded-lg bg-gold/20 flex items-center justify-center flex-shrink-0">
+              <Handshake size={16} className="text-gold" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-off-white">Direkrut oleh <span className="text-gold font-semibold">{refInfo.data.name}</span></p>
+              <p className="text-[11px] text-muted">Kode rujukan {refInfo.data.code} akan terhubung otomatis dengan akun Anda.</p>
+            </div>
+          </div>
+        )}
+
         {/* Progress */}
         <div className="flex items-center justify-between mb-8 sm:mb-10" aria-label={`Langkah ${step + 1} dari ${STEPS.length}`}>
           {STEPS.map((label, i) => (

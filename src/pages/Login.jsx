@@ -261,6 +261,10 @@ export default function Login() {
         </motion.div>
 
         <p className="text-center text-muted text-xs mt-6">
+          Mau jadi mitra & dapat komisi?{' '}
+          <a href="/affiliate/register" className="text-gold hover:underline">Daftar Affiliate</a>
+        </p>
+        <p className="text-center text-muted text-xs mt-2">
           BarberOS v1.0 • Premium Barbershop Management
         </p>
       </div>

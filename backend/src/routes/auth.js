@@ -28,6 +28,9 @@ const registerSchema = z.object({
   phone:        z.string().min(8).max(20),
   password:     z.string().min(8, 'Password minimal 8 karakter').max(72),
   packageName:  z.enum(['Basic', 'Pro', 'Enterprise']).default('Basic'),
+  // Kode referral affiliate opsional (?ref=XXXX). Diabaikan jika kode invalid /
+  // affiliate tidak aktif — pendaftaran tetap berhasil supaya UX mulus.
+  referralCode: z.string().min(3).max(32).nullish(),
 });
 
 // GET /api/auth/check-slug?slug=xxx — preflight ke frontend
@@ -113,18 +116,38 @@ router.post('/register', async (req, res, next) => {
       // TenantFeatureFlag kosong → semua fitur ter-gate mati di UI.
       await seedTenantFlags(tx, tenant.id, body.packageName);
 
+      // Tautkan tenant baru ke affiliate kalau referralCode valid & affiliate aktif.
+      // Tetap silent saat kode tidak valid — pendaftaran utama tidak boleh gagal.
+      let affiliate = null;
+      if (body.referralCode) {
+        const code = body.referralCode.toUpperCase().trim();
+        affiliate = await tx.affiliate.findUnique({ where: { referralCode: code } });
+        if (affiliate && affiliate.status === 'active') {
+          await tx.affiliateReferral.create({
+            data: {
+              affiliateId:  affiliate.id,
+              tenantId:     tenant.id,
+              referralCode: code,
+              status:       'active',
+            },
+          });
+        } else {
+          affiliate = null; // batalkan attribution kalau status non-active
+        }
+      }
+
       // Audit
       await tx.auditLog.create({
         data: {
           actorId: user.id, actorName: user.name,
           action: 'tenant.register',
           target: `tenant:${tenant.id}`,
-          detail: `Self-service trial registration: pkg=${body.packageName} slug=${slug}`,
+          detail: `Self-service trial registration: pkg=${body.packageName} slug=${slug}${affiliate ? ` ref=${affiliate.referralCode}` : ''}`,
           severity: 'info',
         },
       });
 
-      return { tenant, user };
+      return { tenant, user, affiliate };
     });
 
     const payload = {
@@ -221,11 +244,20 @@ router.post('/login', async (req, res, next) => {
           redirect: `https://${PUBLIC_HOST}/login`,
         });
       }
+      if (user.role === 'affiliate') {
+        // Affiliate login dari main domain. Subdomain tenant menolak.
+        return res.status(403).json({
+          success: false,
+          error: `Akun affiliate harus login dari ${PUBLIC_HOST}`,
+          redirect: `https://${PUBLIC_HOST}/login`,
+        });
+      }
       if (user.tenantId !== req.tenant.id) {
         return res.status(403).json({ success: false, error: 'Akun ini tidak terdaftar di tenant ini' });
       }
     } else {
-      if (user.role !== 'super_admin') {
+      // Main domain: terima super_admin & affiliate (keduanya tidak punya tenant).
+      if (user.role !== 'super_admin' && user.role !== 'affiliate') {
         // Resolve tenant slug for the redirect link
         let slug = null;
         if (user.tenantId) {
@@ -391,10 +423,11 @@ router.post('/refresh', async (req, res, next) => {
     const denyReason = (() => {
       if (req.tenant) {
         if (stored.user.role === 'super_admin') return 'super_admin_on_subdomain';
+        if (stored.user.role === 'affiliate') return 'affiliate_on_subdomain';
         if (stored.user.tenantId !== req.tenant.id) return 'tenant_mismatch';
         return null;
       }
-      if (stored.user.role !== 'super_admin') return 'tenant_on_main_domain';
+      if (stored.user.role !== 'super_admin' && stored.user.role !== 'affiliate') return 'tenant_on_main_domain';
       return null;
     })();
     if (denyReason) {

@@ -7,7 +7,8 @@ import {
   Star, TrendingUp, LogOut, Sun, Moon, Search, LogIn, Languages,
   Tag, GitCompare, Megaphone, Flag, MessageSquare, Activity,
   PieChart, UserCircle, DollarSign, Package, ShieldAlert, MapPin,
-  ChevronRight, Wallet, Landmark, LifeBuoy, Fingerprint,
+  ChevronRight, Wallet, Landmark, LifeBuoy, Fingerprint, Handshake,
+  Banknote, UserPlus,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useTenantStore } from '../../store/tenantStore.js'
@@ -36,6 +37,7 @@ const navConfig = {
     { labelKey: 'nav.activityLog',  icon: Activity,        path: '/super-admin/activity-log' },
     { labelKey: 'nav.errorLogs',    icon: ShieldAlert,     path: '/super-admin/error-logs', badge: 'errorLogs' },
     { labelKey: 'nav.usage',        icon: PieChart,        path: '/super-admin/usage' },
+    { labelKey: 'nav.affiliates',   icon: Handshake,       path: '/super-admin/affiliates' },
     { labelKey: 'nav.profile',      icon: UserCircle,      path: '/super-admin/profile' },
   ],
   tenant_admin: () => [
@@ -82,6 +84,13 @@ const navConfig = {
     { labelKey: 'nav.booking', icon: CalendarDays, path: '/customer/booking' },
     { labelKey: 'nav.history', icon: Receipt,      path: '/customer/history' },
     { labelKey: 'nav.loyalty', icon: Star,         path: '/customer/loyalty' },
+  ],
+  affiliate: [
+    { labelKey: 'nav.dashboard',   icon: LayoutDashboard, path: '/affiliate/dashboard' },
+    { labelKey: 'nav.referrals',   icon: UserPlus,        path: '/affiliate/referrals' },
+    { labelKey: 'nav.commissions', icon: TrendingUp,      path: '/affiliate/commissions' },
+    { labelKey: 'nav.payouts',     icon: Banknote,        path: '/affiliate/payouts' },
+    { labelKey: 'nav.profile',     icon: UserCircle,      path: '/affiliate/profile' },
   ],
 }
 

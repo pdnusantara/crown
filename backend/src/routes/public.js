@@ -29,6 +29,128 @@ function requireTenant(req, res, next) {
   next();
 }
 
+// GET /api/public/affiliate-code/:code — lookup minimal info kode rujukan.
+// Dipakai halaman /register untuk menampilkan "Direkrut oleh: …" agar pendaftar
+// tahu kode validasi. Tidak mengembalikan PII (email/phone affiliate).
+router.get('/affiliate-code/:code', async (req, res) => {
+  try {
+    const code = String(req.params.code || '').toUpperCase().slice(0, 32);
+    if (!code) return res.json({ success: true, data: null });
+    const aff = await require('../config/database').affiliate.findUnique({
+      where: { referralCode: code },
+      select: {
+        referralCode: true, status: true,
+        displayName: true,
+        user: { select: { name: true } },
+      },
+    });
+    if (!aff || aff.status !== 'active') {
+      return res.json({ success: true, data: null });
+    }
+    res.json({
+      success: true,
+      data: {
+        code: aff.referralCode,
+        name: aff.displayName || aff.user.name,
+      },
+    });
+  } catch { res.json({ success: true, data: null }); }
+});
+
+// POST /api/public/affiliate-register — pendaftaran mitra affiliate (status=pending).
+// Berbeda dari pendaftaran tenant: tidak buat Tenant/Subscription, hanya User+Affiliate.
+const _z = require('zod');
+const affiliateRegisterSchema = _z.object({
+  name:     _z.string().min(2).max(150),
+  email:    _z.string().email(),
+  phone:    _z.string().min(8).max(20),
+  password: _z.string().min(8).max(72),
+  bio:      _z.string().max(500).optional(),
+});
+
+router.post('/affiliate-register', async (req, res, next) => {
+  try {
+    const body = affiliateRegisterSchema.parse(req.body);
+    const prisma = require('../config/database');
+    const bcrypt = require('bcryptjs');
+    const crypto = require('crypto');
+
+    const [emailUser, emailTenant] = await Promise.all([
+      prisma.user.findUnique({ where: { email: body.email }, select: { id: true } }),
+      prisma.tenant.findUnique({ where: { email: body.email }, select: { id: true } }),
+    ]);
+    if (emailUser || emailTenant) {
+      return res.status(409).json({ success: false, error: 'Email sudah terdaftar' });
+    }
+
+    // Generate referral code unik (8 char) — pola sama dengan routes/affiliates.js.
+    const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    async function uniqueCode() {
+      for (let i = 0; i < 8; i++) {
+        const b = crypto.randomBytes(8);
+        let s = ''; for (let j = 0; j < 8; j++) s += ALPHA[b[j] % ALPHA.length];
+        const exists = await prisma.affiliate.findUnique({ where: { referralCode: s }, select: { id: true } });
+        if (!exists) return s;
+      }
+      throw new Error('Failed to generate referral code');
+    }
+
+    const referralCode = await uniqueCode();
+    const passwordHash = await bcrypt.hash(body.password, 10);
+
+    const created = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email:    body.email,
+          password: passwordHash,
+          name:     body.name,
+          phone:    body.phone,
+          role:     'affiliate',
+          isActive: true,
+        },
+      });
+      return tx.affiliate.create({
+        data: {
+          userId:         user.id,
+          referralCode,
+          status:         'pending', // butuh approval SA
+          displayName:    body.name,
+          bio:            body.bio || null,
+          commissionRate: 0.10,
+        },
+      });
+    });
+
+    // Audit + broadcast ke super-admin supaya bisa langsung approve.
+    try {
+      const { recordAudit } = require('../utils/auditLog');
+      await recordAudit(null, {
+        action: 'affiliate.self_register',
+        target: `affiliate:${created.id}`,
+        detail: `${created.referralCode} — ${body.email} (status=pending)`,
+        severity: 'info',
+        actorId: null,
+        actorName: body.name,
+      });
+      const { getIO } = require('../config/socket');
+      getIO()?.to('support').emit('affiliate:created', { id: created.id, status: 'pending' });
+    } catch { /* noop */ }
+
+    res.status(201).json({
+      success: true,
+      data: {
+        referralCode: created.referralCode,
+        email:        body.email,
+        status:       'pending',
+      },
+    });
+  } catch (err) {
+    if (err?.name === 'ZodError') return res.status(400).json({ success: false, error: err.errors[0]?.message });
+    if (err?.code === 'P2002') return res.status(409).json({ success: false, error: 'Email sudah terdaftar' });
+    next(err);
+  }
+});
+
 // GET /api/public/info — nama, logo, dan konfigurasi tampilan halaman booking.
 // `bookingPage` di-fetch terpisah karena tidak masuk ke select default tenant
 // resolver (payloadnya bisa besar — base64 hero image / gallery).

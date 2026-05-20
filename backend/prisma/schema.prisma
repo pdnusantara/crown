@@ -13,6 +13,7 @@ enum Role {
   kasir
   barber
   customer
+  affiliate
 }
 
 enum SubscriptionStatus {
@@ -132,6 +133,9 @@ model User {
   // Item transaksi dengan barber ini di-assign — dipakai untuk lookup nama
   // barber di /kasir/transactions & laporan komisi.
   transactionItemsAsBarber TransactionItem[] @relation("BarberItems")
+  // Profil affiliate — diisi hanya untuk user role=affiliate. 1-1 dengan User
+  // supaya self-service dashboard cukup join via req.user.id.
+  affiliate      Affiliate?     @relation("UserAffiliate")
 }
 
 model RefreshToken {
@@ -210,6 +214,10 @@ model Tenant {
   expenses            Expense[]
   attendances         Attendance[]
   workSchedules       WorkSchedule[]
+  // Referral mitra affiliate yang merekrut tenant ini (kalau ada). Nullable —
+  // mayoritas tenant tidak datang dari affiliate. Disetel saat /auth/register
+  // bila request membawa referralCode valid.
+  affiliateReferral   AffiliateReferral?
 }
 
 model Branch {
@@ -856,4 +864,149 @@ model WorkSchedule {
 
   @@unique([staffId, dayOfWeek])
   @@index([tenantId])
+}
+
+// ── Affiliate Program ─────────────────────────────────────────────────────
+// Mitra affiliate (role=affiliate). Mereka membawa pelanggan baru (tenant)
+// via referralCode unik, dapat komisi % dari setiap invoice yang dibayar
+// tenant rujukan. Saldo dicairkan via permintaan payout manual yang di-approve
+// super-admin.
+
+enum AffiliateStatus {
+  pending // baru daftar, menunggu approval super-admin
+  active  // approved, link rujukan aktif
+  suspended // dibekukan sementara — link tetap valid tapi komisi tak akumulasi
+  rejected // permohonan ditolak
+}
+
+enum AffiliateCommissionStatus {
+  pending  // baru tercatat, belum bisa dicairkan
+  approved // dianggap valid, masuk ke saldo dapat-ditarik
+  paid     // sudah dibayarkan ke affiliate via payout
+  void     // dibatalkan (refund/chargeback/fraud)
+}
+
+enum AffiliatePayoutStatus {
+  requested  // affiliate ajukan payout, menunggu super-admin
+  processing // super-admin mulai proses
+  paid       // sudah terbayar
+  rejected   // ditolak
+}
+
+model Affiliate {
+  id              String         @id @default(cuid())
+  // Tautan ke User. 1-1 — satu profil affiliate punya satu akun login.
+  userId          String         @unique
+  // Kode rujukan unik. Pendek, uppercase, dipakai di URL `?ref=XXXX`.
+  referralCode    String         @unique
+  // Persentase komisi yang dipakai untuk tenant baru yang dirujuk affiliate ini.
+  // Disnapshot ke AffiliateCommission saat invoice dibayar — agar perubahan
+  // rate tidak retroaktif.
+  commissionRate  Float          @default(0.10) // 10%
+  status          AffiliateStatus @default(pending)
+  // Profil tampil & komunikasi — disinkronkan dari User.name/email/phone saat
+  // approval; field di sini boleh berbeda (misal nama panggilan publik).
+  displayName     String?
+  bio             String?
+  // Metode pencairan saldo. method ∈ 'bank_transfer' | 'gopay' | 'ovo' | 'dana'.
+  payoutMethod    String?
+  payoutAccount   String? // no rekening / no e-wallet
+  payoutHolder    String? // nama pemilik rekening
+  // Catatan internal super-admin (tidak ditampilkan ke affiliate).
+  internalNotes   String?
+  // Cache total earning untuk dashboard cepat. Dihitung ulang setiap commission
+  // di-approve/paid/void via $transaction.
+  totalEarned     Int            @default(0) // semua approved+paid
+  totalPaid       Int            @default(0) // sudah ditransfer
+  approvedAt      DateTime?
+  suspendedAt     DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  user            User           @relation("UserAffiliate", fields: [userId], references: [id], onDelete: Cascade)
+  referrals       AffiliateReferral[]
+  commissions     AffiliateCommission[]
+  payouts         AffiliatePayout[]
+
+  @@index([status, createdAt])
+}
+
+model AffiliateReferral {
+  id           String     @id @default(cuid())
+  affiliateId  String
+  // 1-1 dengan Tenant — satu tenant maksimum direkrut oleh satu affiliate.
+  tenantId     String     @unique
+  // Snapshot kode rujukan yang dipakai saat tenant daftar — supaya histori
+  // tetap valid bila affiliate kelak ganti kode.
+  referralCode String
+  // 'active'  — masih membayar; 'churned' — langganan habis & tidak diperpanjang
+  status       String     @default("active")
+  // Cache jumlah komisi yang sudah dihasilkan tenant ini — dipakai per-baris
+  // di tabel referrals dashboard tanpa N+1.
+  totalCommission Int     @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  affiliate    Affiliate  @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  commissions  AffiliateCommission[]
+
+  @@index([affiliateId, createdAt])
+}
+
+model AffiliateCommission {
+  id              String   @id @default(cuid())
+  affiliateId     String
+  referralId      String
+  tenantId        String
+  // Sumber invoice yang men-trigger komisi. invoiceId nullable untuk audit
+  // bukti payment_order, tapi seharusnya selalu terisi pada flow normal.
+  invoiceId       String?
+  paymentOrderId  String?
+  // Nominal dasar (amount invoice setelah diskon promo) — basis hitung komisi.
+  baseAmount      Int
+  // Persentase komisi snapshot saat invoice dibayar (decimal, e.g. 0.10).
+  commissionRate  Float
+  // Komisi final dalam IDR (= round(baseAmount * commissionRate)).
+  amount          Int
+  status          AffiliateCommissionStatus @default(pending)
+  // Periode invoice — untuk tampilan ringkas di dashboard.
+  period          String?
+  // Diisi saat status berubah ke 'paid' (oleh payout).
+  payoutId        String?
+  paidAt          DateTime?
+  // Catatan kalau status=void (alasan pembatalan).
+  voidReason      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  affiliate       Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  referral        AffiliateReferral @relation(fields: [referralId], references: [id], onDelete: Cascade)
+  payout          AffiliatePayout? @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+
+  @@unique([invoiceId, affiliateId]) // 1 invoice → 1 commission per affiliate
+  @@index([affiliateId, status, createdAt])
+  @@index([referralId, createdAt])
+}
+
+model AffiliatePayout {
+  id            String   @id @default(cuid())
+  affiliateId   String
+  amount        Int
+  method        String   // snapshot dari Affiliate.payoutMethod saat request
+  account       String
+  holder        String?
+  status        AffiliatePayoutStatus @default(requested)
+  // Catatan affiliate (mis. "Mohon transfer secepatnya") & catatan admin.
+  affiliateNote String?
+  adminNote     String?
+  // Identitas super-admin yang memproses — untuk audit.
+  processedById String?
+  processedAt   DateTime?
+  // Bukti transfer (URL gambar) — diunggah saat status berubah ke paid.
+  proofUrl      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  affiliate     Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  commissions   AffiliateCommission[]
+
+  @@index([affiliateId, createdAt])
+  @@index([status, createdAt])
 }

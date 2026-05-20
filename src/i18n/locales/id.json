@@ -96,7 +96,11 @@
     "whatsappSettings": "WhatsApp Gateway",
     "promotions": "Kode Promo",
     "landing": "Landing Page",
-    "help": "Bantuan"
+    "help": "Bantuan",
+    "affiliates": "Affiliate",
+    "referrals": "Rujukan",
+    "commissions": "Komisi",
+    "payouts": "Pencairan"
   },
   "auth": {
     "login": "Masuk",

@@ -85,6 +85,16 @@ const PublicRatingPage  = lazy(() => import('./pages/public/PublicRatingPage.jsx
 const KasirRatingsPage  = lazy(() => import('./pages/kasir/KasirRatingsPage.jsx'))
 const BarberRatingsPage = lazy(() => import('./pages/barber/BarberRatingsPage.jsx'))
 
+// Affiliate program
+const SAAffiliatesPage       = lazy(() => import('./pages/super-admin/SAAffiliatesPage.jsx'))
+const SAAffiliateDetailPage  = lazy(() => import('./pages/super-admin/SAAffiliateDetailPage.jsx'))
+const AffiliateDashboard     = lazy(() => import('./pages/affiliate/AffiliateDashboard.jsx'))
+const AffiliateReferralsPage = lazy(() => import('./pages/affiliate/AffiliateReferralsPage.jsx'))
+const AffiliateCommissionsPage = lazy(() => import('./pages/affiliate/AffiliateCommissionsPage.jsx'))
+const AffiliatePayoutsPage   = lazy(() => import('./pages/affiliate/AffiliatePayoutsPage.jsx'))
+const AffiliateProfilePage   = lazy(() => import('./pages/affiliate/AffiliateProfilePage.jsx'))
+const AffiliateRegisterPage  = lazy(() => import('./pages/affiliate/AffiliateRegisterPage.jsx'))
+
 // ── Page loading fallback ───────────────────────────────────────────────────
 function PageLoader() {
   return (
@@ -109,6 +119,7 @@ function roleHomePath(user) {
     case 'kasir':        { const slug = getBranchSlug(user); return slug ? `/${slug}/kasir/pos` : '/login' }
     case 'barber':       return '/barber/dashboard'
     case 'customer':     return '/customer/booking'
+    case 'affiliate':    return '/affiliate/dashboard'
     default:             return '/login'
   }
 }
@@ -287,6 +298,8 @@ export default function App() {
             <Route path="activity-log"   element={<SAActivityLogPage />} />
             <Route path="usage"          element={<SAUsagePage />} />
             <Route path="error-logs"     element={<SAErrorLogPage />} />
+            <Route path="affiliates"        element={<SAAffiliatesPage />} />
+            <Route path="affiliates/:id"    element={<SAAffiliateDetailPage />} />
             <Route path="profile"        element={<SAProfilePage />} />
             <Route index element={<Navigate to="dashboard" replace />} />
           </Route>
@@ -370,6 +383,23 @@ export default function App() {
             <Route path="history" element={<CustomerHistory />} />
             <Route path="loyalty" element={<CustomerLoyalty />} />
             <Route index element={<Navigate to="booking" replace />} />
+          </Route>
+
+          {/* Public affiliate registration (no auth) — declare BEFORE /affiliate protected block
+              supaya React Router pilih ini lebih dulu untuk path tepat /affiliate/register. */}
+          <Route path="/affiliate/register" element={<AffiliateRegisterPage />} />
+
+          {/* Affiliate dashboard (protected) */}
+          <Route
+            path="/affiliate"
+            element={<ProtectedRoute roles={['affiliate']}><AppLayout /></ProtectedRoute>}
+          >
+            <Route path="dashboard"   element={<AffiliateDashboard />} />
+            <Route path="referrals"   element={<AffiliateReferralsPage />} />
+            <Route path="commissions" element={<AffiliateCommissionsPage />} />
+            <Route path="payouts"     element={<AffiliatePayoutsPage />} />
+            <Route path="profile"     element={<AffiliateProfilePage />} />
+            <Route index element={<Navigate to="dashboard" replace />} />
           </Route>
 
           {/* Halaman booking publik — tanpa auth, diakses via subdomain atau /book/:slug */}

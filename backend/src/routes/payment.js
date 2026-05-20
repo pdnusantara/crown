@@ -526,6 +526,61 @@ router.post('/callback', async (req, res) => {
         ]);
       }
 
+      // Affiliate commission tracking — kalau tenant ini direkrut affiliate aktif,
+      // catat 1 commission record per invoice yg baru saja sukses. Rate diambil
+      // snapshot dari Affiliate.commissionRate. Jangan menggandakan untuk invoice
+      // yang sama (unique constraint [invoiceId, affiliateId]).
+      try {
+        const referral = await prisma.affiliateReferral.findUnique({
+          where: { tenantId: order.tenantId },
+          include: { affiliate: true },
+        });
+        if (referral && referral.affiliate && referral.affiliate.status === 'active') {
+          // Cari invoice yang baru saja sukses untuk order ini (paid + paidAt > 1 min lalu).
+          const invoice = await prisma.invoice.findFirst({
+            where: { subscriptionId: order.subscriptionId, status: 'paid' },
+            orderBy: { paidAt: 'desc' },
+          });
+          if (invoice) {
+            const rate = referral.affiliate.commissionRate || 0;
+            const commission = Math.round(invoice.amount * rate);
+            if (commission > 0) {
+              try {
+                await prisma.affiliateCommission.create({
+                  data: {
+                    affiliateId:    referral.affiliateId,
+                    referralId:     referral.id,
+                    tenantId:       order.tenantId,
+                    invoiceId:      invoice.id,
+                    paymentOrderId: order.id,
+                    baseAmount:     invoice.amount,
+                    commissionRate: rate,
+                    amount:         commission,
+                    period:         invoice.period,
+                    status:         'pending', // butuh approval super-admin
+                  },
+                });
+                // Realtime notify affiliate + super-admin.
+                try {
+                  const { getIO } = require('../config/socket');
+                  const io = getIO();
+                  if (io) {
+                    io.to('support').emit('affiliate:commission_created', { affiliateId: referral.affiliateId });
+                    const aff = await prisma.affiliate.findUnique({ where: { id: referral.affiliateId }, select: { userId: true } });
+                    if (aff) io.to(`user:${aff.userId}`).emit('affiliate:commission_created', { amount: commission });
+                  }
+                } catch { /* noop */ }
+              } catch (e) {
+                // Unique constraint (invoiceId,affiliateId) — abaikan double trigger.
+                if (e?.code !== 'P2002') console.warn('[affiliate commission]', e?.message || e);
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[affiliate commission tracking]', e?.message || e);
+      }
+
       // Promotion redemption tracking
       if (order.promotionCode) {
         const promo = await prisma.promotion.findUnique({ where: { code: order.promotionCode } });
