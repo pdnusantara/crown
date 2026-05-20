@@ -1,6 +1,29 @@
+import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import api from '../lib/api.js'
 import { useAuthStore } from '../store/authStore.js'
+import { getSocket } from '../lib/socket.js'
+
+// Subscribe ke event transaction:* dari tenant room. Backend emit saat ada
+// transaksi baru, status berubah (cancel/refund), atau update lain — UI yang
+// sedang buka halaman transactions/POS langsung sinkron tanpa nunggu polling.
+function useTransactionRealtime(tenantId) {
+  const qc = useQueryClient()
+  useEffect(() => {
+    if (!tenantId) return
+    const socket = getSocket()
+    const invalidate = () => {
+      qc.invalidateQueries({ queryKey: ['transactions', 'list', tenantId] })
+      qc.invalidateQueries({ queryKey: ['transactions', 'detail', tenantId] })
+    }
+    socket.on('transaction:created', invalidate)
+    socket.on('transaction:updated', invalidate)
+    return () => {
+      socket.off('transaction:created', invalidate)
+      socket.off('transaction:updated', invalidate)
+    }
+  }, [tenantId, qc])
+}
 
 // Hook utama: paginated. Backend mengembalikan paginatedResponse:
 // { data: [...], total, page, limit, totalPages }
@@ -8,6 +31,7 @@ import { useAuthStore } from '../store/authStore.js'
 export function useTransactions(filters = {}) {
   const { user } = useAuthStore()
   const tenantId = user?.tenantId
+  useTransactionRealtime(tenantId)
 
   const query = useQuery({
     queryKey: ['transactions', 'list', tenantId, filters],
@@ -46,6 +70,7 @@ export function useTransactions(filters = {}) {
 // kalau detail belum ada di list cache.
 export function useTransaction(id) {
   const { user } = useAuthStore()
+  useTransactionRealtime(user?.tenantId)
   return useQuery({
     queryKey: ['transactions', 'detail', user?.tenantId, id],
     queryFn: async () => {

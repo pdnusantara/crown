@@ -1863,5 +1863,12 @@
     "liveTooltip": "Real-time tersambung — klik untuk segarkan manual",
     "offlineTooltip": "Tidak tersambung — klik untuk segarkan data",
     "refreshing": "Menyegarkan…"
+  },
+  "appUpdate": {
+    "title": "Versi baru tersedia",
+    "description": "Muat ulang halaman untuk pakai versi terbaru. Pastikan data yang sedang Anda isi sudah tersimpan.",
+    "reload": "Muat ulang sekarang",
+    "later": "Nanti saja",
+    "dismiss": "Tutup"
   }
 }

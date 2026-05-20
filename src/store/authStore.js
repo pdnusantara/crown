@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import api, { setTokens, clearTokens, getAccessToken, decodeAccessTokenPayload } from '../lib/api.js'
 import { getBranchSlug } from '../utils/branchSlug.js'
+import { queryClient } from '../lib/queryClient.js'
 
 const USER_CACHE_KEY = 'barberos_cached_user'
 
@@ -149,6 +150,14 @@ export const useAuthStore = create((set, get) => ({
     } catch {}
     clearTokens()
     cacheUser(null)
+    // Bersihkan cache React Query supaya data tenant lama tidak bocor ke user
+    // berikutnya (kasus: warnet / device sharing). Dilakukan SEBELUM set state
+    // supaya tidak ada hook aktif yang langsung refetch dengan token yang sudah
+    // dihapus.
+    try { queryClient.clear() } catch {}
+    // Tutup koneksi socket — listener di socket.js akan disconnect & buang
+    // instance supaya koneksi berikutnya pakai token baru.
+    try { window.dispatchEvent(new Event('auth:logout')) } catch {}
     set({ user: null, isAuthenticated: false, error: null, impersonating: false, originalUser: null, impersonatedFrom: null })
   },
 

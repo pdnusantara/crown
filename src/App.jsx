@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { ToastProvider } from './components/ui/Toast.jsx'
+import SWUpdateBanner from './components/ui/SWUpdateBanner.jsx'
 import AppLayout from './components/layout/AppLayout.jsx'
 import LoadingScreen from './components/ui/LoadingScreen.jsx'
 import BranchLicenseGate from './components/BranchLicenseGate.jsx'
@@ -251,6 +252,7 @@ export default function App() {
         <a href="#main-content" className="skip-link">Langsung ke konten utama</a>
         <ThemeApplier />
         <AutoSegmentation />
+        <SWUpdateBanner />
         <PublicTenantLoader>
         <AuthInitializer>
         <Suspense fallback={<PageLoader />}>

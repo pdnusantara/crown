@@ -8,6 +8,7 @@ const { isValidTimezone, DEFAULT_TZ, SUPPORTED_TIMEZONES } = require('../utils/t
 const { getIO, tenantRoom, userRoom } = require('../config/socket');
 const { recordAudit } = require('../utils/auditLog');
 const { seedTenantFlags } = require('../services/featureFlagSync');
+const { invalidateTenantCache } = require('../middleware/tenantResolver');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -439,6 +440,8 @@ router.patch('/me', authenticate, requireRole('tenant_admin', 'super_admin'), as
       select: tenantSelect,
     });
 
+    invalidateTenantCache(tenant.slug);
+
     const io = getIO();
     if (io && body.timezone && body.timezone !== before?.timezone) {
       io.to(tenantRoom(tenant.id)).emit('tenant:updated', {
@@ -506,6 +509,11 @@ router.put('/:id', authenticate, requireRole('super_admin'), async (req, res, ne
       return tx.tenant.findUnique({ where: { id: req.params.id }, select: tenantSelect });
     });
 
+    // Slug bisa berubah — invalidate baik slug lama (existing) maupun yang baru
+    // supaya tenantResolver tidak memakai data basi.
+    invalidateTenantCache(existing.slug);
+    if (tenant.slug && tenant.slug !== existing.slug) invalidateTenantCache(tenant.slug);
+
     // Notifikasi real-time bila ada perubahan signifikan (suspend / timezone).
     const io = getIO();
     if (io) {
@@ -558,6 +566,8 @@ router.patch('/:id/suspend', authenticate, requireRole('super_admin'), async (re
       data: { isSuspended: !tenant.isSuspended },
       select: tenantSelect,
     });
+
+    invalidateTenantCache(updated.slug);
 
     // Notify users di tenant ini bahwa status berubah, supaya UI mereka refresh
     // (atau auto-logout kalau di-suspend) tanpa nunggu request berikutnya.
@@ -630,6 +640,8 @@ router.delete('/:id', authenticate, requireRole('super_admin'), async (req, res,
       where: { id: req.params.id },
       data: { deletedAt: new Date() },
     });
+
+    invalidateTenantCache(existing.slug);
 
     // Lepas device WhatsApp tenant dari WA Gateway agar tidak jadi device
     // hantu yang menumpuk & memakan kuota plan. Best-effort — kegagalan di

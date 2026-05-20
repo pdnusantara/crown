@@ -1863,5 +1863,12 @@
     "liveTooltip": "Real-time connected — click to refresh manually",
     "offlineTooltip": "Disconnected — click to refresh data",
     "refreshing": "Refreshing…"
+  },
+  "appUpdate": {
+    "title": "New version available",
+    "description": "Reload the page to use the latest version. Make sure to save any data you're entering first.",
+    "reload": "Reload now",
+    "later": "Later",
+    "dismiss": "Dismiss"
   }
 }

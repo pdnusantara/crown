@@ -1,5 +1,24 @@
+import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../lib/api.js'
+import { getSocket } from '../lib/socket.js'
+
+// Backend emit `tenant:updated` (CRUD super admin / patch tenant_admin) dan
+// `tenant:status-changed` (suspend/aktifkan) — listen di sini supaya tabel
+// /super-admin/tenants tidak perlu refresh manual.
+function useTenantRealtime() {
+  const qc = useQueryClient()
+  useEffect(() => {
+    const s = getSocket()
+    const invalidate = () => qc.invalidateQueries({ queryKey: ['tenants'] })
+    s.on('tenant:updated', invalidate)
+    s.on('tenant:status-changed', invalidate)
+    return () => {
+      s.off('tenant:updated', invalidate)
+      s.off('tenant:status-changed', invalidate)
+    }
+  }, [qc])
+}
 
 function normalizeTenant(t) {
   if (!t) return null
@@ -16,6 +35,7 @@ function normalizeTenant(t) {
 }
 
 export function useTenants(filters = {}) {
+  useTenantRealtime()
   return useQuery({
     queryKey: ['tenants', filters],
     queryFn: async () => {
@@ -29,6 +49,7 @@ export function useTenants(filters = {}) {
 }
 
 export function useTenant(id) {
+  useTenantRealtime()
   return useQuery({
     queryKey: ['tenants', id],
     queryFn: async () => {
