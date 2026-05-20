@@ -1,7 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Fingerprint, CalendarClock, BarChart3, Settings2, Download,
   Loader2, AlertTriangle, Pencil, X, Navigation, ClipboardList, Save, MapPin,
+  Info, ExternalLink,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useToast } from '../../components/ui/Toast.jsx'
@@ -525,6 +527,17 @@ function JadwalTab() {
 
   return (
     <div className="space-y-3">
+      <div className="flex items-start gap-2 rounded-lg border border-gold/20 bg-gold/5 px-3 py-2 text-xs text-muted">
+        <Info className="w-4 h-4 text-gold/80 mt-0.5 shrink-0" />
+        <p>
+          Jadwal mingguan di sini jadi <span className="text-off-white">dasar perhitungan terlambat</span>.
+          Untuk shift barber tanggal-spesifik (Pagi/Sore/Full),
+          <Link to="/admin/schedule" className="ml-1 inline-flex items-center gap-1 text-gold hover:underline">
+            buka halaman Jadwal Barber <ExternalLink className="w-3 h-3" />
+          </Link>
+          — bila barber punya shift di tanggal tertentu, jam itu yang dipakai (override jadwal mingguan).
+        </p>
+      </div>
       {staffList.length === 0 && (
         <Card><CardBody className="py-10 text-center text-sm text-muted">Belum ada staf kasir/barber.</CardBody></Card>
       )}

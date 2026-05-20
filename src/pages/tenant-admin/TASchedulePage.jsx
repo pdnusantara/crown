@@ -1,9 +1,11 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import {
   ChevronLeft, ChevronRight, Trash2, RefreshCw, AlertTriangle, Plus,
   Copy, CalendarDays, Search, Download, CheckSquare, Square, X,
   LayoutGrid, List as ListIcon, Eraser, ArrowDownAZ, Users, Clock,
+  Fingerprint,
 } from 'lucide-react'
 import { startOfWeek, addDays, format, addWeeks, subWeeks } from 'date-fns'
 import { id as idLocale, enUS as enLocale } from 'date-fns/locale'
@@ -423,6 +425,14 @@ function TASchedulePageInner() {
           <p className="text-muted text-xs sm:text-sm mt-1">{t('tenantAdmin.schedule.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Link
+            to="/admin/attendance"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs sm:text-sm text-muted hover:text-gold hover:border-gold/40 transition-all"
+            title="Halaman Absensi & Jadwal Mingguan"
+          >
+            <Fingerprint className="w-4 h-4" />
+            <span className="hidden sm:inline">Absensi</span>
+          </Link>
           <LiveBadge className="hidden sm:inline-flex" />
           {branches.length > 1 && (
             <select

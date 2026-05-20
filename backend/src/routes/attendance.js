@@ -17,7 +17,7 @@ const { authenticate, requireRole } = require('../middleware/auth');
 const { parsePagination, paginatedResponse } = require('../utils/pagination');
 const { recordAudit } = require('../utils/auditLog');
 const { getIO, tenantRoom } = require('../config/socket');
-const { tenantDayStart, formatYmdInTz, normalizeTimezone } = require('../utils/timezone');
+const { tenantDayStart, formatYmdInTz, normalizeTimezone, buildTenantDateRange } = require('../utils/timezone');
 
 // ── Konstanta & default ─────────────────────────────────────────────────────
 const ATT_DEFAULTS = {
@@ -133,13 +133,31 @@ function resolveTenantId(req, fromBody = false) {
   return req.user.tenantId;
 }
 
-// Jadwal kerja staf pada satu hari (0=Minggu). Default bila belum diatur.
-async function getScheduleForDay(staffId, dayOfWeek) {
+// Ambil timezone tenant; fallback Asia/Jakarta bila tak diset.
+async function tenantTimezone(tenantId) {
+  if (!tenantId) return 'Asia/Jakarta';
+  const t = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { timezone: true } });
+  return t?.timezone || 'Asia/Jakarta';
+}
+
+// Jadwal kerja efektif staf pada satu hari.
+// Untuk barber: BarberSchedule tanggal-spesifik (mis. shift Pagi/Sore) menggantikan
+// pola mingguan WorkSchedule. Fallback ke WorkSchedule, lalu default.
+async function getScheduleForDay(staffId, role, ymd, dayOfWeek) {
+  if (role === 'barber' && ymd) {
+    const bs = await prisma.barberSchedule.findFirst({
+      where: { staffId, date: ymd },
+      select: { startTime: true, endTime: true, shift: true },
+    });
+    if (bs) {
+      return { isDayOff: false, startTime: bs.startTime, endTime: bs.endTime, source: `barberSchedule:${bs.shift}` };
+    }
+  }
   const row = await prisma.workSchedule.findUnique({
     where: { staffId_dayOfWeek: { staffId, dayOfWeek } },
   });
-  if (!row) return { ...SCHEDULE_DEFAULT };
-  return { isDayOff: row.isDayOff, startTime: row.startTime, endTime: row.endTime };
+  if (!row) return { ...SCHEDULE_DEFAULT, source: 'default' };
+  return { isDayOff: row.isDayOff, startTime: row.startTime, endTime: row.endTime, source: 'workSchedule' };
 }
 
 // ── Feature gate ────────────────────────────────────────────────────────────
@@ -171,7 +189,7 @@ router.use(authenticate, requireAttendanceFeature);
 // GET /api/attendance/me/today — status absen staf hari ini + jadwal + geofence
 router.get('/me/today', requireRole('kasir', 'barber'), async (req, res, next) => {
   try {
-    const { id: staffId, tenantId, branchId } = req.user;
+    const { id: staffId, tenantId, branchId, role } = req.user;
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId }, select: { timezone: true, attendanceConfig: true },
     });
@@ -191,7 +209,7 @@ router.get('/me/today', requireRole('kasir', 'barber'), async (req, res, next) =
       prisma.attendance.findUnique({
         where: { staffId_date: { staffId, date } }, select: attendanceSelect,
       }),
-      getScheduleForDay(staffId, clock.dayOfWeek),
+      getScheduleForDay(staffId, role, clock.ymd, clock.dayOfWeek),
     ]);
 
     res.json({
@@ -300,7 +318,7 @@ router.post('/check-in', requireRole('kasir', 'barber'), async (req, res, next) 
       return res.status(409).json({ success: false, error: 'Anda sudah check-in hari ini.' });
     }
 
-    const schedule = await getScheduleForDay(staffId, clock.dayOfWeek);
+    const schedule = await getScheduleForDay(staffId, role, clock.ymd, clock.dayOfWeek);
     const startMin = hmToMin(schedule.startTime);
     let status = 'present';
     let lateMinutes = 0;
@@ -437,9 +455,9 @@ router.get('/', requireAdmin, async (req, res, next) => {
     if (status && STATUSES.includes(status)) where.status = status;
     if (search) where.staffName = { contains: String(search).trim(), mode: 'insensitive' };
     if (startDate || endDate) {
-      where.date = {};
-      if (/^\d{4}-\d{2}-\d{2}$/.test(startDate || '')) where.date.gte = new Date(`${startDate}T00:00:00.000Z`);
-      if (/^\d{4}-\d{2}-\d{2}$/.test(endDate || ''))   where.date.lte = new Date(`${endDate}T23:59:59.999Z`);
+      const tz = await tenantTimezone(tenantId);
+      const range = buildTenantDateRange(startDate, endDate, tz);
+      if (range.gte || range.lte) where.date = range;
     }
 
     const [data, total] = await Promise.all([
@@ -463,9 +481,9 @@ router.get('/stats', requireAdmin, async (req, res, next) => {
     const where = { tenantId };
     if (branchId) where.branchId = branchId;
     if (startDate || endDate) {
-      where.date = {};
-      if (/^\d{4}-\d{2}-\d{2}$/.test(startDate || '')) where.date.gte = new Date(`${startDate}T00:00:00.000Z`);
-      if (/^\d{4}-\d{2}-\d{2}$/.test(endDate || ''))   where.date.lte = new Date(`${endDate}T23:59:59.999Z`);
+      const tz = await tenantTimezone(tenantId);
+      const range = buildTenantDateRange(startDate, endDate, tz);
+      if (range.gte || range.lte) where.date = range;
     }
 
     const [byStatus, agg] = await Promise.all([
@@ -507,23 +525,29 @@ router.get('/today-summary', requireAdmin, async (req, res, next) => {
     });
     const staffIds = staff.map((s) => s.id);
 
-    const [records, schedules] = await Promise.all([
+    const barberIds = staff.filter((s) => s.role === 'barber').map((s) => s.id);
+    const [records, schedules, barberShifts] = await Promise.all([
       prisma.attendance.findMany({
         where: { tenantId, date },
         select: { staffId: true, status: true, checkInAt: true, checkOutAt: true, lateMinutes: true },
       }),
       prisma.workSchedule.findMany({ where: { staffId: { in: staffIds }, dayOfWeek: clock.dayOfWeek } }),
+      barberIds.length
+        ? prisma.barberSchedule.findMany({ where: { staffId: { in: barberIds }, date: clock.ymd }, select: { staffId: true } })
+        : Promise.resolve([]),
     ]);
     const recMap = {};
     records.forEach((r) => { recMap[r.staffId] = r; });
     const offMap = {};
     schedules.forEach((s) => { offMap[s.staffId] = s.isDayOff; });
+    const shiftedToday = new Set(barberShifts.map((b) => b.staffId));
 
     const counts = { present: 0, late: 0, leave: 0, absent: 0, pending: 0, dayoff: 0 };
     const rows = staff.map((s) => {
       const rec = recMap[s.id];
       let status;
       if (rec) status = rec.status;
+      else if (shiftedToday.has(s.id)) status = 'pending';
       else if (offMap[s.id]) status = 'dayoff';
       else status = 'pending';
       counts[status] = (counts[status] || 0) + 1;
@@ -576,33 +600,46 @@ router.get('/report', requireAdmin, async (req, res, next) => {
       return res.json({ success: true, data: { period: { startDate, endDate }, rows: [] } });
     }
 
-    const [records, schedules] = await Promise.all([
+    const barberIds = staff.filter((s) => s.role === 'barber').map((s) => s.id);
+    const [records, schedules, barberShifts] = await Promise.all([
       prisma.attendance.findMany({
         where: {
           tenantId, staffId: { in: staffIds },
-          date: { gte: new Date(`${startDate}T00:00:00.000Z`), lte: new Date(`${endDate}T23:59:59.999Z`) },
+          date: buildTenantDateRange(startDate, endDate, tz),
         },
         select: { staffId: true, date: true, status: true, lateMinutes: true, workedMinutes: true },
       }),
       prisma.workSchedule.findMany({ where: { staffId: { in: staffIds } } }),
+      barberIds.length
+        ? prisma.barberSchedule.findMany({
+            where: { staffId: { in: barberIds }, date: { gte: startDate, lte: endDate } },
+            select: { staffId: true, date: true },
+          })
+        : Promise.resolve([]),
     ]);
 
-    // Index jadwal per staf per hari & catatan per staf per ymd.
+    // Index jadwal per staf per hari & catatan per staf per ymd (TZ tenant).
     const schedMap = {};   // staffId → { dow → isDayOff }
     schedules.forEach((s) => {
       (schedMap[s.staffId] ||= {})[s.dayOfWeek] = s.isDayOff;
     });
     const recMap = {};     // staffId → { ymd → record }
     records.forEach((r) => {
-      const ymd = new Date(r.date).toISOString().slice(0, 10);
+      const ymd = formatYmdInTz(r.date, tz);
       (recMap[r.staffId] ||= {})[ymd] = r;
+    });
+    // BarberSchedule override per-tanggal: shift eksplisit → bukan hari libur.
+    const shiftMap = {};   // staffId → Set(ymd)
+    barberShifts.forEach((b) => {
+      (shiftMap[b.staffId] ||= new Set()).add(b.date);
     });
 
     const rows = staff.map((s) => {
       let present = 0, late = 0, leave = 0, scheduledDays = 0, absent = 0;
       let totalLate = 0, totalWorked = 0;
       for (const day of days) {
-        const isDayOff = schedMap[s.id]?.[day.dow] ?? false;
+        const hasShift = shiftMap[s.id]?.has(day.ymd) || false;
+        const isDayOff = hasShift ? false : (schedMap[s.id]?.[day.dow] ?? false);
         if (!isDayOff) scheduledDays++;
         const rec = recMap[s.id]?.[day.ymd];
         if (rec) {
