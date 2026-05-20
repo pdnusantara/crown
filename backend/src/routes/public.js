@@ -501,12 +501,7 @@ router.get('/rating/:transactionId', requireTenant, ratingRateLimiter, async (re
         createdAt: true,
         status: true,
         branch: { select: { id: true, name: true } },
-        items: {
-          select: {
-            id: true, name: true, barberId: true,
-            barber: { select: { id: true, name: true } },
-          },
-        },
+        items: { select: { id: true, name: true, barberId: true } },
       },
     });
     if (!tx) return res.status(404).json({ success: false, error: 'Transaksi tidak ditemukan' });
@@ -519,12 +514,16 @@ router.get('/rating/:transactionId', requireTenant, ratingRateLimiter, async (re
       select: { id: true, rating: true, comment: true, createdAt: true },
     });
 
-    // Daftar barber unik yang melayani — untuk per-barber rating opsional di UI.
-    const barberMap = new Map();
-    for (const it of tx.items) {
-      if (it.barber?.id) barberMap.set(it.barber.id, it.barber.name);
+    // TransactionItem hanya simpan `barberId` (tanpa relation di schema).
+    // Fetch nama barber terpisah supaya bisa ditampilkan di form per-barber.
+    const barberIds = [...new Set(tx.items.map(it => it.barberId).filter(Boolean))];
+    let barbers = [];
+    if (barberIds.length) {
+      barbers = await prisma.user.findMany({
+        where: { id: { in: barberIds } },
+        select: { id: true, name: true },
+      });
     }
-    const barbers = Array.from(barberMap, ([id, name]) => ({ id, name }));
 
     res.json({
       success: true,
