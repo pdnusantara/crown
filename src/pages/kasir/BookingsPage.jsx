@@ -340,9 +340,16 @@ export default function BookingsPage() {
     if (!checkInTarget) return
     try {
       const res = await checkInBooking.mutateAsync(checkInTarget.id)
-      toast.success(`${checkInTarget.customerName} masuk antrian`)
+      // Bila cron auto-checkin (atau klik sebelumnya) sudah memindahkan booking
+      // ini ke antrian, backend kembalikan alreadyQueued=true — beri pesan beda
+      // supaya kasir paham tidak terjadi pembuatan tiket duplikat.
+      if (res?.alreadyQueued) {
+        toast.info(`${checkInTarget.customerName} sudah ada di antrian`)
+      } else {
+        toast.success(`${checkInTarget.customerName} masuk antrian`)
+      }
       closeDetail()
-      // Navigate ke halaman antrian supaya kasir langsung melihat tiket baru
+      // Navigate ke halaman antrian supaya kasir langsung melihat tiket
       const slug = getBranchSlug(user)
       navigate(`/${slug}/kasir/queue`)
       return res

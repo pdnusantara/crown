@@ -382,11 +382,34 @@ router.post('/:id/check-in', authenticate, requireRole('super_admin', 'tenant_ad
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
-    if (existing.status === 'in_progress' || existing.status === 'done') {
-      return res.status(400).json({ success: false, error: 'Booking sudah berjalan / selesai' });
-    }
     if (existing.status === 'cancelled') {
       return res.status(400).json({ success: false, error: 'Booking sudah dibatalkan' });
+    }
+    // Idempotent: bila booking sudah masuk antrian (cron auto-checkin atau klik
+    // ganda), kembalikan antrian yang ada — JANGAN buat duplikat.
+    const existingQueue = await prisma.queue.findFirst({
+      where: {
+        tenantId: existing.tenantId,
+        type: 'booking',
+        notes: { contains: `"bookingId":"${existing.id}"` },
+      },
+      include: { branch: { select: { id: true, name: true } } },
+    });
+    if (existingQueue) {
+      const booking = await prisma.booking.findUnique({
+        where: { id: existing.id },
+        include: {
+          branch:   { select: { id: true, name: true } },
+          customer: { select: { id: true, name: true, phone: true } },
+        },
+      });
+      return res.status(200).json({
+        success: true,
+        data: { booking, queue: existingQueue, alreadyQueued: true },
+      });
+    }
+    if (existing.status === 'in_progress' || existing.status === 'done') {
+      return res.status(400).json({ success: false, error: 'Booking sudah berjalan / selesai' });
     }
 
     // Pastikan customer record ada (booking lama mungkin belum di-upsert).
