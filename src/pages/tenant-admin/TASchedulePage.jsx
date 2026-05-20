@@ -195,6 +195,68 @@ function TASchedulePageInner() {
     })
   }
 
+  // Ghost chips: barber yang punya WorkSchedule default tapi BELUM ada
+  // BarberSchedule untuk tanggal ini → tampilkan placeholder semi-transparan
+  // di slot pertama yg di-cover oleh jam default. Klik = promosikan jadi shift.
+  const ghostMap = useMemo(() => {
+    const map = {}
+    if (!allUsers.length) return map
+    // Cek apakah staf masuk filter cabang yang aktif.
+    const passesBranchFilter = (u) => {
+      if (!branchFilter || branchFilter === 'all') return true
+      return u.branchId === branchFilter
+    }
+    for (const day of weekDays) {
+      const dateStr = format(day, 'yyyy-MM-dd')
+      const dow = day.getDay() // 0=Minggu, sesuai dengan WorkSchedule.dayOfWeek
+      // Set staf yang sudah punya BarberSchedule di tanggal ini.
+      const taken = new Set(weekSchedules.filter((s) => s.date === dateStr).map((s) => s.staffId))
+      for (const u of allUsers) {
+        if (taken.has(u.id)) continue
+        if (!passesBranchFilter(u)) continue
+        const ws = wsLookup[u.id]?.[dow]
+        if (!ws || ws.isDayOff) continue
+        const startH = parseInt((ws.startTime || '08:00').split(':')[0])
+        const endH   = parseInt((ws.endTime   || '17:00').split(':')[0])
+        // Slot pertama yang overlap jam WS — taruh ghost di sini saja.
+        const firstSlot = TIME_SLOTS.find((s) => {
+          const h = parseInt(s.split(':')[0])
+          return h >= startH && h < endH
+        }) || TIME_SLOTS[0]
+        const key = `${dateStr}|${firstSlot}`
+        ;(map[key] ||= []).push({
+          staffId: u.id,
+          name: u.name,
+          startTime: ws.startTime,
+          endTime: ws.endTime,
+        })
+      }
+    }
+    return map
+  }, [allUsers, weekDays, weekSchedules, wsLookup, branchFilter])
+
+  // Tambah shift dari ghost chip — sama seperti handleCellClick tapi
+  // pre-fill staf & jam dari WorkSchedule.
+  const handleGhostClick = (e, date, ghost) => {
+    e.stopPropagation()
+    if (bulkMode) return
+    setSelectedCell({ date, slot: TIME_SLOTS[0] })
+    setSelectedSchedule(null)
+    const defaultBranch =
+      (branchFilter && branchFilter !== 'all' ? branchFilter : null) ||
+      user?.branchId || branches[0]?.id || ''
+    // Cocokkan dengan preset bila jam-nya sama; kalau tidak, pakai label "Custom".
+    const matched = presets.find((p) => p.startTime === ghost.startTime && p.endTime === ghost.endTime)
+    setForm({
+      staffId: ghost.staffId,
+      shift: matched?.value || presets[0]?.value || 'Default',
+      branchId: defaultBranch,
+      startTime: ghost.startTime,
+      endTime: ghost.endTime,
+    })
+    setShowModal(true)
+  }
+
   const handleCellClick = (date, slot) => {
     if (bulkMode) return
     setSelectedCell({ date, slot })
@@ -751,6 +813,19 @@ function TASchedulePageInner() {
             <p className="text-xs text-muted">{t('tenantAdmin.schedule.noMatchingBarber')}</p>
           )}
 
+          {/* Legend ghost chip — hanya ditampilkan bila ada ghost di minggu ini */}
+          {viewMode === 'calendar' && Object.keys(ghostMap).length > 0 && !bulkMode && (
+            <div className="flex items-start gap-2 rounded-lg border border-dark-border bg-dark-card/40 px-3 py-2 text-[11px] text-muted">
+              <span className="inline-block px-1.5 py-0.5 rounded border border-dashed border-dark-border/70 bg-dark-card/40 italic opacity-70 shrink-0">
+                Tono · 09:00–17:00
+              </span>
+              <span>
+                Chip bergaris putus-putus = <span className="text-off-white">pola kerja mingguan</span> staf (diatur di
+                <Link to="/admin/attendance" className="ml-1 text-gold hover:underline">Pola Mingguan</Link>).
+                Klik untuk tambahkan sebagai shift khusus tanggal itu.
+              </span>
+            </div>
+          )}
           {/* Calendar / List view */}
           {viewMode === 'calendar' ? (
             <div className="bg-dark-surface border border-dark-border rounded-2xl overflow-hidden">
@@ -779,6 +854,7 @@ function TASchedulePageInner() {
                       {weekDays.map((day, di) => {
                         const cellScheds = getScheduleForCell(day, slot)
                         const dateKey = format(day, 'yyyy-MM-dd')
+                        const cellGhosts = bulkMode ? [] : (ghostMap[`${dateKey}|${slot}`] || [])
                         const isDropHover = dropHover === dateKey && !!draggedId
                         return (
                           <div
@@ -792,6 +868,17 @@ function TASchedulePageInner() {
                             } ${isDropHover ? 'bg-gold/15 ring-2 ring-gold/40 ring-inset' : 'hover:bg-dark-card/30'}`}
                           >
                             {cellScheds.map(sch => <ChipSchedule key={sch.id} sch={sch} dense />)}
+                            {cellGhosts.map((g) => (
+                              <button
+                                key={`ghost-${g.staffId}`}
+                                type="button"
+                                onClick={(e) => handleGhostClick(e, day, g)}
+                                title={`Pola mingguan ${g.name}: ${g.startTime}–${g.endTime}. Klik untuk tambahkan sebagai shift khusus.`}
+                                className="block w-full text-xs px-1.5 py-1 mb-0.5 rounded border border-dashed border-dark-border/70 bg-dark-card/20 text-muted italic opacity-70 hover:opacity-100 hover:border-gold/40 hover:text-gold transition-all truncate text-left"
+                              >
+                                <span className="truncate">{g.name} · {g.startTime}–{g.endTime}</span>
+                              </button>
+                            ))}
                           </div>
                         )
                       })}
