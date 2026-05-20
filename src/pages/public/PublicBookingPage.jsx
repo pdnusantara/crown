@@ -118,6 +118,8 @@ function PublicBookingPageInner() {
   const [barbers, setBarbers]     = useState([])
   const [testimonials, setTestimonials] = useState([])
   const [bookedSlots, setBookedSlots] = useState([])
+  // Penutupan cabang pada tanggal terpilih (libur khusus admin).
+  const [branchClosure, setBranchClosure] = useState(null) // null | { note }
   const [loading, setLoading]     = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError]         = useState(null)
@@ -230,7 +232,7 @@ function PublicBookingPageInner() {
   // service starting at 14:00 should also block selecting 14:30 — the previous
   // version only returned exact start times).
   const refetchAvailability = useCallback(async (signal) => {
-    if (!selected.branch || !selected.date) { setBookedSlots([]); return }
+    if (!selected.branch || !selected.date) { setBookedSlots([]); setBranchClosure(null); return }
     try {
       const res = await publicApi.get('/public/availability', {
         params: {
@@ -242,6 +244,13 @@ function PublicBookingPageInner() {
         signal,
       })
       const data = res.data.data || {}
+      // Cabang tutup di tanggal ini — kosongkan slot, set state closure.
+      if (data.closed) {
+        setBookedSlots([])
+        setBranchClosure({ note: data.closureNote || null })
+        return
+      }
+      setBranchClosure(null)
       // Use overlap-aware ranges when backend provides them (newer API), else
       // fall back to exact `booked` start times for back-compat.
       if (Array.isArray(data.bookedRanges) && data.bookedRanges.length && selected.service?.duration) {
@@ -391,7 +400,8 @@ function PublicBookingPageInner() {
           )}
           {step === 1 && (
             <Step2Schedule
-              selected={selected} timeSlots={timeSlots} bookedSlots={bookedSlots} tenantTz={tenantTz}
+              selected={selected} timeSlots={timeSlots} bookedSlots={bookedSlots}
+              branchClosure={branchClosure} tenantTz={tenantTz}
               accent={accent} shake={shake}
               onPickDate={pickDate} onPickTime={pickTime}
               onBack={() => setStep(0)}
@@ -1304,8 +1314,15 @@ function SectionTitle({ step, title, accent }) {
 // STEP 2 — Pilih Jadwal (calendar grid + slot grid)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function Step2Schedule({ selected, timeSlots, bookedSlots, tenantTz, accent, shake,
+function Step2Schedule({ selected, timeSlots, bookedSlots, branchClosure, tenantTz, accent, shake,
                          onPickDate, onPickTime, onBack, onNext }) {
+  // Set tanggal-tanggal cabang ini ditutup admin (mis. Lebaran) — dipakai untuk
+  // disable di kalender pemilihan tanggal.
+  const closedDates = React.useMemo(() => {
+    const arr = Array.isArray(selected.branch?.closedDates) ? selected.branch.closedDates : []
+    return new Set(arr.map((c) => c?.date).filter(Boolean))
+  }, [selected.branch?.closedDates])
+  const isClosedDate = (day) => closedDates.has(format(day, 'yyyy-MM-dd'))
   const [viewMonth, setViewMonth] = useState(selected.date || new Date())
   // ensure if selected.date changes externally we follow
   useEffect(() => { if (selected.date) setViewMonth(selected.date) }, [selected.date])
@@ -1368,23 +1385,28 @@ function Step2Schedule({ selected, timeSlots, bookedSlots, tenantTz, accent, sha
             const isSel = selected.date && isSameDay(day, selected.date)
             const isCurrentMonth = isSameMonth(day, viewMonth)
             const isToday_ = isSameDay(day, today)
+            const closed = isClosedDate(day)
+            const disabled = isPast || closed
             return (
               <button
                 key={day.toISOString()}
-                disabled={isPast}
+                disabled={disabled}
                 onClick={() => onPickDate(day)}
-                aria-label={format(day, 'EEEE, d MMMM yyyy', { locale: idLocale })}
+                aria-label={`${format(day, 'EEEE, d MMMM yyyy', { locale: idLocale })}${closed ? ', cabang tutup' : ''}`}
                 aria-pressed={isSel}
                 aria-current={isToday_ ? 'date' : undefined}
+                title={closed ? 'Cabang tutup tanggal ini' : undefined}
                 className="aspect-square rounded-lg text-sm font-semibold relative flex items-center justify-center transition-all"
                 style={{
-                  background: isSel ? accent : 'transparent',
+                  background: isSel ? accent : closed ? 'rgba(239,68,68,0.10)' : 'transparent',
                   color: isSel ? '#111' :
+                         closed ? '#FCA5A5' :
                          isPast ? 'var(--bk-text-muted)' :
                          isCurrentMonth ? 'var(--bk-text)' : 'var(--bk-text-2)',
-                  opacity: isPast ? 0.35 : 1,
-                  cursor: isPast ? 'not-allowed' : 'pointer',
-                  border: isToday_ && !isSel ? `1.5px solid ${accent}66` : '1.5px solid transparent',
+                  opacity: isPast ? 0.35 : closed ? 0.85 : 1,
+                  cursor: disabled ? 'not-allowed' : 'pointer',
+                  border: isToday_ && !isSel ? `1.5px solid ${accent}66` : closed ? '1px solid rgba(239,68,68,0.35)' : '1.5px solid transparent',
+                  textDecoration: closed ? 'line-through' : undefined,
                   minHeight: '44px',
                   minWidth: '44px',
                 }}
@@ -1397,7 +1419,24 @@ function Step2Schedule({ selected, timeSlots, bookedSlots, tenantTz, accent, sha
       </div>
 
       {/* Time grid */}
-      {selected.date ? (
+      {selected.date && branchClosure ? (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <SectionTitle step="" title="Cabang Tutup" accent={accent} />
+          </div>
+          <div className="p-4 rounded-xl flex items-start gap-3 text-sm"
+            style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.35)', color: '#FCA5A5' }}>
+            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold">Cabang tutup pada tanggal ini.</p>
+              {branchClosure.note && (
+                <p className="mt-0.5 opacity-90 italic">{branchClosure.note}</p>
+              )}
+              <p className="mt-1 text-xs opacity-80">Silakan pilih tanggal lain di kalender.</p>
+            </div>
+          </div>
+        </div>
+      ) : selected.date ? (
         <div>
           <div className="flex items-center justify-between mb-3">
             <SectionTitle step="" title="Pilih Jam" accent={accent} />
