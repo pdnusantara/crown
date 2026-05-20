@@ -483,14 +483,18 @@ export default function TASettingsPage() {
     }
   }
 
-  const loadWhatsAppStatus = async () => {
+  // `silent` dipakai oleh polling supaya tidak menyalakan/mematikan `loading`
+  // yang sedang dikunci oleh aksi user (Hubungkan/Putuskan/Tes). Kalau polling
+  // ikut toggle, spinner di tombol akan kedip-mati di tengah aksi → user
+  // mengira tak jalan dan klik lagi.
+  const loadWhatsAppStatus = async ({ silent = false } = {}) => {
     try {
-      setWaState(prev => ({ ...prev, loading: true }))
+      if (!silent) setWaState(prev => ({ ...prev, loading: true }))
       const res = await api.get('/whatsapp/status')
       const data = res.data?.data || {}
       setWaState(prev => ({
         ...prev,
-        loading: false,
+        loading: silent ? prev.loading : false,
         status: data.status || 'idle',
         qrDataUrl: data.qrDataUrl || null,
         lastError: data.lastError || null,
@@ -506,8 +510,8 @@ export default function TASettingsPage() {
         },
       }))
     } catch (err) {
-      setWaState(prev => ({ ...prev, loading: false }))
-      toast.error(err?.response?.data?.error || 'Gagal memuat status WhatsApp')
+      if (!silent) setWaState(prev => ({ ...prev, loading: false }))
+      if (!silent) toast.error(err?.response?.data?.error || 'Gagal memuat status WhatsApp')
     }
   }
 
@@ -524,19 +528,31 @@ export default function TASettingsPage() {
   }
 
   const connectWhatsApp = async () => {
+    // Guard re-entry: kalau loading sudah true (user nge-spam klik / mouse
+    // double-click), abaikan klik berikutnya supaya tidak kirim 2 POST.
+    if (waState.loading) return
+    // Transisi optimistik ke 'connecting' supaya tombol langsung berubah dari
+    // "Hubungkan WhatsApp" ke "Batalkan" + status pill ikut bergerak. Tanpa
+    // ini ada celah ~0.5–2 detik antara click dan loadWhatsAppStatus selesai
+    // di mana user mengira tak jalan dan klik lagi.
+    setWaState(prev => ({ ...prev, loading: true, status: 'connecting', lastError: null }))
+    toast.success('Memulai koneksi WhatsApp…')
     try {
-      setWaState(prev => ({ ...prev, loading: true }))
       await api.post('/whatsapp/connect')
       await loadWhatsAppStatus()
     } catch (err) {
-      setWaState(prev => ({ ...prev, loading: false }))
       toast.error(err?.response?.data?.error || 'Gagal memulai koneksi WhatsApp')
+      // Sinkron ulang status — server bisa jadi tetap 'idle' kalau gagal start.
+      try { await loadWhatsAppStatus({ silent: true }) } catch {}
+      setWaState(prev => ({ ...prev, loading: false }))
     }
   }
 
   const disconnectWhatsApp = async () => {
+    if (waState.loading) return
+    setWaState(prev => ({ ...prev, loading: true }))
+    toast.success('Memutuskan koneksi WhatsApp…')
     try {
-      setWaState(prev => ({ ...prev, loading: true }))
       await api.post('/whatsapp/disconnect')
       await loadWhatsAppStatus()
       toast.success('WhatsApp terputus')
@@ -559,13 +575,14 @@ export default function TASettingsPage() {
   }
 
   // Polling status: lebih sering saat menunggu QR/connecting/loading (UX),
-  // lebih jarang saat sudah connected/idle.
+  // lebih jarang saat sudah connected/idle. Polling pakai mode silent supaya
+  // tidak mematikan `loading` yang sedang dipakai tombol aksi user.
   useEffect(() => {
     if (activeTab !== 'whatsapp') return
     loadWhatsAppStatus()
     const fastStates = ['awaiting_qr', 'connecting', 'authenticated', 'loading']
     const interval = fastStates.includes(waState.status) ? 2500 : 10000
-    const timer = setInterval(loadWhatsAppStatus, interval)
+    const timer = setInterval(() => loadWhatsAppStatus({ silent: true }), interval)
     return () => clearInterval(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, waState.status])
@@ -1529,32 +1546,32 @@ function WhatsAppCard({ waState, setWaState, onConnect, onDisconnect, onSaveSett
         {/* Actions */}
         <div className="flex flex-wrap gap-2 pt-1 border-t border-dark-border/50">
           {!isConnected && !isInProgress && !isSleeping && (
-            <Button onClick={onConnect} loading={waState.loading} icon={QrCode}>
-              Hubungkan WhatsApp
+            <Button onClick={onConnect} loading={waState.loading} icon={QrCode} disabled={waState.loading}>
+              {waState.loading ? 'Menghubungkan…' : 'Hubungkan WhatsApp'}
             </Button>
           )}
           {isSleeping && (
-            <Button onClick={onSendTest} loading={waState.loading} icon={Send} disabled={!phoneOk}>
-              Bangunkan & Kirim Tes
+            <Button onClick={onSendTest} loading={waState.loading} icon={Send} disabled={!phoneOk || waState.loading}>
+              {waState.loading ? 'Mengirim…' : 'Bangunkan & Kirim Tes'}
             </Button>
           )}
           {isInProgress && (
-            <Button onClick={onDisconnect} loading={waState.loading} variant="outline" icon={PowerOff}>
-              Batalkan
+            <Button onClick={onDisconnect} loading={waState.loading} variant="outline" icon={PowerOff} disabled={waState.loading}>
+              {waState.loading ? 'Memproses…' : 'Batalkan'}
             </Button>
           )}
           {isConnected && (
             <>
-              <Button onClick={onSendTest} loading={waState.loading} icon={Send} disabled={!phoneOk}>
-                Kirim Pesan Tes
+              <Button onClick={onSendTest} loading={waState.loading} icon={Send} disabled={!phoneOk || waState.loading}>
+                {waState.loading ? 'Mengirim…' : 'Kirim Pesan Tes'}
               </Button>
-              <Button onClick={onDisconnect} loading={waState.loading} variant="outline" icon={PowerOff}>
-                Putuskan Koneksi
+              <Button onClick={onDisconnect} loading={waState.loading} variant="outline" icon={PowerOff} disabled={waState.loading}>
+                {waState.loading ? 'Memutuskan…' : 'Putuskan Koneksi'}
               </Button>
             </>
           )}
-          <Button onClick={onSaveSettings} loading={waState.loading} variant="secondary" icon={RefreshCw} disabled={!phoneCheck.valid}>
-            Simpan Pengaturan
+          <Button onClick={onSaveSettings} loading={waState.loading} variant="secondary" icon={RefreshCw} disabled={!phoneCheck.valid || waState.loading}>
+            {waState.loading ? 'Menyimpan…' : 'Simpan Pengaturan'}
           </Button>
         </div>
 
