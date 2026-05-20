@@ -68,11 +68,14 @@ function customerDisplayPhone(tx) {
 }
 
 // Daftar nama barber unik dari item transaksi (transaksi multi-service bisa
-// punya beberapa barber berbeda). Fallback ke booking.barberName kalau item
-// tidak punya barberName tapi transaksi datang dari booking.
+// punya beberapa barber berbeda). Sumber prioritas:
+//   1. item.barber.name (relasi User — pasti up-to-date),
+//   2. item.barberName (denorm bila pernah disimpan),
+//   3. booking.barberName (fallback bila transaksi dari booking & item tak
+//      ber-barberId).
 function transactionBarbers(tx) {
   const fromItems = (tx?.items || [])
-    .map(i => i.barberName)
+    .map((i) => i?.barber?.name || i?.barberName)
     .filter(Boolean)
   if (fromItems.length) return [...new Set(fromItems)]
   if (tx?.booking?.barberName) return [tx.booking.barberName]

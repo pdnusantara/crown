@@ -124,9 +124,20 @@ router.get('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir'
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          items: { include: { service: { select: { id: true, name: true } } } },
+          items: {
+            include: {
+              service: { select: { id: true, name: true } },
+              // Nama barber per item — supaya halaman /kasir/transactions bisa
+              // tampilkan nama, bukan strip "-". Item TransactionItem hanya
+              // simpan barberId; nama diambil via relasi User.
+              barber:  { select: { id: true, name: true } },
+            },
+          },
           customer: { select: { id: true, name: true, phone: true } },
-          branch: { select: { id: true, name: true } },
+          branch:   { select: { id: true, name: true } },
+          // Fallback nama barber dari booking bila transaksi datang dari booking
+          // dan item tidak punya barberId (skenario lama).
+          booking:  { select: { id: true, barberName: true, source: true } },
         },
       }),
       prisma.transaction.count({ where }),

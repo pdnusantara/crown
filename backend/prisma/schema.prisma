@@ -129,6 +129,9 @@ model User {
   ticketReplies  TicketReply[]
   attendances    Attendance[]
   workSchedules  WorkSchedule[]
+  // Item transaksi dengan barber ini di-assign — dipakai untuk lookup nama
+  // barber di /kasir/transactions & laporan komisi.
+  transactionItemsAsBarber TransactionItem[] @relation("BarberItems")
 }
 
 model RefreshToken {
@@ -365,6 +368,9 @@ model TransactionItem {
   price         Int
   transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
   service       Service     @relation(fields: [serviceId], references: [id])
+  // Relasi opsional ke barber yang melayani item ini — supaya prisma include
+  // bisa fetch nama tanpa N+1.
+  barber        User?       @relation("BarberItems", fields: [barberId], references: [id])
 }
 
 model Queue {
