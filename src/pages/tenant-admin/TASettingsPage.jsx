@@ -1086,6 +1086,11 @@ export default function TASettingsPage() {
                 <code className="text-gold bg-dark-surface px-1 py-0.5 rounded">{'{toko}'}</code>, dan{' '}
                 <code className="text-gold bg-dark-surface px-1 py-0.5 rounded">{'{link}'}</code>.
               </p>
+              <div className="rounded-lg border border-gold/20 bg-gold/5 px-3 py-2 text-[12px] text-off-white/90">
+                <strong className="text-gold">Catatan:</strong> hanya transaksi yang selesai{' '}
+                <em>setelah</em> fitur diaktifkan yang akan menerima link. Transaksi lama tidak akan
+                dikirimi link supaya pelanggan tidak terganggu.
+              </div>
 
               <label className="flex items-start gap-3 cursor-pointer">
                 <input

@@ -442,7 +442,10 @@ router.patch('/me', authenticate, requireRole('tenant_admin', 'super_admin'), as
     const tenantId = req.user.role === 'super_admin' ? req.body.tenantId : req.user.tenantId;
     if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId wajib' });
 
-    const before = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { timezone: true } });
+    const before = await prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { timezone: true, ratingConfig: true },
+    });
     const body = selfUpdateSchema.parse(req.body);
     const tenant = await prisma.tenant.update({
       where: { id: tenantId },
@@ -451,6 +454,35 @@ router.patch('/me', authenticate, requireRole('tenant_admin', 'super_admin'), as
     });
 
     invalidateTenantCache(tenant.slug);
+
+    // Aktivasi pertama kali "Rating Otomatis": cegah spam dengan menandai semua
+    // transaksi lama yang belum punya `ratingLinkSentAt` sebagai sudah dikirim.
+    // Tanpa ini, cron berikutnya akan blast link rating ke pelanggan dari 24 jam
+    // terakhir. Hanya transaksi yang BARU completed setelah toggle ON yang
+    // boleh menerima link.
+    if (body.ratingConfig !== undefined) {
+      const wasEnabled = !!(before?.ratingConfig && before.ratingConfig.enabled);
+      const nowEnabled = !!(body.ratingConfig && body.ratingConfig.enabled);
+      if (nowEnabled && !wasEnabled) {
+        const stampedAt = new Date();
+        try {
+          const r = await prisma.transaction.updateMany({
+            where: {
+              tenantId,
+              status: 'completed',
+              ratingLinkSentAt: null,
+              createdAt: { lt: stampedAt },
+            },
+            data: { ratingLinkSentAt: stampedAt },
+          });
+          if (r.count > 0) {
+            console.log(`[RatingLink] Aktivasi tenant=${tenantId}: ${r.count} transaksi lama di-skip dari antrian`);
+          }
+        } catch (err) {
+          console.error(`[RatingLink] Gagal backfill saat aktivasi tenant=${tenantId}:`, err.message);
+        }
+      }
+    }
 
     const io = getIO();
     if (io && body.timezone && body.timezone !== before?.timezone) {
