@@ -78,7 +78,14 @@ function TASchedulePageInner() {
     t('tenantAdmin.schedule.daySun'),
   ]
   const { user } = useAuthStore()
-  const { data: allUsers = [] } = useUsers({ role: 'barber', isActive: true })
+  // Tarik kasir & barber. Backend useUsers menerima 1 role param, jadi gabung dua query.
+  const { data: barberUsers = [] } = useUsers({ role: 'barber', isActive: true })
+  const { data: kasirUsers  = [] } = useUsers({ role: 'kasir',  isActive: true })
+  const allUsers = useMemo(() => {
+    const merged = [...barberUsers, ...kasirUsers]
+    return merged.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+  }, [barberUsers, kasirUsers])
+  const [roleFilter, setRoleFilter] = useState('all') // all | kasir | barber
   const { data: branches = [] } = useBranches(user?.tenantId)
   const { data: tenant } = useTenant(user?.tenantId)
   const updateTenant = useUpdateMyTenant()
@@ -184,10 +191,12 @@ function TASchedulePageInner() {
   useEffect(() => { if (!bulkMode) setSelected(new Set()) }, [bulkMode])
 
   const staff = useMemo(() => {
-    // Backend already scopes by tenant + isActive=true; just filter by search for the legend / form.
-    if (!searchDeb) return allUsers
-    return allUsers.filter(s => s.name?.toLowerCase().includes(searchDeb))
-  }, [allUsers, searchDeb])
+    // Backend already scopes by tenant + isActive=true; filter by role + search.
+    let arr = allUsers
+    if (roleFilter !== 'all') arr = arr.filter((s) => s.role === roleFilter)
+    if (searchDeb) arr = arr.filter((s) => s.name?.toLowerCase().includes(searchDeb))
+    return arr
+  }, [allUsers, searchDeb, roleFilter])
 
   // Color stability: use FULL staff list as basis (so colors don't shift when searching)
   const colorMap = useMemo(() => {
@@ -229,6 +238,7 @@ function TASchedulePageInner() {
       for (const u of allUsers) {
         if (taken.has(u.id)) continue
         if (!passesBranchFilter(u)) continue
+        if (roleFilter !== 'all' && u.role !== roleFilter) continue
         const ws = wsLookup[u.id]?.[dow]
         if (!ws || ws.isDayOff) continue
         const startH = parseInt((ws.startTime || '08:00').split(':')[0])
@@ -242,13 +252,14 @@ function TASchedulePageInner() {
         ;(map[key] ||= []).push({
           staffId: u.id,
           name: u.name,
+          role: u.role,
           startTime: ws.startTime,
           endTime: ws.endTime,
         })
       }
     }
     return map
-  }, [allUsers, weekDays, weekSchedules, wsLookup, branchFilter])
+  }, [allUsers, weekDays, weekSchedules, wsLookup, branchFilter, roleFilter])
 
   // Tambah shift dari ghost chip — sama seperti handleCellClick tapi
   // pre-fill staf & jam dari WorkSchedule.
@@ -555,14 +566,15 @@ function TASchedulePageInner() {
   const weekLabel = `${format(currentWeek, 'd MMM', { locale: dateLocale })} – ${format(addDays(currentWeek, 6), 'd MMM yyyy', { locale: dateLocale })}`
 
   const filteredVisible = (sch) => {
+    const u = allUsers.find((x) => x.id === sch.staffId)
+    if (roleFilter !== 'all' && u?.role !== roleFilter) return false
     if (!searchDeb) return true
-    const name = allUsers.find(u => u.id === sch.staffId)?.name?.toLowerCase() || ''
-    return name.includes(searchDeb)
+    return (u?.name || '').toLowerCase().includes(searchDeb)
   }
   const visibleSchedules = useMemo(
     () => weekSchedules.filter(filteredVisible),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [weekSchedules, searchDeb, allUsers]
+    [weekSchedules, searchDeb, allUsers, roleFilter]
   )
   const selectAllVisible = () => {
     setSelected(new Set(visibleSchedules.map(s => s.id)))
@@ -594,7 +606,12 @@ function TASchedulePageInner() {
             {isSelected ? <CheckSquare size={12} className="text-gold" /> : <Square size={12} className="text-muted" />}
           </span>
         )}
-        <span className="truncate">{staffMember?.name || '?'} ({sch.shift})</span>
+        <span className="truncate">
+          <span className="inline-block w-3.5 text-center text-[9px] font-bold mr-1 opacity-70" aria-label={staffMember?.role}>
+            {staffMember?.role === 'kasir' ? 'K' : 'B'}
+          </span>
+          {staffMember?.name || '?'} ({sch.shift})
+        </span>
       </div>
     )
   }
@@ -604,8 +621,8 @@ function TASchedulePageInner() {
       {/* Header */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div className="min-w-0">
-          <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white truncate">{t('tenantAdmin.schedule.title')}</h1>
-          <p className="text-muted text-xs sm:text-sm mt-1">{t('tenantAdmin.schedule.subtitle')}</p>
+          <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white truncate">Jadwal Kerja Mingguan</h1>
+          <p className="text-muted text-xs sm:text-sm mt-1">Rencana shift kasir &amp; barber per tanggal. Pola jam dasar diatur di <Link to="/admin/attendance?tab=jadwal" className="text-gold hover:underline">Pola Mingguan</Link>.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button
@@ -758,6 +775,29 @@ function TASchedulePageInner() {
               <X size={14} />
             </button>
           )}
+          {/* Pemilih peran — segmented control compact */}
+          <div className="flex-shrink-0 inline-flex rounded-lg border border-dark-border overflow-hidden" role="tablist" aria-label="Filter peran">
+            {[
+              { id: 'all',    label: 'Semua' },
+              { id: 'kasir',  label: 'Kasir' },
+              { id: 'barber', label: 'Barber' },
+            ].map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                role="tab"
+                aria-selected={roleFilter === opt.id}
+                onClick={() => setRoleFilter(opt.id)}
+                className={`px-2 py-1 text-[11px] font-medium transition-colors ${
+                  roleFilter === opt.id
+                    ? 'bg-gold text-dark'
+                    : 'text-muted hover:text-off-white hover:bg-dark-card'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </label>
         <div className="grid grid-cols-2 gap-3 col-span-1 sm:col-span-2">
           <Card className="p-3 flex items-center gap-3">
@@ -888,10 +928,15 @@ function TASchedulePageInner() {
                                 key={`ghost-${g.staffId}`}
                                 type="button"
                                 onClick={(e) => handleGhostClick(e, day, g)}
-                                title={`Pola mingguan ${g.name}: ${g.startTime}–${g.endTime}. Klik untuk tambahkan sebagai shift khusus.`}
+                                title={`Pola mingguan ${g.name} (${g.role}): ${g.startTime}–${g.endTime}. Klik untuk tambahkan sebagai shift khusus.`}
                                 className="block w-full text-xs px-1.5 py-1 mb-0.5 rounded border border-dashed border-dark-border/70 bg-dark-card/20 text-muted italic opacity-70 hover:opacity-100 hover:border-gold/40 hover:text-gold transition-all truncate text-left"
                               >
-                                <span className="truncate">{g.name} · {g.startTime}–{g.endTime}</span>
+                                <span className="truncate">
+                                  <span className="inline-block w-3 text-center text-[9px] font-bold mr-1 opacity-70 not-italic">
+                                    {g.role === 'kasir' ? 'K' : 'B'}
+                                  </span>
+                                  {g.name} · {g.startTime}–{g.endTime}
+                                </span>
                               </button>
                             ))}
                           </div>
@@ -1126,13 +1171,13 @@ function TASchedulePageInner() {
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-muted mb-1.5">{t('tenantAdmin.schedule.barber')}</label>
+            <label className="block text-sm font-medium text-muted mb-1.5">Staf (Kasir / Barber)</label>
             <select
               value={form.staffId}
               onChange={e => setForm(f => ({ ...f, staffId: e.target.value }))}
               className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60"
             >
-              {allUsers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {allUsers.map(s => <option key={s.id} value={s.id}>{s.name} ({s.role})</option>)}
             </select>
           </div>
           {branches.length > 1 && (

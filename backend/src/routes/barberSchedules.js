@@ -80,7 +80,7 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin'), async
 
     // Verify staff belongs to tenant + role barber
     const staff = await prisma.user.findFirst({
-      where: { id: body.staffId, tenantId, role: 'barber', isActive: true, deletedAt: null },
+      where: { id: body.staffId, tenantId, role: { in: ['kasir', 'barber'] }, isActive: true, deletedAt: null },
       select: { id: true, name: true },
     });
     if (!staff) return res.status(400).json({ success: false, error: 'Barber tidak ditemukan di tenant ini' });
@@ -156,7 +156,7 @@ router.patch('/:id', authenticate, requireRole('super_admin', 'tenant_admin'), a
     // Validate staff kalau ganti staffId
     if (body.staffId) {
       const staff = await prisma.user.findFirst({
-        where: { id: body.staffId, tenantId: existing.tenantId, role: 'barber', isActive: true, deletedAt: null },
+        where: { id: body.staffId, tenantId: existing.tenantId, role: { in: ['kasir', 'barber'] }, isActive: true, deletedAt: null },
         select: { id: true },
       });
       if (!staff) return res.status(400).json({ success: false, error: 'Barber tidak ditemukan di tenant ini' });
