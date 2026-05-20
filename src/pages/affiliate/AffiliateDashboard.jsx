@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import {
   Users, Wallet, TrendingUp, Clock, Copy, ExternalLink,
   Share2, CheckCircle, ArrowUpRight, Sparkles, AlertCircle,
-  MessageCircle, Facebook,
+  MessageCircle, Send, ThumbsUp,
 } from 'lucide-react'
 import {
   useAffiliateMe, useAffiliateSelfStats, useAffiliateChart,
@@ -140,11 +140,11 @@ export default function AffiliateDashboard() {
               </button>
               <button onClick={shareTelegram}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs hover:bg-blue-500/25 transition-colors">
-                <Share2 size={12} /> Telegram
+                <Send size={12} /> Telegram
               </button>
               <button onClick={shareFacebook}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs hover:bg-indigo-500/25 transition-colors">
-                <Facebook size={12} /> Facebook
+                <ThumbsUp size={12} /> Facebook
               </button>
               <button onClick={handleShare}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-dark-card border border-dark-border text-xs text-muted hover:text-off-white">
