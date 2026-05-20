@@ -25,9 +25,7 @@ import { useActiveShift } from '../../hooks/useShifts.js'
 import { useServices } from '../../hooks/useServices.js'
 import { useUsers } from '../../hooks/useUsers.js'
 import { useCustomers, useCreateCustomer } from '../../hooks/useCustomers.js'
-import { useSubmitBarberRatingsBatch } from '../../hooks/useBarberRatings.js'
 import { useToast } from '../../components/ui/Toast.jsx'
-import { StarRating } from '../../components/ui/StarRating.jsx'
 import WilayahPicker from '../../components/WilayahPicker.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Modal from '../../components/ui/Modal.jsx'
@@ -398,7 +396,6 @@ function POSPageInner() {
   const navigate = useNavigate()
   const queueId = searchParams.get('queueId')
   const { user } = useAuthStore()
-  const submitRatingsMut = useSubmitBarberRatingsBatch()
   const posStore = usePosStore()
   const validateVoucherMut = useValidateVoucher()
   const redeemVoucherMut   = useRedeemVoucher()
@@ -426,7 +423,6 @@ function POSPageInner() {
 
   // Feature flag checks — backend-backed, realtime invalidate on `featureFlag:changed`.
   const voucherEnabled       = useIsFeatureEnabled(user?.tenantId, 'voucher')
-  const barberRatingEnabled  = useIsFeatureEnabled(user?.tenantId, 'barber_rating')
 
   // Transaksi hanya boleh saat shift terbuka. `noActiveShift` baru true setelah
   // query selesai (hindari flash blokir saat masih memuat). Backend tetap jadi
@@ -457,9 +453,6 @@ function POSPageInner() {
   const [appliedVoucher, setAppliedVoucher] = useState(null)
   const [pendingVoucherId, setPendingVoucherId] = useState(null)
   const [processing, setProcessing] = useState(false)
-  const [barberRatings, setBarberRatings] = useState({})
-  const [barberComments, setBarberComments] = useState({})
-  const [ratingsSubmitted, setRatingsSubmitted] = useState(false)
   const [showDraftBanner, setShowDraftBanner] = useState(false)
   const [draft, setDraft] = useState(null)
   const [showCartSheet, setShowCartSheet] = useState(false)
@@ -666,15 +659,6 @@ function POSPageInner() {
       setAppliedVoucher(null)
       setVoucherCode('')
 
-      if (barberRatingEnabled) {
-        const barberIds = [...new Set(posStore.cartItems.map(i => i.barberId).filter(Boolean))]
-        const initRatings = {}
-        const initComments = {}
-        barberIds.forEach(id => { initRatings[id] = 0; initComments[id] = '' })
-        setBarberRatings(initRatings)
-        setBarberComments(initComments)
-        setRatingsSubmitted(false)
-      }
       toast.success(t('pos.transactionSuccess'))
     } catch (err) {
       toast.error(err?.response?.data?.error || t('pos.transactionFailed') || 'Gagal memproses transaksi')
@@ -687,9 +671,6 @@ function POSPageInner() {
     posStore.clearCart()
     setShowReceiptModal(false)
     setDiscountInput({ type: 'percentage', value: '' })
-    setBarberRatings({})
-    setBarberComments({})
-    setRatingsSubmitted(false)
     if (queueId) navigate(`/${getBranchSlug(user)}/kasir/queue`)
   }
 
@@ -724,36 +705,6 @@ function POSPageInner() {
       toast.success(t('pos.newCustomerAdded'))
     } catch (err) {
       toast.error(err?.response?.data?.message || t('pos.addCustomerFailed'))
-    }
-  }
-
-  const handleSubmitRatings = async () => {
-    const txId = posStore.lastTransaction?.id
-    const ratings = Object.entries(barberRatings)
-      .filter(([, rating]) => rating > 0)
-      .map(([barberId, rating]) => ({
-        barberId,
-        rating,
-        comment: (barberComments[barberId] || '').trim() || null,
-      }))
-    if (ratings.length === 0) {
-      // Tidak ada rating yang diisi — anggap user skip
-      handleNewTransaction()
-      return
-    }
-    try {
-      const res = await submitRatingsMut.mutateAsync({
-        transactionId: txId || null,
-        ratings,
-      })
-      const created = res?.meta?.created ?? ratings.length
-      const skipped = res?.meta?.skipped ?? 0
-      if (created > 0) toast.success(t('pos.ratingsSent', { count: created }))
-      if (skipped > 0) toast.error(t('pos.ratingsDuplicate', { count: skipped }))
-      setRatingsSubmitted(true)
-      handleNewTransaction()
-    } catch (err) {
-      toast.error(err?.response?.data?.error || t('pos.ratingsSubmitFailed'))
     }
   }
 
@@ -1474,63 +1425,6 @@ function POSPageInner() {
               <div className="border-t border-dashed border-gray-300 my-2" />
               <p className="text-center text-xs text-gray-400">{t('pos.receiptThanksLong')}</p>
               <p className="text-center text-xs text-gray-300 mt-0.5">{t('pos.poweredBy')}</p>
-            </div>
-          )}
-
-          {/* Barber Rating — submit ke /api/barber-ratings/batch */}
-          {barberRatingEnabled && !ratingsSubmitted && Object.keys(barberRatings).length > 0 && (
-            <div className="p-4 bg-dark-card border border-dark-border rounded-xl space-y-3">
-              <div>
-                <p className="font-semibold text-off-white text-sm">{t('pos.rateBarber')}</p>
-                <p className="text-[11px] text-muted mt-0.5">{t('pos.rateBarberHint')}</p>
-              </div>
-              <div className="space-y-3">
-                {Object.keys(barberRatings).map(barberId => {
-                  const barber = barbers.find(b => b.id === barberId)
-                  if (!barber) return null
-                  const rating = barberRatings[barberId] || 0
-                  return (
-                    <div key={barberId} className="p-3 bg-dark-surface border border-dark-border rounded-lg space-y-2">
-                      <div className="flex items-center justify-between gap-3 flex-wrap">
-                        <span className="text-sm text-off-white font-medium truncate flex-1 min-w-0">{barber.name}</span>
-                        <StarRating
-                          value={rating}
-                          onChange={r => setBarberRatings(rs => ({ ...rs, [barberId]: r }))}
-                          size={22}
-                        />
-                      </div>
-                      {rating > 0 && (
-                        <input
-                          type="text"
-                          maxLength={200}
-                          value={barberComments[barberId] || ''}
-                          onChange={e => setBarberComments(c => ({ ...c, [barberId]: e.target.value }))}
-                          placeholder={t('pos.ratingCommentPlaceholder')}
-                          className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold/60"
-                        />
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" fullWidth onClick={() => { setRatingsSubmitted(true); handleNewTransaction() }} disabled={submitRatingsMut.isPending}>
-                  {t('pos.ratingSkip')}
-                </Button>
-                <Button
-                  fullWidth
-                  onClick={handleSubmitRatings}
-                  loading={submitRatingsMut.isPending}
-                  disabled={Object.values(barberRatings).every(v => !v)}
-                >
-                  {t('pos.submitRating')}
-                </Button>
-              </div>
-            </div>
-          )}
-          {ratingsSubmitted && Object.keys(barberRatings).length > 0 && (
-            <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-center text-sm text-emerald-300 inline-flex items-center justify-center gap-2">
-              <Check className="w-4 h-4" /> {t('pos.ratingsSentBanner')}
             </div>
           )}
 
