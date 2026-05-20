@@ -28,6 +28,7 @@ const getRedirectPath = (user) => {
     case 'kasir':        { const slug = getBranchSlug(user); return slug ? `/${slug}/kasir/pos` : '/login' }
     case 'barber':       return '/barber/dashboard'
     case 'customer':     return '/customer/booking'
+    case 'affiliate':    return '/affiliate/dashboard'
     default:             return '/login'
   }
 }
