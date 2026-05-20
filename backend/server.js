@@ -16,6 +16,7 @@ const { initRenewalJob } = require('./src/jobs/subscriptionRenewal');
 const { initVisitReminderJob } = require('./src/jobs/visitReminder');
 const { initAttendanceFinalizeJob } = require('./src/jobs/attendanceFinalize');
 const { initRatingLinkDispatchJob } = require('./src/jobs/ratingLinkDispatch');
+const { initBookingAutoCheckinJob } = require('./src/jobs/bookingAutoCheckin');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -170,6 +171,7 @@ httpServer.listen(PORT, () => {
   initVisitReminderJob();
   initAttendanceFinalizeJob();
   initRatingLinkDispatchJob();
+  initBookingAutoCheckinJob();
 });
 
 module.exports = app;
