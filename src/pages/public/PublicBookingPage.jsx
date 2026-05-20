@@ -410,7 +410,8 @@ function PublicBookingPageInner() {
           )}
           {step === 2 && (
             <Step3Confirm
-              tenantName={tenantName} selected={selected} form={form} formError={formError}
+              tenantName={tenantName} tenantWilayah={tenantWilayah}
+              selected={selected} form={form} formError={formError}
               setForm={setForm} accent={accent} totalPrice={totalPrice}
               error={error} submitting={submitting}
               onBack={() => setStep(1)}
@@ -1523,7 +1524,7 @@ function Step2Schedule({ selected, timeSlots, bookedSlots, branchClosure, tenant
 // STEP 3 — Konfirmasi
 // ═══════════════════════════════════════════════════════════════════════════
 
-function Step3Confirm({ tenantName, selected, form, formError, setForm, accent, totalPrice,
+function Step3Confirm({ tenantName, tenantWilayah, selected, form, formError, setForm, accent, totalPrice,
                         error, submitting, onBack, onSubmit }) {
   return (
     <div className="lg:grid lg:grid-cols-5 lg:gap-8 space-y-6 lg:space-y-0">
