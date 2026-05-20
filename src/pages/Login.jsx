@@ -128,8 +128,8 @@ export default function Login() {
             <div className="flex items-start gap-2 bg-amber-400/10 border border-amber-400/30 rounded-xl p-3 mb-4 text-amber-200 text-xs leading-relaxed">
               <Shield size={14} className="mt-0.5 flex-shrink-0 text-amber-400" />
               <p>
-                Login domain ini khusus <span className="font-semibold">Super-Admin</span>.
-                Akun tenant silakan login melalui subdomain bisnis Anda
+                Domain ini untuk <span className="font-semibold">Super-Admin</span> &amp; <span className="font-semibold">Affiliate</span>.
+                Akun tenant (admin/kasir/barber) silakan login melalui subdomain bisnis Anda
                 (mis. <span className="font-mono text-amber-100">tenant.sembapos.com</span>).
               </p>
             </div>
