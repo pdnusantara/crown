@@ -1860,7 +1860,8 @@
   "realtime": {
     "live": "Live",
     "offline": "Offline",
-    "liveTooltip": "Real-time tersambung",
-    "offlineTooltip": "Tidak tersambung — data mungkin tidak terbaru"
+    "liveTooltip": "Real-time tersambung — klik untuk segarkan manual",
+    "offlineTooltip": "Tidak tersambung — klik untuk segarkan data",
+    "refreshing": "Menyegarkan…"
   }
 }

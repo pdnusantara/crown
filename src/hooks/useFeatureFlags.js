@@ -35,7 +35,10 @@ export function useFeatureFlags(tenantId) {
       return data.filter(f => f.enabled).map(f => f.id)
     },
     enabled: !!tenantId,
-    staleTime: 1000 * 60 * 5,
+    // Flag jarang berubah, tapi saat berubah harus cepat reflect (feature on/off).
+    // WS event `featureFlag:changed` handle realtime; staleTime 60s cukup sebagai
+    // safety net + memanfaatkan refetchOnWindowFocus saat user balik ke tab.
+    staleTime: 60_000,
     retry: false,
   })
 }

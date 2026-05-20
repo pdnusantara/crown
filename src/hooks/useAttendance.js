@@ -24,7 +24,9 @@ export function useMyAttendanceToday() {
   return useQuery({
     queryKey: ['attendance', 'me', 'today'],
     queryFn: async () => (await api.get('/attendance/me/today')).data.data,
-    staleTime: 1000 * 30,
+    staleTime: 15_000,
+    // Safety net kalau WS drop di HP staf (network mobile suka putus-nyambung).
+    refetchInterval: 45_000,
     retry: false,
   })
 }
@@ -78,6 +80,8 @@ export function useAttendanceList(params, enabled = true) {
     },
     enabled,
     keepPreviousData: true,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
   })
 }
 
@@ -95,7 +99,8 @@ export function useAttendanceTodaySummary(enabled = true) {
     queryKey: ['attendance', 'today-summary'],
     queryFn: async () => (await api.get('/attendance/today-summary')).data.data,
     enabled,
-    staleTime: 1000 * 60,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
   })
 }
 

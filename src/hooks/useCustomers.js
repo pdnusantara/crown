@@ -91,39 +91,26 @@ export function useCustomer(id) {
 export function useCustomerStats() {
   const { user } = useAuthStore()
   const tenantId = user?.tenantId
-  // Bumped ke v2 setelah skema segment refactor (vip/loyal/new/atRisk/lost/never).
-  // Cache key v1 lama (regular/inactive) di-ignore otomatis karena beda key.
-  const cacheKey = tenantId ? `customer-stats-v2:${tenantId}` : null
 
-  // Bersihkan cache key v1 lama (one-time cleanup) supaya tidak menumpuk di localStorage.
+  // One-time cleanup cache lama (v1 + v2) di localStorage — sebelumnya kita
+  // simpan stats di sana sebagai initialData, tapi itu bikin "flash stale"
+  // (user lihat angka kunjungan sebelumnya selama 1-2 detik). Sekarang andalkan
+  // React Query cache + skeleton loader saja.
   if (typeof window !== 'undefined' && tenantId) {
-    try { window.localStorage.removeItem(`customer-stats:${tenantId}`) } catch {}
-  }
-
-  // Initial data dari localStorage agar refresh halaman tidak flash 0/skeleton.
-  const initial = (() => {
-    if (!cacheKey || typeof window === 'undefined') return undefined
     try {
-      const raw = window.localStorage.getItem(cacheKey)
-      return raw ? JSON.parse(raw) : undefined
-    } catch { return undefined }
-  })()
+      window.localStorage.removeItem(`customer-stats:${tenantId}`)
+      window.localStorage.removeItem(`customer-stats-v2:${tenantId}`)
+    } catch {}
+  }
 
   return useQuery({
     queryKey: ['customers', 'stats', tenantId],
     queryFn: async () => {
       const res = await api.get('/customers/stats', { params: { tenantId } })
-      const data = res.data?.data || null
-      if (cacheKey && data) {
-        try { window.localStorage.setItem(cacheKey, JSON.stringify(data)) } catch {}
-      }
-      return data
+      return res.data?.data || null
     },
     enabled: !!tenantId,
     staleTime: 30_000,
-    initialData: initial,
-    // Selalu refetch di mount supaya angka tile update walaupun ada cache.
-    refetchOnMount: 'always',
   })
 }
 

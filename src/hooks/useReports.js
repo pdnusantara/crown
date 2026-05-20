@@ -12,26 +12,30 @@ function daysAgoStr(n) {
 export function useReportSummary(tenantId, startDate, endDate, branchId) {
   const sd = startDate ?? todayStr()
   const ed = endDate   ?? todayStr()
-  const cacheKey = tenantId ? `reports-summary:${tenantId}:${branchId || 'all'}:${sd}:${ed}` : null
-  const initial = (() => {
-    if (!cacheKey || typeof window === 'undefined') return undefined
-    try { const raw = window.localStorage.getItem(cacheKey); return raw ? JSON.parse(raw) : undefined }
-    catch { return undefined }
-  })()
+
+  // One-time cleanup cache lama di localStorage — sebelumnya kita simpan
+  // summary di sana sebagai initialData, tapi itu bikin user lihat angka
+  // periode/cabang lain yang sempat dibuka (flash stale). Sekarang andalkan
+  // React Query saja.
+  if (typeof window !== 'undefined' && tenantId) {
+    try {
+      const prefix = `reports-summary:${tenantId}:`
+      for (let i = window.localStorage.length - 1; i >= 0; i--) {
+        const key = window.localStorage.key(i)
+        if (key && key.startsWith(prefix)) window.localStorage.removeItem(key)
+      }
+    } catch {}
+  }
+
   return useQuery({
     queryKey: ['reports', 'summary', tenantId, sd, ed, branchId || 'all'],
     queryFn: async () => {
       const params = { tenantId, startDate: sd, endDate: ed }
       if (branchId) params.branchId = branchId
       const res = await api.get('/reports/summary', { params })
-      const data = res.data.data
-      if (cacheKey && data) {
-        try { window.localStorage.setItem(cacheKey, JSON.stringify(data)) } catch {}
-      }
-      return data
+      return res.data.data
     },
     enabled: !!tenantId,
-    initialData: initial,
     staleTime: 30_000,
   })
 }

@@ -22,8 +22,10 @@ export function usePackages() {
       const list = res.data.data || []
       return { list, map: listToMap(list) }
     },
-    // Paket jarang berubah — cache 5 menit
-    staleTime: 5 * 60 * 1000,
+    // Paket jarang berubah, tapi saat super admin update — UI tenant harus cepat
+    // reflect (harga, fitur, slot cabang). WS event `package:updated` handle
+    // realtime; staleTime 60s sebagai safety net.
+    staleTime: 60_000,
   })
 
   // Realtime: super_admin men-update paket → semua tab/pengguna lain ikut refresh.

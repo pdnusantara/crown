@@ -102,6 +102,11 @@ export function useQueue(branchId) {
       return Array.isArray(raw) ? raw : (raw?.data || [])
     },
     enabled: !!branchId,
+    // Polling fallback — utama lewat WS (`queue:created/updated/deleted`),
+    // tapi kalau koneksi WS drop atau event hilang, polling 30s memastikan
+    // antrian tetap sinkron antar device.
+    staleTime: 10_000,
+    refetchInterval: 30_000,
   })
 
   useEffect(() => {
