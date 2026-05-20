@@ -12,6 +12,7 @@
 
 const cron = require('node-cron');
 const prisma = require('../config/database');
+const { tenantDayStart } = require('../utils/timezone');
 
 // "HH:MM" → menit sejak tengah malam.
 function hmToMin(hm) {
@@ -38,7 +39,9 @@ async function processTenant(tenant) {
   if (!autoCheckOutEnabled(tenant.attendanceConfig)) return 0;
 
   const todayYmd = tenantTodayYmd(tenant.timezone);
-  const todayStartUTC = new Date(`${todayYmd}T00:00:00.000Z`);
+  // Boundary harus pakai TZ tenant — record disimpan via tenantDayStart, jadi
+  // record hari ini bisa berupa UTC instant di hari sebelumnya (mis. WIB → 17:00Z).
+  const todayStart = tenantDayStart(todayYmd, tenant.timezone || 'Asia/Jakarta');
 
   // Absen yang masih terbuka & tanggalnya sebelum hari ini (tenant-local).
   const open = await prisma.attendance.findMany({
@@ -46,7 +49,7 @@ async function processTenant(tenant) {
       tenantId: tenant.id,
       checkInAt: { not: null },
       checkOutAt: null,
-      date: { lt: todayStartUTC },
+      date: { lt: todayStart },
     },
     select: { id: true, date: true, checkInAt: true, scheduleEnd: true },
   });
