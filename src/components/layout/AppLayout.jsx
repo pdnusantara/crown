@@ -260,6 +260,12 @@ export const AppLayout = () => {
       const prev = bookingStatusCache.get(b.id)
       bookingStatusCache.set(b.id, b.status)
       if (prev === b.status) return
+      // Skip notifikasi 'in_progress' — selalu pair dengan queue:created
+      // ("Antrian Baru") yang sudah membuat toast & lonceng. Tanpa guard ini,
+      // user lihat 2 popup identik per check-in (manual & cron auto-checkin).
+      // Status lain (confirmed/cancelled/done) tetap di-notif karena event
+      // booking-specific yang tak selalu punya pair queue event.
+      if (b.status === 'in_progress') return
       const label = BOOKING_STATUS_TEXT[b.status] || b.status
       const title = b.status === 'cancelled' ? '⚠️ Booking Dibatalkan'
         : b.status === 'confirmed' ? '✅ Booking Dikonfirmasi'
