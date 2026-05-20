@@ -18,6 +18,11 @@ const DEFAULT_DELAY_MIN = 15;
 const MIN_DELAY_MIN     = 1;
 const MAX_DELAY_MIN     = 24 * 60; // 1 hari — guard biar tidak basi
 const MAX_PER_RUN       = 100;     // batas aman per tenant per eksekusi
+// Batas atas usia transaksi yang masih layak dikirim link rating. Kalau tenant
+// baru mengaktifkan fitur, transaksi historis berhari-hari/minggu yg lalu
+// JANGAN ikut dikirim — ini bikin spam pelanggan. Asumsi: link rating cuma
+// relevan dalam hari yang sama (24 jam).
+const MAX_TX_AGE_HOURS  = 24;
 
 function resolveConfig(raw) {
   const c = raw && typeof raw === 'object' ? raw : {};
@@ -34,15 +39,21 @@ async function processTenant(tenant) {
     return { tenantId: tenant.id, skipped: 'disabled', sent: 0 };
   }
 
-  // Transaksi completed > N menit, ada nomor HP, belum dikirim link rating,
-  // dan belum ada ShopRating (anti-spam kalau user sudah submit secara langsung).
-  const threshold = new Date(Date.now() - cfg.autoSendMinutes * 60_000);
+  // Transaksi completed yang:
+  // - sudah lewat `autoSendMinutes` (siap dikirim)
+  // - usianya masih ≤ MAX_TX_AGE_HOURS (cegah spam saat tenant baru aktifkan
+  //   fitur — transaksi historis berminggu-minggu lalu tak relevan)
+  // - ada nomor HP
+  // - belum dikirim link rating
+  const now = Date.now();
+  const upperBound = new Date(now - cfg.autoSendMinutes * 60_000);
+  const lowerBound = new Date(now - MAX_TX_AGE_HOURS * 3600_000);
 
   const candidates = await prisma.transaction.findMany({
     where: {
       tenantId: tenant.id,
       status: 'completed',
-      createdAt: { lte: threshold },
+      createdAt: { lte: upperBound, gte: lowerBound },
       ratingLinkSentAt: null,
       customerPhone: { not: null },
     },
@@ -110,13 +121,39 @@ async function runOnce() {
   return results;
 }
 
+// Backfill once saat boot: tandai transaksi historis (> MAX_TX_AGE_HOURS) yang
+// belum punya `ratingLinkSentAt` supaya cron tidak pernah memilihnya. Idempotent —
+// untuk record yg sudah disambar batas usia, .updateMany cuma menyentuh yg null.
+async function backfillOldTransactions() {
+  const cutoff = new Date(Date.now() - MAX_TX_AGE_HOURS * 3600_000);
+  try {
+    const r = await prisma.transaction.updateMany({
+      where: {
+        status: 'completed',
+        createdAt: { lt: cutoff },
+        ratingLinkSentAt: null,
+      },
+      data: { ratingLinkSentAt: new Date() },
+    });
+    if (r.count > 0) {
+      console.log(`[RatingLink] Backfill: ${r.count} transaksi historis di-skip dari kandidat`);
+    }
+  } catch (err) {
+    console.error('[RatingLink] Backfill ERROR:', err.message);
+  }
+}
+
 function initRatingLinkDispatchJob() {
+  // One-time backfill saat boot supaya tenant yang baru aktifkan fitur tidak
+  // dapat antrian kirim utk transaksi berhari-hari yg lalu.
+  backfillOldTransactions().catch((err) => console.error('[RatingLink] init backfill failed:', err.message));
+
   // Tiap 5 menit. Lebih sering dari visitReminder (yang hourly) karena
   // ekspektasi pelanggan dapat link sekitar 15 menit setelah transaksi.
   cron.schedule('*/5 * * * *', () => {
     runOnce().catch((err) => console.error('[RatingLink] cron run failed:', err.message));
   });
-  console.log('[RatingLink] Scheduled: every 5 minutes');
+  console.log('[RatingLink] Scheduled: every 5 minutes (max-age 24h, backfill on boot)');
 }
 
 module.exports = { initRatingLinkDispatchJob, runOnce, processTenant };
