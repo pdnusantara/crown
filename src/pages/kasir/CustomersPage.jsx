@@ -18,6 +18,7 @@ import Button from '../../components/ui/Button.jsx'
 import Input from '../../components/ui/Input.jsx'
 import Modal from '../../components/ui/Modal.jsx'
 import Badge, { getSegmentBadge } from '../../components/ui/Badge.jsx'
+import ErrorBoundary from '../../components/ui/ErrorBoundary.jsx'
 import { formatRupiah, formatRupiahShort, formatDate, formatDateTime } from '../../utils/format.js'
 import { formatDistanceToNow } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
@@ -63,9 +64,16 @@ function StatTile({ icon: Icon, label, value, hint, accent = 'gold' }) {
 
 function CustomerRow({ c, onOpen }) {
   const seg = quickSegment(c)
-  const lastVisit = c.lastVisitAt
-    ? formatDistanceToNow(new Date(c.lastVisitAt), { addSuffix: true, locale: idLocale })
-    : 'belum pernah'
+  // Hindari crash bila lastVisitAt format tak terduga — try/catch defensif.
+  let lastVisit = 'belum pernah'
+  if (c.lastVisitAt) {
+    try {
+      const d = new Date(c.lastVisitAt)
+      if (!Number.isNaN(d.getTime())) {
+        lastVisit = formatDistanceToNow(d, { addSuffix: true, locale: idLocale })
+      }
+    } catch { /* fallback */ }
+  }
   return (
     <button
       onClick={() => onOpen(c.id)}
@@ -109,7 +117,9 @@ function CustomerRow({ c, onOpen }) {
 // Drawer detail pelanggan + tombol Edit / Atur Poin.
 function CustomerDrawer({ customerId, onClose, onEdit, onAdjust }) {
   const { data: c, isLoading } = useCustomer(customerId)
-  const { data: history = [] } = usePointHistory(customerId, { limit: 20 })
+  // usePointHistory mengembalikan { items, meta } — bukan array langsung.
+  const { data: ph } = usePointHistory(customerId, { limit: 20 })
+  const history = Array.isArray(ph?.items) ? ph.items : []
   if (!customerId) return null
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true">
@@ -302,6 +312,14 @@ function AdjustPointsModal({ open, onClose, customer, onConfirm, loading }) {
 }
 
 export default function KasirCustomersPage() {
+  return (
+    <ErrorBoundary>
+      <KasirCustomersInner />
+    </ErrorBoundary>
+  )
+}
+
+function KasirCustomersInner() {
   const toast = useToast()
   const [search, setSearch] = useState('')
   const [searchDeb, setSearchDeb] = useState('')
@@ -326,9 +344,9 @@ export default function KasirCustomersPage() {
 
   const statsTiles = useMemo(() => ([
     { label: 'Total', value: stats?.total ?? total ?? 0, icon: Users, accent: 'gold' },
-    { label: 'VIP', value: stats?.vipCount ?? 0, icon: Crown, accent: 'gold', hint: '10+ kunjungan' },
-    { label: 'Baru bulan ini', value: stats?.newThisMonth ?? 0, icon: Star, accent: 'info' },
-    { label: 'Total poin', value: (stats?.totalPoints ?? 0).toLocaleString('id-ID'), icon: Award, accent: 'success' },
+    { label: 'VIP', value: stats?.vip ?? 0, icon: Crown, accent: 'gold', hint: '10+ kunjungan' },
+    { label: 'Baru', value: stats?.new ?? 0, icon: Star, accent: 'info', hint: 'kunjungan 1–2' },
+    { label: 'At-Risk + Lost', value: (stats?.atRisk ?? 0) + (stats?.lost ?? 0), icon: Award, accent: 'warning', hint: '>90 hari tidak datang' },
   ]), [stats, total])
 
   const onSubmitForm = async (data) => {
