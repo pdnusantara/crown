@@ -5,6 +5,7 @@ const { z } = require('zod');
 const prisma = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { parsePagination, paginatedResponse } = require('../utils/pagination');
+const { recordAudit } = require('../utils/auditLog');
 
 // Charset menghindari karakter ambigu (0/O, 1/l/I) supaya gampang dibacakan
 // admin ke staf via telepon/WA.
@@ -152,6 +153,13 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin'), async
       select: userSelect,
     });
 
+    await recordAudit(req, {
+      action: 'user.create',
+      target: `user:${user.id}`,
+      detail: `Staf baru: ${user.name} (${user.role}, ${user.email})`,
+      severity: 'info',
+      tenantId: user.tenantId,
+    });
     res.status(201).json({
       success: true,
       data: { ...user, tempPassword: plaintextPassword, passwordGenerated: generated },
@@ -172,6 +180,7 @@ router.put('/:id', authenticate, requireRole('super_admin', 'tenant_admin'), asy
     }
 
     const body = updateUserSchema.parse(req.body);
+    const passwordChanged = !!body.password;
 
     if (body.password) {
       body.password = await bcrypt.hash(body.password, 10);
@@ -183,6 +192,15 @@ router.put('/:id', authenticate, requireRole('super_admin', 'tenant_admin'), asy
       select: userSelect,
     });
 
+    const changedKeys = Object.keys(body).filter(k => k !== 'password');
+    if (passwordChanged) changedKeys.push('password');
+    await recordAudit(req, {
+      action: 'user.update',
+      target: `user:${user.id}`,
+      detail: `Edit staf: ${user.name}${changedKeys.length ? ` (${changedKeys.join(', ')})` : ''}`,
+      severity: passwordChanged ? 'warning' : 'info',
+      tenantId: user.tenantId,
+    });
     res.json({ success: true, data: user });
   } catch (err) {
     next(err);
@@ -226,6 +244,13 @@ router.post('/:id/reset-password', authenticate, requireRole('super_admin', 'ten
     // Sekaligus invalidate refresh token aktif supaya sesi lama otomatis logout
     await prisma.refreshToken.deleteMany({ where: { userId: existing.id } });
 
+    await recordAudit(req, {
+      action: 'user.password_reset',
+      target: `user:${existing.id}`,
+      detail: `Reset password: ${existing.name} (${existing.email})${isCustom ? ' — kustom' : ' — otomatis'}`,
+      severity: 'warning',
+      tenantId: existing.tenantId,
+    });
     res.json({
       success: true,
       data: {
@@ -256,6 +281,13 @@ router.delete('/:id', authenticate, requireRole('super_admin', 'tenant_admin'), 
       data: { deletedAt: new Date() },
     });
 
+    await recordAudit(req, {
+      action: 'user.delete',
+      target: `user:${existing.id}`,
+      detail: `Hapus staf: ${existing.name} (${existing.email})`,
+      severity: 'warning',
+      tenantId: existing.tenantId,
+    });
     res.json({ success: true, data: { message: 'User deleted successfully' } });
   } catch (err) {
     next(err);

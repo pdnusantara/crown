@@ -5,6 +5,7 @@ const { authenticate, requireRole } = require('../middleware/auth');
 const { parsePagination, paginatedResponse } = require('../utils/pagination');
 const { getBranchLicenseStatus } = require('../utils/branchLicense');
 const { invalidateBranchCache, resolveBranchId, isCuid } = require('../utils/branchResolver');
+const { recordAudit } = require('../utils/auditLog');
 
 const branchSelect = {
   id: true,
@@ -256,6 +257,13 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin'), async
     });
 
     invalidateBranchCache();
+    await recordAudit(req, {
+      action: 'branch.create',
+      target: `branch:${branch.id}`,
+      detail: `Cabang baru: ${branch.name}${branch.code ? ` (${branch.code})` : ''}`,
+      severity: 'info',
+      tenantId: branch.tenantId,
+    });
     res.status(201).json({
       success: true,
       data: branch,
@@ -289,6 +297,14 @@ router.put('/:id', authenticate, requireRole('super_admin', 'tenant_admin'), res
     if (body.code !== undefined && body.code !== existing.code) {
       invalidateBranchCache();
     }
+    const changedKeys = Object.keys(body);
+    await recordAudit(req, {
+      action: 'branch.update',
+      target: `branch:${branch.id}`,
+      detail: `Edit cabang: ${branch.name}${changedKeys.length ? ` (${changedKeys.join(', ')})` : ''}`,
+      severity: 'info',
+      tenantId: branch.tenantId,
+    });
     res.json({ success: true, data: branch });
   } catch (err) {
     if (err?.code === 'P2002' && Array.isArray(err.meta?.target) && err.meta.target.includes('code')) {
@@ -347,6 +363,13 @@ router.post('/:id/closures', authenticate, requireRole('super_admin', 'tenant_ad
       }),
     ]);
 
+    await recordAudit(req, {
+      action: 'branch.closure_set',
+      target: `branch:${existing.id}`,
+      detail: `Tutup cabang ${updated.name} pada ${body.date}${body.note ? ` — ${body.note}` : ''}`,
+      severity: 'info',
+      tenantId: updated.tenantId,
+    });
     res.json({ success: true, data: { branch: updated, clearedSchedules: cleared.count } });
   } catch (err) {
     if (err instanceof z.ZodError) return res.status(400).json({ success: false, error: err.errors[0]?.message });
@@ -373,6 +396,13 @@ router.delete('/:id/closures', authenticate, requireRole('super_admin', 'tenant_
       data: { closedDates: next },
       select: branchSelect,
     });
+    await recordAudit(req, {
+      action: 'branch.closure_remove',
+      target: `branch:${existing.id}`,
+      detail: `Buka kembali cabang ${updated.name} pada ${date}`,
+      severity: 'info',
+      tenantId: updated.tenantId,
+    });
     res.json({ success: true, data: updated });
   } catch (err) { next(err); }
 });
@@ -393,6 +423,13 @@ router.delete('/:id', authenticate, requireRole('super_admin', 'tenant_admin'), 
     });
 
     invalidateBranchCache();
+    await recordAudit(req, {
+      action: 'branch.delete',
+      target: `branch:${existing.id}`,
+      detail: `Hapus cabang: ${existing.name}`,
+      severity: 'warning',
+      tenantId: existing.tenantId,
+    });
     res.json({ success: true, data: { message: 'Branch deleted successfully' } });
   } catch (err) {
     next(err);

@@ -4,6 +4,7 @@ const prisma = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { parsePagination, paginatedResponse } = require('../utils/pagination');
 const { getIO, tenantRoom } = require('../config/socket');
+const { recordAudit } = require('../utils/auditLog');
 
 // Broadcast perubahan layanan ke seluruh klien tenant (kasir, booking, queue,
 // admin) supaya POS & halaman lain ikut tersinkron otomatis tanpa reload.
@@ -171,6 +172,13 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin'), async
     });
 
     emitService('service:created', service, service.tenantId);
+    await recordAudit(req, {
+      action: 'service.create',
+      target: `service:${service.id}`,
+      detail: `Layanan baru: ${service.name} (Rp ${service.price.toLocaleString('id-ID')}, ${service.duration} mnt)`,
+      severity: 'info',
+      tenantId: service.tenantId,
+    });
     res.status(201).json({ success: true, data: service });
   } catch (err) {
     next(err);
@@ -195,6 +203,14 @@ router.put('/:id', authenticate, requireRole('super_admin', 'tenant_admin'), asy
     });
 
     emitService('service:updated', service, service.tenantId);
+    const changedKeys = Object.keys(body);
+    await recordAudit(req, {
+      action: 'service.update',
+      target: `service:${service.id}`,
+      detail: `Edit layanan: ${service.name}${changedKeys.length ? ` (${changedKeys.join(', ')})` : ''}`,
+      severity: 'info',
+      tenantId: service.tenantId,
+    });
     res.json({ success: true, data: service });
   } catch (err) {
     next(err);
@@ -217,6 +233,13 @@ router.delete('/:id', authenticate, requireRole('super_admin', 'tenant_admin'), 
     });
 
     emitService('service:deleted', { id: req.params.id }, existing.tenantId);
+    await recordAudit(req, {
+      action: 'service.delete',
+      target: `service:${existing.id}`,
+      detail: `Hapus layanan: ${existing.name}`,
+      severity: 'warning',
+      tenantId: existing.tenantId,
+    });
     res.json({ success: true, data: { message: 'Service deleted successfully' } });
   } catch (err) {
     next(err);
