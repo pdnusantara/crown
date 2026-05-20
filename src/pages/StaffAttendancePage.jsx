@@ -212,6 +212,15 @@ export default function StaffAttendancePage() {
                     <span className="text-muted font-normal"> · toleransi {config.lateToleranceMin}m</span>
                   )}
                 </p>
+                {schedule?.source && !schedule.isDayOff && (
+                  <p className="text-[11px] text-muted mt-0.5">
+                    {schedule.source.startsWith('barberSchedule')
+                      ? <>Shift <span className="text-gold">{schedule.source.split(':')[1] || 'Khusus'}</span> · rencana shift harian</>
+                      : schedule.source === 'workSchedule'
+                        ? 'Pola kerja mingguan'
+                        : 'Default sistem'}
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex items-start gap-3 border-t border-dark-border pt-3">

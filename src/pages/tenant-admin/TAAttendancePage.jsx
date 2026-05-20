@@ -17,6 +17,7 @@ import {
   useAttendanceSchedules, useUpdateSchedule, useBulkSchedule,
   useUpdateAttendance, useManualAttendance,
 } from '../../hooks/useAttendance.js'
+import { useBarberSchedules } from '../../hooks/useBarberSchedules.js'
 import {
   DAY_NAMES, DAY_NAMES_SHORT, ATT_STATUS, statusMeta, fmtDuration, fmtTime, fmtDateLong,
 } from '../../utils/attendance.js'
@@ -43,7 +44,7 @@ function downloadCSV(filename, headers, rows) {
 const TABS = [
   { id: 'rekap',    label: 'Rekap',       icon: ClipboardList },
   { id: 'laporan',  label: 'Laporan',     icon: BarChart3 },
-  { id: 'jadwal',   label: 'Jadwal Kerja', icon: CalendarClock },
+  { id: 'jadwal',   label: 'Pola Mingguan', icon: CalendarClock },
   { id: 'setting',  label: 'Pengaturan',  icon: Settings2 },
 ]
 
@@ -217,6 +218,7 @@ function RekapTab({ tenantId }) {
                       <th className="px-4 py-2.5">Tanggal</th>
                       <th className="px-4 py-2.5">Staf</th>
                       <th className="px-4 py-2.5">Cabang</th>
+                      <th className="px-4 py-2.5">Jadwal</th>
                       <th className="px-4 py-2.5">Masuk</th>
                       <th className="px-4 py-2.5">Pulang</th>
                       <th className="px-4 py-2.5">Durasi</th>
@@ -233,6 +235,9 @@ function RekapTab({ tenantId }) {
                           <p className="text-xs text-muted capitalize">{r.staffRole || r.staff?.role}</p>
                         </td>
                         <td className="px-4 py-2.5 text-muted">{r.branch?.name || '-'}</td>
+                        <td className="px-4 py-2.5 text-muted tabular-nums whitespace-nowrap">
+                          {r.scheduleStart && r.scheduleEnd ? `${r.scheduleStart}–${r.scheduleEnd}` : '—'}
+                        </td>
                         <td className="px-4 py-2.5 text-off-white">
                           {fmtTime(r.checkInAt)}
                           {r.lateMinutes > 0 && <span className="text-amber-400 text-xs"> +{r.lateMinutes}m</span>}
@@ -267,11 +272,14 @@ function RekapTab({ tenantId }) {
                         </button>
                       </div>
                     </div>
-                    <div className="mt-2 flex gap-4 text-xs text-muted">
-                      <span>Masuk: <span className="text-off-white">{fmtTime(r.checkInAt)}</span>
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+                      <span>Masuk: <span className="text-off-white tabular-nums">{fmtTime(r.checkInAt)}</span>
                         {r.lateMinutes > 0 && <span className="text-amber-400"> +{r.lateMinutes}m</span>}</span>
-                      <span>Pulang: <span className="text-off-white">{fmtTime(r.checkOutAt)}</span></span>
+                      <span>Pulang: <span className="text-off-white tabular-nums">{fmtTime(r.checkOutAt)}</span></span>
                       <span>Durasi: <span className="text-off-white">{fmtDuration(r.workedMinutes)}</span></span>
+                      {r.scheduleStart && r.scheduleEnd && (
+                        <span>Jadwal: <span className="text-off-white tabular-nums">{r.scheduleStart}–{r.scheduleEnd}</span></span>
+                      )}
                     </div>
                   </li>
                 ))}
@@ -522,6 +530,21 @@ function JadwalTab() {
   const { data: staffList = [], isLoading, error } = useAttendanceSchedules()
   const [editStaff, setEditStaff] = useState(null)
 
+  // Senin minggu ini (lokal browser) — untuk hitung jumlah shift khusus
+  // (BarberSchedule) per barber, ditampilkan sebagai badge.
+  const weekStart = useMemo(() => {
+    const d = new Date()
+    const dow = d.getDay() === 0 ? 6 : d.getDay() - 1
+    const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - dow)
+    return monday.toLocaleDateString('en-CA')
+  }, [])
+  const { data: weekBs = [] } = useBarberSchedules({ weekStart })
+  const bsCountByStaff = useMemo(() => {
+    const m = {}
+    for (const s of weekBs) m[s.staffId] = (m[s.staffId] || 0) + 1
+    return m
+  }, [weekBs])
+
   if (error?.response?.status === 403) return <FeatureOff />
   if (isLoading) return <div className="py-12 flex justify-center"><Loader2 className="w-6 h-6 text-gold animate-spin" /></div>
 
@@ -543,11 +566,19 @@ function JadwalTab() {
       )}
       {staffList.map((s) => {
         const offDays = s.schedule.filter((d) => d.isDayOff).length
+        const bsCount = bsCountByStaff[s.staffId] || 0
         return (
           <Card key={s.staffId}>
             <CardBody className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-off-white truncate">{s.name}</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-sm font-medium text-off-white truncate">{s.name}</p>
+                  {s.role === 'barber' && bsCount > 0 && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300 border border-blue-500/30 whitespace-nowrap">
+                      {bsCount} shift khusus minggu ini
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-muted capitalize">
                   {s.role} · {s.branchName || 'Tanpa cabang'} · {7 - offDays} hari kerja / minggu
                 </p>

@@ -18,6 +18,7 @@ import {
   useUpdateBarberSchedule, useCopyScheduleWeek,
   useBulkDeleteSchedules, useClearScheduleWeek,
 } from '../../hooks/useBarberSchedules.js'
+import { useAttendanceSchedules } from '../../hooks/useAttendance.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Modal from '../../components/ui/Modal.jsx'
@@ -80,6 +81,10 @@ function TASchedulePageInner() {
   const { data: branches = [] } = useBranches(user?.tenantId)
   const { data: tenant } = useTenant(user?.tenantId)
   const updateTenant = useUpdateMyTenant()
+  // Pola kerja mingguan barber (WorkSchedule) — untuk peringatan "hari libur" saat
+  // admin assign shift di tanggal yang dipola mingguannya libur. Gracefully fail
+  // bila fitur attendance tidak aktif di tenant.
+  const { data: attSchedules = [] } = useAttendanceSchedules()
   const toast = useToast()
 
   // Preset shift efektif: dari tenant.shiftPresets bila ada, fallback default.
@@ -91,6 +96,17 @@ function TASchedulePageInner() {
     return raw.map((p, i) => ({ ...p, color: PRESET_COLORS[i % PRESET_COLORS.length] }))
   }, [tenant?.shiftPresets])
   const [showPresetEditor, setShowPresetEditor] = useState(false)
+
+  // Lookup WorkSchedule per (staffId, dayOfWeek=0..6).
+  const wsLookup = useMemo(() => {
+    const map = {}
+    for (const row of attSchedules || []) {
+      const days = {}
+      for (const d of row.schedule || []) days[d.dayOfWeek] = d
+      map[row.staffId] = days
+    }
+    return map
+  }, [attSchedules])
 
   const [currentWeek, setCurrentWeek] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
   const weekStartStr = format(currentWeek, 'yyyy-MM-dd')
@@ -221,6 +237,36 @@ function TASchedulePageInner() {
     if (!p) return setForm((f) => ({ ...f, shift: value }))
     setForm((f) => ({ ...f, shift: value, startTime: p.startTime, endTime: p.endTime }))
   }
+
+  // Konflik dengan pola mingguan (WorkSchedule): warning di modal saat barber
+  // ini punya WS isDayOff=true di hari yang sama, atau jam shift di luar jam WS.
+  const modalDate = selectedSchedule
+    ? new Date(selectedSchedule.date + 'T00:00:00')
+    : selectedCell?.date || null
+  const wsWarning = useMemo(() => {
+    if (!modalDate || !form.staffId) return null
+    const dow = modalDate.getDay() // 0=Minggu
+    const ws = wsLookup[form.staffId]?.[dow]
+    if (!ws) return null
+    if (ws.isDayOff) {
+      return {
+        tone: 'warn',
+        text: 'Pola mingguan staf ini: HARI LIBUR. Shift di sini akan menggantikan dan menjadi dasar perhitungan absensi.',
+      }
+    }
+    // Cek jam shift jauh berbeda dari WS (mis. WS 09-17, shift Sore 14-22).
+    if (form.startTime && form.endTime && ws.startTime && ws.endTime) {
+      const sameStart = form.startTime === ws.startTime
+      const sameEnd   = form.endTime === ws.endTime
+      if (!sameStart || !sameEnd) {
+        return {
+          tone: 'info',
+          text: `Pola mingguan staf ini: ${ws.startTime}–${ws.endTime}. Jam shift di sini akan dipakai untuk hitung terlambat hari itu.`,
+        }
+      }
+    }
+    return null
+  }, [modalDate, form.staffId, form.startTime, form.endTime, wsLookup])
 
   const toggleSelect = (id) => {
     setSelected(prev => {
@@ -950,6 +996,16 @@ function TASchedulePageInner() {
             <p className="text-sm text-muted">
               {format(selectedCell.date, 'EEEE, d MMMM yyyy', { locale: dateLocale })} — {t('tenantAdmin.schedule.slot')} {selectedCell.slot}
             </p>
+          )}
+          {wsWarning && (
+            <div className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-xs ${
+              wsWarning.tone === 'warn'
+                ? 'border-amber-500/30 bg-amber-500/10 text-amber-200'
+                : 'border-gold/20 bg-gold/5 text-muted'
+            }`}>
+              <AlertTriangle className={`w-4 h-4 mt-0.5 shrink-0 ${wsWarning.tone === 'warn' ? 'text-amber-400' : 'text-gold/80'}`} />
+              <span>{wsWarning.text}</span>
+            </div>
           )}
           <div>
             <label className="block text-sm font-medium text-muted mb-1.5">{t('tenantAdmin.schedule.barber')}</label>
