@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore.js'
@@ -483,19 +483,37 @@ export default function TASettingsPage() {
     }
   }
 
-  // `silent` dipakai oleh polling supaya tidak menyalakan/mematikan `loading`
-  // yang sedang dikunci oleh aksi user (Hubungkan/Putuskan/Tes). Kalau polling
-  // ikut toggle, spinner di tombol akan kedip-mati di tengah aksi → user
-  // mengira tak jalan dan klik lagi.
+  // Lock supaya polling silent tidak meng-overwrite status/loading saat user
+  // baru saja klik aksi (Hubungkan/Putuskan/dll).
+  const waActionLockRef = useRef(false)
+  // Timestamp klik Hubungkan terakhir — selama 15 detik berikutnya, server
+  // yang masih jawab 'disconnected'/'idle' diabaikan (backend gateway sering
+  // lag 1–3 detik sebelum transisi ke 'connecting'/'connected'). Tanpa ini
+  // POST /connect balik dengan 'disconnected', loadWhatsAppStatus segera
+  // overwrite optimistic 'connecting' → UI seperti tak terjadi apa-apa.
+  const connectIntentUntilRef = useRef(0)
+
   const loadWhatsAppStatus = async ({ silent = false } = {}) => {
+    // Polling silent saat aksi user in-flight → skip total supaya tidak
+    // overwrite optimistic state.
+    if (silent && waActionLockRef.current) return
     try {
       if (!silent) setWaState(prev => ({ ...prev, loading: true }))
       const res = await api.get('/whatsapp/status')
       const data = res.data?.data || {}
+      let serverStatus = data.status || 'idle'
+      // Cegah downgrade dari intent 'connecting' ke 'disconnected'/'idle' lama
+      // saat backend belum sempat sinkron (umum 1–3 detik setelah POST).
+      const intentActive = Date.now() < connectIntentUntilRef.current
+      if (intentActive && (serverStatus === 'disconnected' || serverStatus === 'idle')) {
+        serverStatus = 'connecting'
+      } else if (serverStatus !== 'disconnected' && serverStatus !== 'idle') {
+        connectIntentUntilRef.current = 0 // backend sudah menyusul → lepas guard
+      }
       setWaState(prev => ({
         ...prev,
         loading: silent ? prev.loading : false,
-        status: data.status || 'idle',
+        status: serverStatus,
         qrDataUrl: data.qrDataUrl || null,
         lastError: data.lastError || null,
         lastConnectedAt: data.lastConnectedAt || null,
@@ -530,7 +548,9 @@ export default function TASettingsPage() {
   const connectWhatsApp = async () => {
     // Guard re-entry: kalau loading sudah true (user nge-spam klik / mouse
     // double-click), abaikan klik berikutnya supaya tidak kirim 2 POST.
-    if (waState.loading) return
+    if (waState.loading || waActionLockRef.current) return
+    waActionLockRef.current = true
+    connectIntentUntilRef.current = Date.now() + 15_000
     // Transisi optimistik ke 'connecting' supaya tombol langsung berubah dari
     // "Hubungkan WhatsApp" ke "Batalkan" + status pill ikut bergerak. Tanpa
     // ini ada celah ~0.5–2 detik antara click dan loadWhatsAppStatus selesai
@@ -539,24 +559,31 @@ export default function TASettingsPage() {
     toast.success('Memulai koneksi WhatsApp…')
     try {
       await api.post('/whatsapp/connect')
+      waActionLockRef.current = false
       await loadWhatsAppStatus()
     } catch (err) {
       toast.error(err?.response?.data?.error || 'Gagal memulai koneksi WhatsApp')
-      // Sinkron ulang status — server bisa jadi tetap 'idle' kalau gagal start.
+      connectIntentUntilRef.current = 0
+      waActionLockRef.current = false
       try { await loadWhatsAppStatus({ silent: true }) } catch {}
       setWaState(prev => ({ ...prev, loading: false }))
     }
   }
 
   const disconnectWhatsApp = async () => {
-    if (waState.loading) return
+    if (waState.loading || waActionLockRef.current) return
+    waActionLockRef.current = true
+    // Putuskan koneksi → otomatis batalkan intent connect aktif.
+    connectIntentUntilRef.current = 0
     setWaState(prev => ({ ...prev, loading: true }))
     toast.success('Memutuskan koneksi WhatsApp…')
     try {
       await api.post('/whatsapp/disconnect')
+      waActionLockRef.current = false
       await loadWhatsAppStatus()
       toast.success('WhatsApp terputus')
     } catch (err) {
+      waActionLockRef.current = false
       setWaState(prev => ({ ...prev, loading: false }))
       toast.error(err?.response?.data?.error || 'Gagal memutus koneksi WhatsApp')
     }
@@ -577,9 +604,20 @@ export default function TASettingsPage() {
   // Polling status: lebih sering saat menunggu QR/connecting/loading (UX),
   // lebih jarang saat sudah connected/idle. Polling pakai mode silent supaya
   // tidak mematikan `loading` yang sedang dipakai tombol aksi user.
+  //
+  // Pisah jadi dua useEffect: (1) initial load HANYA saat tab dibuka,
+  // (2) interval setup yang ulang saat status berubah. Tanpa pemisahan ini,
+  // setState optimistik (mis. `status:'connecting'` saat klik Hubungkan) akan
+  // memicu useEffect re-run → loadWhatsAppStatus non-silent → overwrite balik
+  // ke status server ('disconnected') dalam < 100ms → UI terlihat seperti
+  // klik tak jalan.
+  useEffect(() => {
+    if (activeTab === 'whatsapp') loadWhatsAppStatus()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab])
+
   useEffect(() => {
     if (activeTab !== 'whatsapp') return
-    loadWhatsAppStatus()
     const fastStates = ['awaiting_qr', 'connecting', 'authenticated', 'loading']
     const interval = fastStates.includes(waState.status) ? 2500 : 10000
     const timer = setInterval(() => loadWhatsAppStatus({ silent: true }), interval)
