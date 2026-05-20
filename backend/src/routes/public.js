@@ -65,7 +65,7 @@ router.get('/branches', requireTenant, async (req, res, next) => {
   try {
     const branches = await prisma.branch.findMany({
       where: { tenantId: req.tenant.id, isActive: true, deletedAt: null },
-      select: { id: true, name: true, address: true, phone: true, openTime: true, closeTime: true },
+      select: { id: true, name: true, address: true, phone: true, openTime: true, closeTime: true, closedDates: true },
       orderBy: { name: 'asc' },
     });
     res.json({ success: true, data: branches });
@@ -195,7 +195,7 @@ router.get('/availability', requireTenant, async (req, res, next) => {
     };
     if (barberId) where.barberId = String(barberId);
 
-    const [rows, service] = await Promise.all([
+    const [rows, service, branch] = await Promise.all([
       prisma.booking.findMany({
         where,
         select: { time: true, barberId: true, serviceId: true },
@@ -206,7 +206,28 @@ router.get('/availability', requireTenant, async (req, res, next) => {
             select: { duration: true },
           })
         : null,
+      prisma.branch.findFirst({
+        where: { id: String(branchId), tenantId: req.tenant.id, deletedAt: null },
+        select: { closedDates: true },
+      }),
     ]);
+
+    // Cabang ditutup admin pada tanggal ini → kembalikan flag eksplisit
+    // supaya UI bisa tampil banner & sembunyikan slot.
+    const closures = Array.isArray(branch?.closedDates) ? branch.closedDates : [];
+    const closure = closures.find((c) => c?.date === String(date));
+    if (closure) {
+      return res.json({
+        success: true,
+        data: {
+          closed: true,
+          closureNote: closure.note || null,
+          booked: [],
+          bookedRanges: [],
+          targetDuration: service?.duration || 30,
+        },
+      });
+    }
 
     // Need durations for each existing booking to compute the blocked range.
     const existingServiceIds = [...new Set(rows.map(r => r.serviceId).filter(Boolean))];
@@ -232,6 +253,7 @@ router.get('/availability', requireTenant, async (req, res, next) => {
     res.json({
       success: true,
       data: {
+        closed: false,
         // Backward-compat: existing FE reads `booked` (exact start times).
         booked: rows.map(r => r.time),
         // New: ranges client can use to render finer-grain disables.
@@ -309,6 +331,16 @@ router.post('/bookings', requireTenant, async (req, res, next) => {
     }
     if (branch.closeTime && body.time >= branch.closeTime) {
       return res.status(400).json({ success: false, error: `Cabang tutup jam ${branch.closeTime}` });
+    }
+    // Cabang ditutup admin pada tanggal ini (libur khusus, Lebaran, dll).
+    const closures = Array.isArray(branch.closedDates) ? branch.closedDates : [];
+    const closure = closures.find((c) => c?.date === body.date);
+    if (closure) {
+      return res.status(422).json({
+        success: false,
+        error: `Maaf, cabang tutup pada tanggal ini${closure.note ? ` (${closure.note})` : ''}. Silakan pilih tanggal lain.`,
+        code: 'BRANCH_CLOSED',
+      });
     }
 
     const service = await prisma.service.findFirst({
@@ -429,6 +461,185 @@ router.get('/bookings/:id', requireTenant, async (req, res, next) => {
     if (!booking) return res.status(404).json({ success: false, error: 'Booking tidak ditemukan' });
     res.json({ success: true, data: booking });
   } catch (err) { next(err); }
+});
+
+// ============================================================================
+// PUBLIC RATING — pelanggan rate transaksi lewat link WA tanpa login
+// ============================================================================
+
+// Rate-limit kecil per IP (anti-spam) — toleran karena link sekali pakai
+// per transaksi tapi tetap proteksi dari script kasar.
+const ratingRateLimiter = require('express-rate-limit')({
+  windowMs: 60_000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Terlalu banyak request, coba lagi sebentar' },
+});
+
+const ratingSubmitSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+  comment: z.string().max(1000).optional().nullable(),
+  barberRatings: z.array(z.object({
+    barberId: z.string(),
+    rating: z.number().int().min(1).max(5),
+  })).max(20).optional(),
+});
+
+// GET /api/public/rating/:transactionId — fetch ringkasan transaksi + status sudah rate
+router.get('/rating/:transactionId', requireTenant, ratingRateLimiter, async (req, res, next) => {
+  try {
+    const tx = await prisma.transaction.findFirst({
+      where: { id: req.params.transactionId, tenantId: req.tenant.id },
+      select: {
+        id: true,
+        tenantId: true,
+        branchId: true,
+        customerId: true,
+        customerName: true,
+        total: true,
+        createdAt: true,
+        status: true,
+        branch: { select: { id: true, name: true } },
+        items: {
+          select: {
+            id: true, name: true, barberId: true,
+            barber: { select: { id: true, name: true } },
+          },
+        },
+      },
+    });
+    if (!tx) return res.status(404).json({ success: false, error: 'Transaksi tidak ditemukan' });
+    if (tx.status !== 'completed') {
+      return res.status(400).json({ success: false, error: 'Transaksi belum selesai atau dibatalkan' });
+    }
+
+    const existing = await prisma.shopRating.findUnique({
+      where: { transactionId: tx.id },
+      select: { id: true, rating: true, comment: true, createdAt: true },
+    });
+
+    // Daftar barber unik yang melayani — untuk per-barber rating opsional di UI.
+    const barberMap = new Map();
+    for (const it of tx.items) {
+      if (it.barber?.id) barberMap.set(it.barber.id, it.barber.name);
+    }
+    const barbers = Array.from(barberMap, ([id, name]) => ({ id, name }));
+
+    res.json({
+      success: true,
+      data: {
+        transaction: {
+          id: tx.id,
+          customerName: tx.customerName,
+          total: tx.total,
+          createdAt: tx.createdAt,
+          branchName: tx.branch?.name || null,
+        },
+        tenant: {
+          name: req.tenant.name,
+          logo: req.tenant.logo,
+          slug: req.tenant.slug,
+        },
+        barbers,
+        alreadyRated: !!existing,
+        existing: existing ? { rating: existing.rating, comment: existing.comment, createdAt: existing.createdAt } : null,
+      },
+    });
+  } catch (err) { next(err); }
+});
+
+// POST /api/public/rating/:transactionId — submit rating dari pelanggan
+router.post('/rating/:transactionId', requireTenant, ratingRateLimiter, async (req, res, next) => {
+  try {
+    const body = ratingSubmitSchema.parse(req.body);
+
+    const tx = await prisma.transaction.findFirst({
+      where: { id: req.params.transactionId, tenantId: req.tenant.id, status: 'completed' },
+      select: {
+        id: true, tenantId: true, branchId: true, customerId: true,
+        items: { select: { barberId: true } },
+      },
+    });
+    if (!tx) return res.status(404).json({ success: false, error: 'Transaksi tidak ditemukan' });
+
+    const existing = await prisma.shopRating.findUnique({ where: { transactionId: tx.id } });
+    if (existing) {
+      return res.status(409).json({ success: false, error: 'Transaksi ini sudah pernah dirating' });
+    }
+
+    const ip = (req.headers['x-forwarded-for']?.toString().split(',')[0] || req.ip || '').trim().slice(0, 100);
+    const ua = (req.headers['user-agent'] || '').toString().slice(0, 500);
+
+    // Daftar barberId valid yang melayani transaksi ini — filter input client.
+    const validBarberIds = new Set(tx.items.map(it => it.barberId).filter(Boolean));
+
+    const shopRating = await prisma.$transaction(async (prismaTx) => {
+      const shop = await prismaTx.shopRating.create({
+        data: {
+          tenantId: tx.tenantId,
+          branchId: tx.branchId,
+          transactionId: tx.id,
+          customerId: tx.customerId,
+          rating: body.rating,
+          comment: body.comment?.trim() || null,
+          ipAddress: ip || null,
+          userAgent: ua || null,
+        },
+      });
+
+      // Per-barber rating opsional — diabaikan kalau barberId tidak valid /
+      // sudah pernah ada (unique transactionId+barberId).
+      if (Array.isArray(body.barberRatings) && body.barberRatings.length) {
+        for (const br of body.barberRatings) {
+          if (!validBarberIds.has(br.barberId)) continue;
+          try {
+            await prismaTx.barberRating.create({
+              data: {
+                tenantId: tx.tenantId,
+                branchId: tx.branchId,
+                barberId: br.barberId,
+                transactionId: tx.id,
+                customerId: tx.customerId,
+                rating: br.rating,
+                comment: body.comment?.trim() || null,
+                // Submitted dari public link (bukan kasir) — submittedById null.
+              },
+            });
+          } catch (err) {
+            // P2002: unique violation — sudah ada rating untuk transactionId+barberId
+            if (err?.code !== 'P2002') throw err;
+          }
+        }
+      }
+
+      return shop;
+    });
+
+    // Emit realtime supaya halaman /admin/ratings, /kasir/ratings, /barber/ratings
+    // langsung update tanpa polling.
+    try {
+      const { getIO, tenantRoom } = require('../config/socket');
+      const io = getIO();
+      if (io) io.to(tenantRoom(tx.tenantId)).emit('rating:created', { id: shopRating.id, tenantId: tx.tenantId });
+    } catch { /* noop */ }
+
+    res.status(201).json({
+      success: true,
+      data: {
+        id: shopRating.id,
+        rating: shopRating.rating,
+        message: body.rating >= 4
+          ? 'Terima kasih atas penilaiannya!'
+          : 'Terima kasih, kami akan tingkatkan pelayanan kami.',
+      },
+    });
+  } catch (err) {
+    if (err?.name === 'ZodError') {
+      return res.status(400).json({ success: false, error: err.errors[0]?.message || 'Data tidak valid' });
+    }
+    next(err);
+  }
 });
 
 module.exports = router;

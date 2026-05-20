@@ -636,6 +636,50 @@ async function sendSystemMessage(tenantId, phone, text) {
   }
 }
 
+// Kirim link rating publik ke pelanggan setelah transaksi. Dipicu oleh cron
+// `ratingLinkDispatch` setelah delay `autoSendMinutes` di Tenant.ratingConfig.
+// Idempotent — cron menandai Transaction.ratingLinkSentAt setelah berhasil
+// supaya tidak kirim dobel.
+const DEFAULT_RATING_TEMPLATE =
+  'Halo {nama}! Terima kasih sudah berkunjung ke {toko}.\n\n' +
+  'Bagaimana pengalamanmu hari ini? Bantu kami dengan beri rating singkat di link berikut:\n' +
+  '{link}\n\n' +
+  'Hanya butuh 30 detik. Masukan Anda sangat berarti untuk kami.';
+
+async function sendRatingLink(tenantId, transaction) {
+  const phone = transaction?.customerPhone || transaction?.customer?.phone;
+  if (!phone) return { sent: false, reason: 'no_phone' };
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { name: true, slug: true, ratingConfig: true },
+  }).catch(() => null);
+  if (!tenant) return { sent: false, reason: 'tenant_not_found' };
+
+  const cfg = tenant.ratingConfig || {};
+  if (!cfg.enabled) return { sent: false, reason: 'disabled' };
+
+  // URL halaman rating publik — selalu pakai subdomain tenant supaya tenant
+  // resolver di backend dapat mengenali tenant dari host header.
+  const baseDomain = process.env.APP_BASE_DOMAIN || 'sembapos.com';
+  const link = `https://${tenant.slug}.${baseDomain}/rating/${transaction.id}`;
+
+  const template = (cfg.messageTemplate && cfg.messageTemplate.trim())
+    ? cfg.messageTemplate
+    : DEFAULT_RATING_TEMPLATE;
+  const text = renderTemplate(template, {
+    nama: transaction.customerName || transaction.customer?.name || 'Pelanggan',
+    toko: tenant.name || '',
+    link,
+  });
+
+  try {
+    return await dispatchMessage(tenantId, phone, text, `rating-${transaction.id}`);
+  } catch (err) {
+    return { sent: false, reason: err.message };
+  }
+}
+
 module.exports = {
   connectTenant,
   disconnectTenant,
@@ -646,6 +690,7 @@ module.exports = {
   sendTransactionNotification,
   sendTestMessage,
   sendSystemMessage,
+  sendRatingLink,
   // konfigurasi gateway (super-admin)
   getConfig,
   getConfigPublic,

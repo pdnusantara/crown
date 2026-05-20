@@ -48,6 +48,7 @@ const tenantSelect = {
   visitReminder: true,
   attendanceConfig: true,
   shiftPresets: true,
+  ratingConfig: true,
   isSuspended: true,
   createdAt: true,
   updatedAt: true,
@@ -377,6 +378,14 @@ const shiftPresetsSchema = z.array(z.object({
   endTime:   hhmm,
 }).strict()).max(6).nullish();
 
+// Konfigurasi rating otomatis via WhatsApp setelah transaksi.
+// autoSendMinutes 1..1440 (1 menit – 1 hari). Template max 2000 char.
+const ratingConfigSchema = z.object({
+  enabled:         z.boolean().default(false),
+  autoSendMinutes: z.number().int().min(1).max(1440).default(15),
+  messageTemplate: z.string().trim().max(2000).optional().nullable(),
+}).strict().nullish();
+
 const selfUpdateSchema = z.object({
   name:        z.string().min(1).max(255).optional(),
   phone:       z.string().max(50).nullish(),
@@ -392,6 +401,7 @@ const selfUpdateSchema = z.object({
   visitReminder: visitReminderSchema,
   attendanceConfig: attendanceConfigSchema,
   shiftPresets: shiftPresetsSchema,
+  ratingConfig: ratingConfigSchema,
 });
 // ── Upload gambar tenant (hero & galeri halaman booking) ───────────────────────
 // Gambar disimpan sebagai FILE di disk, bukan base64 di JSON tenant — supaya

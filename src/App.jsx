@@ -77,6 +77,9 @@ const CustomerHistory = lazy(() => import('./pages/customer/CustomerHistory.jsx'
 const CustomerLoyalty = lazy(() => import('./pages/customer/CustomerLoyalty.jsx'))
 
 const PublicBookingPage = lazy(() => import('./pages/public/PublicBookingPage.jsx'))
+const PublicRatingPage  = lazy(() => import('./pages/public/PublicRatingPage.jsx'))
+const KasirRatingsPage  = lazy(() => import('./pages/kasir/KasirRatingsPage.jsx'))
+const BarberRatingsPage = lazy(() => import('./pages/barber/BarberRatingsPage.jsx'))
 
 // ── Page loading fallback ───────────────────────────────────────────────────
 function PageLoader() {
@@ -328,6 +331,7 @@ export default function App() {
                 <Route path="transactions"  element={<TransactionsPage />} />
                 <Route path="shift-closing" element={<ShiftClosingPage />} />
                 <Route path="attendance"    element={<StaffAttendancePage />} />
+                <Route path="ratings"       element={<KasirRatingsPage />} />
                 <Route path="bantuan"       element={<KasirHelpPage />} />
                 <Route index element={<Navigate to="pos" replace />} />
               </Route>
@@ -346,6 +350,7 @@ export default function App() {
                 <Route path="queue"      element={<BarberQueue />} />
                 <Route path="commission" element={<BarberCommission />} />
                 <Route path="attendance" element={<StaffAttendancePage />} />
+                <Route path="ratings"    element={<BarberRatingsPage />} />
                 <Route index element={<Navigate to="dashboard" replace />} />
               </Route>
             </Route>
@@ -365,6 +370,10 @@ export default function App() {
           {/* Halaman booking publik — tanpa auth, diakses via subdomain atau /book/:slug */}
           <Route path="/book" element={<PublicBookingPage />} />
           <Route path="/book/:slug" element={<PublicBookingPage />} />
+
+          {/* Halaman rating publik — diakses via link WA setelah transaksi.
+              Tenant ditebak dari subdomain (X-Tenant-Slug header otomatis). */}
+          <Route path="/rating/:transactionId" element={<PublicRatingPage />} />
 
           {/* Root: tampil landing untuk pengunjung; user yang sudah login dialihkan ke home role-nya. */}
           <Route path="/" element={<RootRedirector />} />

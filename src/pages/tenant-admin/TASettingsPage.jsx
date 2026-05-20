@@ -12,7 +12,7 @@ import Button from '../../components/ui/Button.jsx'
 import Input from '../../components/ui/Input.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import * as api from '../../lib/api.js'
-import { Settings, Bell, Shield, Palette, Download, Upload, FileText, MessageCircle, Send, QrCode, Smartphone, RefreshCw, PowerOff, CheckCircle2, XCircle, Loader2, AlertTriangle, Phone, ArrowUpRight, ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { Settings, Bell, Shield, Palette, Download, Upload, FileText, MessageCircle, Send, QrCode, Smartphone, RefreshCw, PowerOff, CheckCircle2, XCircle, Loader2, AlertTriangle, Phone, ArrowUpRight, ChevronLeft, ChevronRight, X, Star } from 'lucide-react'
 import { format, differenceInDays } from 'date-fns'
 import { formatDistanceToNow } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
@@ -80,6 +80,46 @@ export default function TASettingsPage() {
       })
     }
   }, [tenant?.transactionMessages])
+
+  // ── Rating otomatis via WhatsApp setelah transaksi ─────────────────────────
+  const DEFAULT_RATING_TEMPLATE =
+    'Halo {nama}! Terima kasih sudah berkunjung ke {toko}.\n\n' +
+    'Bagaimana pengalamanmu hari ini? Bantu kami dengan beri rating singkat di link berikut:\n' +
+    '{link}\n\n' +
+    'Hanya butuh 30 detik. Masukan Anda sangat berarti untuk kami.'
+  const [ratingForm, setRatingForm] = useState({
+    enabled: false, autoSendMinutes: 15, messageTemplate: '',
+  })
+  const [ratingSaving, setRatingSaving] = useState(false)
+  useEffect(() => {
+    const rc = tenant?.ratingConfig
+    if (rc) {
+      setRatingForm({
+        enabled:         !!rc.enabled,
+        autoSendMinutes: Number.isFinite(rc.autoSendMinutes) ? rc.autoSendMinutes : 15,
+        messageTemplate: rc.messageTemplate || '',
+      })
+    }
+  }, [tenant?.ratingConfig])
+
+  const handleSaveRatingConfig = async () => {
+    setRatingSaving(true)
+    try {
+      const tpl = (ratingForm.messageTemplate || '').trim()
+      await updateMyTenant.mutateAsync({
+        ratingConfig: {
+          enabled:         !!ratingForm.enabled,
+          autoSendMinutes: Math.min(1440, Math.max(1, parseInt(ratingForm.autoSendMinutes, 10) || 15)),
+          messageTemplate: tpl || null,
+        },
+      })
+      toast.success('Pengaturan rating tersimpan')
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal menyimpan')
+    } finally {
+      setRatingSaving(false)
+    }
+  }
 
   // ── Pengingat kunjungan otomatis (WhatsApp) ────────────────────────────────
   const [reminderForm, setReminderForm] = useState({
@@ -536,6 +576,7 @@ export default function TASettingsPage() {
     ...(whatsappEnabled ? [{ id: 'whatsapp', label: 'WhatsApp Beta' }] : []),
     { id: 'transactionMsg', label: 'Pesan Transaksi' },
     ...(whatsappEnabled ? [{ id: 'visitReminder', label: 'Pengingat Kunjungan' }] : []),
+    ...(whatsappEnabled ? [{ id: 'ratingAuto', label: 'Rating Otomatis' }] : []),
     { id: 'backup', label: t('tenantAdmin.settings.tabBackup') },
     { id: 'audit', label: t('tenantAdmin.settings.tabAudit') },
   ]
@@ -1022,6 +1063,96 @@ export default function TASettingsPage() {
                 "Kirim Sekarang" mengirim langsung ke pelanggan yang memenuhi kriteria tersimpan,
                 tanpa menunggu jadwal. WhatsApp toko harus tersambung.
               </p>
+            </CardBody>
+          </Card>
+        </div>
+      )}
+
+      {activeTab === 'ratingAuto' && (
+        <div className="max-w-2xl">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Star className="w-5 h-5 text-gold" />
+                <h3 className="font-semibold text-off-white">Rating Otomatis via WhatsApp</h3>
+              </div>
+            </CardHeader>
+            <CardBody className="space-y-5">
+              <p className="text-sm text-muted">
+                Aktifkan fitur ini supaya sistem otomatis mengirim link rating ke pelanggan
+                setelah transaksi selesai. Pelanggan akan diarahkan ke halaman publik untuk
+                memberi bintang & komentar — Anda bisa melihatnya di halaman <strong>Rating</strong>.
+                Gunakan placeholder <code className="text-gold bg-dark-surface px-1 py-0.5 rounded">{'{nama}'}</code>,{' '}
+                <code className="text-gold bg-dark-surface px-1 py-0.5 rounded">{'{toko}'}</code>, dan{' '}
+                <code className="text-gold bg-dark-surface px-1 py-0.5 rounded">{'{link}'}</code>.
+              </p>
+
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={ratingForm.enabled}
+                  onChange={(e) => setRatingForm(f => ({ ...f, enabled: e.target.checked }))}
+                  className="mt-1 w-4 h-4 accent-gold"
+                />
+                <span className="text-sm text-off-white">
+                  Aktifkan kirim link rating otomatis ke pelanggan
+                  <span className="block text-[11px] text-muted">
+                    Hanya pelanggan dengan nomor HP yang menerima link. WhatsApp toko harus tersambung.
+                  </span>
+                </span>
+              </label>
+
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-off-white">
+                  Kirim setelah (menit)
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={1440}
+                  value={ratingForm.autoSendMinutes}
+                  onChange={(e) => setRatingForm(f => ({ ...f, autoSendMinutes: e.target.value }))}
+                  className="w-32 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60"
+                />
+                <p className="text-[11px] text-muted">
+                  Jeda antara transaksi selesai dan link dikirim. Default 15 menit — beri waktu
+                  pelanggan meninggalkan toko dulu supaya tidak canggung.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-off-white">
+                  Template pesan WhatsApp
+                </label>
+                <textarea
+                  value={ratingForm.messageTemplate}
+                  onChange={(e) => setRatingForm(f => ({ ...f, messageTemplate: e.target.value }))}
+                  rows={6}
+                  maxLength={2000}
+                  placeholder={DEFAULT_RATING_TEMPLATE}
+                  className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60 resize-none font-mono"
+                />
+                <div className="flex justify-between gap-3">
+                  <p className="text-[11px] text-muted">
+                    Kosongkan untuk pakai template default. Variabel:{' '}
+                    <code className="text-gold">{'{nama}'}</code>{' '}
+                    <code className="text-gold">{'{toko}'}</code>{' '}
+                    <code className="text-gold">{'{link}'}</code>
+                  </p>
+                  <span className="text-[11px] text-muted flex-shrink-0 tabular-nums">
+                    {ratingForm.messageTemplate.length}/2000
+                  </span>
+                </div>
+              </div>
+
+              <Button
+                icon={Star}
+                onClick={handleSaveRatingConfig}
+                loading={ratingSaving}
+                disabled={ratingSaving}
+              >
+                Simpan Pengaturan
+              </Button>
             </CardBody>
           </Card>
         </div>

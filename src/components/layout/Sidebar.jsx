@@ -66,6 +66,7 @@ const navConfig = {
       { labelKey: 'nav.transactions', icon: Receipt,       path: `/${slug}/kasir/transactions` },
       { labelKey: 'nav.shiftClose',   icon: LogIn,         path: `/${slug}/kasir/shift-closing` },
       { labelKey: 'nav.attendance',   icon: Fingerprint,   path: `/${slug}/kasir/attendance`, flag: 'attendance' },
+      { labelKey: 'nav.ratings',      icon: Star,          path: `/${slug}/kasir/ratings` },
       { labelKey: 'nav.help',         icon: LifeBuoy,      path: `/${slug}/kasir/bantuan` },
     ]
   },
@@ -74,6 +75,7 @@ const navConfig = {
     { labelKey: 'nav.queue',      icon: ListOrdered,     path: '/barber/queue' },
     { labelKey: 'nav.commission', icon: TrendingUp,      path: '/barber/commission' },
     { labelKey: 'nav.attendance', icon: Fingerprint,     path: '/barber/attendance', flag: 'attendance' },
+    { labelKey: 'nav.ratings',    icon: Star,            path: '/barber/ratings' },
   ],
   customer: [
     { labelKey: 'nav.booking', icon: CalendarDays, path: '/customer/booking' },
