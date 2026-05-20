@@ -17,25 +17,25 @@ import Card from '../../components/ui/Card.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Input from '../../components/ui/Input.jsx'
 import Modal from '../../components/ui/Modal.jsx'
-import Badge from '../../components/ui/Badge.jsx'
-import { formatRupiah, formatDate, formatDateTime } from '../../utils/format.js'
+import Badge, { getSegmentBadge } from '../../components/ui/Badge.jsx'
+import { formatRupiah, formatRupiahShort, formatDate, formatDateTime } from '../../utils/format.js'
 import { formatDistanceToNow } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
 
 const PAGE_SIZE = 20
 
-// Klasifikasi ringkas berdasarkan kunjungan + recency. Cocok untuk badge
-// visual; tidak menggantikan analytics admin.
+// Klasifikasi ringkas berdasarkan kunjungan + recency. Pakai variant Badge
+// shared (getSegmentBadge) supaya konsisten dengan halaman admin.
 function quickSegment(c) {
-  if (!c.visitCount || c.visitCount <= 0) return { id: 'never', label: 'Belum tx', tone: 'muted' }
-  if (c.visitCount >= 10) return { id: 'vip', label: 'VIP', tone: 'gold' }
+  if (!c.visitCount || c.visitCount <= 0) return { id: 'never', label: 'Belum tx' }
+  if (c.visitCount >= 10) return { id: 'vip', label: 'VIP' }
   if (c.lastVisitAt) {
     const days = Math.floor((Date.now() - new Date(c.lastVisitAt).getTime()) / 86_400_000)
-    if (days > 180) return { id: 'lost', label: 'Lost', tone: 'danger' }
-    if (days > 90)  return { id: 'atRisk', label: 'At-Risk', tone: 'warning' }
+    if (days > 180) return { id: 'lost', label: 'Lost' }
+    if (days > 90)  return { id: 'atRisk', label: 'At-Risk' }
   }
-  if (c.visitCount >= 3) return { id: 'loyal', label: 'Loyal', tone: 'info' }
-  return { id: 'new', label: 'Baru', tone: 'success' }
+  if (c.visitCount >= 3) return { id: 'loyal', label: 'Loyal' }
+  return { id: 'new', label: 'Baru' }
 }
 
 function StatTile({ icon: Icon, label, value, hint, accent = 'gold' }) {
@@ -69,32 +69,38 @@ function CustomerRow({ c, onOpen }) {
   return (
     <button
       onClick={() => onOpen(c.id)}
-      className="w-full text-left p-3 rounded-xl bg-dark-card border border-dark-border hover:border-gold/30 transition-colors flex items-center gap-3"
+      className="w-full text-left p-3 rounded-xl bg-dark-card border border-dark-border hover:border-gold/30 active:bg-dark-surface/60 transition-colors"
     >
-      <div className="shrink-0 w-10 h-10 rounded-full bg-dark-surface border border-dark-border flex items-center justify-center text-sm font-bold text-gold">
-        {(c.name || '?').slice(0, 1).toUpperCase()}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-sm font-medium text-off-white truncate">{c.name || '—'}</p>
-          <Badge variant={seg.tone} size="sm">{seg.label}</Badge>
+      {/* Baris atas — selalu tampak: avatar | nama+segmen+phone | poin */}
+      <div className="flex items-center gap-3">
+        <div className="shrink-0 w-10 h-10 rounded-full bg-dark-surface border border-dark-border flex items-center justify-center text-sm font-bold text-gold">
+          {(c.name || '?').slice(0, 1).toUpperCase()}
         </div>
-        <p className="text-xs text-muted truncate flex items-center gap-1.5">
-          <Phone className="w-3 h-3" />
-          {c.phone || '—'}
-        </p>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-sm font-medium text-off-white truncate">{c.name || '—'}</p>
+            <Badge variant={getSegmentBadge(seg.id)} dot>{seg.label}</Badge>
+          </div>
+          <p className="text-xs text-muted truncate flex items-center gap-1.5 mt-0.5">
+            <Phone className="w-3 h-3 shrink-0" />
+            <span className="truncate">{c.phone || '—'}</span>
+          </p>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="text-[10px] uppercase tracking-wide text-muted">Poin</p>
+          <p className="text-sm font-bold text-gold tabular-nums leading-none mt-0.5">{c.loyaltyPoints || 0}</p>
+        </div>
       </div>
-      <div className="shrink-0 text-right">
-        <p className="text-xs text-muted">Kunjungan</p>
-        <p className="text-sm font-bold text-off-white tabular-nums">{c.visitCount || 0}</p>
-      </div>
-      <div className="shrink-0 text-right hidden sm:block min-w-[90px]">
-        <p className="text-xs text-muted">Poin</p>
-        <p className="text-sm font-bold text-gold tabular-nums">{c.loyaltyPoints || 0}</p>
-      </div>
-      <div className="shrink-0 text-right hidden md:block min-w-[120px]">
-        <p className="text-xs text-muted">Kunjungan terakhir</p>
-        <p className="text-xs text-off-white truncate">{lastVisit}</p>
+      {/* Baris bawah — chip kompak: kunjungan + last visit */}
+      <div className="mt-2 flex items-center gap-2 flex-wrap text-[11px] text-muted">
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-dark-surface/60 border border-dark-border">
+          <TrendingUp className="w-3 h-3 text-gold/70" />
+          <span className="tabular-nums text-off-white">{c.visitCount || 0}</span> kunjungan
+        </span>
+        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-dark-surface/60 border border-dark-border truncate max-w-[180px]">
+          <Calendar className="w-3 h-3 text-muted" />
+          <span className="truncate">{lastVisit}</span>
+        </span>
       </div>
     </button>
   )
@@ -142,15 +148,15 @@ function CustomerDrawer({ customerId, onClose, onEdit, onAdjust }) {
               <div className="grid grid-cols-3 gap-2">
                 <Card className="p-3 text-center">
                   <p className="text-[10px] uppercase tracking-wide text-muted">Kunjungan</p>
-                  <p className="text-lg font-bold text-off-white tabular-nums">{c.visitCount || 0}</p>
+                  <p className="text-lg font-bold text-off-white tabular-nums leading-tight mt-0.5">{c.visitCount || 0}</p>
                 </Card>
-                <Card className="p-3 text-center">
+                <Card className="p-3 text-center" title={formatRupiah(c.totalSpend || 0)}>
                   <p className="text-[10px] uppercase tracking-wide text-muted">Belanja</p>
-                  <p className="text-sm font-bold text-off-white tabular-nums">{formatRupiah(c.totalSpend || 0)}</p>
+                  <p className="text-sm font-bold text-off-white tabular-nums leading-tight mt-0.5 truncate">{formatRupiahShort(c.totalSpend || 0)}</p>
                 </Card>
                 <Card className="p-3 text-center">
                   <p className="text-[10px] uppercase tracking-wide text-muted">Poin</p>
-                  <p className="text-lg font-bold text-gold tabular-nums">{c.loyaltyPoints || 0}</p>
+                  <p className="text-lg font-bold text-gold tabular-nums leading-tight mt-0.5">{c.loyaltyPoints || 0}</p>
                 </Card>
               </div>
 
@@ -413,11 +419,11 @@ export default function KasirCustomersPage() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-3 pt-2">
-          <Button variant="outline" size="sm" icon={ChevronLeft} disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+          <Button variant="outline" size="sm" icon={ChevronLeft} disabled={page <= 1} onClick={() => setPage((p) => p - 1)} aria-label="Sebelumnya">
             <span className="hidden sm:inline">Sebelumnya</span>
           </Button>
           <span className="text-xs text-muted tabular-nums">Hal {page} / {totalPages}</span>
-          <Button variant="outline" size="sm" iconRight={ChevronRight} disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+          <Button variant="outline" size="sm" icon={ChevronRight} disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)} aria-label="Berikutnya">
             <span className="hidden sm:inline">Berikutnya</span>
           </Button>
         </div>
