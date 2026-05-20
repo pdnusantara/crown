@@ -6,7 +6,7 @@ import {
   Copy, CalendarDays, Search, Download, CheckSquare, Square, X,
   LayoutGrid, List as ListIcon, Eraser, ArrowDownAZ, Users, Clock,
   Fingerprint, Sliders, Save, RotateCcw,
-  CheckCircle2, Circle, UserCircle, ListChecks,
+  CheckCircle2, Circle, UserCircle, ListChecks, CalendarClock,
 } from 'lucide-react'
 import { startOfWeek, addDays, format, addWeeks, subWeeks } from 'date-fns'
 import { id as idLocale, enUS as enLocale } from 'date-fns/locale'
