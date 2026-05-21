@@ -52,12 +52,13 @@ const CATEGORIES = [
       {
         id: 'm-staf',
         q: 'Bagaimana membuat akun kasir dan barber?',
-        a: 'Setiap staf butuh akun untuk login. Kasir memproses transaksi di POS; barber muncul di pilihan saat melayani pelanggan.',
+        a: 'Setiap staf butuh akun untuk login. Kasir memproses transaksi di POS; barber muncul di pilihan saat melayani pelanggan. Untuk toko kecil, satu orang bisa jadi kasir sekaligus barber dengan satu akun.',
         steps: [
           'Buka menu Staff.',
           'Klik "Tambah Staff", pilih peran (kasir atau barber).',
           'Tetapkan cabang dan beri email serta kata sandi awal.',
           'Untuk barber pilih skema gaji (Komisi / Pokok / Pokok + Komisi); untuk kasir isi gaji pokok bulanan.',
+          'Bila kasir ini juga ikut memotong, aktifkan "Juga seorang barber" lalu isi komisinya — namanya akan muncul di pilihan barber saat transaksi dan komisi serta rating-nya tercatat.',
           'Bagikan kredensial — staf login lewat subdomain toko Anda.',
         ],
         to: '/admin/staff',
