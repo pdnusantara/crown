@@ -1860,7 +1860,10 @@
     "categoryBug": "Bug",
     "categoryFeature": "Feature Request",
     "categoryBilling": "Billing",
-    "categoryGeneral": "General"
+    "categoryGeneral": "General",
+    "attachAdd": "Add image ({{n}}/{{max}})",
+    "attachMax": "Maximum {{max}} images",
+    "attachFailed": "Failed to upload image"
   },
   "realtime": {
     "live": "Live",

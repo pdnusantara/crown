@@ -543,6 +543,7 @@ model Ticket {
   category    String
   priority    TicketPriority @default(medium)
   status      TicketStatus   @default(open)
+  attachments String[]       @default([]) // URL gambar lampiran (relatif: /api/uploads/tickets/...)
   createdById String
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
@@ -552,14 +553,15 @@ model Ticket {
 }
 
 model TicketReply {
-  id        String   @id @default(cuid())
-  ticketId  String
-  authorId  String
-  message   String
-  isAdmin   Boolean  @default(false)
-  createdAt DateTime @default(now())
-  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  author    User     @relation(fields: [authorId], references: [id])
+  id          String   @id @default(cuid())
+  ticketId    String
+  authorId    String
+  message     String
+  isAdmin     Boolean  @default(false)
+  attachments String[] @default([]) // URL gambar lampiran (relatif: /api/uploads/tickets/...)
+  createdAt   DateTime @default(now())
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author      User     @relation(fields: [authorId], references: [id])
 }
 
 model Broadcast {

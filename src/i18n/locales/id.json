@@ -1860,7 +1860,10 @@
     "categoryBug": "Bug",
     "categoryFeature": "Feature Request",
     "categoryBilling": "Billing",
-    "categoryGeneral": "General"
+    "categoryGeneral": "General",
+    "attachAdd": "Tambah gambar ({{n}}/{{max}})",
+    "attachMax": "Maksimal {{max}} gambar",
+    "attachFailed": "Gagal mengunggah gambar"
   },
   "realtime": {
     "live": "Live",

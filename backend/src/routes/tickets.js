@@ -1,10 +1,23 @@
 const router = require('express').Router();
+const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
+const multer = require('multer');
 const { z } = require('zod');
 const prisma = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { parsePagination, paginatedResponse } = require('../utils/pagination');
 const { emitTicketEvent } = require('../config/socket');
 const { recordAudit } = require('../utils/auditLog');
+
+const replySelect = {
+  id: true,
+  message: true,
+  isAdmin: true,
+  attachments: true,
+  createdAt: true,
+  author: { select: { id: true, name: true, role: true } },
+};
 
 const ticketSelect = {
   id: true,
@@ -14,6 +27,7 @@ const ticketSelect = {
   category: true,
   priority: true,
   status: true,
+  attachments: true,
   createdAt: true,
   updatedAt: true,
   createdBy: { select: { id: true, name: true, email: true } },
@@ -21,16 +35,59 @@ const ticketSelect = {
   _count: { select: { replies: true } },
 };
 
+// Lampiran disimpan sebagai URL relatif file di disk (lihat POST /upload).
+// Dibatasi ke path uploads kami sendiri supaya nilai ini aman dirender <img src>.
+const MAX_ATTACHMENTS = 6;
+const attachmentsSchema = z
+  .array(z.string().regex(/^\/api\/uploads\/tickets\/[\w.-]+$/, 'URL lampiran tidak valid'))
+  .max(MAX_ATTACHMENTS)
+  .optional();
+
 const createTicketSchema = z.object({
   subject: z.string().min(1).max(255),
   description: z.string().min(1),
   category: z.string().min(1),
   priority: z.enum(['low', 'medium', 'high']).optional(),
+  attachments: attachmentsSchema,
 });
 
 const updateTicketSchema = z.object({
   status: z.enum(['open', 'in_progress', 'resolved']).optional(),
   priority: z.enum(['low', 'medium', 'high']).optional(),
+});
+
+// ── Upload lampiran gambar tiket ───────────────────────────────────────────────
+// Disimpan sebagai FILE di disk (bukan base64) supaya payload tiket tetap kecil.
+// Disajikan via `app.use('/api/uploads', express.static(.../uploads))` di server.js.
+const TICKET_UPLOAD_DIR = path.join(__dirname, '../../uploads/tickets');
+fs.mkdirSync(TICKET_UPLOAD_DIR, { recursive: true });
+
+const ALLOWED_IMG_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const uploadTicketImage = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, TICKET_UPLOAD_DIR),
+    filename:    (req, file, cb) => {
+      const ext = (path.extname(file.originalname) || '.jpg').toLowerCase();
+      cb(null, `${crypto.randomUUID()}${ext}`);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (req, file, cb) => {
+    if (ALLOWED_IMG_MIME.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Format gambar harus JPG, PNG, WebP, atau GIF'));
+  },
+}).single('image');
+
+// POST /api/tickets/upload — unggah satu gambar lampiran, balas URL publiknya.
+router.post('/upload', authenticate, requireRole('super_admin', 'tenant_admin'), (req, res) => {
+  uploadTicketImage(req, res, (err) => {
+    if (err) {
+      const msg = err.code === 'LIMIT_FILE_SIZE' ? 'Ukuran gambar maksimal 5 MB' : err.message;
+      return res.status(400).json({ success: false, error: msg });
+    }
+    if (!req.file) return res.status(400).json({ success: false, error: 'File gambar wajib diunggah (field "image")' });
+    res.json({ success: true, data: { url: `/api/uploads/tickets/${req.file.filename}` } });
+  });
 });
 
 // GET /api/tickets
@@ -104,13 +161,7 @@ router.get('/:id', authenticate, requireRole('super_admin', 'tenant_admin'), asy
         ...ticketSelect,
         replies: {
           orderBy: { createdAt: 'asc' },
-          select: {
-            id: true,
-            message: true,
-            isAdmin: true,
-            createdAt: true,
-            author: { select: { id: true, name: true, role: true } },
-          },
+          select: replySelect,
         },
       },
     });
@@ -141,6 +192,7 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin'), async
     const ticket = await prisma.ticket.create({
       data: {
         ...body,
+        attachments: body.attachments || [],
         tenantId,
         createdById: req.user.id,
       },
@@ -196,7 +248,13 @@ router.patch('/:id', authenticate, requireRole('super_admin'), async (req, res, 
 // POST /api/tickets/:id/replies - add reply
 router.post('/:id/replies', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
   try {
-    const { message } = z.object({ message: z.string().min(1) }).parse(req.body);
+    const { message, attachments } = z.object({
+      message: z.string().max(5000).optional().default(''),
+      attachments: attachmentsSchema,
+    }).refine(
+      (d) => (d.message && d.message.trim().length > 0) || (d.attachments && d.attachments.length > 0),
+      { message: 'Balasan harus berisi pesan atau lampiran' },
+    ).parse(req.body);
 
     const ticket = await prisma.ticket.findUnique({ where: { id: req.params.id } });
     if (!ticket) return res.status(404).json({ success: false, error: 'Ticket not found' });
@@ -213,15 +271,10 @@ router.post('/:id/replies', authenticate, requireRole('super_admin', 'tenant_adm
           ticketId: req.params.id,
           authorId: req.user.id,
           message,
+          attachments: attachments || [],
           isAdmin,
         },
-        select: {
-          id: true,
-          message: true,
-          isAdmin: true,
-          createdAt: true,
-          author: { select: { id: true, name: true, role: true } },
-        },
+        select: replySelect,
       });
 
       // If admin replies, move ticket to in_progress if still open
@@ -238,7 +291,7 @@ router.post('/:id/replies', authenticate, requireRole('super_admin', 'tenant_adm
     // Ambil snapshot ticket terbaru untuk emit event (replies array + count)
     const fullTicket = await prisma.ticket.findUnique({
       where: { id: req.params.id },
-      select: { ...ticketSelect, replies: { orderBy: { createdAt: 'asc' }, select: { id: true, message: true, isAdmin: true, createdAt: true, author: { select: { id: true, name: true, role: true } } } } },
+      select: { ...ticketSelect, replies: { orderBy: { createdAt: 'asc' }, select: replySelect } },
     });
     emitTicketEvent('ticket:replied', fullTicket, { toUserId: ticket.createdById });
 

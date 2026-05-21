@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Send, MessageSquare, AlertCircle, Clock, CheckCircle, ChevronRight, ShieldCheck, User, X } from 'lucide-react'
@@ -10,6 +10,7 @@ import Badge from '../../components/ui/Badge.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Modal from '../../components/ui/Modal.jsx'
 import Input from '../../components/ui/Input.jsx'
+import { AttachmentPicker, AttachmentGallery } from '../../components/tickets/TicketAttachments.jsx'
 import { timeAgo, formatDateTime } from '../../utils/format.js'
 
 const STATUS_CONFIG = {
@@ -33,8 +34,9 @@ export default function TATicketsPage() {
   const [showNew,        setShowNew]        = useState(false)
   const [selectedId,     setSelectedId]     = useState(null)
   const [replyText,      setReplyText]      = useState('')
+  const [replyAttachments, setReplyAttachments] = useState([])
   const [sending,        setSending]        = useState(false)
-  const [form, setForm] = useState({ subject: '', description: '', category: 'Bug', priority: 'medium' })
+  const [form, setForm] = useState({ subject: '', description: '', category: 'Bug', priority: 'medium', attachments: [] })
 
   const { data: myTicketsResp, isLoading } = useTickets(user?.tenantId)
   const myTickets = myTicketsResp?.data || []
@@ -45,6 +47,9 @@ export default function TATicketsPage() {
 
   const openCount     = myTickets.filter(t => t.status === 'open').length
   const resolvedCount = myTickets.filter(t => t.status === 'resolved').length
+
+  // Reset draft balasan saat berpindah tiket supaya lampiran tak tertukar.
+  useEffect(() => { setReplyText(''); setReplyAttachments([]) }, [selectedId])
 
   const handleSubmit = async () => {
     if (!form.subject.trim() || !form.description.trim())
@@ -57,10 +62,11 @@ export default function TATicketsPage() {
         description: form.description,
         category:    form.category,
         priority:    form.priority,
+        attachments: form.attachments,
         createdBy:   user.name,
       })
       toast.success(t('tickets.toast.created'))
-      setForm({ subject: '', description: '', category: 'Bug', priority: 'medium' })
+      setForm({ subject: '', description: '', category: 'Bug', priority: 'medium', attachments: [] })
       setShowNew(false)
     } catch {
       toast.error(t('tickets.toast.createFailed'))
@@ -68,11 +74,12 @@ export default function TATicketsPage() {
   }
 
   const handleReply = async () => {
-    if (!replyText.trim() || !selectedTicket) return
+    if ((!replyText.trim() && replyAttachments.length === 0) || !selectedTicket) return
     setSending(true)
     try {
-      await replyToTicket.mutateAsync({ id: selectedTicket.id, author: user.name, message: replyText, isAdmin: false })
+      await replyToTicket.mutateAsync({ id: selectedTicket.id, author: user.name, message: replyText.trim(), attachments: replyAttachments, isAdmin: false })
       setReplyText('')
+      setReplyAttachments([])
       toast.success(t('tickets.toast.replied'))
     } catch {
       toast.error(t('tickets.toast.replyFailed'))
@@ -186,7 +193,8 @@ export default function TATicketsPage() {
                           <span className="text-xs font-medium text-off-white">{selectedTicket.createdBy?.name || selectedTicket.createdBy?.email || '—'}</span>
                           <span className="text-xs text-muted" title={formatDateTime(selectedTicket.createdAt)}>{timeAgo(selectedTicket.createdAt)}</span>
                         </div>
-                        <p className="text-sm text-off-white">{selectedTicket.description}</p>
+                        <p className="text-sm text-off-white whitespace-pre-wrap">{selectedTicket.description}</p>
+                        <AttachmentGallery urls={selectedTicket.attachments} className="mt-3" />
                       </div>
 
                       {/* Replies */}
@@ -199,7 +207,8 @@ export default function TATicketsPage() {
                             }
                             <span className="text-xs text-muted" title={formatDateTime(r.createdAt)}>{timeAgo(r.createdAt)}</span>
                           </div>
-                          <p className="text-sm text-off-white">{r.message}</p>
+                          {r.message && <p className="text-sm text-off-white whitespace-pre-wrap">{r.message}</p>}
+                          <AttachmentGallery urls={r.attachments} className={r.message ? 'mt-2' : ''} />
                         </div>
                       ))}
 
@@ -213,7 +222,8 @@ export default function TATicketsPage() {
                             placeholder="Tambah informasi atau pertanyaan lanjutan..."
                             className="w-full bg-dark-card border border-dark-border rounded-xl px-3 py-2.5 text-sm text-off-white placeholder-muted resize-none focus:outline-none focus:border-gold/50"
                           />
-                          <Button icon={Send} size="sm" onClick={handleReply} disabled={sending || !replyText.trim()}>
+                          <AttachmentPicker value={replyAttachments} onChange={setReplyAttachments} disabled={sending} />
+                          <Button icon={Send} size="sm" onClick={handleReply} disabled={sending || (!replyText.trim() && replyAttachments.length === 0)}>
                             {sending ? 'Mengirim...' : 'Kirim'}
                           </Button>
                         </div>
@@ -270,6 +280,10 @@ export default function TATicketsPage() {
                 {PRIORITIES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
               </select>
             </div>
+          </div>
+          <div>
+            <label className="block text-xs text-muted mb-1.5">Lampiran Gambar <span className="text-muted/60">(opsional)</span></label>
+            <AttachmentPicker value={form.attachments} onChange={(a) => setForm(f => ({ ...f, attachments: a }))} />
           </div>
           <div className="flex gap-3 pt-1">
             <Button variant="secondary" fullWidth onClick={() => setShowNew(false)}>Batal</Button>

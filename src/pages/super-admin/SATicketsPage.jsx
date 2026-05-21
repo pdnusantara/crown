@@ -16,6 +16,7 @@ import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import Button from '../../components/ui/Button.jsx'
 import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx'
+import { AttachmentPicker, AttachmentGallery } from '../../components/tickets/TicketAttachments.jsx'
 import { formatDateTimeInTz, getTenantTimezone, DEFAULT_TZ } from '../../utils/timezone.js'
 
 const PAGE_LIMIT = 25
@@ -58,6 +59,7 @@ export default function SATicketsPage() {
   const [limit,          setLimit]          = useState(PAGE_LIMIT)
   const [selectedId,     setSelectedId]     = useState(null)
   const [replyText,      setReplyText]      = useState('')
+  const [replyAttachments, setReplyAttachments] = useState([])
   const [sending,        setSending]        = useState(false)
   const [confirmAction,  setConfirmAction]  = useState(null)
 
@@ -106,6 +108,9 @@ export default function SATicketsPage() {
     }
   }, [selectedId, ticketDetail, tickets])
 
+  // Reset draft balasan saat berpindah tiket supaya lampiran tak tertukar.
+  useEffect(() => { setReplyText(''); setReplyAttachments([]) }, [selectedId])
+
   const hasFilter = filterStatus || filterPriority || filterCategory || filterTenant || debouncedSearch
 
   const handleResetFilters = () => {
@@ -114,11 +119,12 @@ export default function SATicketsPage() {
   }
 
   const handleReply = async () => {
-    if (!replyText.trim() || !selectedTicket) return
+    if ((!replyText.trim() && replyAttachments.length === 0) || !selectedTicket) return
     setSending(true)
     try {
-      await replyToTicket.mutateAsync({ id: selectedTicket.id, message: replyText, isAdmin: true })
+      await replyToTicket.mutateAsync({ id: selectedTicket.id, message: replyText.trim(), attachments: replyAttachments, isAdmin: true })
       setReplyText('')
+      setReplyAttachments([])
       toast.success(t('tickets.toast.replied'))
     } catch (err) {
       toast.error(err?.response?.data?.error || t('tickets.toast.replyFailed'))
@@ -367,6 +373,7 @@ export default function SATicketsPage() {
                         <span className="text-xs text-muted">{relativeFromTz(selectedTicket.createdAt, tz)}</span>
                       </div>
                       <p className="text-sm text-off-white whitespace-pre-wrap">{selectedTicket.description}</p>
+                      <AttachmentGallery urls={selectedTicket.attachments} className="mt-3" />
                     </div>
 
                     {/* Replies */}
@@ -380,7 +387,8 @@ export default function SATicketsPage() {
                           <span className="text-xs text-muted">·</span>
                           <span className="text-xs text-muted">{relativeFromTz(reply.createdAt, tz)}</span>
                         </div>
-                        <p className="text-sm text-off-white whitespace-pre-wrap">{reply.message}</p>
+                        {reply.message && <p className="text-sm text-off-white whitespace-pre-wrap">{reply.message}</p>}
+                        <AttachmentGallery urls={reply.attachments} className={reply.message ? 'mt-2' : ''} />
                       </div>
                     ))}
 
@@ -411,7 +419,8 @@ export default function SATicketsPage() {
                           placeholder={t('tickets.writeReplyAdmin')}
                           className="w-full bg-dark-card border border-dark-border rounded-xl px-3 py-2.5 text-sm text-off-white placeholder-muted resize-none focus:outline-none focus:border-gold/50 transition-colors"
                         />
-                        <Button icon={Send} size="sm" onClick={handleReply} disabled={sending || !replyText.trim()} loading={sending}>
+                        <AttachmentPicker value={replyAttachments} onChange={setReplyAttachments} disabled={sending} />
+                        <Button icon={Send} size="sm" onClick={handleReply} disabled={sending || (!replyText.trim() && replyAttachments.length === 0)} loading={sending}>
                           {sending ? t('tickets.sending') : t('tickets.sendReply')}
                         </Button>
                       </div>
