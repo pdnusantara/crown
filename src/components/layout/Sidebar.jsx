@@ -8,7 +8,7 @@ import {
   Tag, GitCompare, Megaphone, Flag, MessageSquare, Activity,
   PieChart, UserCircle, DollarSign, Package, ShieldAlert, MapPin,
   ChevronRight, Wallet, Landmark, LifeBuoy, Fingerprint, Handshake,
-  Banknote, UserPlus,
+  Banknote, UserPlus, MessageCircle,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useTenantStore } from '../../store/tenantStore.js'
@@ -54,6 +54,7 @@ const navConfig = {
     { labelKey: 'nav.expenses',      icon: Wallet,        path: '/admin/expenses' },
     { labelKey: 'nav.ratings',       icon: Star,          path: '/admin/ratings' },
     { labelKey: 'nav.attendance',    icon: Fingerprint,   path: '/admin/attendance', flag: 'attendance' },
+    { labelKey: 'nav.whatsappLogs',  icon: MessageCircle, path: '/admin/whatsapp-logs', flag: 'whatsapp' },
     { labelKey: 'nav.tickets',       icon: MessageSquare, path: '/admin/tickets', badge: 'ta_tickets' },
     { labelKey: 'nav.billing',       icon: CreditCard,    path: '/admin/billing' },
     { labelKey: 'nav.settings',      icon: Settings,      path: '/admin/settings' },

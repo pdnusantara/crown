@@ -58,6 +58,7 @@ const TAExpensePage          = lazy(() => import('./pages/tenant-admin/TAExpense
 const TARatingsPage          = lazy(() => import('./pages/tenant-admin/TARatingsPage.jsx'))
 const TAHelpPage             = lazy(() => import('./pages/tenant-admin/TAHelpPage.jsx'))
 const TAAttendancePage       = lazy(() => import('./pages/tenant-admin/TAAttendancePage.jsx'))
+const TAWhatsappLogsPage     = lazy(() => import('./pages/tenant-admin/TAWhatsappLogsPage.jsx'))
 
 const POSPage          = lazy(() => import('./pages/kasir/POSPage.jsx'))
 const QueuePage        = lazy(() => import('./pages/kasir/QueuePage.jsx'))
@@ -329,6 +330,7 @@ export default function App() {
               <Route path="expenses"       element={<TAExpensePage />} />
               <Route path="ratings"        element={<TARatingsPage />} />
               <Route path="attendance"     element={<TAAttendancePage />} />
+              <Route path="whatsapp-logs"  element={<TAWhatsappLogsPage />} />
               <Route path="bantuan"        element={<TAHelpPage />} />
             </Route>
             <Route index element={<Navigate to="dashboard" replace />} />

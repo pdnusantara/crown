@@ -20,6 +20,32 @@ const crypto = require('crypto');
 
 const prisma = require('../config/database');
 
+// Pencatatan log pesan keluar bersifat best-effort & TIDAK boleh menggagalkan
+// pengiriman. Semua operasi prisma di-bungkus try/catch dan tak pernah throw.
+// `category`: transaction_admin | transaction_customer | rating | test | system.
+async function logMessage({ tenantId, recipient, category = 'system', status, reason = null, preview = null, messageId = null }) {
+  if (!tenantId || !recipient) return;
+  try {
+    const row = await prisma.whatsappMessageLog.create({
+      data: {
+        tenantId,
+        recipient: String(recipient).slice(0, 32),
+        category,
+        status,
+        messageId: messageId || null,
+        reason: reason ? String(reason).slice(0, 250) : null,
+        preview: preview ? String(preview).slice(0, 120) : null,
+        ...(status === 'delivered' || status === 'read' ? { deliveredAt: new Date() } : {}),
+      },
+    });
+    // Realtime ke dashboard tenant supaya halaman /admin/whatsapp-logs hidup.
+    try {
+      const { getIO, tenantRoom } = require('../config/socket');
+      getIO()?.to(tenantRoom(tenantId)).emit('whatsapp:message', { id: row.id, status });
+    } catch (_) { /* socket opsional */ }
+  } catch (_) { /* observability — jangan ganggu pengiriman */ }
+}
+
 const ROOT_DIR = path.resolve(__dirname, '..', '..');
 const STORAGE_DIR = path.join(ROOT_DIR, 'storage');
 // Pengaturan yang dikontrol pengguna (boleh ditampilkan ke UI).
@@ -511,29 +537,46 @@ function buildTransactionMessage(transaction) {
 
 // Kirim satu pesan via gateway dari device milik tenant ini. `idempotencyKey`
 // mencegah duplikasi saat pemanggil melakukan retry.
-async function dispatchMessage(tenantId, phone, text, idempotencyKey) {
+async function dispatchMessage(tenantId, phone, text, idempotencyKey, category = 'system') {
   const to = normalizePhone(phone);
-  if (!to) return { sent: false, reason: 'invalid_phone' };
+  const preview = text || '';
+  if (!to) {
+    await logMessage({ tenantId, recipient: phone || '(kosong)', category, status: 'failed', reason: 'invalid_phone', preview });
+    return { sent: false, reason: 'invalid_phone' };
+  }
 
   const config = await getConfig();
+  // disabled_global / not_configured = keadaan konfigurasi gateway (super-admin),
+  // bukan kegagalan per-pesan tenant → tidak dicatat agar log tidak banjir.
   if (!config.enabled) return { sent: false, reason: 'disabled_global' };
   if (!config.apiKey) return { sent: false, reason: 'not_configured' };
 
   const device = await getTenantDevice(tenantId);
-  if (!device?.deviceId) return { sent: false, reason: 'not_connected' };
+  if (!device?.deviceId) {
+    await logMessage({ tenantId, recipient: to, category, status: 'failed', reason: 'not_connected', preview });
+    return { sent: false, reason: 'not_connected' };
+  }
 
   const headers = apiHeaders(config);
   if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
 
-  const resp = unwrap(
-    await wagatFetch(config, '/send', {
-      method: 'POST',
-      headers,
-      // deviceId eksplisit → pesan dikirim dari nomor WhatsApp tenant ini.
-      body: { to, message: text, deviceId: device.deviceId, source: 'pos' },
-    })
-  );
-  return { sent: true, messageId: resp?.messageId || null, status: resp?.status || 'queued' };
+  try {
+    const resp = unwrap(
+      await wagatFetch(config, '/send', {
+        method: 'POST',
+        headers,
+        // deviceId eksplisit → pesan dikirim dari nomor WhatsApp tenant ini.
+        body: { to, message: text, deviceId: device.deviceId, source: 'pos' },
+      })
+    );
+    const messageId = resp?.messageId || null;
+    const status = resp?.status === 'failed' ? 'failed' : 'sent';
+    await logMessage({ tenantId, recipient: to, category, status, messageId, preview });
+    return { sent: true, messageId, status: resp?.status || 'queued' };
+  } catch (err) {
+    await logMessage({ tenantId, recipient: to, category, status: 'failed', reason: err?.message || 'gateway_error', preview });
+    throw err;
+  }
 }
 
 async function sendTransactionNotification(tenantId, transaction) {
@@ -550,7 +593,7 @@ async function sendTransactionNotification(tenantId, transaction) {
 
   if (settings.notifyAdminPhone) {
     try {
-      const r = await dispatchMessage(tenantId, settings.notifyAdminPhone, summary, `tx-${txId}-admin`);
+      const r = await dispatchMessage(tenantId, settings.notifyAdminPhone, summary, `tx-${txId}-admin`, 'transaction_admin');
       if (r.sent) {
         sentTargets.push('admin');
         console.log(`[WA] tx=${txId} → admin OK (${r.messageId || 'queued'})`);
@@ -580,7 +623,8 @@ async function sendTransactionNotification(tenantId, transaction) {
         tenantId,
         transaction.customer.phone,
         `${opening}\n\n${summary}`,
-        `tx-${txId}-cust`
+        `tx-${txId}-cust`,
+        'transaction_customer'
       );
       if (r.sent) {
         sentTargets.push('customer');
@@ -617,7 +661,7 @@ async function sendTestMessage(tenantId) {
     `Waktu kirim: ${new Date().toLocaleString('id-ID')}`,
   ].join('\n');
 
-  const r = await dispatchMessage(tenantId, settings.notifyAdminPhone, body, `test-${tenantId}-${Date.now()}`);
+  const r = await dispatchMessage(tenantId, settings.notifyAdminPhone, body, `test-${tenantId}-${Date.now()}`, 'test');
   if (!r.sent) {
     const err = new Error(`Gagal mengirim pesan tes (${r.reason || 'unknown'}).`);
     err.code = 'NOT_CONNECTED';
@@ -674,7 +718,7 @@ async function sendRatingLink(tenantId, transaction) {
   });
 
   try {
-    return await dispatchMessage(tenantId, phone, text, `rating-${transaction.id}`);
+    return await dispatchMessage(tenantId, phone, text, `rating-${transaction.id}`, 'rating');
   } catch (err) {
     return { sent: false, reason: err.message };
   }

@@ -10,6 +10,7 @@
 // JWT; integritas dijamin murni oleh verifikasi tanda tangan.
 
 const router = require('express').Router();
+const prisma = require('../config/database');
 const wa = require('../services/whatsappService');
 const { getIO, tenantRoom } = require('../config/socket');
 
@@ -51,6 +52,31 @@ router.post('/', async (req, res) => {
     }
 
     if (type.startsWith('message.')) {
+      // Perbarui status log pesan keluar (dicocokkan via messageId gateway).
+      // Guard `notIn` mencegah downgrade kalau webhook tiba tak berurutan
+      // (mis. 'delivered' lalu 'sent' yang terlambat).
+      const statusMap = { 'message.sent': 'sent', 'message.delivered': 'delivered', 'message.read': 'read', 'message.failed': 'failed' };
+      const guardNotIn = { sent: ['sent', 'delivered', 'read', 'failed'], delivered: ['delivered', 'read'], read: ['read'], failed: [] };
+      const newStatus = statusMap[type];
+      if (newStatus && event.messageId) {
+        try {
+          await prisma.whatsappMessageLog.updateMany({
+            where: {
+              messageId: String(event.messageId),
+              ...(guardNotIn[newStatus].length ? { status: { notIn: guardNotIn[newStatus] } } : {}),
+            },
+            data: {
+              status: newStatus,
+              ...(newStatus === 'delivered' || newStatus === 'read' ? { deliveredAt: new Date() } : {}),
+              ...(event.error || event.reason ? { reason: String(event.error || event.reason).slice(0, 250) } : {}),
+            },
+          });
+          const tenantId = await wa.findTenantByDeviceId(deviceId);
+          if (tenantId) {
+            try { getIO()?.to(tenantRoom(tenantId)).emit('whatsapp:message', { messageId: event.messageId, status: newStatus }); } catch { /* socket opsional */ }
+          }
+        } catch (e) { /* observability — jangan throw */ }
+      }
       console.log(`[WA webhook] ${type} messageId=${event.messageId || '?'} to=${event.to || '?'} status=${event.status || '?'}`);
       return;
     }

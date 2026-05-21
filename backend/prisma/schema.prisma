@@ -1010,3 +1010,31 @@ model AffiliatePayout {
   @@index([affiliateId, createdAt])
   @@index([status, createdAt])
 }
+
+// Log pesan WhatsApp keluar per tenant — sumber data halaman
+// /admin/whatsapp-logs (memantau pesan terkirim/gagal). Dicatat best-effort di
+// whatsappService.dispatchMessage; status diperbarui dari webhook gateway
+// (message.sent/delivered/failed). Bersifat observabilitas — kegagalan
+// menyimpan log TIDAK boleh mengganggu pengiriman pesan.
+model WhatsappMessageLog {
+  id           String    @id @default(cuid())
+  tenantId     String
+  // messageId dari gateway — dicocokkan saat webhook memperbarui status.
+  messageId    String?
+  recipient    String    // nomor tujuan ter-normalisasi (62...)
+  // transaction_admin | transaction_customer | rating | test | system
+  category     String    @default("system")
+  // queued | sent | delivered | read | failed | skipped
+  status       String    @default("sent")
+  // Alasan gagal/skip atau pesan error gateway (not_connected, invalid_phone, ...).
+  reason       String?
+  // Potongan isi pesan (~120 char) untuk memudahkan penelusuran.
+  preview      String?
+  deliveredAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status])
+  @@index([messageId])
+}
