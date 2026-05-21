@@ -3,8 +3,19 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App.jsx'
 import { ErrorBoundary } from './components/ErrorBoundary.jsx'
+import { reloadOnceForChunkError } from './lib/chunkReload.js'
 import './i18n/index.js'
 import './index.css'
+
+// Vite memancarkan 'vite:preloadError' saat sebuah chunk dynamic-import gagal
+// dimuat — hampir selalu karena deploy baru me-rotate hash file sementara tab
+// ini masih memegang index.html lama. Pulihkan otomatis dengan reload sekali
+// (ambil index.html segar) sebelum error itu sempat menjadi layar error.
+// Kalau reload diblok cooldown (baru saja reload tapi masih gagal), biarkan
+// error menjalar ke ErrorBoundary.
+window.addEventListener('vite:preloadError', (e) => {
+  if (reloadOnceForChunkError()) e.preventDefault()
+})
 
 // Service worker baru sudah aktif (skipWaiting+clientsClaim di vite.config.js).
 // Alih-alih reload paksa — yang bisa menghapus form yang sedang diisi user —

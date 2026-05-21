@@ -40,7 +40,19 @@ export default defineConfig({
         // saat dipakai via runtimeCaching di bawah (CacheFirst, sebab nama file
         // ber-hash = immutable) dengan batas entri yang merawat dirinya sendiri.
         globPatterns: ['index.html', 'manifest.webmanifest', 'favicon.ico', 'icon-*.png'],
-        navigateFallback: 'index.html',
+        // navigateFallback DIMATIKAN (null). vite-plugin-pwa default-nya
+        // 'index.html', yang membuat SW menyajikan index.html PRECACHE (basi) di
+        // setiap navigasi/reload → referensi hash chunk lama → "Failed to fetch
+        // dynamically imported module" pasca-deploy, dan reload pun tak memulihkan
+        // sampai SW ter-update. Dengan null, navigasi selalu ambil index.html
+        // SEGAR dari jaringan (nginx no-cache). Aset /assets/ tetap di-cache di
+        // bawah. (Trade-off: shell tak tersaji saat OFFLINE — app ini online-first.)
+        navigateFallback: null,
+        // directoryIndex default 'index.html' membuat request ke root '/' tetap
+        // dilayani index.html precache (basi). Null → '/' ikut ke jaringan.
+        // index.html tetap di-precache hanya sebagai sinyal versi (revision
+        // berubah tiap deploy → sw.js berubah → update SW terdeteksi).
+        directoryIndex: null,
         runtimeCaching: [
           {
             // Bundel aplikasi ber-hash konten → immutable. CacheFirst: ambil

@@ -1,6 +1,7 @@
 import { Component } from 'react'
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
 import api from '../lib/api.js'
+import { isChunkLoadError, reloadOnceForChunkError } from '../lib/chunkReload.js'
 
 export class ErrorBoundary extends Component {
   constructor(props) {
@@ -13,20 +14,9 @@ export class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    const isChunkError = (
-      error?.message?.includes('Failed to fetch dynamically imported module') ||
-      error?.message?.includes('Importing a module script failed') ||
-      error?.name === 'ChunkLoadError'
-    )
-
-    if (isChunkError) {
-      const RELOAD_KEY = '_chunk_reload'
-      if (!sessionStorage.getItem(RELOAD_KEY)) {
-        sessionStorage.setItem(RELOAD_KEY, '1')
-        window.location.reload()
-        return
-      }
-    }
+    // Chunk usang pasca-deploy → reload sekali untuk ambil index.html segar.
+    // Guard berbasis waktu: pulih dari episode berulang tanpa loop tak-terbatas.
+    if (isChunkLoadError(error) && reloadOnceForChunkError()) return
 
     console.error('BarberOS Error:', error, errorInfo)
     this.setState({ errorInfo })
