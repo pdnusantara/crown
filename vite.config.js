@@ -12,7 +12,6 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico'],
       manifest: {
         name: 'BarberOS',
         short_name: 'BarberOS',
@@ -39,7 +38,7 @@ export default defineConfig({
         // instalasi SW GAGAL, sehingga update tak pernah aktif. Chunk di-cache
         // saat dipakai via runtimeCaching di bawah (CacheFirst, sebab nama file
         // ber-hash = immutable) dengan batas entri yang merawat dirinya sendiri.
-        globPatterns: ['index.html', 'manifest.webmanifest', 'favicon.ico', 'icon-*.png'],
+        globPatterns: ['index.html', 'manifest.webmanifest', 'icon-*.png'],
         // navigateFallback DIMATIKAN (null). vite-plugin-pwa default-nya
         // 'index.html', yang membuat SW menyajikan index.html PRECACHE (basi) di
         // setiap navigasi/reload → referensi hash chunk lama → "Failed to fetch
