@@ -12,6 +12,11 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Registrasi SW dilakukan manual di src/main.jsx supaya bisa DILEWATI di
+      // halaman publik pelanggan (mis. /rating/* dari link WhatsApp) yang tak
+      // boleh dikontrol SW. Tanpa ini, registerSW.js auto-inject mendaftarkan SW
+      // di semua halaman.
+      injectRegister: false,
       manifest: {
         name: 'BarberOS',
         short_name: 'BarberOS',

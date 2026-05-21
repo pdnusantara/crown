@@ -17,25 +17,48 @@ window.addEventListener('vite:preloadError', (e) => {
   if (reloadOnceForChunkError()) e.preventDefault()
 })
 
-// Service worker baru sudah aktif (skipWaiting+clientsClaim di vite.config.js).
-// Alih-alih reload paksa — yang bisa menghapus form yang sedang diisi user —
-// kita dispatch event supaya komponen SWUpdateBanner tampil dan user yang
-// memilih kapan reload. Flag sessionStorage cegah event berulang dalam sesi
-// yang sama.
-if ('serviceWorker' in navigator) {
+// Halaman rating publik (link WhatsApp yang diklik pelanggan) sengaja TIDAK
+// pakai service worker. SW — terutama versi lama yang masih nyangkut di HP
+// pelanggan yang pernah membuka app/booking — bisa menyajikan index.html basi
+// sehingga halaman "terbuka lalu reload sendiri beberapa detik". Registrasi SW
+// dilakukan MANUAL di sini (injectRegister:false di vite.config) supaya bisa
+// dilewati untuk route ini.
+const SW_EXCLUDED = location.pathname.startsWith('/rating')
+
+if ('serviceWorker' in navigator && SW_EXCLUDED) {
+  // Jangan daftarkan SW. Kalau pengunjung kebetulan masih punya SW lama →
+  // unregister + bersihkan cache, lalu SATU reload bersih untuk lepas dari
+  // kontrolnya. Pengunjung baru (mayoritas) tak punya SW → tanpa reload.
+  navigator.serviceWorker.getRegistrations().then((regs) => {
+    if (!regs.length) return
+    Promise.all(regs.map((r) => r.unregister()))
+      .then(() => (window.caches ? caches.keys().then((ks) => Promise.all(ks.map((k) => caches.delete(k)))) : null))
+      .catch(() => {})
+      .finally(() => {
+        if (navigator.serviceWorker.controller && !sessionStorage.getItem('rating-sw-cleared')) {
+          sessionStorage.setItem('rating-sw-cleared', '1')
+          location.reload()
+        }
+      })
+  }).catch(() => {})
+} else if ('serviceWorker' in navigator) {
+  // Halaman aplikasi biasa: daftarkan SW secara manual.
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {})
+  })
+
+  // SW baru aktif (skipWaiting+clientsClaim) → tampilkan SWUpdateBanner alih-alih
+  // reload paksa (yang bisa menghapus form yang sedang diisi user). Flag
+  // sessionStorage cegah event berulang dalam sesi yang sama.
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (sessionStorage.getItem('sw-update-shown') === '1') return
     sessionStorage.setItem('sw-update-shown', '1')
     window.dispatchEvent(new Event('app:update-available'))
   })
 
-  // Aplikasi ini SPA: pindah halaman pakai History API, BUKAN navigasi browser,
-  // jadi browser bisa tidak pernah mengambil ulang /sw.js dengan sendirinya. Tab
-  // yang dibiarkan terbuka seharian akhirnya tak pernah tahu ada deploy baru —
-  // inilah sebab "fitur baru muncul telat / tidak muncul" di sebagian sesi.
-  // Maka kita minta browser cek update secara berkala, dan tiap tab kembali
-  // aktif atau koneksi pulih. Saat SW baru ketemu, ia langsung aktif
-  // (skipWaiting+clientsClaim) → controllerchange di atas → banner muncul.
+  // SPA pindah halaman via History API (bukan navigasi browser), jadi browser
+  // bisa tak pernah ambil ulang /sw.js → tab lama tak tahu ada deploy baru.
+  // Maka cek update berkala + tiap tab kembali aktif / online lagi.
   navigator.serviceWorker.ready.then((registration) => {
     const UPDATE_INTERVAL_MS = 15 * 60 * 1000 // cek berkala tiap 15 menit
     const MIN_GAP_MS = 30 * 1000              // jangan cek lebih sering dari 30 dtk
