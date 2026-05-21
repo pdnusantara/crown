@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { z } = require('zod');
 const prisma = require('../config/database');
 const { formatYmdInTz, normalizeTimezone, DEFAULT_TZ } = require('../utils/timezone');
+const { getBranchLicenseStatus, isBranchLicensed } = require('../utils/branchLicense');
 
 // Defense-in-depth: even if the public booking UI is bypassed, refuse a slot
 // that's already in the past (or starts in less than this many minutes) in the
@@ -190,7 +191,12 @@ router.get('/branches', requireTenant, async (req, res, next) => {
       select: { id: true, name: true, address: true, phone: true, openTime: true, closeTime: true, closedDates: true },
       orderBy: { name: 'asc' },
     });
-    res.json({ success: true, data: branches });
+    // Sembunyikan cabang yang belum berlisensi (cabang add-on yang belum dibayar)
+    // dari halaman booking publik — pelanggan tak boleh memesan ke cabang yang
+    // belum aktif. Penegakan tulis ada di POST /bookings.
+    const license = await getBranchLicenseStatus(req.tenant.id);
+    const visible = branches.filter((b) => !license.unlicensed.has(b.id));
+    res.json({ success: true, data: visible });
   } catch (err) { next(err); }
 });
 
@@ -221,7 +227,13 @@ router.get('/barbers', requireTenant, async (req, res, next) => {
       deletedAt: null,
       OR: [{ role: 'barber' }, { isBarber: true }],
     };
-    if (req.query.branchId) where.branchId = req.query.branchId;
+    if (req.query.branchId) {
+      // Cabang belum berlisensi → tidak menerima booking online, jangan tampilkan barber.
+      if (!(await isBranchLicensed(req.tenant.id, String(req.query.branchId)))) {
+        return res.json({ success: true, data: [] });
+      }
+      where.branchId = req.query.branchId;
+    }
     const barbers = await prisma.user.findMany({
       where,
       select: { id: true, name: true, photo: true },
@@ -316,6 +328,14 @@ router.get('/availability', requireTenant, async (req, res, next) => {
     const { branchId, date, barberId, serviceId } = req.query;
     if (!branchId || !date) {
       return res.status(400).json({ success: false, error: 'branchId dan date wajib' });
+    }
+    // Cabang belum berlisensi (add-on belum dibayar) tidak menerima booking online.
+    if (!(await isBranchLicensed(req.tenant.id, String(branchId)))) {
+      return res.status(403).json({
+        success: false,
+        code: 'BRANCH_UNLICENSED',
+        error: 'Cabang ini belum tersedia untuk booking online.',
+      });
     }
     const where = {
       tenantId: req.tenant.id,
@@ -437,6 +457,16 @@ router.post('/bookings', requireTenant, async (req, res, next) => {
       where: { id: body.branchId, tenantId: req.tenant.id, isActive: true, deletedAt: null },
     });
     if (!branch) return res.status(400).json({ success: false, error: 'Cabang tidak ditemukan' });
+
+    // Cabang add-on yang belum dibayar tidak boleh menerima booking — penegakan
+    // tulis (jalur publik tak melewati requireLicensedBranch yang butuh auth).
+    if (!(await isBranchLicensed(req.tenant.id, branch.id))) {
+      return res.status(403).json({
+        success: false,
+        code: 'BRANCH_UNLICENSED',
+        error: 'Cabang ini belum tersedia untuk booking online.',
+      });
+    }
 
     // Reject past slots (tenant-local time). Lead-time buffer prevents booking
     // a slot that starts in <15 minutes — gives kasir time to prepare.

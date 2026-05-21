@@ -127,4 +127,20 @@ async function getBranchLicenseStatus(tenantId) {
   };
 }
 
-module.exports = { getBranchLicenseStatus };
+/**
+ * Apakah satu cabang berlisensi (kuota paket atau add-on yang sudah dibayar)?
+ * Dipakai di jalur publik (booking pelanggan) yang tidak melewati
+ * middleware `requireLicensedBranch` (tanpa auth). Cabang yang tidak dikenal
+ * atau tenant tanpa subscription → dianggap licensed (fail-open).
+ *
+ * @param {string} tenantId
+ * @param {string} branchId
+ * @returns {Promise<boolean>}
+ */
+async function isBranchLicensed(tenantId, branchId) {
+  if (!tenantId || !branchId) return true;
+  const status = await getBranchLicenseStatus(tenantId);
+  return !status.unlicensed.has(branchId);
+}
+
+module.exports = { getBranchLicenseStatus, isBranchLicensed };

@@ -479,19 +479,51 @@ router.post('/callback', async (req, res) => {
         ]);
 
       } else if (order.type === 'branch_addon') {
-        await prisma.invoice.create({
-          data: {
-            subscriptionId: order.subscriptionId,
-            period: `Tambah Cabang — ${now.toLocaleString('id-ID', { month: 'long', year: 'numeric' })}`,
-            amount: order.amount,
-            originalAmount: order.amount + order.discountAmount,
-            discountAmount: order.discountAmount,
-            promotionCode:  order.promotionCode,
-            type:   'branch_addon',
-            status: 'paid',
-            paidAt: now,
-          },
-        });
+        // Lunasi invoice branch_addon PENDING yang sudah dibuat saat cabang
+        // ditambahkan — JANGAN membuat invoice baru. Membuat duplikat akan
+        // menggandakan paidAddonCount sehingga melisensikan cabang ekstra
+        // berikutnya tanpa bayar (kredit add-on "hantu") dan menyisakan badge
+        // "menunggu konfirmasi" selamanya. Prioritas target: invoiceId di order
+        // → invoice branch_addon pending terlama → fallback buat baru
+        // (mis. pembelian lisensi cabang di muka, sebelum cabangnya dibuat).
+        let target = null;
+        if (order.invoiceId) {
+          target = await prisma.invoice.findUnique({ where: { id: order.invoiceId } });
+          if (target && (target.type !== 'branch_addon' || target.status === 'paid')) target = null;
+        }
+        if (!target) {
+          target = await prisma.invoice.findFirst({
+            where: { subscriptionId: order.subscriptionId, type: 'branch_addon', status: { not: 'paid' } },
+            orderBy: { createdAt: 'asc' },
+          });
+        }
+        if (target) {
+          await prisma.invoice.update({
+            where: { id: target.id },
+            data: {
+              amount:         order.amount,
+              originalAmount: order.amount + order.discountAmount,
+              discountAmount: order.discountAmount,
+              promotionCode:  order.promotionCode,
+              status: 'paid',
+              paidAt: now,
+            },
+          });
+        } else {
+          await prisma.invoice.create({
+            data: {
+              subscriptionId: order.subscriptionId,
+              period: `Tambah Cabang — ${now.toLocaleString('id-ID', { month: 'long', year: 'numeric' })}`,
+              amount: order.amount,
+              originalAmount: order.amount + order.discountAmount,
+              discountAmount: order.discountAmount,
+              promotionCode:  order.promotionCode,
+              type:   'branch_addon',
+              status: 'paid',
+              paidAt: now,
+            },
+          });
+        }
 
       } else if (order.type === 'upgrade' && order.targetPackage) {
         const sub = await prisma.subscription.findUnique({ where: { id: order.subscriptionId } });
