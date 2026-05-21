@@ -50,7 +50,8 @@ const branchSelect = {
   isActive: true,
   createdAt: true,
   tenant: { select: { id: true, name: true } },
-  _count: { select: { users: true } },
+  // Hitung hanya staf aktif (belum di-soft-delete) supaya angka "Staf" akurat.
+  _count: { select: { users: { where: { deletedAt: null } } } },
 };
 
 // Kode cabang: huruf kecil/angka/tanda hubung, 2-24 char. Tidak boleh berupa
@@ -129,13 +130,29 @@ router.get('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir'
         licenseByTenant.set(tid, await getBranchLicenseStatus(tid));
       }),
     );
-    const revenueByBranch = await computeBranchMonthlyRevenue(data.map((b) => b.id));
+    const branchIds = data.map((b) => b.id);
+    const revenueByBranch = await computeBranchMonthlyRevenue(branchIds);
+
+    // Rincian staf aktif per peran (kasir/barber/...) untuk kartu cabang —
+    // lebih jelas daripada satu angka "Staf" yang ambigu.
+    const staffRows = await prisma.user.groupBy({
+      by: ['branchId', 'role'],
+      where: { branchId: { in: branchIds }, deletedAt: null },
+      _count: { _all: true },
+    });
+    const staffByBranch = {};
+    for (const r of staffRows) {
+      if (!r.branchId) continue;
+      (staffByBranch[r.branchId] ||= {})[r.role] = r._count._all;
+    }
+
     const annotated = data.map((b) => {
       const lic = licenseByTenant.get(b.tenantId);
       return {
         ...b,
         isLicensed: lic ? !lic.unlicensed.has(b.id) : true,
         monthlyRevenue: revenueByBranch[b.id] || 0,
+        staffByRole: staffByBranch[b.id] || {},
       };
     });
 

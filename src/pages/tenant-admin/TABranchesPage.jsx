@@ -52,6 +52,17 @@ function QuotaDots({ current, max, extra = 0 }) {
   )
 }
 
+// Rincian staf per peran → "1 Kasir · 2 Barber" (lebih jelas dari angka tunggal).
+const STAFF_ROLE_LABEL = { kasir: 'Kasir', barber: 'Barber', tenant_admin: 'Admin' }
+function staffBreakdown(byRole) {
+  if (!byRole) return ''
+  return Object.entries(byRole)
+    .filter(([, n]) => n > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([role, n]) => `${n} ${STAFF_ROLE_LABEL[role] || role}`)
+    .join(' · ')
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function TABranchesPage() {
@@ -368,7 +379,9 @@ export default function TABranchesPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {branches.map((branch, i) => {
             const unlicensed = branch.isLicensed === false
-            const staffCount = branch._count?.users ?? 0
+            const staffByRole = branch.staffByRole || {}
+            const staffCount = branch._count?.users ?? Object.values(staffByRole).reduce((a, b) => a + b, 0)
+            const staffDetail = staffBreakdown(staffByRole)
             return (
               <motion.div key={branch.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
                 <Card className={`p-5 card-hover relative ${unlicensed ? 'border-amber-400/30 bg-amber-400/5' : ''}`}>
@@ -438,15 +451,20 @@ export default function TABranchesPage() {
                   )}
 
                   {/* Stats footer */}
-                  <div className="pt-3 border-t border-dark-border grid grid-cols-2 gap-3">
-                    <div className="bg-dark-surface rounded-xl p-2.5 text-center">
-                      <p className="text-base font-bold text-off-white">{staffCount}</p>
-                      <p className="text-[10px] text-muted">Staff</p>
+                  <div className="pt-3 border-t border-dark-border">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-dark-surface rounded-xl p-2.5 text-center">
+                        <p className="text-base font-bold text-off-white">{staffCount}</p>
+                        <p className="text-[10px] text-muted">Staf aktif</p>
+                      </div>
+                      <div className="bg-dark-surface rounded-xl p-2.5 text-center">
+                        <p className="text-sm font-bold text-gold">{formatRupiah(branch.monthlyRevenue || 0)}</p>
+                        <p className="text-[10px] text-muted">Omzet bulan ini</p>
+                      </div>
                     </div>
-                    <div className="bg-dark-surface rounded-xl p-2.5 text-center">
-                      <p className="text-sm font-bold text-gold">{formatRupiah(branch.monthlyRevenue || 0)}</p>
-                      <p className="text-[10px] text-muted">MTD</p>
-                    </div>
+                    {staffDetail && (
+                      <p className="text-[10px] text-muted text-center mt-2">{staffDetail}</p>
+                    )}
                   </div>
                 </Card>
               </motion.div>
