@@ -39,7 +39,7 @@ export default function TAStaffPage() {
   const [search, setSearch] = useState('')
   const [branchFilter, setBranchFilter] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
-  const [form, setForm] = useState({ name: '', email: '', role: 'barber', branchId: '', commissionRate: 0.35, salaryType: 'commission', baseSalary: 0, photo: '' })
+  const [form, setForm] = useState({ name: '', email: '', role: 'barber', branchId: '', commissionRate: 0.35, salaryType: 'commission', baseSalary: 0, isBarber: false, photo: '' })
   const [formError, setFormError] = useState({})
   // { email, tempPassword, name, mode: 'created' | 'reset', custom? } | null
   const [credentials, setCredentials] = useState(null)
@@ -67,14 +67,14 @@ export default function TAStaffPage() {
 
   const openAdd = () => {
     setEditStaff(null)
-    setForm({ name: '', email: '', role: 'barber', branchId: branches[0]?.id || '', commissionRate: 0.35, salaryType: 'commission', baseSalary: 0, photo: '' })
+    setForm({ name: '', email: '', role: 'barber', branchId: branches[0]?.id || '', commissionRate: 0.35, salaryType: 'commission', baseSalary: 0, isBarber: false, photo: '' })
     setFormError({})
     setShowModal(true)
   }
 
   const openEdit = (member) => {
     setEditStaff(member)
-    setForm({ name: member.name, email: member.email || '', role: member.role, branchId: member.branchId, commissionRate: member.commissionRate, salaryType: member.role === 'kasir' ? 'fixed' : (member.salaryType || 'commission'), baseSalary: member.baseSalary || 0, photo: member.photo || '' })
+    setForm({ name: member.name, email: member.email || '', role: member.role, branchId: member.branchId, commissionRate: member.commissionRate ?? 0.35, salaryType: (member.role === 'kasir' && !member.isBarber) ? 'fixed' : (member.salaryType || 'commission'), baseSalary: member.baseSalary || 0, isBarber: member.isBarber || false, photo: member.photo || '' })
     setFormError({})
     setShowModal(true)
   }
@@ -97,7 +97,11 @@ export default function TAStaffPage() {
     try {
       if (editStaff) {
         // Saat edit, jangan kirim email (untuk hindari bentrok unique) kecuali memang berubah.
-        const patch = { name: form.name, role: form.role, branchId: form.branchId, commissionRate: form.commissionRate, salaryType: form.role === 'kasir' ? 'fixed' : form.salaryType, baseSalary: form.baseSalary, photo: form.photo || null }
+        // Kasir yang ditandai "juga barber" memakai skema hybrid (gaji pokok +
+        // komisi) supaya komisi atas layanan yang dia kerjakan tetap dihitung.
+        const isBarber = form.role === 'kasir' ? !!form.isBarber : false
+        const salaryType = form.role === 'kasir' ? (isBarber ? 'hybrid' : 'fixed') : form.salaryType
+        const patch = { name: form.name, role: form.role, branchId: form.branchId, commissionRate: form.commissionRate, salaryType, baseSalary: form.baseSalary, isBarber, photo: form.photo || null }
         if (form.email && form.email !== editStaff.email) patch.email = form.email
         await updateUser.mutateAsync({ id: editStaff.id, ...patch, tenantId: user.tenantId })
         toast.success(t('tenantAdmin.staff.staffUpdated'))
@@ -113,7 +117,9 @@ export default function TAStaffPage() {
           ...(form.role === 'barber'
             ? { commissionRate: form.commissionRate, salaryType: form.salaryType, baseSalary: form.baseSalary }
             : form.role === 'kasir'
-              ? { salaryType: 'fixed', baseSalary: form.baseSalary }
+              ? form.isBarber
+                ? { salaryType: 'hybrid', baseSalary: form.baseSalary, isBarber: true, commissionRate: form.commissionRate }
+                : { salaryType: 'fixed', baseSalary: form.baseSalary, isBarber: false }
               : {}),
         })
         toast.success(t('tenantAdmin.staff.staffAdded'))
@@ -233,7 +239,12 @@ export default function TAStaffPage() {
                     <div className="flex items-start justify-between">
                       <div>
                         <h3 className="font-semibold text-off-white">{member.name}</h3>
-                        <Badge variant={roleColors[member.role] || 'muted'} className="mt-1">{member.role}</Badge>
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          <Badge variant={roleColors[member.role] || 'muted'}>{member.role}</Badge>
+                          {member.role === 'kasir' && member.isBarber && (
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gold/10 text-gold border border-gold/30">+ Barber</span>
+                          )}
+                        </div>
                       </div>
                       <div className="flex gap-0.5 flex-shrink-0 -mr-1">
                         <button
@@ -264,7 +275,7 @@ export default function TAStaffPage() {
                       {branches.find(b => b.id === member.branchId)?.name || '-'}
                     </p>
 
-                    {member.role === 'barber' && (
+                    {(member.role === 'barber' || (member.role === 'kasir' && member.isBarber)) && (
                       <div className="flex items-center gap-3 mt-2">
                         {member.rating && (
                           <div className="flex items-center gap-1">
@@ -369,14 +380,42 @@ export default function TAStaffPage() {
                   )}
                 </>
               ) : (
-                // Kasir: hanya gaji pokok (komisi tak relevan untuk kasir).
-                <Input
-                  label="Gaji Pokok per Bulan (Rp)"
-                  type="number" min="0" step="50000"
-                  value={form.baseSalary}
-                  onChange={e => setForm(f => ({ ...f, baseSalary: parseInt(e.target.value, 10) || 0 }))}
-                  hint="Kasir digaji pokok tetap tiap bulan."
-                />
+                // Kasir: gaji pokok + opsi merangkap sebagai barber (toko kecil).
+                <>
+                  <Input
+                    label="Gaji Pokok per Bulan (Rp)"
+                    type="number" min="0" step="50000"
+                    value={form.baseSalary}
+                    onChange={e => setForm(f => ({ ...f, baseSalary: parseInt(e.target.value, 10) || 0 }))}
+                    hint="Kasir digaji pokok tetap tiap bulan."
+                  />
+
+                  <label className="flex items-start gap-3 cursor-pointer select-none pt-1">
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={form.isBarber}
+                      onClick={() => setForm(f => ({ ...f, isBarber: !f.isBarber }))}
+                      className={`mt-0.5 relative h-6 w-11 flex-shrink-0 rounded-full transition-colors ${form.isBarber ? 'bg-gold' : 'bg-dark-border'}`}
+                    >
+                      <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${form.isBarber ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+                    </button>
+                    <span>
+                      <span className="block text-sm font-medium text-off-white">Juga seorang barber</span>
+                      <span className="block text-xs text-muted">Untuk toko kecil — kasir ini ikut memotong. Namanya akan muncul di pilihan barber saat transaksi, dan komisi serta rating-nya tercatat.</span>
+                    </span>
+                  </label>
+
+                  {form.isBarber && (
+                    <Input
+                      label="Komisi Barber"
+                      type="number" step="0.01" min="0" max="1"
+                      value={form.commissionRate}
+                      onChange={e => setForm(f => ({ ...f, commissionRate: parseFloat(e.target.value) || 0 }))}
+                      hint="Contoh 0.35 = 35% dari layanan yang dia kerjakan (di luar gaji pokok)."
+                    />
+                  )}
+                </>
               )}
             </div>
           )}

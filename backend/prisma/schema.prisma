@@ -116,6 +116,10 @@ model User {
   // | 'hybrid' (gaji pokok + komisi). baseSalary = gaji pokok per bulan (Rp).
   salaryType     String         @default("commission")
   baseSalary     Int            @default(0)
+  // Kasir/admin yang juga melayani sebagai barber (toko kecil, 1 orang
+  // merangkap). Bila true, user ikut muncul di daftar/pilihan barber POS
+  // sehingga komisi & rating-nya tercatat — tanpa perlu akun barber terpisah.
+  isBarber       Boolean        @default(false)
   tenantId       String?
   branchId       String?
   isActive       Boolean        @default(true)

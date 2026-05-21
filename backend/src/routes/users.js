@@ -30,6 +30,7 @@ const userSelect = {
   commissionRate: true,
   salaryType: true,
   baseSalary: true,
+  isBarber: true,
   tenantId: true,
   branchId: true,
   isActive: true,
@@ -51,6 +52,7 @@ const createUserSchema = z.object({
   commissionRate: z.number().min(0).max(1).optional(),
   salaryType: z.enum(['commission', 'fixed', 'hybrid']).optional(),
   baseSalary: z.number().int().min(0).max(1_000_000_000).optional(),
+  isBarber: z.boolean().optional(),
   tenantId: z.string().optional(),
   branchId: z.string().optional(),
   isActive: z.boolean().optional(),
@@ -73,30 +75,39 @@ router.get('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir'
     const { search, role, tenantId, branchId, isActive } = req.query;
 
     const where = { deletedAt: null };
+    const and = [];
+
+    // "Barber-eligible" = role barber ATAU kasir/admin yang ditandai juga
+    // barber (isBarber). Dipakai agar staf merangkap muncul di pilihan barber
+    // POS & laporan komisi/rating tanpa akun terpisah.
+    const barberEligible = { OR: [{ role: 'barber' }, { isBarber: true }] };
 
     if (req.user.role === 'kasir' || req.user.role === 'barber') {
       // Kasir and barber can only list barbers in their own branch
       where.tenantId = req.user.tenantId;
       where.branchId = req.user.branchId;
-      where.role = 'barber';
+      and.push(barberEligible);
     } else if (req.user.role === 'tenant_admin') {
       where.tenantId = req.user.tenantId;
       if (branchId) where.branchId = branchId;
-      if (role) where.role = role;
+      if (role === 'barber') and.push(barberEligible);
+      else if (role) where.role = role;
     } else {
       // super_admin: full access
       if (tenantId) where.tenantId = tenantId;
       if (branchId) where.branchId = branchId;
-      if (role) where.role = role;
+      if (role === 'barber') and.push(barberEligible);
+      else if (role) where.role = role;
     }
 
     if (isActive !== undefined) where.isActive = isActive === 'true';
     if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
+      and.push({ OR: [
+        { name:  { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } },
-      ];
+      ] });
     }
+    if (and.length) where.AND = and;
 
     const [data, total] = await Promise.all([
       prisma.user.findMany({ where, select: userSelect, skip, take: limit, orderBy: { createdAt: 'desc' } }),
