@@ -396,13 +396,15 @@ export default function TAStaffPage() {
                       role="switch"
                       aria-checked={form.isBarber}
                       onClick={() => setForm(f => ({ ...f, isBarber: !f.isBarber }))}
-                      className={`mt-0.5 relative h-6 w-11 flex-shrink-0 rounded-full transition-colors ${form.isBarber ? 'bg-gold' : 'bg-dark-border'}`}
+                      className={`mt-0.5 relative h-6 w-11 shrink-0 rounded-full transition-colors ${form.isBarber ? 'bg-gold' : 'bg-dark-border'}`}
                     >
-                      <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${form.isBarber ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+                      {/* Knob: posisi eksplisit (left+vertikal center) supaya tidak
+                          melebar keluar track / menutupi tulisan di sebelahnya. */}
+                      <span className={`absolute top-1/2 left-0.5 -translate-y-1/2 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.isBarber ? 'translate-x-5' : 'translate-x-0'}`} />
                     </button>
-                    <span>
+                    <span className="min-w-0 flex-1">
                       <span className="block text-sm font-medium text-off-white">Juga seorang barber</span>
-                      <span className="block text-xs text-muted">Untuk toko kecil — kasir ini ikut memotong. Namanya akan muncul di pilihan barber saat transaksi, dan komisi serta rating-nya tercatat.</span>
+                      <span className="block text-xs text-muted leading-snug">Untuk toko kecil — kasir ini ikut memotong. Namanya akan muncul di pilihan barber saat transaksi, dan komisi serta rating-nya tercatat.</span>
                     </span>
                   </label>
 
