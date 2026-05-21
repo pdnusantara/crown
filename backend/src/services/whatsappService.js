@@ -19,6 +19,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const prisma = require('../config/database');
+const { formatInTz } = require('../utils/timezone');
 
 // Pencatatan log pesan keluar bersifat best-effort & TIDAK boleh menggagalkan
 // pengiriman. Semua operasi prisma di-bungkus try/catch dan tak pernah throw.
@@ -522,14 +523,16 @@ function renderTemplate(text, vars = {}) {
   );
 }
 
-function buildTransactionMessage(transaction) {
+function buildTransactionMessage(transaction, tz) {
   const lines = [
     'Transaksi baru (MVP Beta)',
     `ID: ${transaction.id}`,
     `Cabang: ${transaction.branch?.name || '-'}`,
     `Total: Rp ${Number(transaction.total || 0).toLocaleString('id-ID')}`,
     `Pembayaran: ${transaction.paymentMethod || '-'}`,
-    `Waktu: ${new Date(transaction.createdAt || Date.now()).toLocaleString('id-ID')}`,
+    // Waktu di zona tenant (bukan zona server, yang berjalan UTC) supaya jam
+    // yang diterima pelanggan sesuai waktu toko sebenarnya.
+    `Waktu: ${formatInTz(transaction.createdAt || Date.now(), tz)}`,
   ];
   if (transaction.customer?.name) lines.push(`Pelanggan: ${transaction.customer.name}`);
   return lines.join('\n');
@@ -588,7 +591,13 @@ async function sendTransactionNotification(tenantId, transaction) {
     return { sent: false, reason: 'disabled' };
   }
 
-  const summary = buildTransactionMessage(transaction);
+  // Ambil tenant sekali: timezone (format "Waktu"), nama & template pesan.
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { name: true, timezone: true, transactionMessages: true },
+  }).catch(() => null);
+
+  const summary = buildTransactionMessage(transaction, tenant?.timezone);
   const sentTargets = [];
 
   if (settings.notifyAdminPhone) {
@@ -609,10 +618,6 @@ async function sendTransactionNotification(tenantId, transaction) {
 
   if (settings.notifyCustomer && transaction.customer?.phone) {
     // Pembuka pesan bisa dikustom tenant di /admin/settings → Pesan Transaksi.
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: { name: true, transactionMessages: true },
-    }).catch(() => null);
     const customOpening = tenant?.transactionMessages?.waCustomerMessage;
     const opening = renderTemplate(
       (customOpening && customOpening.trim()) || 'Terima kasih sudah bertransaksi.',
@@ -654,11 +659,12 @@ async function sendTestMessage(tenantId) {
     throw err;
   }
 
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { timezone: true } }).catch(() => null);
   const body = [
     'Pesan tes BarberOS',
     '',
     'Jika Anda menerima pesan ini, integrasi WhatsApp sudah berfungsi.',
-    `Waktu kirim: ${new Date().toLocaleString('id-ID')}`,
+    `Waktu kirim: ${formatInTz(new Date(), tenant?.timezone)}`,
   ].join('\n');
 
   const r = await dispatchMessage(tenantId, settings.notifyAdminPhone, body, `test-${tenantId}-${Date.now()}`, 'test');

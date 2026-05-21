@@ -148,12 +148,14 @@ function initRatingLinkDispatchJob() {
   // dapat antrian kirim utk transaksi berhari-hari yg lalu.
   backfillOldTransactions().catch((err) => console.error('[RatingLink] init backfill failed:', err.message));
 
-  // Tiap 5 menit. Lebih sering dari visitReminder (yang hourly) karena
-  // ekspektasi pelanggan dapat link sekitar 15 menit setelah transaksi.
-  cron.schedule('*/5 * * * *', () => {
+  // Tiap 1 menit supaya delay pendek (autoSendMinutes bisa serendah 1-2 menit)
+  // benar-benar dihormati — pelanggan menerima link mendekati waktu yang
+  // dikonfigurasi, bukan tertunda 5-7 menit karena granularitas cron. Query
+  // per-tenant ringan (indexed) dan dibatasi MAX_PER_RUN per tenant.
+  cron.schedule('* * * * *', () => {
     runOnce().catch((err) => console.error('[RatingLink] cron run failed:', err.message));
   });
-  console.log('[RatingLink] Scheduled: every 5 minutes (max-age 24h, backfill on boot)');
+  console.log('[RatingLink] Scheduled: every 1 minute (max-age 24h, backfill on boot)');
 }
 
 module.exports = { initRatingLinkDispatchJob, runOnce, processTenant };
