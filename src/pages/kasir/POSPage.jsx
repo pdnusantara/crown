@@ -432,6 +432,11 @@ function POSPageInner() {
   // Transaksi tidak boleh diproses kalau ada layanan di keranjang yang belum
   // punya barber — komisi & laporan barber harus tercatat.
   const missingBarber = posStore.cartItems.length > 0 && posStore.cartItems.some(it => !it.barberId)
+  // Kasir yang login juga barber (muncul di daftar barber-eligible cabang ini).
+  const selfIsBarber = !!user?.id && barbers.some(b => b.id === user.id)
+  // Dia satu-satunya barber → tak ada yang perlu dipilih; sembunyikan dropdown
+  // dan tampilkan label ringkas "Dilayani: Anda" saja.
+  const soloSelfBarber = selfIsBarber && barbers.length === 1
   // Pelanggan wajib dipilih sebelum bayar — tidak boleh transaksi tanpa identitas.
   const missingCustomer = posStore.cartItems.length > 0 && !posStore.selectedCustomer
 
@@ -529,18 +534,27 @@ function POSPageInner() {
     return () => clearTimeout(id)
   }, [posStore.cartItems, posStore.selectedCustomer, posStore.discount])
 
-  // Auto-pick: cabang punya 1 barber → set default. Barber inactive → reset (orphan id).
+  // Auto-pick barber default:
+  //  - reset kalau id default sudah tak valid (barber dinonaktifkan → orphan id)
+  //  - kalau kasir yang login JUGA barber → default ke DIRINYA (paling sering
+  //    melayani); tetap bisa diganti bila ternyata barber lain yang mengerjakan
+  //  - selain itu, kalau cabang cuma punya 1 barber → pakai itu
   useEffect(() => {
     if (!barbers.length) return
     if (posStore.defaultBarberId && !barbers.find(b => b.id === posStore.defaultBarberId)) {
       posStore.setDefaultBarber(null, null)
       return
     }
-    if (!posStore.defaultBarberId && barbers.length === 1) {
-      posStore.setDefaultBarber(barbers[0].id, barbers[0].name)
+    if (!posStore.defaultBarberId) {
+      const self = user?.id ? barbers.find(b => b.id === user.id) : null
+      if (self) {
+        posStore.setDefaultBarber(self.id, self.name)
+      } else if (barbers.length === 1) {
+        posStore.setDefaultBarber(barbers[0].id, barbers[0].name)
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [barbers])
+  }, [barbers, user?.id])
 
   const handleRestoreDraft = () => {
     if (!draft) return
@@ -807,29 +821,40 @@ function POSPageInner() {
         )}
       </AnimatePresence>
 
-      {/* Barber selector — label disembunyikan di mobile; placeholder select
-          ("Pilih barber") sudah memberi konteks. */}
+      {/* Barber selector. Kalau kasir yang login adalah satu-satunya barber di
+          cabang ini, tak ada yang perlu dipilih → tampilkan label ringkas
+          (otomatis ke dirinya), bukan dropdown. */}
       <div className="bg-dark-card border border-dark-border rounded-xl p-2.5 lg:p-3">
         <label className="hidden lg:inline-flex text-[11px] uppercase tracking-wider text-off-white font-semibold mb-1.5 items-center gap-1.5">
           <Scissors className="w-3 h-3 text-gold" /> {t('pos.barberServing')}
         </label>
-        <select
-          value={posStore.defaultBarberId || ''}
-          onChange={e => {
-            const b = barbers.find(x => x.id === e.target.value)
-            posStore.setDefaultBarber(b?.id || null, b?.name || null)
-          }}
-          className={`w-full bg-dark-surface border text-off-white rounded-lg px-3 py-2 text-sm outline-none transition-colors ${
-            missingBarber ? 'border-amber-500/60 focus:border-amber-500' : 'border-dark-border focus:border-gold/60'
-          }`}
-        >
-          <option value="">{t('pos.pickBarber')}</option>
-          {barbers.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-        </select>
-        {missingBarber && (
-          <p className="text-xs text-amber-400 mt-1.5 flex items-center gap-1">
-            <AlertCircle size={12} /> {t('pos.noBarberWarning')}
-          </p>
+        {soloSelfBarber ? (
+          <div className="flex items-center gap-2 bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-off-white">
+            <Scissors className="w-3.5 h-3.5 text-gold flex-shrink-0" />
+            <span className="truncate">{posStore.defaultBarberName || barbers[0]?.name || user?.name}</span>
+            <span className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gold/10 text-gold border border-gold/30 flex-shrink-0">Anda</span>
+          </div>
+        ) : (
+          <>
+            <select
+              value={posStore.defaultBarberId || ''}
+              onChange={e => {
+                const b = barbers.find(x => x.id === e.target.value)
+                posStore.setDefaultBarber(b?.id || null, b?.name || null)
+              }}
+              className={`w-full bg-dark-surface border text-off-white rounded-lg px-3 py-2 text-sm outline-none transition-colors ${
+                missingBarber ? 'border-amber-500/60 focus:border-amber-500' : 'border-dark-border focus:border-gold/60'
+              }`}
+            >
+              <option value="">{t('pos.pickBarber')}</option>
+              {barbers.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+            {missingBarber && (
+              <p className="text-xs text-amber-400 mt-1.5 flex items-center gap-1">
+                <AlertCircle size={12} /> {t('pos.noBarberWarning')}
+              </p>
+            )}
+          </>
         )}
       </div>
       </div>
