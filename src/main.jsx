@@ -17,6 +17,31 @@ if ('serviceWorker' in navigator) {
     sessionStorage.setItem('sw-update-shown', '1')
     window.dispatchEvent(new Event('app:update-available'))
   })
+
+  // Aplikasi ini SPA: pindah halaman pakai History API, BUKAN navigasi browser,
+  // jadi browser bisa tidak pernah mengambil ulang /sw.js dengan sendirinya. Tab
+  // yang dibiarkan terbuka seharian akhirnya tak pernah tahu ada deploy baru —
+  // inilah sebab "fitur baru muncul telat / tidak muncul" di sebagian sesi.
+  // Maka kita minta browser cek update secara berkala, dan tiap tab kembali
+  // aktif atau koneksi pulih. Saat SW baru ketemu, ia langsung aktif
+  // (skipWaiting+clientsClaim) → controllerchange di atas → banner muncul.
+  navigator.serviceWorker.ready.then((registration) => {
+    const UPDATE_INTERVAL_MS = 15 * 60 * 1000 // cek berkala tiap 15 menit
+    const MIN_GAP_MS = 30 * 1000              // jangan cek lebih sering dari 30 dtk
+    let lastCheck = 0
+
+    const checkForUpdate = () => {
+      if (Date.now() - lastCheck < MIN_GAP_MS) return
+      lastCheck = Date.now()
+      registration.update().catch(() => {})
+    }
+
+    setInterval(checkForUpdate, UPDATE_INTERVAL_MS)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') checkForUpdate()
+    })
+    window.addEventListener('online', checkForUpdate)
+  })
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(

@@ -31,8 +31,33 @@ export default defineConfig({
       workbox: {
         skipWaiting: true,
         clientsClaim: true,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // Precache HANYA shell tak-ber-hash (HTML + ikon + manifest). Bundel
+        // JS/CSS di /assets/ sengaja tidak di-precache: dengan emptyOutDir:false
+        // folder dist menyimpan chunk dari banyak build lama, jadi memindai
+        // direktori akan menyeret ribuan file usang ke precache (dulu 48MB /
+        // 2742 entri) — precache raksasa bisa lewati kuota storage HP dan bikin
+        // instalasi SW GAGAL, sehingga update tak pernah aktif. Chunk di-cache
+        // saat dipakai via runtimeCaching di bawah (CacheFirst, sebab nama file
+        // ber-hash = immutable) dengan batas entri yang merawat dirinya sendiri.
+        globPatterns: ['index.html', 'manifest.webmanifest', 'favicon.ico', 'icon-*.png'],
+        navigateFallback: 'index.html',
         runtimeCaching: [
+          {
+            // Bundel aplikasi ber-hash konten → immutable. CacheFirst: ambil
+            // dari cache, fetch jaringan hanya bila belum ada. Batas maxEntries
+            // + purgeOnQuotaError menjaga cache perangkat tetap terbatas.
+            urlPattern: ({ url }) => url.pathname.startsWith('/assets/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'app-assets',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 30,
+                purgeOnQuotaError: true,
+              },
+              cacheableResponse: { statuses: [0, 200] },
+            }
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
