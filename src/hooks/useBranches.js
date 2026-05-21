@@ -1,11 +1,27 @@
+import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../lib/api.js'
+import { getSocket } from '../lib/socket.js'
 
 export function useBranches(tenantId) {
+  const qc = useQueryClient()
+
+  // Realtime: refetch saat cabang berubah dari sesi lain (tambah/edit/hapus,
+  // atau super-admin mengubah cabang/lisensi). Backend emit ke tenant room.
+  useEffect(() => {
+    if (!tenantId) return
+    const socket = getSocket()
+    const onChange = () => qc.invalidateQueries({ queryKey: ['branches'] })
+    socket.on('branch:changed', onChange)
+    return () => socket.off('branch:changed', onChange)
+  }, [tenantId, qc])
+
   return useQuery({
     queryKey: ['branches', tenantId],
     queryFn: async () => {
-      const res = await api.get('/branches', { params: { tenantId } })
+      // limit tinggi: ambil semua cabang sekaligus supaya hitungan kuota &
+      // "X cabang aktif" akurat (default pagination backend hanya 20/halaman).
+      const res = await api.get('/branches', { params: { tenantId, limit: 1000 } })
       const raw = res.data.data
       return Array.isArray(raw) ? raw : (raw?.data || [])
     },

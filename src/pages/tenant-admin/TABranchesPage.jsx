@@ -1,17 +1,13 @@
 import React, { useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Edit2, Trash2, MapPin, Phone, Clock, Building2, AlertTriangle,
   Info, GitBranch, Lock, CheckCircle2, XCircle, CreditCard, ArrowUpCircle,
   ChevronRight, Receipt, RefreshCw,
 } from 'lucide-react'
-import { format } from 'date-fns'
-import { id as idLocale } from 'date-fns/locale'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore.js'
 import { useBranches, useCreateBranch, useUpdateBranch, useDeleteBranch, useBranchLicenseSummary } from '../../hooks/useBranches.js'
-import { useUsers } from '../../hooks/useUsers.js'
 import { useSubscription } from '../../hooks/useSubscription.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import Card from '../../components/ui/Card.jsx'
@@ -20,6 +16,7 @@ import Button from '../../components/ui/Button.jsx'
 import Modal from '../../components/ui/Modal.jsx'
 import Input from '../../components/ui/Input.jsx'
 import { formatRupiah } from '../../utils/format.js'
+import { formatDateInTz } from '../../utils/timezone.js'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -58,7 +55,6 @@ function QuotaDots({ current, max, extra = 0 }) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function TABranchesPage() {
-  const { t } = useTranslation()
   const { user } = useAuthStore()
   const navigate = useNavigate()
   const toast = useToast()
@@ -71,8 +67,7 @@ export default function TABranchesPage() {
   const [pendingForm,   setPendingForm]   = useState(null)
   const [form, setForm] = useState({ name: '', code: '', address: '', phone: '', openTime: '09:00', closeTime: '21:00' })
 
-  const { data: branches = [], isLoading }  = useBranches(tenantId)
-  const { data: staff = [] }                = useUsers({ tenantId })
+  const { data: branches = [], isLoading, isError, refetch, isFetching } = useBranches(tenantId)
   const { data: sub }                       = useSubscription(tenantId)
   const { data: lic }                       = useBranchLicenseSummary(tenantId)
   const createBranch = useCreateBranch()
@@ -90,7 +85,6 @@ export default function TABranchesPage() {
   const isSuspended      = sub?.tenant?.isSuspended ?? false
   const isExpired        = subStatus === 'expired'
   const isOverdue        = subStatus === 'overdue'
-  const canCreate        = !isSuspended && (withinQuota || canAddon)
 
   const pendingInvoices  = (sub?.invoices ?? []).filter(
     inv => inv.type === 'branch_addon' && inv.status !== 'paid'
@@ -160,7 +154,7 @@ export default function TABranchesPage() {
   const handleConfirmFee = async () => {
     if (!pendingForm) return
     try {
-      const res = await createBranch.mutateAsync({ ...pendingForm, tenantId })
+      await createBranch.mutateAsync({ ...pendingForm, tenantId })
       toast.success(`Cabang "${pendingForm.name}" berhasil dibuat. Invoice dikirim ke super admin untuk konfirmasi.`)
       setShowFeeModal(false)
       setPendingForm(null)
@@ -185,14 +179,26 @@ export default function TABranchesPage() {
     <div className="space-y-5">
 
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold text-off-white">Cabang</h1>
           <p className="text-muted text-sm mt-1">{currentCount} cabang aktif</p>
         </div>
-        <Button icon={Plus} onClick={openAdd} disabled={isSuspended || (!withinQuota && !canAddon)}>
-          Tambah Cabang
-        </Button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            aria-label="Muat ulang"
+            title="Muat ulang"
+            className="p-2 rounded-lg border border-dark-border text-muted hover:text-off-white hover:bg-dark-card transition-colors disabled:opacity-50"
+          >
+            <RefreshCw size={16} className={isFetching ? 'animate-spin' : ''} />
+          </button>
+          <Button icon={Plus} onClick={openAdd} disabled={isSuspended || (!withinQuota && !canAddon)}>
+            Tambah Cabang
+          </Button>
+        </div>
       </div>
 
       {/* ── Status Banners ── */}
@@ -202,7 +208,7 @@ export default function TABranchesPage() {
             className="flex items-start gap-3 p-4 rounded-2xl border bg-red-500/5 border-red-500/20">
             <XCircle size={16} className="text-red-400 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-red-300">Akun Tenant Di-Suspend</p>
+              <p className="text-sm font-semibold text-red-400">Akun Tenant Di-Suspend</p>
               <p className="text-xs text-muted mt-0.5">Semua operasi dinonaktifkan. Hubungi super admin untuk reaktivasi.</p>
             </div>
           </motion.div>
@@ -213,10 +219,10 @@ export default function TABranchesPage() {
             className="flex items-start gap-3 p-4 rounded-2xl border bg-red-500/5 border-red-500/20">
             <XCircle size={16} className="text-red-400 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-sm font-semibold text-red-300">Langganan Sudah Berakhir</p>
+              <p className="text-sm font-semibold text-red-400">Langganan Sudah Berakhir</p>
               <p className="text-xs text-muted mt-0.5">Cabang yang melebihi kuota tidak berlisensi. Hubungi super admin untuk perpanjang.</p>
             </div>
-            <button onClick={() => navigate('/admin/billing')} className="text-xs text-red-400 hover:text-red-300 underline flex-shrink-0">
+            <button onClick={() => navigate('/admin/billing')} className="text-xs text-red-400 hover:text-red-400 underline flex-shrink-0">
               Lihat Tagihan
             </button>
           </motion.div>
@@ -227,10 +233,10 @@ export default function TABranchesPage() {
             className="flex items-start gap-3 p-4 rounded-2xl border bg-amber-400/5 border-amber-400/20">
             <AlertTriangle size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-sm font-semibold text-amber-300">Pembayaran Tertunggak</p>
+              <p className="text-sm font-semibold text-amber-400">Pembayaran Tertunggak</p>
               <p className="text-xs text-muted mt-0.5">Segera lunasi tagihan agar layanan tidak terputus.</p>
             </div>
-            <button onClick={() => navigate('/admin/billing')} className="text-xs text-amber-400 hover:text-amber-300 underline flex-shrink-0">
+            <button onClick={() => navigate('/admin/billing')} className="text-xs text-amber-400 hover:text-amber-400 underline flex-shrink-0">
               Lihat Tagihan
             </button>
           </motion.div>
@@ -267,7 +273,7 @@ export default function TABranchesPage() {
                 )}
                 {!withinQuota && canAddon && (
                   <div className="text-right">
-                    <p className="text-xs text-amber-300 font-medium">{formatRupiah(addonPrice)}<span className="text-muted font-normal">/{addonType === 'monthly' ? 'bulan' : 'sekali bayar'}</span></p>
+                    <p className="text-xs text-amber-400 font-medium">{formatRupiah(addonPrice)}<span className="text-muted font-normal">/{addonType === 'monthly' ? 'bulan' : 'sekali bayar'}</span></p>
                     <p className="text-[10px] text-muted">per cabang tambahan</p>
                   </div>
                 )}
@@ -278,7 +284,7 @@ export default function TABranchesPage() {
             {!withinQuota && !canAddon && (
               <div className="mt-3 pt-3 border-t border-red-400/20 flex items-center gap-2">
                 <Info size={12} className="text-red-400 flex-shrink-0" />
-                <p className="text-xs text-red-300">
+                <p className="text-xs text-red-400">
                   Paket {sub.package} hanya mendukung {maxBranches} cabang. Upgrade ke Pro atau Enterprise untuk cabang tak terbatas.
                 </p>
               </div>
@@ -293,7 +299,7 @@ export default function TABranchesPage() {
           <Card className="border-amber-400/30 bg-amber-400/5">
             <div className="flex items-center gap-2 px-5 pt-4 pb-3 border-b border-amber-400/20">
               <Receipt size={14} className="text-amber-400" />
-              <p className="text-sm font-semibold text-amber-300">Tagihan Cabang Menunggu Konfirmasi</p>
+              <p className="text-sm font-semibold text-amber-400">Tagihan Cabang Menunggu Konfirmasi</p>
             </div>
             <div className="divide-y divide-amber-400/10">
               {pendingInvoices.map(inv => (
@@ -301,12 +307,12 @@ export default function TABranchesPage() {
                   <div>
                     <p className="text-sm text-off-white">{inv.period}</p>
                     <p className="text-xs text-muted mt-0.5">
-                      Dibuat {format(new Date(inv.createdAt), 'd MMM yyyy', { locale: idLocale })}
+                      Dibuat {formatDateInTz(inv.createdAt)}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-semibold text-amber-300">{formatRupiah(inv.amount)}</p>
-                    <p className="text-[10px] text-amber-400/70 mt-0.5">Hubungi admin untuk konfirmasi</p>
+                    <p className="text-sm font-semibold text-amber-400">{formatRupiah(inv.amount)}</p>
+                    <p className="text-[10px] text-amber-400 mt-0.5">Hubungi admin untuk konfirmasi</p>
                   </div>
                 </div>
               ))}
@@ -334,8 +340,20 @@ export default function TABranchesPage() {
         </div>
       )}
 
+      {/* ── Error ── */}
+      {!isLoading && isError && (
+        <Card className="p-10 text-center border-red-400/30 bg-red-400/5">
+          <AlertTriangle className="w-9 h-9 text-red-400 mx-auto mb-3" />
+          <p className="text-off-white font-medium">Gagal memuat daftar cabang</p>
+          <p className="text-muted text-sm mt-1">Periksa koneksi internet lalu coba lagi.</p>
+          <Button size="sm" className="mt-4" icon={RefreshCw} variant="secondary" onClick={() => refetch()}>
+            Coba Lagi
+          </Button>
+        </Card>
+      )}
+
       {/* ── Branch Grid ── */}
-      {!isLoading && branches.length === 0 && (
+      {!isLoading && !isError && branches.length === 0 && (
         <Card className="p-12 text-center">
           <Building2 className="w-10 h-10 text-muted/30 mx-auto mb-3" />
           <p className="text-off-white font-medium">Belum ada cabang</p>
@@ -346,11 +364,11 @@ export default function TABranchesPage() {
         </Card>
       )}
 
-      {!isLoading && branches.length > 0 && (
+      {!isLoading && !isError && branches.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {branches.map((branch, i) => {
             const unlicensed = branch.isLicensed === false
-            const branchStaff = staff.filter(s => s.branchId === branch.id)
+            const staffCount = branch._count?.users ?? 0
             return (
               <motion.div key={branch.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
                 <Card className={`p-5 card-hover relative ${unlicensed ? 'border-amber-400/30 bg-amber-400/5' : ''}`}>
@@ -366,11 +384,11 @@ export default function TABranchesPage() {
                       <div className="min-w-0">
                         <h3 className="font-semibold text-off-white truncate">{branch.name}</h3>
                         {unlicensed ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full border border-amber-400/40 bg-amber-400/10 text-amber-300 mt-0.5">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full border border-amber-400/40 bg-amber-400/10 text-amber-400 mt-0.5">
                             <Lock size={9} /> Belum Berlisensi
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full border border-green-400/30 bg-green-400/10 text-green-300 mt-0.5">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full border border-green-400/30 bg-green-400/10 text-green-400 mt-0.5">
                             <CheckCircle2 size={9} /> Berlisensi
                           </span>
                         )}
@@ -410,9 +428,9 @@ export default function TABranchesPage() {
                   {unlicensed && (
                     <div className="mb-3 flex items-start gap-2 p-2.5 rounded-xl bg-amber-400/10 border border-amber-400/25">
                       <Lock size={12} className="text-amber-400 mt-0.5 flex-shrink-0" />
-                      <p className="text-xs text-amber-200/90 leading-snug">
+                      <p className="text-xs text-amber-400 leading-snug">
                         Cabang ini melebihi kuota paket. Kasir tidak bisa beroperasi sampai lisensi aktif.{' '}
-                        <button onClick={() => navigate('/admin/tickets')} className="text-amber-300 underline font-medium">
+                        <button onClick={() => navigate('/admin/tickets')} className="text-amber-400 underline font-medium">
                           Hubungi admin.
                         </button>
                       </p>
@@ -422,7 +440,7 @@ export default function TABranchesPage() {
                   {/* Stats footer */}
                   <div className="pt-3 border-t border-dark-border grid grid-cols-2 gap-3">
                     <div className="bg-dark-surface rounded-xl p-2.5 text-center">
-                      <p className="text-base font-bold text-off-white">{branchStaff.length}</p>
+                      <p className="text-base font-bold text-off-white">{staffCount}</p>
                       <p className="text-[10px] text-muted">Staff</p>
                     </div>
                     <div className="bg-dark-surface rounded-xl p-2.5 text-center">
@@ -468,7 +486,7 @@ export default function TABranchesPage() {
           {!editBranch && !withinQuota && canAddon && (
             <div className="flex items-start gap-2 p-3 bg-amber-400/10 border border-amber-400/20 rounded-xl">
               <AlertTriangle size={13} className="text-amber-400 mt-0.5 flex-shrink-0" />
-              <p className="text-xs text-amber-300">
+              <p className="text-xs text-amber-400">
                 Cabang ini di luar kuota paket. Akan dikenakan biaya{' '}
                 <strong>{formatRupiah(addonPrice)}/{addonType === 'monthly' ? 'bulan' : 'sekali bayar'}</strong>.
                 Invoice akan dibuat dan dikirim ke super admin.
@@ -538,7 +556,7 @@ export default function TABranchesPage() {
           <div className="flex items-start gap-2 p-3 bg-blue-400/5 border border-blue-400/20 rounded-xl">
             <Info size={13} className="text-blue-400 mt-0.5 flex-shrink-0" />
             <p className="text-xs text-muted">
-              Cabang akan langsung dibuat namun status <strong className="text-amber-300">belum berlisensi</strong> sampai invoice dikonfirmasi oleh super admin.
+              Cabang akan langsung dibuat namun status <strong className="text-amber-400">belum berlisensi</strong> sampai invoice dikonfirmasi oleh super admin.
               {addonType === 'monthly' && ' Tagihan berulang tiap bulan.'}
             </p>
           </div>
@@ -563,7 +581,7 @@ export default function TABranchesPage() {
       >
         <div className="space-y-4">
           <div className="p-3 bg-red-500/5 border border-red-500/20 rounded-xl">
-            <p className="text-sm text-red-300 font-medium">Tindakan ini tidak dapat dibatalkan</p>
+            <p className="text-sm text-red-400 font-medium">Tindakan ini tidak dapat dibatalkan</p>
             <p className="text-xs text-muted mt-1">
               Cabang <strong className="text-off-white">{showDelModal?.name}</strong> akan dihapus beserta semua konfigurasinya.
             </p>

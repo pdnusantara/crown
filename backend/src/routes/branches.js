@@ -6,6 +6,33 @@ const { parsePagination, paginatedResponse } = require('../utils/pagination');
 const { getBranchLicenseStatus } = require('../utils/branchLicense');
 const { invalidateBranchCache, resolveBranchId, isCuid } = require('../utils/branchResolver');
 const { recordAudit } = require('../utils/auditLog');
+const { getIO, tenantRoom } = require('../config/socket');
+
+// Realtime: beri tahu sesi lain di tenant yang sama agar daftar cabang +
+// ringkasan lisensi ter-refresh tanpa reload manual (mis. dua tab admin, atau
+// super-admin meng-edit cabang tenant).
+function emitBranchChanged(tenantId, payload) {
+  if (!tenantId) return;
+  try { getIO().to(tenantRoom(tenantId)).emit('branch:changed', payload); } catch (_) { /* socket belum siap */ }
+}
+
+// Omzet bulan berjalan per cabang (transaksi completed sejak tanggal 1).
+// Mengikuti pola computeMonthlyRevenue di tenants.js, tapi di-bucket per branchId
+// sehingga kartu cabang menampilkan MTD asli, bukan placeholder Rp 0.
+async function computeBranchMonthlyRevenue(branchIds) {
+  if (!branchIds.length) return {};
+  const start = new Date();
+  start.setDate(1);
+  start.setHours(0, 0, 0, 0);
+  const rows = await prisma.transaction.groupBy({
+    by: ['branchId'],
+    where: { status: 'completed', createdAt: { gte: start }, branchId: { in: branchIds } },
+    _sum: { total: true },
+  });
+  const map = {};
+  for (const r of rows) map[r.branchId] = r._sum.total || 0;
+  return map;
+}
 
 const branchSelect = {
   id: true,
@@ -102,9 +129,14 @@ router.get('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir'
         licenseByTenant.set(tid, await getBranchLicenseStatus(tid));
       }),
     );
+    const revenueByBranch = await computeBranchMonthlyRevenue(data.map((b) => b.id));
     const annotated = data.map((b) => {
       const lic = licenseByTenant.get(b.tenantId);
-      return { ...b, isLicensed: lic ? !lic.unlicensed.has(b.id) : true };
+      return {
+        ...b,
+        isLicensed: lic ? !lic.unlicensed.has(b.id) : true,
+        monthlyRevenue: revenueByBranch[b.id] || 0,
+      };
     });
 
     res.json({ success: true, data: paginatedResponse(annotated, total, page, limit) });
@@ -257,6 +289,7 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin'), async
     });
 
     invalidateBranchCache();
+    emitBranchChanged(branch.tenantId, { id: branch.id, action: 'create' });
     await recordAudit(req, {
       action: 'branch.create',
       target: `branch:${branch.id}`,
@@ -297,6 +330,7 @@ router.put('/:id', authenticate, requireRole('super_admin', 'tenant_admin'), res
     if (body.code !== undefined && body.code !== existing.code) {
       invalidateBranchCache();
     }
+    emitBranchChanged(branch.tenantId, { id: branch.id, action: 'update' });
     const changedKeys = Object.keys(body);
     await recordAudit(req, {
       action: 'branch.update',
@@ -363,6 +397,7 @@ router.post('/:id/closures', authenticate, requireRole('super_admin', 'tenant_ad
       }),
     ]);
 
+    emitBranchChanged(updated.tenantId, { id: existing.id, action: 'closure_set' });
     await recordAudit(req, {
       action: 'branch.closure_set',
       target: `branch:${existing.id}`,
@@ -396,6 +431,7 @@ router.delete('/:id/closures', authenticate, requireRole('super_admin', 'tenant_
       data: { closedDates: next },
       select: branchSelect,
     });
+    emitBranchChanged(updated.tenantId, { id: existing.id, action: 'closure_remove' });
     await recordAudit(req, {
       action: 'branch.closure_remove',
       target: `branch:${existing.id}`,
@@ -423,6 +459,7 @@ router.delete('/:id', authenticate, requireRole('super_admin', 'tenant_admin'), 
     });
 
     invalidateBranchCache();
+    emitBranchChanged(existing.tenantId, { id: existing.id, action: 'delete' });
     await recordAudit(req, {
       action: 'branch.delete',
       target: `branch:${existing.id}`,
