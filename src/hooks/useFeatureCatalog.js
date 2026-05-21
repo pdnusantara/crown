@@ -17,7 +17,11 @@ export function useFeatureCatalog() {
       const list = res.data?.data
       return Array.isArray(list) && list.length ? list : ALL_FEATURE_FLAGS
     },
-    initialData: ALL_FEATURE_FLAGS,
+    // placeholderData (BUKAN initialData): const fallback hanya ditampilkan
+    // sementara fetch berjalan, tapi query TETAP mengambil katalog dari backend.
+    // initialData + staleTime dulu membuat React Query menganggap fallback
+    // sudah "fresh" → tak pernah fetch → UI mentok di daftar lama (bug).
+    placeholderData: ALL_FEATURE_FLAGS,
     staleTime: 5 * 60 * 1000,
   })
   return Array.isArray(data) && data.length ? data : ALL_FEATURE_FLAGS
