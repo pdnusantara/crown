@@ -9,6 +9,12 @@
 // `useIsFeatureEnabled(tenantId, flagId)` di `src/hooks/useFeatureFlags.js`
 // yang membaca `TenantFeatureFlag` dari backend. Jangan buat store seed lagi.
 
+// ⚠️ SUMBER KEBENARAN katalog kini di BACKEND: backend/src/config/featureCatalog.js
+// (disajikan GET /api/feature-flags, dibaca via hooks/useFeatureCatalog.js).
+// List di bawah HANYA fallback awal (initialData saat fetch & bila API gagal)
+// dan dipakai useFeatureFlags. Menambah fitur baru: cukup di featureCatalog.js
+// backend → otomatis muncul di /super-admin/packages dll. Menyamakan list ini
+// opsional (biar fallback rapi), tapi tidak lagi wajib/menahan beban.
 const ALL_FLAGS = [
   { id: 'pos',           label: 'POS Kasir',           description: 'Sistem kasir point-of-sale untuk transaksi',        category: 'Core' },
   { id: 'booking',       label: 'Booking Online',      description: 'Pelanggan bisa booking jadwal secara online',      category: 'Core' },

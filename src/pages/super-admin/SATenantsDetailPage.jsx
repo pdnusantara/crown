@@ -10,7 +10,7 @@ import { useSubscription, usePayInvoice, useGrantBranchLicense, useUpgradePackag
 import { useBranches, useBranchLicenseSummary } from '../../hooks/useBranches.js'
 import { useFeatureFlags } from '../../hooks/useFeatureFlags.js'
 import { useTickets } from '../../hooks/useTickets.js'
-import { ALL_FEATURE_FLAGS } from '../../store/featureFlagStore.js'
+import { useFeatureCatalog } from '../../hooks/useFeatureCatalog.js'
 import { useAuthStore } from '../../store/authStore.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
@@ -26,6 +26,7 @@ const PACKAGE_COLORS = {
 
 export default function SATenantsDetailPage() {
   const { t } = useTranslation()
+  const ALL_FEATURE_FLAGS = useFeatureCatalog()
   const { id } = useParams()
   const navigate = useNavigate()
   const { data: tenant, isLoading, isError } = useTenant(id)

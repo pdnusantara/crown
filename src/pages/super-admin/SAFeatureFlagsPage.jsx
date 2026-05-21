@@ -11,7 +11,8 @@ import {
   useFeatureFlags, useUpdateFeatureFlags,
   useSyncTenantToPackage, useFeatureFlagAudit, useSyncAllTenants,
 } from '../../hooks/useFeatureFlags.js'
-import { ALL_FEATURE_FLAGS, PACKAGE_FLAG_DEFAULTS } from '../../store/featureFlagStore.js'
+import { PACKAGE_FLAG_DEFAULTS } from '../../store/featureFlagStore.js'
+import { useFeatureCatalog } from '../../hooks/useFeatureCatalog.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
 import Button from '../../components/ui/Button.jsx'
@@ -98,6 +99,7 @@ function CopyFromMenu({ tenants, currentTenantId, onPick, t }) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function SAFeatureFlagsPage() {
   const { t } = useTranslation()
+  const ALL_FEATURE_FLAGS = useFeatureCatalog()
   const toast = useToast()
 
   const { data: tenants = [], isLoading: loadingTenants, isError: tenantsError, refetch: refetchTenants } = useTenants({ limit: 100 })

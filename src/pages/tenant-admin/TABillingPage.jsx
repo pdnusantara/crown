@@ -12,7 +12,7 @@ import {
   useSubscription, useToggleAutoRenew, usePauseSubscription, useResumeSubscription,
 } from '../../hooks/useSubscription.js'
 import { usePackages } from '../../hooks/usePackages.js'
-import { ALL_FEATURE_FLAGS } from '../../store/featureFlagStore.js'
+import { useFeatureCatalog } from '../../hooks/useFeatureCatalog.js'
 import { useFeatureFlags } from '../../hooks/useFeatureFlags.js'
 import {
   useCreatePaymentOrder, usePaymentStatus, useMyPaymentOrders,
@@ -44,6 +44,7 @@ function genIdempotencyKey() {
 
 export default function TABillingPage() {
   const { t } = useTranslation()
+  const ALL_FEATURE_FLAGS = useFeatureCatalog()
   const { user } = useAuthStore()
   const toast = useToast()
   const [searchParams, setSearchParams] = useSearchParams()

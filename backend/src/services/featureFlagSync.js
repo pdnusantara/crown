@@ -8,16 +8,10 @@
 const prisma = require('../config/database');
 const { getIO, tenantRoom } = require('../config/socket');
 
-// Katalog flag valid — HARUS sinkron dengan AVAILABLE_FLAGS di
-// routes/featureFlags.js, ALL_KNOWN_FLAGS di routes/tenants.js, dan
-// featureFlagStore.js di frontend.
-const KNOWN_FLAG_IDS = [
-  'pos', 'booking', 'loyalty', 'voucher', 'queue',
-  'reports', 'heatmap', 'clv', 'wilayah_report',
-  'schedule', 'multi_branch', 'expense_tracking', 'attendance',
-  'pwa', 'whatsapp', 'barber_rating',
-  'api_access', 'white_label', 'backup',
-];
+// Katalog flag valid — sumber tunggal di config/featureCatalog.js. Menambah
+// fitur baru cukup di sana; modul ini (seed + propagasi tenant) otomatis ikut.
+const { FEATURE_FLAG_IDS } = require('../config/featureCatalog');
+const KNOWN_FLAG_IDS = FEATURE_FLAG_IDS;
 const KNOWN = new Set(KNOWN_FLAG_IDS);
 
 // Flag default per paket — dipakai saat tenant pertama dibuat supaya

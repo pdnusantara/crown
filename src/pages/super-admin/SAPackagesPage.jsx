@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { differenceInDays } from 'date-fns'
 import { usePackages, useUpdatePackage } from '../../hooks/usePackages.js'
-import { ALL_FEATURE_FLAGS } from '../../store/featureFlagStore.js'
+import { useFeatureCatalog } from '../../hooks/useFeatureCatalog.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import Card, { CardHeader } from '../../components/ui/Card.jsx'
 import Button from '../../components/ui/Button.jsx'
@@ -21,7 +21,6 @@ const PACKAGE_STYLES = {
   Enterprise: { border: 'border-purple-400/30',  bg: 'bg-purple-400/5', badge: 'text-purple-400 bg-purple-400/10 border-purple-400/30', accent: 'text-purple-400' },
 }
 
-const FLAG_CATEGORIES = [...new Set(ALL_FEATURE_FLAGS.map(f => f.category))]
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function calcTotal(branches, basePrice, maxBranches, addonPrice, addonType) {
@@ -282,6 +281,8 @@ function MrrImpact({ originalPrice, newPrice, tenantCount }) {
 
 // ── Edit Modal ────────────────────────────────────────────────────────────────
 function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
+  const ALL_FEATURE_FLAGS = useFeatureCatalog()
+  const FLAG_CATEGORIES = useMemo(() => [...new Set(ALL_FEATURE_FLAGS.map(f => f.category))], [ALL_FEATURE_FLAGS])
   const [tab, setTab] = useState('pricing')
   const [form, setForm] = useState({
     price:                 pkg.price ?? 0,
@@ -563,6 +564,7 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
 
 // ── Upgrade Path Section ──────────────────────────────────────────────────────
 function UpgradePath({ packageList }) {
+  const ALL_FEATURE_FLAGS = useFeatureCatalog()
   if (packageList.length < 2) return null
 
   const pairs = []
@@ -645,6 +647,7 @@ function UpgradePath({ packageList }) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function SAPackagesPage() {
   const { t } = useTranslation()
+  const ALL_FEATURE_FLAGS = useFeatureCatalog()
   const { data, isLoading, isError, error, refetch } = usePackages()
   const updatePackage = useUpdatePackage()
   const toast         = useToast()

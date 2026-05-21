@@ -19,28 +19,11 @@ function emitFlagChange(tenantId, flagId) {
   } catch { /* observability — never throw */ }
 }
 
-// Available feature flags — kept in sync with frontend featureFlagStore.js
-const AVAILABLE_FLAGS = [
-  { id: 'pos',              label: 'POS Kasir',               category: 'Core' },
-  { id: 'booking',          label: 'Booking Online',           category: 'Core' },
-  { id: 'loyalty',          label: 'Loyalty Program',          category: 'Core' },
-  { id: 'voucher',          label: 'Voucher & Promo',           category: 'Core' },
-  { id: 'queue',            label: 'Manajemen Antrian',        category: 'Core' },
-  { id: 'reports',          label: 'Laporan Lanjutan',         category: 'Analytics' },
-  { id: 'heatmap',          label: 'Heatmap Jam Sibuk',        category: 'Analytics' },
-  { id: 'clv',              label: 'Customer CLV',             category: 'Analytics' },
-  { id: 'wilayah_report',   label: 'Laporan Wilayah',          category: 'Analytics' },
-  { id: 'schedule',         label: 'Jadwal Shift',             category: 'Operations' },
-  { id: 'multi_branch',     label: 'Multi-Cabang',             category: 'Operations' },
-  { id: 'expense_tracking', label: 'Manajemen Pengeluaran',    category: 'Operations' },
-  { id: 'attendance',       label: 'Absensi Digital',          category: 'Operations' },
-  { id: 'pwa',              label: 'Install Aplikasi',         category: 'UX' },
-  { id: 'whatsapp',         label: 'Struk WhatsApp',           category: 'UX' },
-  { id: 'barber_rating',    label: 'Rating Barber',            category: 'UX' },
-  { id: 'api_access',       label: 'API Access',               category: 'Enterprise' },
-  { id: 'white_label',      label: 'White Label',              category: 'Enterprise' },
-  { id: 'backup',           label: 'Backup & Restore',         category: 'Enterprise' },
-];
+// Katalog fitur dari sumber tunggal (config/featureCatalog.js). GET / di bawah
+// mengembalikannya apa adanya → frontend (useFeatureCatalog) membacanya, jadi
+// menambah fitur cukup di featureCatalog.js dan otomatis muncul di mana-mana.
+const { FEATURE_CATALOG } = require('../config/featureCatalog');
+const AVAILABLE_FLAGS = FEATURE_CATALOG;
 
 const VALID_FLAG_IDS = new Set(AVAILABLE_FLAGS.map(f => f.id));
 
