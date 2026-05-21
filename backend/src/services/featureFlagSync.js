@@ -20,8 +20,8 @@ const KNOWN = new Set(KNOWN_FLAG_IDS);
 const PACKAGE_FLAG_DEFAULTS = {
   Basic:      ['pos', 'queue', 'booking', 'loyalty', 'pwa'],
   Pro:        ['pos', 'queue', 'booking', 'loyalty', 'voucher', 'reports', 'schedule',
-               'multi_branch', 'expense_tracking', 'attendance', 'whatsapp', 'barber_rating',
-               'heatmap', 'clv', 'wilayah_report', 'pwa', 'backup'],
+               'multi_branch', 'expense_tracking', 'attendance', 'whatsapp', 'whatsapp_logs',
+               'barber_rating', 'heatmap', 'clv', 'wilayah_report', 'pwa', 'backup'],
   Enterprise: [...KNOWN_FLAG_IDS],
 };
 

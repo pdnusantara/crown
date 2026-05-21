@@ -21,28 +21,27 @@ function resolveTenantId(req) {
   return req.user.tenantId || null;
 }
 
-// Gerbang fitur: WhatsApp Beta hanya untuk tenant yang paketnya mengaktifkan
-// flag `whatsapp`. super_admin dikecualikan (bisa kelola tenant mana pun).
-async function requireWhatsappFeature(req, res, next) {
-  try {
-    if (req.user.role === 'super_admin') return next();
-    const tenantId = req.user.tenantId;
-    if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId wajib' });
-    const flag = await prisma.tenantFeatureFlag.findUnique({
-      where: { tenantId_flagId: { tenantId, flagId: 'whatsapp' } },
-    });
-    if (!flag?.enabled) {
-      return res.status(403).json({
-        success: false,
-        error: 'Fitur WhatsApp tidak tersedia di paket Anda',
-        code: 'FEATURE_DISABLED',
+// Gerbang fitur per flag. super_admin dikecualikan (bisa kelola tenant mana pun).
+function requireFeature(flagId, label = 'Fitur ini') {
+  return async function (req, res, next) {
+    try {
+      if (req.user.role === 'super_admin') return next();
+      const tenantId = req.user.tenantId;
+      if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId wajib' });
+      const flag = await prisma.tenantFeatureFlag.findUnique({
+        where: { tenantId_flagId: { tenantId, flagId } },
       });
+      if (!flag?.enabled) {
+        return res.status(403).json({ success: false, error: `${label} tidak tersedia di paket Anda`, code: 'FEATURE_DISABLED' });
+      }
+      next();
+    } catch (err) {
+      next(err);
     }
-    next();
-  } catch (err) {
-    next(err);
-  }
+  };
 }
+const requireWhatsappFeature = requireFeature('whatsapp', 'Fitur WhatsApp');
+const requireWhatsappLogsFeature = requireFeature('whatsapp_logs', 'Laporan Pesan WhatsApp');
 
 // Pemetaan kode error WA Gateway → status HTTP yang sesuai.
 const GATEWAY_ERROR_STATUS = {
@@ -186,7 +185,7 @@ function dateRangeFilter(from, to) {
 }
 
 // GET /api/whatsapp/messages — daftar log pesan keluar, tenant-scoped + filter.
-router.get('/messages', authenticate, requireRole('super_admin', 'tenant_admin'), requireWhatsappFeature, async (req, res, next) => {
+router.get('/messages', authenticate, requireRole('super_admin', 'tenant_admin'), requireWhatsappLogsFeature, async (req, res, next) => {
   try {
     const tenantId = resolveTenantId(req);
     if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId wajib' });
@@ -211,7 +210,7 @@ router.get('/messages', authenticate, requireRole('super_admin', 'tenant_admin')
 
 // GET /api/whatsapp/messages/stats — agregat per-status untuk KPI (ikut rentang
 // tanggal, tapi abaikan filter status/category supaya kartu KPI selalu utuh).
-router.get('/messages/stats', authenticate, requireRole('super_admin', 'tenant_admin'), requireWhatsappFeature, async (req, res, next) => {
+router.get('/messages/stats', authenticate, requireRole('super_admin', 'tenant_admin'), requireWhatsappLogsFeature, async (req, res, next) => {
   try {
     const tenantId = resolveTenantId(req);
     if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId wajib' });

@@ -27,6 +27,7 @@ const FEATURE_CATALOG = [
   { id: 'attendance',       label: 'Absensi Digital',       description: 'Absen GPS staf kasir & barber + laporan kehadiran',   category: 'Operations' },
   { id: 'pwa',              label: 'Install Aplikasi',      description: 'Banner pasang sebagai PWA di HP',                     category: 'UX' },
   { id: 'whatsapp',         label: 'Struk WhatsApp',        description: 'Kirim struk via WhatsApp langsung dari POS',          category: 'UX' },
+  { id: 'whatsapp_logs',    label: 'Laporan Pesan WhatsApp', description: 'Pantau status terkirim/sampai/gagal pesan WhatsApp ke pelanggan', category: 'UX' },
   { id: 'barber_rating',    label: 'Rating Barber',         description: 'Pelanggan beri bintang setelah transaksi',            category: 'UX' },
   { id: 'api_access',       label: 'API Access',            description: 'Akses API untuk integrasi pihak ketiga',              category: 'Enterprise' },
   { id: 'white_label',      label: 'White Label',           description: 'Custom domain & branding tanpa logo BarberOS',        category: 'Enterprise' },
