@@ -704,7 +704,8 @@ router.get('/tenants', authenticate, requireRole('super_admin'), async (req, res
           isSuspended: true,
           createdAt: true,
           subscription: { select: { package: true, status: true, endDate: true } },
-          _count: { select: { branches: true, users: true, customers: true } },
+          // Hanya hitung yang belum di-soft-delete agar konsisten dengan daftar.
+          _count: { select: { branches: { where: { deletedAt: null } }, users: { where: { deletedAt: null } }, customers: { where: { deletedAt: null } } } },
         },
         orderBy: { createdAt: 'desc' },
       }),

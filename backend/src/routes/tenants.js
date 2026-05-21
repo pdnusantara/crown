@@ -52,7 +52,10 @@ const tenantSelect = {
   isSuspended: true,
   createdAt: true,
   updatedAt: true,
-  _count: { select: { branches: true, users: true } },
+  // Hitung hanya entitas yang belum di-soft-delete supaya angka "Cabang"/"Staf"
+  // di super-admin konsisten dengan daftar nyata (yang memfilter deletedAt:null).
+  // Tanpa filter, cabang/staf yang sudah dihapus ikut terhitung → angka inflated.
+  _count: { select: { branches: { where: { deletedAt: null } }, users: { where: { deletedAt: null } } } },
   subscription: {
     select: { package: true, status: true, endDate: true, price: true, autoRenew: true },
   },
