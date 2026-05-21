@@ -212,7 +212,15 @@ router.get('/services', requireTenant, async (req, res, next) => {
 // (anti N+1) dan tenant-scoped.
 router.get('/barbers', requireTenant, async (req, res, next) => {
   try {
-    const where = { tenantId: req.tenant.id, role: 'barber', isActive: true, deletedAt: null };
+    // Barber-eligible = role barber ATAU kasir yang ditandai juga barber
+    // (isBarber) — supaya staf merangkap ikut bisa dipilih pelanggan saat booking,
+    // konsisten dengan POS. (Lihat barberEligible di routes/users.js.)
+    const where = {
+      tenantId: req.tenant.id,
+      isActive: true,
+      deletedAt: null,
+      OR: [{ role: 'barber' }, { isBarber: true }],
+    };
     if (req.query.branchId) where.branchId = req.query.branchId;
     const barbers = await prisma.user.findMany({
       where,
@@ -474,7 +482,8 @@ router.post('/bookings', requireTenant, async (req, res, next) => {
     // Barber wajib dipilih — validasi milik tenant & masih aktif.
     const barberId = body.barberId;
     const barber = await prisma.user.findFirst({
-      where: { id: barberId, tenantId: req.tenant.id, role: 'barber', isActive: true, deletedAt: null },
+      // Barber-eligible: role barber ATAU kasir merangkap barber (isBarber).
+      where: { id: barberId, tenantId: req.tenant.id, isActive: true, deletedAt: null, OR: [{ role: 'barber' }, { isBarber: true }] },
       select: { name: true },
     });
     if (!barber) {
