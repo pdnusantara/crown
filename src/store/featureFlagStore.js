@@ -31,6 +31,7 @@ const ALL_FLAGS = [
   { id: 'attendance',       label: 'Absensi Digital',     description: 'Absen GPS staf kasir & barber + laporan kehadiran', category: 'Operations' },
   { id: 'pwa',           label: 'Install Aplikasi',    description: 'Banner pasang sebagai PWA di HP',                  category: 'UX' },
   { id: 'whatsapp',      label: 'Struk WhatsApp',      description: 'Kirim struk via WhatsApp langsung dari POS',        category: 'UX' },
+  { id: 'whatsapp_logs', label: 'Laporan Pesan WhatsApp', description: 'Pantau status terkirim/sampai/gagal pesan WhatsApp ke pelanggan', category: 'UX' },
   { id: 'barber_rating', label: 'Rating Barber',       description: 'Pelanggan beri bintang setelah transaksi',          category: 'UX' },
   { id: 'api_access',    label: 'API Access',          description: 'Akses API untuk integrasi pihak ketiga',            category: 'Enterprise' },
   { id: 'white_label',   label: 'White Label',         description: 'Custom domain & branding tanpa logo BarberOS',      category: 'Enterprise' },
@@ -41,7 +42,7 @@ const ALL_FLAGS = [
 // Kebenaran per-tenant tetap di TenantFeatureFlag (backend).
 const PACKAGE_DEFAULTS = {
   Basic:      ['pos', 'queue', 'booking', 'loyalty', 'pwa'],
-  Pro:        ['pos', 'queue', 'booking', 'loyalty', 'voucher', 'reports', 'schedule', 'multi_branch', 'expense_tracking', 'attendance', 'whatsapp', 'barber_rating', 'heatmap', 'clv', 'wilayah_report', 'pwa', 'backup'],
+  Pro:        ['pos', 'queue', 'booking', 'loyalty', 'voucher', 'reports', 'schedule', 'multi_branch', 'expense_tracking', 'attendance', 'whatsapp', 'whatsapp_logs', 'barber_rating', 'heatmap', 'clv', 'wilayah_report', 'pwa', 'backup'],
   Enterprise: ALL_FLAGS.map(f => f.id),
 }
 

@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../lib/api.js'
-import { ALL_FEATURE_FLAGS } from '../store/featureFlagStore.js'
+import { useFeatureCatalog } from './useFeatureCatalog.js'
 import { getSocket } from '../lib/socket.js'
 
 const FLAG_EVENT = 'featureFlag:changed'
@@ -50,10 +50,14 @@ export function useIsFeatureEnabled(tenantId, flagId) {
 
 export function useUpdateFeatureFlags() {
   const qc = useQueryClient()
+  // Katalog dari backend (sumber tunggal) — supaya body PUT mencakup SEMUA flag
+  // termasuk yang baru (mis. whatsapp_logs). Dulu pakai const statis 19 → flag
+  // baru tak pernah ikut terkirim/tersimpan.
+  const catalog = useFeatureCatalog()
   return useMutation({
     mutationFn: ({ tenantId, flags }) => {
-      // Convert array of enabled IDs → [{flagId, enabled}] for all known flags
-      const body = ALL_FEATURE_FLAGS.map(f => ({
+      // Convert array of enabled IDs → [{flagId, enabled}] untuk semua flag.
+      const body = catalog.map(f => ({
         flagId:  f.id,
         enabled: flags.includes(f.id),
       }))
