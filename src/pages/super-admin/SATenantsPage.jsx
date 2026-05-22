@@ -356,6 +356,7 @@ export default function SATenantsPage() {
     const active    = tenants.filter(t => t.subscriptionStatus === 'active' && !t.isSuspended).length
     const trial     = tenants.filter(t => t.subscriptionStatus === 'trial').length
     const overdue   = tenants.filter(t => t.subscriptionStatus === 'overdue').length
+    const expired   = tenants.filter(t => t.subscriptionStatus === 'expired').length
     const suspended = tenants.filter(t => t.isSuspended).length
     const expiring  = tenants.filter(t => {
       if (t.subscriptionStatus !== 'active') return false
@@ -365,7 +366,7 @@ export default function SATenantsPage() {
     const totalBranches = tenants.reduce((s, t) => s + (t.totalBranches || 0), 0)
     const totalStaff    = tenants.reduce((s, t) => s + (t.totalStaff || 0), 0)
     const totalRevenue  = tenants.reduce((s, t) => s + (t.monthlyRevenue || 0), 0)
-    return { total: tenants.length, active, trial, overdue, suspended, expiring, totalBranches, totalStaff, totalRevenue }
+    return { total: tenants.length, active, trial, overdue, expired, suspended, expiring, totalBranches, totalStaff, totalRevenue }
   }, [tenants])
 
   const pillCount = (key) => {
@@ -617,35 +618,15 @@ export default function SATenantsPage() {
         </div>
       </div>
 
-      {/* Ringkasan agregat — total lintas semua tenant */}
+      {/* KPI Row — status langganan (klik = filter). Expired ikut tercatat di sini. */}
       {!isLoading && tenants.length > 0 && (
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { icon: Building2,   label: 'Total Cabang', value: stats.totalBranches, color: 'text-gold' },
-            { icon: Users,       label: 'Total Staf',   value: stats.totalStaff,    color: 'text-blue-400' },
-            { icon: TrendingUp,  label: 'Revenue MTD',  value: formatRupiahShort(stats.totalRevenue), color: 'text-green-400' },
-          ].map(s => (
-            <Card key={s.label} className="p-3.5 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-dark-surface flex items-center justify-center flex-shrink-0">
-                <s.icon size={16} className={s.color} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[11px] text-muted truncate">{s.label}</p>
-                <p className="text-lg font-bold text-off-white tabular-nums truncate">{s.value}</p>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* KPI Row */}
-      {!isLoading && tenants.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {[
             { label: 'Total Tenant',  value: stats.total,     icon: Building2,     color: 'text-off-white', filterKey: 'all' },
             { label: 'Sub Aktif',     value: stats.active,    icon: CheckCircle,   color: 'text-green-400', filterKey: 'active' },
             { label: 'Trial',         value: stats.trial,     icon: Clock,         color: 'text-blue-400',  filterKey: 'trial' },
             { label: 'Overdue',       value: stats.overdue,   icon: AlertTriangle, color: 'text-amber-400', filterKey: 'overdue' },
+            { label: 'Expired',       value: stats.expired,   icon: XCircle,       color: 'text-muted',     filterKey: 'expired' },
             { label: 'Suspended',     value: stats.suspended, icon: XCircle,       color: 'text-red-400',   filterKey: 'suspended' },
           ].map((kpi, i) => (
             <motion.div key={kpi.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
@@ -662,6 +643,27 @@ export default function SATenantsPage() {
                 </Card>
               </button>
             </motion.div>
+          ))}
+        </div>
+      )}
+
+      {/* Ringkasan agregat — di BAWAH Total Tenant: total cabang & staf lintas tenant */}
+      {!isLoading && tenants.length > 0 && (
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { icon: Building2,   label: 'Total Cabang', value: stats.totalBranches, color: 'text-gold' },
+            { icon: Users,       label: 'Total Staf',   value: stats.totalStaff,    color: 'text-blue-400' },
+            { icon: TrendingUp,  label: 'Revenue MTD',  value: formatRupiahShort(stats.totalRevenue), color: 'text-green-400' },
+          ].map(s => (
+            <Card key={s.label} className="p-3.5 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-dark-surface flex items-center justify-center flex-shrink-0">
+                <s.icon size={16} className={s.color} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] text-muted truncate">{s.label}</p>
+                <p className="text-lg font-bold text-off-white tabular-nums truncate">{s.value}</p>
+              </div>
+            </Card>
           ))}
         </div>
       )}
