@@ -118,8 +118,8 @@ router.get('/stats', async (req, res, next) => {
     const last30 = new Date(now.getTime() - 30 * 86400 * 1000);
 
     const [refCount, refLast30, commActive, commPending, commPaid, commAll, payoutPending, payoutPaid, balance] = await Promise.all([
-      prisma.affiliateReferral.count({ where: { affiliateId } }),
-      prisma.affiliateReferral.count({ where: { affiliateId, createdAt: { gte: last30 } } }),
+      prisma.affiliateReferral.count({ where: { affiliateId, tenant: { deletedAt: null } } }),
+      prisma.affiliateReferral.count({ where: { affiliateId, createdAt: { gte: last30 }, tenant: { deletedAt: null } } }),
       prisma.affiliateCommission.aggregate({
         _sum: { amount: true }, _count: true,
         where: { affiliateId, status: { in: ['approved', 'pending'] } },
@@ -176,7 +176,7 @@ router.get('/chart', async (req, res, next) => {
       select: { amount: true, createdAt: true },
     });
     const referrals = await prisma.affiliateReferral.findMany({
-      where: { affiliateId: req.affiliate.id, createdAt: { gte: since } },
+      where: { affiliateId: req.affiliate.id, createdAt: { gte: since }, tenant: { deletedAt: null } },
       select: { createdAt: true },
     });
 
@@ -204,7 +204,9 @@ router.get('/chart', async (req, res, next) => {
 router.get('/referrals', async (req, res, next) => {
   try {
     const data = await prisma.affiliateReferral.findMany({
-      where: { affiliateId: req.affiliate.id },
+      // Sembunyikan rujukan ke tenant yang sudah dihapus super-admin (soft delete).
+      // Baris tetap ada di DB (histori komisi utuh) — hanya tak ditampilkan ke affiliate.
+      where: { affiliateId: req.affiliate.id, tenant: { deletedAt: null } },
       orderBy: { createdAt: 'desc' },
       take: 200,
       include: {

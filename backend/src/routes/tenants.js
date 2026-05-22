@@ -740,6 +740,25 @@ router.delete('/:id', authenticate, requireRole('super_admin'), async (req, res,
       severity: 'error',
     });
 
+    // Realtime: tenant hilang → halaman SA (dashboard/tenants/billing) refresh, dan
+    // bila tenant ini rujukan affiliate, beri tahu affiliatenya supaya hilang dari
+    // daftar rujukan miliknya tanpa reload. Baris referral TIDAK dihapus (histori
+    // komisi utuh) — hanya disembunyikan via filter tenant.deletedAt di endpoint.
+    try {
+      const io = getIO();
+      if (io) {
+        io.emit('tenant:updated', { tenantId: existing.id, deleted: true });
+        io.to('support').emit('tenant:status-changed', { tenantId: existing.id, deleted: true });
+        const ref = await prisma.affiliateReferral.findUnique({
+          where: { tenantId: existing.id },
+          include: { affiliate: { select: { userId: true } } },
+        });
+        if (ref?.affiliate?.userId) {
+          io.to(userRoom(ref.affiliate.userId)).emit('affiliate:referral_updated', { tenantId: existing.id, deleted: true });
+        }
+      }
+    } catch { /* observability — never block delete */ }
+
     res.json({ success: true, data: { message: 'Tenant deleted successfully' } });
   } catch (err) {
     next(err);
