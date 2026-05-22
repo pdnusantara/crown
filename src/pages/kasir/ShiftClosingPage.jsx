@@ -50,17 +50,6 @@ function escapeCsv(v) {
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== 'undefined' ? window.innerWidth < 768 : false
-  )
-  useEffect(() => {
-    const handler = () => setIsMobile(window.innerWidth < 768)
-    window.addEventListener('resize', handler)
-    return () => window.removeEventListener('resize', handler)
-  }, [])
-  return isMobile
-}
 
 // ── Shift status pill — "Online" saat shift aktif, "Offline" saat tidak ─────
 // Penanda cepat apakah cabang sedang siap menerima transaksi.
@@ -215,7 +204,6 @@ function ShiftClosingPageInner() {
   const { user } = useAuthStore()
   const navigate = useNavigate()
   const toast = useToast()
-  const isMobile = useIsMobile()
 
   const {
     data: activeShift, isLoading: loadingActive, isError: activeError, refetch: refetchActive,
@@ -589,8 +577,7 @@ function ShiftClosingPageInner() {
         </CardHeader>
 
         {/* Desktop table */}
-        {!isMobile && (
-          <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-dark-border text-xs uppercase tracking-wider text-muted">
@@ -627,11 +614,9 @@ function ShiftClosingPageInner() {
               </tbody>
             </table>
           </div>
-        )}
 
         {/* Mobile cards */}
-        {isMobile && (
-          <div className="px-3 pb-3 space-y-2">
+        <div className="md:hidden px-3 pb-3 space-y-2">
             {barberRows.length === 0 && (
               <p className="text-center text-muted text-sm py-4">Belum ada data barber</p>
             )}
@@ -660,7 +645,6 @@ function ShiftClosingPageInner() {
               </div>
             ))}
           </div>
-        )}
       </Card>
 
       {/* Notes */}

@@ -42,10 +42,13 @@ const navConfigs = {
   ],
   kasir: (user) => {
     const slug = getBranchSlug(user)
+    // Urutan WAJIB sama dgn BottomNav (pos→queue→bookings→customers→transactions)
+    // supaya swipe kiri/kanan konsisten dgn tab bar (jangan lewati customers).
     return [
       `/${slug}/kasir/pos`,
       `/${slug}/kasir/queue`,
       `/${slug}/kasir/bookings`,
+      `/${slug}/kasir/customers`,
       `/${slug}/kasir/transactions`,
     ]
   },

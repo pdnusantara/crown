@@ -530,7 +530,7 @@ export default function QueuePage() {
         <button
           onClick={() => setShowModal(true)}
           aria-label="Tambah Walk-in"
-          className="fixed bottom-20 right-4 z-30 h-14 w-14 rounded-full bg-gold text-dark-bg shadow-2xl shadow-gold/30 flex items-center justify-center active:scale-95 transition-transform"
+          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-30 h-14 w-14 rounded-full bg-gold text-dark-bg shadow-2xl shadow-gold/30 flex items-center justify-center active:scale-95 transition-transform"
         >
           <Plus className="w-6 h-6" strokeWidth={2.5} />
         </button>

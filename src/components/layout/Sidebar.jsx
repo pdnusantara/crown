@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import {
   LayoutDashboard, Building2, Scissors, Users, BarChart3,
   Settings, CreditCard, ListOrdered, CalendarDays, Receipt,
-  Star, TrendingUp, LogOut, Sun, Moon, Search, LogIn, Languages,
+  Star, TrendingUp, LogOut, Sun, Moon, Search, Languages,
   Tag, GitCompare, Megaphone, Flag, MessageSquare, Activity,
   PieChart, UserCircle, DollarSign, Package, ShieldAlert, MapPin,
   ChevronRight, Wallet, Landmark, LifeBuoy, Fingerprint, Handshake,
@@ -68,7 +68,7 @@ const navConfig = {
       { labelKey: 'nav.booking',      icon: CalendarDays,  path: `/${slug}/kasir/bookings` },
       { labelKey: 'nav.customers',    icon: Users,         path: `/${slug}/kasir/customers` },
       { labelKey: 'nav.transactions', icon: Receipt,       path: `/${slug}/kasir/transactions` },
-      { labelKey: 'nav.shiftClose',   icon: LogIn,         path: `/${slug}/kasir/shift-closing` },
+      { labelKey: 'nav.shiftClose',   icon: Wallet,        path: `/${slug}/kasir/shift-closing` },
       { labelKey: 'nav.attendance',   icon: Fingerprint,   path: `/${slug}/kasir/attendance`, flag: 'attendance' },
       { labelKey: 'nav.ratings',      icon: Star,          path: `/${slug}/kasir/ratings` },
       { labelKey: 'nav.help',         icon: LifeBuoy,      path: `/${slug}/kasir/bantuan` },
