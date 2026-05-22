@@ -438,6 +438,7 @@ function HeroEditor() {
         whatsappCta:  data.hero.whatsappCta  || '',
         heroBadge:    data.hero.heroBadge    || '',
         showStats:    data.hero.showStats !== false,
+        siteName:     data.hero.siteName     || '',
         siteLogo:     data.hero.siteLogo     || '',
         siteFavicon:  data.hero.siteFavicon  || '',
       })
@@ -475,8 +476,22 @@ function HeroEditor() {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader><h3 className="font-semibold text-off-white">Logo & Favicon</h3></CardHeader>
+        <CardHeader><h3 className="font-semibold text-off-white">Nama, Logo & Favicon</h3></CardHeader>
         <CardBody className="grid sm:grid-cols-2 gap-5">
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium text-muted mb-1.5">Nama Situs (brand)</label>
+            <input
+              type="text"
+              value={form.siteName}
+              onChange={e => setForm(f => ({ ...f, siteName: e.target.value }))}
+              maxLength={60}
+              placeholder="SembaPOS"
+              className="w-full appearance-none rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-sm text-off-white placeholder-muted focus:outline-none focus:border-gold/50"
+            />
+            <p className="text-[11px] text-muted mt-1">
+              Teks brand di pojok kiri header, footer, judul tab browser, & SEO. Dipakai saat logo gambar kosong. Kosongkan untuk default "SembaPOS".
+            </p>
+          </div>
           <ImageUploadField
             label="Logo (header & footer landing)"
             value={form.siteLogo}

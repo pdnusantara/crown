@@ -39,6 +39,7 @@ const SETTING_KEYS = {
   seoDescription: 'landing_seo_description', // meta description & og:description
   seoKeywords:    'landing_seo_keywords',    // meta keywords (dipisah koma)
   seoOgImage:     'landing_seo_og_image',    // URL gambar share (og:image)
+  siteName:       'landing_site_name',       // teks nama brand di header/footer/judul
   siteLogo:       'landing_site_logo',       // URL logo header & footer landing
   siteFavicon:    'landing_site_favicon',    // URL favicon (ikon tab browser)
 };
@@ -102,6 +103,7 @@ const DEFAULTS = {
   seoDescription: 'Kasir, antrian, booking online, multi-cabang, dan laporan pintar — semua dalam satu aplikasi yang dirancang khusus untuk barbershop. Coba gratis 14 hari, tanpa kartu kredit.',
   seoKeywords:    'aplikasi barbershop, POS barbershop, manajemen barbershop, kasir barbershop, booking barbershop, antrian barbershop',
   seoOgImage:     '',
+  siteName:       'SembaPOS',
   siteLogo:       '',
   siteFavicon:    '',
 };
@@ -228,6 +230,7 @@ const heroUpdateSchema = z.object({
   seoDescription: z.string().max(320).optional(),
   seoKeywords:    z.string().max(400).optional(),
   seoOgImage:     z.string().max(500).optional(),
+  siteName:       z.string().max(60).optional(),
   siteLogo:       z.string().max(500).optional(),
   siteFavicon:    z.string().max(500).optional(),
 });

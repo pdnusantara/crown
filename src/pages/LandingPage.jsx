@@ -235,6 +235,9 @@ export default function LandingPage() {
   }, [])
 
   const hero = data?.hero || {}
+  // Nama brand yang tampil (header/footer/judul/SEO). Bisa diubah di
+  // /super-admin/landing → kolom "Nama Situs". Default 'SembaPOS'.
+  const siteName = (hero.siteName || 'SembaPOS').trim()
 
   // Meta Pixel — aktif saat super-admin sudah mengisi Pixel ID. Dilewati di
   // mode preview builder supaya statistik iklan tidak tercemar kunjungan admin.
@@ -263,7 +266,7 @@ export default function LandingPage() {
   // canonical, & structured data JSON-LD. Semua bersumber dari konten yang
   // diatur super-admin (tab "SEO & Iklan"); index.html hanya jadi nilai awal.
   useEffect(() => {
-    const seoTitle = (hero.seoTitle || FALLBACK_SEO.title).trim()
+    const seoTitle = (hero.seoTitle || `${siteName} — Sistem Manajemen Barbershop Modern`).trim()
     const seoDesc  = (hero.seoDescription || FALLBACK_SEO.description).trim()
     const seoKeys  = (hero.seoKeywords || FALLBACK_SEO.keywords).trim()
     const origin   = window.location.origin
@@ -309,7 +312,7 @@ export default function LandingPage() {
     const org = {
       '@type': 'Organization',
       '@id': pageUrl + '#organization',
-      name: 'SembaPOS',
+      name: siteName,
       url: pageUrl,
       logo: ogImage,
     }
@@ -318,7 +321,7 @@ export default function LandingPage() {
     if (hero.contactAddress) org.address   = hero.contactAddress
     const app = {
       '@type': 'SoftwareApplication',
-      name: 'SembaPOS',
+      name: siteName,
       applicationCategory: 'BusinessApplication',
       operatingSystem: 'Web',
       description: seoDesc,
@@ -363,7 +366,7 @@ export default function LandingPage() {
     || ((Array.isArray(data?.layout) && data.layout.length) ? data.layout : FALLBACK_LAYOUT)
   const waNumber = normalizeWa(hero.whatsappCta)
   const waHref = waNumber
-    ? `https://wa.me/${waNumber}?text=${encodeURIComponent('Halo, saya tertarik dengan SembaPOS.')}`
+    ? `https://wa.me/${waNumber}?text=${encodeURIComponent(`Halo, saya tertarik dengan ${siteName}.`)}`
     : null
 
   // Tujuan tombol utama saat user sudah login — selaras dengan logika Nav.
@@ -375,7 +378,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#FBFAF6] text-[#57534E] font-body overflow-x-hidden antialiased">
-      <Nav isAuthed={isAuthenticated} userRole={user?.role} logo={hero.siteLogo} />
+      <Nav isAuthed={isAuthenticated} userRole={user?.role} logo={hero.siteLogo} siteName={siteName} />
 
       <HeroSection
         hero={hero}
@@ -393,6 +396,7 @@ export default function LandingPage() {
       <Footer
         text={footerText}
         logo={hero.siteLogo}
+        siteName={siteName}
         contact={{
           phone:   hero.contactPhone   || '',
           email:   hero.contactEmail   || '',
@@ -1057,7 +1061,7 @@ const BLOCK_REGISTRY = {
 
 // ── Subkomponen ──────────────────────────────────────────────────────────────
 
-function Nav({ isAuthed, userRole, logo }) {
+function Nav({ isAuthed, userRole, logo, siteName = 'SembaPOS' }) {
   const [scrolled, setScrolled] = useState(false)
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 16)
@@ -1076,13 +1080,13 @@ function Nav({ isAuthed, userRole, logo }) {
       <div className="max-w-6xl mx-auto px-6 py-3.5 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2.5">
           {logo ? (
-            <img src={logo} alt="SembaPOS" className="h-9 w-auto max-w-[180px] object-contain" />
+            <img src={logo} alt={siteName} className="h-9 w-auto max-w-[180px] object-contain" />
           ) : (
             <>
               <div className="w-9 h-9 rounded-xl bg-[#1C1A17] flex items-center justify-center">
                 <Lucide.Scissors size={17} className="text-[#C9A84C]" />
               </div>
-              <span className="font-display text-xl font-bold tracking-tight text-[#1C1A17]">SembaPOS</span>
+              <span className="font-display text-xl font-bold tracking-tight text-[#1C1A17]">{siteName}</span>
             </>
           )}
         </Link>
@@ -1207,7 +1211,7 @@ function StickyCtaBar({ show, authed, label, to, note, onCta }) {
   )
 }
 
-function Footer({ text, logo, contact = {} }) {
+function Footer({ text, logo, contact = {}, siteName = 'SembaPOS' }) {
   const phone = (contact.phone || '').trim()
   const email = (contact.email || '').trim()
   const address = (contact.address || '').trim()
@@ -1218,13 +1222,13 @@ function Footer({ text, logo, contact = {} }) {
         <div className="col-span-2">
           <div className="flex items-center gap-2.5 mb-3">
             {logo ? (
-              <img src={logo} alt="SembaPOS" className="h-9 w-auto max-w-[180px] object-contain" />
+              <img src={logo} alt={siteName} className="h-9 w-auto max-w-[180px] object-contain" />
             ) : (
               <>
                 <div className="w-9 h-9 rounded-xl bg-[#C9A84C] flex items-center justify-center">
                   <Lucide.Scissors size={17} className="text-[#1C1A17]" />
                 </div>
-                <span className="font-display text-xl font-bold text-[#FBFAF6]">SembaPOS</span>
+                <span className="font-display text-xl font-bold text-[#FBFAF6]">{siteName}</span>
               </>
             )}
           </div>
@@ -1284,7 +1288,7 @@ function Footer({ text, logo, contact = {} }) {
         </div>
       </div>
       <div className="max-w-6xl mx-auto mt-10 pt-6 border-t border-white/10 text-[12px] text-[#7C766C]">
-        © {new Date().getFullYear()} SembaPOS. Dibuat untuk barbershop Indonesia.
+        © {new Date().getFullYear()} {siteName}. Dibuat untuk barbershop Indonesia.
       </div>
     </footer>
   )
