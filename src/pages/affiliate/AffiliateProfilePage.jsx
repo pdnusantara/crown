@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
-import { CheckCircle, Save, Copy } from 'lucide-react'
+import { CheckCircle, Save, Copy, Lock, Eye, EyeOff } from 'lucide-react'
 import { useAffiliateMe, useUpdateAffiliateMe } from '../../hooks/useAffiliates.js'
+import { useAuthStore } from '../../store/authStore.js'
 import Card from '../../components/ui/Card.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Input from '../../components/ui/Input.jsx'
@@ -18,7 +19,13 @@ export default function AffiliateProfilePage() {
   const toast = useToast()
   const { data: me, isLoading } = useAffiliateMe()
   const update = useUpdateAffiliateMe()
+  const updateProfile = useAuthStore(s => s.updateProfile)
   const [form, setForm] = useState(null)
+
+  // Ganti password mandiri (lewat PATCH /auth/me — verifikasi password lama di backend).
+  const [pwd, setPwd] = useState({ old: '', next: '', confirm: '' })
+  const [showPwd, setShowPwd] = useState(false)
+  const [savingPwd, setSavingPwd] = useState(false)
 
   useEffect(() => {
     if (me) setForm({
@@ -51,6 +58,24 @@ export default function AffiliateProfilePage() {
 
   const copyCode = async () => {
     try { await navigator.clipboard.writeText(me.referralCode); toast.success('Kode tersalin') } catch { /* noop */ }
+  }
+
+  const changePassword = async () => {
+    if (!pwd.old || !pwd.next || !pwd.confirm) return toast.error('Semua kolom password wajib diisi')
+    if (pwd.next.length < 8) return toast.error('Password baru minimal 8 karakter')
+    if (pwd.next !== pwd.confirm) return toast.error('Konfirmasi password tidak cocok')
+    if (pwd.next === pwd.old) return toast.error('Password baru harus berbeda dari yang lama')
+    setSavingPwd(true)
+    try {
+      await updateProfile({ currentPassword: pwd.old, newPassword: pwd.next })
+      setPwd({ old: '', next: '', confirm: '' })
+      setShowPwd(false)
+      toast.success('Password berhasil diganti')
+    } catch (e) {
+      toast.error(e?.response?.data?.error || 'Gagal mengganti password')
+    } finally {
+      setSavingPwd(false)
+    }
   }
 
   return (
@@ -107,6 +132,31 @@ export default function AffiliateProfilePage() {
       <div className="flex justify-end">
         <Button icon={Save} loading={update.isPending} onClick={submit}>Simpan perubahan</Button>
       </div>
+
+      {/* Keamanan — ganti password mandiri */}
+      <Card className="p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <Lock size={15} className="text-gold" />
+          <p className="font-semibold text-off-white">Keamanan</p>
+        </div>
+        <p className="text-xs text-muted mb-3">Ganti password akun Anda. Masukkan password lama untuk verifikasi.</p>
+        <div className="grid md:grid-cols-3 gap-3">
+          <Input label="Password lama" type={showPwd ? 'text' : 'password'} autoComplete="current-password"
+            value={pwd.old} onChange={e => setPwd(p => ({ ...p, old: e.target.value }))} placeholder="••••••••" />
+          <Input label="Password baru" type={showPwd ? 'text' : 'password'} autoComplete="new-password"
+            value={pwd.next} onChange={e => setPwd(p => ({ ...p, next: e.target.value }))} placeholder="Min. 8 karakter" />
+          <Input label="Ulangi password baru" type={showPwd ? 'text' : 'password'} autoComplete="new-password"
+            value={pwd.confirm} onChange={e => setPwd(p => ({ ...p, confirm: e.target.value }))} placeholder="••••••••" />
+        </div>
+        <div className="flex items-center justify-between flex-wrap gap-3 mt-3">
+          <button type="button" onClick={() => setShowPwd(s => !s)}
+            className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-off-white">
+            {showPwd ? <EyeOff size={13} /> : <Eye size={13} />}
+            {showPwd ? 'Sembunyikan password' : 'Tampilkan password'}
+          </button>
+          <Button icon={Lock} size="sm" loading={savingPwd} onClick={changePassword}>Ganti password</Button>
+        </div>
+      </Card>
     </div>
   )
 }
