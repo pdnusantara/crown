@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   Plus, Edit2, Trash2, ToggleLeft, ToggleRight, Building2, Users, TrendingUp,
   ExternalLink, Eye, ChevronRight, Check, AlertTriangle, Search,
@@ -12,8 +13,10 @@ import { differenceInDays } from 'date-fns'
 import { useTenants, useCreateTenant, useUpdateTenant, useDeleteTenant, useResetTenantPassword } from '../../hooks/useTenants.js'
 import { usePackages } from '../../hooks/usePackages.js'
 import { useAuthStore } from '../../store/authStore.js'
+import { getSocket } from '../../lib/socket.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import Card from '../../components/ui/Card.jsx'
+import LiveBadge from '../../components/ui/LiveBadge.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Modal from '../../components/ui/Modal.jsx'
@@ -303,6 +306,22 @@ export default function SATenantsPage() {
   const { impersonate } = useAuthStore()
   const toast = useToast()
   const navigate = useNavigate()
+  const qc = useQueryClient()
+
+  // Realtime: useTenants sudah dengar tenant:updated/status-changed, tapi status
+  // langganan berubah dari pembayaran & cron renewal (event subscription:*) —
+  // tanpa ini laporan basi sampai user refresh. Polling 60s sbg jaring pengaman.
+  useEffect(() => {
+    const s = getSocket()
+    const refresh = () => {
+      qc.invalidateQueries({ queryKey: ['tenants'] })
+      qc.invalidateQueries({ queryKey: ['packages'] })
+    }
+    const events = ['subscription:any-updated', 'subscription:updated', 'package:updated', 'tenant:updated', 'tenant:status-changed']
+    events.forEach(e => s.on(e, refresh))
+    const iv = setInterval(refresh, 60_000)
+    return () => { events.forEach(e => s.off(e, refresh)); clearInterval(iv) }
+  }, [qc])
 
   const packageList = pkgData?.list || []
   const packageOptions = useMemo(
@@ -343,7 +362,10 @@ export default function SATenantsPage() {
       const d = subDaysLeft(t)
       return d !== null && d >= 0 && d <= 7
     }).length
-    return { total: tenants.length, active, trial, overdue, suspended, expiring }
+    const totalBranches = tenants.reduce((s, t) => s + (t.totalBranches || 0), 0)
+    const totalStaff    = tenants.reduce((s, t) => s + (t.totalStaff || 0), 0)
+    const totalRevenue  = tenants.reduce((s, t) => s + (t.monthlyRevenue || 0), 0)
+    return { total: tenants.length, active, trial, overdue, suspended, expiring, totalBranches, totalStaff, totalRevenue }
   }, [tenants])
 
   const pillCount = (key) => {
@@ -578,7 +600,10 @@ export default function SATenantsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="font-display text-2xl font-bold text-off-white">{t('superAdmin.tenants.pageTitle')}</h1>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="font-display text-2xl font-bold text-off-white">{t('superAdmin.tenants.pageTitle')}</h1>
+            <LiveBadge />
+          </div>
           <p className="text-muted text-sm mt-1">
             {isLoading ? t('common.loading') : t('superAdmin.tenants.registeredCount', { count: tenants.length })}
           </p>
@@ -591,6 +616,27 @@ export default function SATenantsPage() {
           <Button icon={Plus} onClick={() => setShowWizard(true)}>{t('superAdmin.tenants.addTenant')}</Button>
         </div>
       </div>
+
+      {/* Ringkasan agregat — total lintas semua tenant */}
+      {!isLoading && tenants.length > 0 && (
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { icon: Building2,   label: 'Total Cabang', value: stats.totalBranches, color: 'text-gold' },
+            { icon: Users,       label: 'Total Staf',   value: stats.totalStaff,    color: 'text-blue-400' },
+            { icon: TrendingUp,  label: 'Revenue MTD',  value: formatRupiahShort(stats.totalRevenue), color: 'text-green-400' },
+          ].map(s => (
+            <Card key={s.label} className="p-3.5 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-dark-surface flex items-center justify-center flex-shrink-0">
+                <s.icon size={16} className={s.color} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] text-muted truncate">{s.label}</p>
+                <p className="text-lg font-bold text-off-white tabular-nums truncate">{s.value}</p>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* KPI Row */}
       {!isLoading && tenants.length > 0 && (
