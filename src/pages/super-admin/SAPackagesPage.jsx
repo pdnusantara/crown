@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   Edit2, Check, X, Building2, Users, GitBranch, Info, Save, AlertTriangle,
   Plus, Minus, Calculator, ArrowRight, TrendingUp, TrendingDown, Clock,
@@ -9,10 +10,12 @@ import {
 import { differenceInDays } from 'date-fns'
 import { usePackages, useUpdatePackage } from '../../hooks/usePackages.js'
 import { useFeatureCatalog } from '../../hooks/useFeatureCatalog.js'
+import { getSocket } from '../../lib/socket.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import Card, { CardHeader } from '../../components/ui/Card.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Modal from '../../components/ui/Modal.jsx'
+import LiveBadge from '../../components/ui/LiveBadge.jsx'
 import { formatRupiah } from '../../utils/format.js'
 
 const PACKAGE_STYLES = {
@@ -651,8 +654,21 @@ export default function SAPackagesPage() {
   const { data, isLoading, isError, error, refetch } = usePackages()
   const updatePackage = useUpdatePackage()
   const toast         = useToast()
+  const qc            = useQueryClient()
   const [editing, setEditing]       = useState(null)
   const [diffOnly, setDiffOnly]     = useState(false)
+
+  // Realtime: usePackages sudah dengar package:updated, tapi tenantCount & MRR
+  // per paket ikut berubah saat tenant pindah paket / dibuat / dihapus
+  // (event subscription:*/tenant:*). Tanpa ini angka tenant & MRR di kartu basi.
+  useEffect(() => {
+    const s = getSocket()
+    const refreshPkgs = () => qc.invalidateQueries({ queryKey: ['packages'] })
+    const events = ['subscription:any-updated', 'subscription:updated', 'tenant:updated', 'tenant:status-changed', 'package:updated']
+    events.forEach(e => s.on(e, refreshPkgs))
+    const iv = setInterval(refreshPkgs, 60_000)
+    return () => { events.forEach(e => s.off(e, refreshPkgs)); clearInterval(iv) }
+  }, [qc])
 
   const packages    = data?.map || {}
   const packageList = data?.list || []
@@ -692,7 +708,10 @@ export default function SAPackagesPage() {
       {/* Header — wrap di mobile supaya MRR-block tidak menabrak title */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl font-display font-bold gold-text">{t('superAdmin.packages.pageTitle')}</h1>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="text-2xl font-display font-bold gold-text">{t('superAdmin.packages.pageTitle')}</h1>
+            <LiveBadge />
+          </div>
           <p className="text-muted text-sm mt-1">{t('superAdmin.packages.pageSubtitle')}</p>
         </div>
         {!isLoading && totalMrr > 0 && (
