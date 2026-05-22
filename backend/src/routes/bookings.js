@@ -437,8 +437,26 @@ router.post('/:id/check-in', authenticate, requireRole('super_admin', 'tenant_ad
       where: { branchId: existing.branchId, createdAt: { gte: todayStart } },
     });
 
+    // Booking bisa >1 layanan. `serviceName` digabung ("A + B") jadi tak bisa
+    // dipakai langsung untuk antrian — resolve `serviceIds` ke nama individual
+    // supaya POS bisa mengisi keranjang otomatis (pipe-separated + bawa serviceIds).
+    const bookingServiceIds = Array.isArray(existing.serviceIds) && existing.serviceIds.length
+      ? existing.serviceIds.filter(Boolean)
+      : (existing.serviceId ? [existing.serviceId] : []);
+    let serviceNameList = [];
+    if (bookingServiceIds.length) {
+      const svcRows = await prisma.service.findMany({
+        where: { id: { in: bookingServiceIds } },
+        select: { id: true, name: true },
+      });
+      const nameById = new Map(svcRows.map((s) => [s.id, s.name]));
+      serviceNameList = bookingServiceIds.map((id) => nameById.get(id)).filter(Boolean);
+    }
+    if (!serviceNameList.length && existing.serviceName) serviceNameList = [existing.serviceName];
+
     const queueNotes = JSON.stringify({
-      services: existing.serviceName ? [existing.serviceName] : ['Layanan'],
+      services: serviceNameList.length ? serviceNameList : ['Layanan'],
+      serviceIds: bookingServiceIds,
       phone: existing.customerPhone,
       type: 'booking',
       staffName: existing.barberName || null,
@@ -454,7 +472,7 @@ router.post('/:id/check-in', authenticate, requireRole('super_admin', 'tenant_ad
         customerPhone: existing.customerPhone,
         barberId: existing.barberId || null,
         barberName: existing.barberName || null,
-        serviceNames: existing.serviceName || null,
+        serviceNames: serviceNameList.length ? serviceNameList.join('|') : (existing.serviceName || null),
         type: 'booking',
         notes: queueNotes,
         status: 'waiting',

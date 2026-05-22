@@ -79,23 +79,36 @@ export const usePosStore = create(
         })
       },
 
-      // Pre-load a queue item into the cart — called when kasir clicks "Bayar" on a queue ticket
+      // Pre-load a queue item into the cart — called when kasir clicks "Bayar" on a queue ticket.
+      // Booking bisa >1 layanan: utamakan cocokkan via serviceIds (paling akurat);
+      // fallback ke nama, dan pecah entri lama yang tergabung ("A + B") supaya
+      // antrian booking lama tetap terisi penuh.
       loadFromQueue: (queueItem, allServices) => {
-        const cartItems = (queueItem.services || [])
-          .map((svcName, i) => {
-            const svc = allServices.find(s => s.name === svcName)
-            if (!svc) return null
-            return {
-              id: `cart-q-${i}-${Date.now()}`,
-              serviceId: svc.id,
-              name: svc.name,
-              price: svc.price,
-              duration: svc.duration,
-              barberId: queueItem.staffId || null,
-              barberName: queueItem.staffName || null,
-            }
-          })
-          .filter(Boolean)
+        const byId = new Map(allServices.map(s => [s.id, s]))
+        const byName = new Map(allServices.map(s => [s.name, s]))
+
+        let matched = []
+        const ids = Array.isArray(queueItem.serviceIds) ? queueItem.serviceIds.filter(Boolean) : []
+        if (ids.length) {
+          matched = ids.map(id => byId.get(id)).filter(Boolean)
+        }
+        if (!matched.length) {
+          const names = (queueItem.services || [])
+            .flatMap(n => (byName.has(n) ? [n] : String(n).split(' + ')))
+            .map(n => n.trim())
+            .filter(Boolean)
+          matched = names.map(n => byName.get(n)).filter(Boolean)
+        }
+
+        const cartItems = matched.map((svc, i) => ({
+          id: `cart-q-${i}-${Date.now()}`,
+          serviceId: svc.id,
+          name: svc.name,
+          price: svc.price,
+          duration: svc.duration,
+          barberId: queueItem.staffId || null,
+          barberName: queueItem.staffName || null,
+        }))
 
         set({
           cartItems,

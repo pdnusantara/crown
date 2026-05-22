@@ -48,6 +48,9 @@ export function toUIItem(entry) {
     customerName: entry.customerName,
     phone: entry.customerPhone || meta.phone || '',
     services,
+    // ID layanan dari booking (multi-layanan) — dipakai POS untuk isi keranjang
+    // secara akurat. Kosong untuk antrian lama/walk-in → fallback ke nama.
+    serviceIds: Array.isArray(meta.serviceIds) ? meta.serviceIds.filter(Boolean) : [],
     staffId: entry.barberId || null,
     staffName: entry.barberName || meta.staffName || null,
     type: typeToUI(entry.type) || meta.type || (entry.customerId ? 'booking' : 'walk-in'),
