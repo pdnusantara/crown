@@ -2,15 +2,12 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
-import { Eye, EyeOff, Scissors, Mail, Lock, ChevronRight, Shield, Building2, ExternalLink } from 'lucide-react'
+import { Eye, EyeOff, Scissors, Mail, Lock, Shield, Building2, ExternalLink } from 'lucide-react'
 import { useAuthStore } from '../store/authStore.js'
 import { usePublicTenantStore } from '../store/publicTenantStore.js'
 import Button from '../components/ui/Button.jsx'
 import Input from '../components/ui/Input.jsx'
 import { getTenantSlug } from '../lib/tenantSlug.js'
-
-// Credentials match backend seed (run: cd backend && npm run db:seed)
-const SUPER_ADMIN_DEMO = { email: 'admin@barberos.com', password: 'Admin123!', role: 'Super Admin', color: 'from-amber-500 to-orange-500' }
 
 // Peran untuk tombol dev-login di subdomain tenant — login tanpa password ke
 // akun tenant subdomain saat ini. Hanya muncul kalau backend DEV_LOGIN=1.
@@ -49,19 +46,6 @@ export default function Login() {
     } else if (result.redirect) {
       // Backend told us this account belongs on a different domain — surface
       // a one-click button so the user doesn't have to retype the URL.
-      setRedirectUrl(result.redirect)
-    }
-  }
-
-  const handleQuickLogin = async (user) => {
-    clearError()
-    setRedirectUrl(null)
-    setEmail(user.email)
-    setPassword(user.password)
-    const result = await login(user.email, user.password)
-    if (result.success) {
-      navigate(result.redirectTo)
-    } else if (result.redirect) {
       setRedirectUrl(result.redirect)
     }
   }
@@ -204,58 +188,35 @@ export default function Login() {
             </Button>
           </form>
 
-          {/* Login cepat — super-admin demo di main domain, atau dev-login
-              tanpa password di subdomain tenant (kalau backend mengizinkan). */}
-          {(isMainDomain || showDevLogin) && (
+          {/* Login cepat tanpa password — HANYA muncul di subdomain tenant saat
+              backend mengaktifkan DEV_LOGIN=1 (khusus pengembangan). Tidak pernah
+              tampil di domain utama / produksi. */}
+          {showDevLogin && (
             <div className="mt-6">
               <div className="flex items-center gap-3 mb-3">
                 <div className="flex-1 h-px bg-dark-border" />
-                <span className="text-xs text-muted">
-                  {showDevLogin ? 'Login cepat (mode dev)' : t('auth.demoAccounts')}
-                </span>
+                <span className="text-xs text-muted">Login cepat (mode dev)</span>
                 <div className="flex-1 h-px bg-dark-border" />
               </div>
 
-              {isMainDomain && (
-                <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
+                {DEV_ROLES.map(r => (
                   <button
-                    onClick={() => handleQuickLogin(SUPER_ADMIN_DEMO)}
+                    key={r.role}
+                    onClick={() => handleDevLogin(r.role)}
                     disabled={isLoading}
-                    className="flex items-center gap-2 p-2.5 rounded-xl bg-dark-card border border-dark-border hover:border-gold/30 transition-all text-left group"
+                    className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-dark-card border border-dark-border hover:border-gold/30 transition-all"
                   >
-                    <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${SUPER_ADMIN_DEMO.color} flex items-center justify-center flex-shrink-0`}>
-                      <span className="text-xs font-bold text-white">{SUPER_ADMIN_DEMO.role[0]}</span>
+                    <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${r.color} flex items-center justify-center`}>
+                      <span className="text-xs font-bold text-white">{r.label[0]}</span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-off-white truncate">{SUPER_ADMIN_DEMO.role}</p>
-                    </div>
-                    <ChevronRight className="w-3 h-3 text-muted group-hover:text-gold transition-colors" />
+                    <p className="text-xs font-medium text-off-white truncate">{r.label}</p>
                   </button>
-                </div>
-              )}
-
-              {showDevLogin && (
-                <>
-                  <div className="grid grid-cols-3 gap-2">
-                    {DEV_ROLES.map(r => (
-                      <button
-                        key={r.role}
-                        onClick={() => handleDevLogin(r.role)}
-                        disabled={isLoading}
-                        className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-dark-card border border-dark-border hover:border-gold/30 transition-all"
-                      >
-                        <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${r.color} flex items-center justify-center`}>
-                          <span className="text-xs font-bold text-white">{r.label[0]}</span>
-                        </div>
-                        <p className="text-xs font-medium text-off-white truncate">{r.label}</p>
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-[11px] text-muted mt-2 text-center leading-relaxed">
-                    Masuk tanpa password sebagai akun tenant ini — khusus pengembangan.
-                  </p>
-                </>
-              )}
+                ))}
+              </div>
+              <p className="text-[11px] text-muted mt-2 text-center leading-relaxed">
+                Masuk tanpa password sebagai akun tenant ini — khusus pengembangan.
+              </p>
             </div>
           )}
         </motion.div>
