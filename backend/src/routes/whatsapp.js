@@ -9,6 +9,7 @@ const {
   getTenantStatus,
   updateTenantSettings,
   sendTestMessage,
+  resendLoggedMessage,
   getConfigPublic,
   updateConfig,
   testConfig,
@@ -241,6 +242,31 @@ router.get('/messages/stats', authenticate, requireRole('super_admin', 'tenant_a
         successRate: total ? Math.round((success / total) * 100) : 0,
       },
     });
+  } catch (err) { next(err); }
+});
+
+// POST /api/whatsapp/messages/:id/resend — kirim ulang pesan yang gagal/dilewati.
+// Body opsional { recipient } untuk mengoreksi nomor tujuan. Tenant-scoped.
+const resendSchema = z.object({
+  recipient: z.string().trim().min(3).max(32).optional(),
+});
+router.post('/messages/:id/resend', authenticate, requireRole('super_admin', 'tenant_admin'), requireWhatsappLogsFeature, async (req, res, next) => {
+  try {
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId wajib' });
+
+    const parsed = resendSchema.safeParse(req.body || {});
+    if (!parsed.success) return res.status(400).json({ success: false, error: 'Nomor tujuan tidak valid' });
+
+    const out = await resendLoggedMessage(tenantId, req.params.id, parsed.data.recipient || null);
+    if (out.code === 'not_found') return res.status(404).json({ success: false, error: 'Pesan tidak ditemukan' });
+    if (out.code === 'not_resendable') return res.status(400).json({ success: false, error: 'Hanya pesan gagal atau dilewati yang bisa dikirim ulang' });
+    if (out.code === 'no_body') return res.status(400).json({ success: false, error: 'Pesan ini tidak menyimpan isi lengkap (terkirim sebelum fitur kirim ulang aktif), jadi tidak bisa dikirim ulang' });
+    if (!out.ok) {
+      const reason = out.reason || out.result?.reason || 'gateway_error';
+      return res.status(502).json({ success: false, error: `Gagal mengirim ulang: ${reason}`, reason });
+    }
+    res.json({ success: true, data: out.result });
   } catch (err) { next(err); }
 });
 

@@ -24,7 +24,7 @@ const { formatInTz } = require('../utils/timezone');
 // Pencatatan log pesan keluar bersifat best-effort & TIDAK boleh menggagalkan
 // pengiriman. Semua operasi prisma di-bungkus try/catch dan tak pernah throw.
 // `category`: transaction_admin | transaction_customer | rating | test | system.
-async function logMessage({ tenantId, recipient, category = 'system', status, reason = null, preview = null, messageId = null }) {
+async function logMessage({ tenantId, recipient, category = 'system', status, reason = null, preview = null, messageId = null, body = null }) {
   if (!tenantId || !recipient) return;
   try {
     const row = await prisma.whatsappMessageLog.create({
@@ -36,6 +36,8 @@ async function logMessage({ tenantId, recipient, category = 'system', status, re
         messageId: messageId || null,
         reason: reason ? String(reason).slice(0, 250) : null,
         preview: preview ? String(preview).slice(0, 120) : null,
+        // Isi penuh disimpan agar pesan bisa dikirim ulang verbatim (cap 4096 char ~ batas WA).
+        body: body ? String(body).slice(0, 4096) : null,
         ...(status === 'delivered' || status === 'read' ? { deliveredAt: new Date() } : {}),
       },
     });
@@ -544,7 +546,7 @@ async function dispatchMessage(tenantId, phone, text, idempotencyKey, category =
   const to = normalizePhone(phone);
   const preview = text || '';
   if (!to) {
-    await logMessage({ tenantId, recipient: phone || '(kosong)', category, status: 'failed', reason: 'invalid_phone', preview });
+    await logMessage({ tenantId, recipient: phone || '(kosong)', category, status: 'failed', reason: 'invalid_phone', preview, body: text });
     return { sent: false, reason: 'invalid_phone' };
   }
 
@@ -556,7 +558,7 @@ async function dispatchMessage(tenantId, phone, text, idempotencyKey, category =
 
   const device = await getTenantDevice(tenantId);
   if (!device?.deviceId) {
-    await logMessage({ tenantId, recipient: to, category, status: 'failed', reason: 'not_connected', preview });
+    await logMessage({ tenantId, recipient: to, category, status: 'failed', reason: 'not_connected', preview, body: text });
     return { sent: false, reason: 'not_connected' };
   }
 
@@ -574,11 +576,30 @@ async function dispatchMessage(tenantId, phone, text, idempotencyKey, category =
     );
     const messageId = resp?.messageId || null;
     const status = resp?.status === 'failed' ? 'failed' : 'sent';
-    await logMessage({ tenantId, recipient: to, category, status, messageId, preview });
+    await logMessage({ tenantId, recipient: to, category, status, messageId, preview, body: text });
     return { sent: true, messageId, status: resp?.status || 'queued' };
   } catch (err) {
-    await logMessage({ tenantId, recipient: to, category, status: 'failed', reason: err?.message || 'gateway_error', preview });
+    await logMessage({ tenantId, recipient: to, category, status: 'failed', reason: err?.message || 'gateway_error', preview, body: text });
     throw err;
+  }
+}
+
+// Kirim ulang sebuah pesan dari log (hanya yang gagal/dilewati). Memakai isi
+// penuh yang tersimpan + idempotency key BARU agar gateway tak menganggapnya
+// duplikat. Membuat baris log baru (jejak audit utuh), tak menimpa yang lama.
+// `recipientOverride` mengizinkan koreksi nomor (mis. kasus invalid_phone).
+async function resendLoggedMessage(tenantId, logId, recipientOverride = null) {
+  const log = await prisma.whatsappMessageLog.findFirst({ where: { id: logId, tenantId } });
+  if (!log) return { ok: false, code: 'not_found' };
+  if (!['failed', 'skipped'].includes(log.status)) return { ok: false, code: 'not_resendable' };
+  if (!log.body) return { ok: false, code: 'no_body' };
+
+  const recipient = (recipientOverride && String(recipientOverride).trim()) || log.recipient;
+  try {
+    const result = await dispatchMessage(tenantId, recipient, log.body, `resend-${log.id}-${Date.now()}`, log.category);
+    return { ok: result.sent === true, result };
+  } catch (err) {
+    return { ok: false, code: 'gateway_error', reason: err?.message || 'gateway_error' };
   }
 }
 
@@ -741,6 +762,7 @@ module.exports = {
   sendTestMessage,
   sendSystemMessage,
   sendRatingLink,
+  resendLoggedMessage,
   // konfigurasi gateway (super-admin)
   getConfig,
   getConfigPublic,

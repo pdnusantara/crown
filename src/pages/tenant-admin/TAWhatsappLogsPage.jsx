@@ -2,14 +2,16 @@ import React, { useState, useMemo, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   MessageSquare, RefreshCw, Download, Search, Check, CheckCheck, Clock,
-  XCircle, AlertTriangle, Ban, ChevronLeft, ChevronRight, Info,
+  XCircle, AlertTriangle, Ban, ChevronLeft, ChevronRight, Info, Send,
 } from 'lucide-react'
-import { useWhatsappMessages, useWhatsappMessageStats } from '../../hooks/useWhatsappMessages.js'
+import { useWhatsappMessages, useWhatsappMessageStats, useResendWhatsappMessage } from '../../hooks/useWhatsappMessages.js'
 import api from '../../lib/api.js'
 import Card from '../../components/ui/Card.jsx'
 import Button from '../../components/ui/Button.jsx'
 import { Select } from '../../components/ui/Select.jsx'
+import { Modal } from '../../components/ui/Modal.jsx'
 import LiveBadge from '../../components/ui/LiveBadge.jsx'
+import { useToast } from '../../components/ui/Toast.jsx'
 import { formatDateTimeInTz } from '../../utils/timezone.js'
 
 // ── Konfigurasi tampilan ────────────────────────────────────────────────────
@@ -90,6 +92,10 @@ export default function TAWhatsappLogsPage() {
   const [to, setTo] = useState('')
   const [page, setPage] = useState(1)
   const [exporting, setExporting] = useState(false)
+  const [resendTarget, setResendTarget] = useState(null)
+  const [resendPhone, setResendPhone] = useState('')
+  const toast = useToast()
+  const resend = useResendWhatsappMessage()
 
   // Debounce kotak cari nomor.
   useEffect(() => {
@@ -122,6 +128,22 @@ export default function TAWhatsappLogsPage() {
 
   const hasFilter = !!(status || category || search || from || to)
   const resetFilters = () => { setStatus(''); setCategory(''); setSearchInput(''); setSearch(''); setFrom(''); setTo('') }
+
+  // ── Kirim ulang ───────────────────────────────────────────────────────────
+  const openResend = (m) => { setResendTarget(m); setResendPhone(m.recipient || '') }
+  const closeResend = () => { if (!resend.isPending) { setResendTarget(null); setResendPhone('') } }
+  const confirmResend = async () => {
+    if (!resendTarget) return
+    const phone = resendPhone.trim()
+    const changed = phone && phone !== resendTarget.recipient
+    try {
+      await resend.mutateAsync({ id: resendTarget.id, recipient: changed ? phone : undefined })
+      toast.success('Pesan dikirim ulang')
+      setResendTarget(null); setResendPhone('')
+    } catch (e) {
+      toast.error(e?.response?.data?.error || 'Gagal mengirim ulang pesan')
+    }
+  }
 
   const handleExport = async () => {
     setExporting(true)
@@ -279,7 +301,18 @@ export default function TAWhatsappLogsPage() {
                       </p>
                     )}
                   </div>
-                  <span className="text-[11px] text-muted whitespace-nowrap flex-shrink-0">{formatDateTimeInTz(m.createdAt)}</span>
+                  <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                    <span className="text-[11px] text-muted whitespace-nowrap">{formatDateTimeInTz(m.createdAt)}</span>
+                    {(m.status === 'failed' || m.status === 'skipped') && m.body && (
+                      <button
+                        type="button"
+                        onClick={() => openResend(m)}
+                        className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-lg border border-gold/30 text-gold hover:bg-gold/10 transition-colors"
+                      >
+                        <Send size={11} /> Kirim ulang
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -313,6 +346,44 @@ export default function TAWhatsappLogsPage() {
           </div>
         </div>
       )}
+
+      {/* Modal kirim ulang */}
+      <Modal isOpen={!!resendTarget} onClose={closeResend} title="Kirim ulang pesan" size="md">
+        {resendTarget && (
+          <div className="space-y-4">
+            <div className="flex items-start gap-2 p-3 rounded-xl border border-amber-400/20 bg-amber-400/5">
+              <Info size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-muted leading-relaxed">
+                Pesan dikirim ulang dengan isi yang sama. Pastikan WhatsApp toko <span className="text-off-white font-medium">tersambung</span> (tab WhatsApp Beta) — bila putus, pengiriman akan gagal lagi.
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-muted mb-1.5">Nomor tujuan</label>
+              <input
+                type="tel"
+                inputMode="numeric"
+                value={resendPhone}
+                onChange={(e) => setResendPhone(e.target.value)}
+                placeholder="08xxx / 62xxx"
+                className="w-full appearance-none rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-sm text-off-white placeholder-muted focus:outline-none focus:border-gold/50 font-mono"
+              />
+              <p className="text-[11px] text-muted mt-1">Bisa diubah bila nomor sebelumnya keliru.</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-muted mb-1.5">Isi pesan</label>
+              <div className="max-h-48 overflow-y-auto rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-xs text-off-white whitespace-pre-wrap leading-relaxed">
+                {resendTarget.body || resendTarget.preview}
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="secondary" size="sm" onClick={closeResend} disabled={resend.isPending}>Batal</Button>
+              <Button size="sm" icon={Send} onClick={confirmResend} disabled={resend.isPending || !resendPhone.trim()}>
+                {resend.isPending ? 'Mengirim...' : 'Kirim ulang'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

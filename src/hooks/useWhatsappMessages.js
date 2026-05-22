@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import api from '../lib/api.js'
 import { getSocket } from '../lib/socket.js'
 
@@ -35,6 +35,23 @@ export function useWhatsappMessageStats(range = {}) {
     queryFn: async () => {
       const res = await api.get('/whatsapp/messages/stats', { params: range })
       return res.data.data
+    },
+  })
+}
+
+// Kirim ulang pesan gagal/dilewati. `recipient` opsional untuk koreksi nomor.
+// Sukses akan memunculkan baris log baru via event socket `whatsapp:message`,
+// tapi kita invalidate juga supaya halaman langsung segar tanpa menunggu socket.
+export function useResendWhatsappMessage() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, recipient }) => {
+      const res = await api.post(`/whatsapp/messages/${id}/resend`, recipient ? { recipient } : {})
+      return res.data.data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['whatsappMessages'] })
+      qc.invalidateQueries({ queryKey: ['whatsappMessageStats'] })
     },
   })
 }

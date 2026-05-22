@@ -1051,6 +1051,9 @@ model WhatsappMessageLog {
   reason       String?
   // Potongan isi pesan (~120 char) untuk memudahkan penelusuran.
   preview      String?
+  // Isi pesan lengkap — dipakai untuk fitur "kirim ulang" verbatim. Null untuk
+  // baris lama (sebelum fitur ini) sehingga tak bisa di-resend.
+  body         String?   @db.Text
   deliveredAt  DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt

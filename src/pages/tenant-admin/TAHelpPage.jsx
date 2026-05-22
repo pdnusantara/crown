@@ -308,6 +308,19 @@ const CATEGORIES = [
         toLabel: 'Buka Pengaturan',
       },
       {
+        id: 's-pesan-wa-log',
+        q: 'Bagaimana memantau dan mengirim ulang notifikasi WhatsApp yang gagal?',
+        a: 'Menu Pesan WhatsApp mencatat status tiap notifikasi yang dikirim sistem (notif transaksi, link rating, dll). Pesan yang Gagal atau Dilewati bisa dikirim ulang langsung dari halaman ini.',
+        steps: [
+          'Buka menu Pesan WhatsApp untuk melihat daftar dan statusnya (Terkirim, Sampai, Dibaca, Gagal).',
+          'Saring berdasarkan status "Gagal" untuk menemukan pesan yang perlu ditindak.',
+          'Klik "Kirim ulang" pada pesan — periksa atau koreksi nomor tujuan bila keliru, lalu kirim.',
+          'Pastikan WhatsApp toko tersambung di tab WhatsApp Beta sebelum mengirim ulang, agar tidak gagal lagi.',
+        ],
+        to: '/admin/whatsapp-logs',
+        toLabel: 'Buka Pesan WhatsApp',
+      },
+      {
         id: 's-jadwal',
         q: 'Bagaimana mengatur jadwal kerja barber?',
         a: 'Menu Jadwal menentukan hari dan jam kerja tiap barber. Jadwal ini memengaruhi slot yang tersedia di halaman booking publik.',
