@@ -282,6 +282,17 @@ async function runRenewalJob() {
 
   if (expiredResult.count) log(`Marked ${expiredResult.count} as expired`);
 
+  // Realtime: kalau ada perubahan status (resume/overdue/trial-expired/expired),
+  // beri tahu dashboard super-admin & billing supaya angka langsung segar.
+  const changed = toResume.length + toOverdue.length + trialToExpire.length + expiredResult.count;
+  if (changed) {
+    try {
+      const { getIO } = require('../config/socket');
+      const io = getIO();
+      if (io) io.emit('subscription:any-updated', { source: 'cron' });
+    } catch { /* observability only */ }
+  }
+
   log('done');
   return {
     timestamp:         now.toISOString(),

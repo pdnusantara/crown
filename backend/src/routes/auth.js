@@ -163,6 +163,13 @@ router.post('/register', async (req, res, next) => {
       data: { token: refreshToken, userId: result.user.id, expiresAt: new Date(Date.now() + 7 * 86400 * 1000) },
     });
 
+    // Realtime: tenant baru lahir → dashboard super-admin langsung memunculkannya.
+    try {
+      const { getIO } = require('../config/socket');
+      const io = getIO();
+      if (io) io.emit('tenant:updated', { tenantId: result.tenant.id, source: 'register' });
+    } catch { /* observability — never block registration */ }
+
     res.status(201).json({
       success: true,
       data: {

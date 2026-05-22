@@ -558,6 +558,18 @@ router.post('/callback', async (req, res) => {
         ]);
       }
 
+      // Realtime: status langganan baru saja berubah (aktif/diperpanjang/upgrade).
+      // Super-admin tidak join tenant room → broadcast global `subscription:any-updated`
+      // supaya dashboard SA & halaman billing langsung refresh tanpa polling.
+      try {
+        const { getIO, tenantRoom } = require('../config/socket');
+        const io = getIO();
+        if (io) {
+          io.emit('subscription:any-updated', { tenantId: order.tenantId, source: 'payment' });
+          io.to(tenantRoom(order.tenantId)).emit('subscription:updated', { tenantId: order.tenantId, source: 'payment' });
+        }
+      } catch { /* observability — never block payment flow */ }
+
       // Affiliate commission tracking — kalau tenant ini direkrut affiliate aktif,
       // catat 1 commission record per invoice yg baru saja sukses. Rate diambil
       // snapshot dari Affiliate.commissionRate. Jangan menggandakan untuk invoice

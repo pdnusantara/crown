@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Cell,
@@ -9,7 +10,7 @@ import {
   Building2, DollarSign, Users, TrendingUp, AlertTriangle, Heart,
   ExternalLink, Clock, CheckCircle, XCircle, CreditCard, Plus,
   ChevronRight, Activity, MessageSquare, GitBranch, ArrowUpRight,
-  ArrowDownRight, Eye,
+  ArrowDownRight, Eye, Ban,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -19,9 +20,11 @@ import { useTenants } from '../../hooks/useTenants.js'
 import { usePackages } from '../../hooks/usePackages.js'
 import { useAuthStore } from '../../store/authStore.js'
 import { useToast } from '../../components/ui/Toast.jsx'
+import { getSocket } from '../../lib/socket.js'
 import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import Button from '../../components/ui/Button.jsx'
+import LiveBadge from '../../components/ui/LiveBadge.jsx'
 import { formatRupiah, formatRupiahShort, formatDate } from '../../utils/format.js'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -137,6 +140,23 @@ export default function SADashboard() {
   const { impersonate } = useAuthStore()
   const toast    = useToast()
   const navigate = useNavigate()
+  const qc       = useQueryClient()
+
+  // Realtime: status langganan & jumlah tenant berubah dari banyak sumber
+  // (pembayaran, cron renewal, registrasi, edit SA). useTenants sudah dengar
+  // tenant:updated/status-changed; di sini tambahkan event langganan & paket,
+  // plus polling 60s sebagai jaring pengaman bila koneksi WS sempat putus.
+  useEffect(() => {
+    const s = getSocket()
+    const refresh = () => {
+      qc.invalidateQueries({ queryKey: ['tenants'] })
+      qc.invalidateQueries({ queryKey: ['packages'] })
+    }
+    const events = ['subscription:any-updated', 'subscription:updated', 'package:updated', 'tenant:updated', 'tenant:status-changed']
+    events.forEach(e => s.on(e, refresh))
+    const iv = setInterval(refresh, 60_000)
+    return () => { events.forEach(e => s.off(e, refresh)); clearInterval(iv) }
+  }, [qc])
 
   const packageList = pkgData?.list || []
   const isLoading   = loadingTenants || loadingPkgs
@@ -145,10 +165,16 @@ export default function SADashboard() {
   const metrics = useMemo(() => {
     const thisMonthStart = startOfMonth(new Date())
 
-    const active   = tenants.filter(t => t.subscriptionStatus === 'active' && !t.isSuspended)
+    // Bucket berdasarkan status langganan — SALING EKSKLUSIF & MENYELURUH:
+    // setiap tenant masuk tepat satu bucket (active/trial/overdue/expired/noSub),
+    // sehingga active+trial+overdue+expired+noSub == total. "Suspended" adalah
+    // flag ORTOGONAL (bisa menempel di status mana pun) → dihitung terpisah,
+    // bukan bagian dari penjumlahan lifecycle.
+    const active   = tenants.filter(t => t.subscriptionStatus === 'active')
     const trial    = tenants.filter(t => t.subscriptionStatus === 'trial')
     const overdue  = tenants.filter(t => t.subscriptionStatus === 'overdue')
     const expired  = tenants.filter(t => t.subscriptionStatus === 'expired')
+    const noSub    = tenants.filter(t => !t.subscriptionStatus)
     const suspended = tenants.filter(t => t.isSuspended)
     const newThisMonth = tenants.filter(t => t.createdAt && new Date(t.createdAt) >= thisMonthStart)
 
@@ -166,6 +192,7 @@ export default function SADashboard() {
       trialCount: trial.length,
       overdueCount: overdue.length,
       expiredCount: expired.length,
+      noSubCount: noSub.length,
       suspendedCount: suspended.length,
       newThisMonth: newThisMonth.length,
       mrr, arr: mrr * 12,
@@ -240,6 +267,7 @@ export default function SADashboard() {
     { key: 'trial',   label: 'Trial',   count: metrics.trialCount,   color: SUB_COLORS.trial },
     { key: 'overdue', label: 'Overdue', count: metrics.overdueCount, color: SUB_COLORS.overdue },
     { key: 'expired', label: 'Expired', count: metrics.expiredCount, color: SUB_COLORS.expired },
+    { key: 'nosub',   label: 'Tanpa langganan', count: metrics.noSubCount, color: '#9CA3AF' },
   ].filter(s => s.count > 0), [metrics])
 
   const handleImpersonate = (tenant) => {
@@ -261,8 +289,8 @@ export default function SADashboard() {
           <div className="h-7 w-48 bg-dark-card animate-pulse rounded-lg mb-2" />
           <div className="h-4 w-72 bg-dark-card animate-pulse rounded-lg" />
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
-          {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-24 bg-dark-card animate-pulse rounded-2xl" />)}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5 sm:gap-3">
+          {Array.from({ length: 7 }).map((_, i) => <div key={i} className="h-24 bg-dark-card animate-pulse rounded-2xl" />)}
         </div>
         <div className="grid lg:grid-cols-2 gap-5 sm:gap-6">
           <div className="h-64 bg-dark-card animate-pulse rounded-2xl" />
@@ -277,7 +305,10 @@ export default function SADashboard() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white">{t('superAdmin.dashboard.title')}</h1>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white">{t('superAdmin.dashboard.title')}</h1>
+            <LiveBadge />
+          </div>
           <p className="text-muted text-xs sm:text-sm mt-0.5 sm:mt-1">{t('superAdmin.dashboard.subtitle')}</p>
         </div>
         <div className="grid grid-cols-3 gap-2 sm:flex sm:gap-6">
@@ -300,13 +331,32 @@ export default function SADashboard() {
       </div>
 
       {/* KPI Row */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
-        <KpiCard label="Total Tenant"   value={metrics.total}        icon={Building2}    iconColor="text-off-white" delta={metrics.newThisMonth} delay={0}    onClick={() => navigate('/super-admin/tenants')} />
-        <KpiCard label="MRR"            value={formatRupiah(metrics.mrr)}  valueShort={formatRupiahShort(metrics.mrr)} icon={DollarSign}   iconColor="text-gold"    sub={`${formatRupiahShort(metrics.arr)}/tahun`} delay={0.04} />
-        <KpiCard label="Sub Aktif"      value={metrics.activeCount}   icon={CheckCircle}  iconColor="text-green-400" delay={0.08} onClick={() => navigate('/super-admin/billing')} />
-        <KpiCard label="Trial"          value={metrics.trialCount}    icon={Clock}        iconColor="text-blue-400"  delay={0.12} onClick={() => navigate('/super-admin/billing')} />
-        <KpiCard label="Overdue"        value={metrics.overdueCount}  icon={AlertTriangle} iconColor="text-amber-400" delay={0.16} onClick={() => navigate('/super-admin/billing')} />
-        <KpiCard label="Suspended"      value={metrics.suspendedCount} icon={XCircle}     iconColor="text-red-400"   delay={0.2}  onClick={() => navigate('/super-admin/tenants')} />
+      <div>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5 sm:gap-3">
+          <KpiCard label="Total Tenant"   value={metrics.total}        icon={Building2}    iconColor="text-off-white" delta={metrics.newThisMonth} delay={0}    onClick={() => navigate('/super-admin/tenants')} />
+          <KpiCard label="MRR"            value={formatRupiah(metrics.mrr)}  valueShort={formatRupiahShort(metrics.mrr)} icon={DollarSign}   iconColor="text-gold"    sub={`${formatRupiahShort(metrics.arr)}/tahun`} delay={0.04} />
+          <KpiCard label="Sub Aktif"      value={metrics.activeCount}   icon={CheckCircle}  iconColor="text-green-400" delay={0.08} onClick={() => navigate('/super-admin/billing')} />
+          <KpiCard label="Trial"          value={metrics.trialCount}    icon={Clock}        iconColor="text-blue-400"  delay={0.12} onClick={() => navigate('/super-admin/billing')} />
+          <KpiCard label="Overdue"        value={metrics.overdueCount}  icon={AlertTriangle} iconColor="text-amber-400" delay={0.16} onClick={() => navigate('/super-admin/billing')} />
+          <KpiCard label="Expired"        value={metrics.expiredCount}  icon={Ban}          iconColor="text-muted"     delay={0.2}  onClick={() => navigate('/super-admin/billing')} />
+          <KpiCard label="Suspended"      value={metrics.suspendedCount} icon={XCircle}     iconColor="text-red-400"   delay={0.24} onClick={() => navigate('/super-admin/tenants')} />
+        </div>
+        {/* Rekonsiliasi — biar jelas "tenant ke sekian ke mana": lifecycle menjumlah ke total. */}
+        {metrics.total > 0 && (
+          <p className="text-[11px] text-muted mt-2">
+            {metrics.total} tenant ={' '}
+            {[
+              metrics.activeCount  && `${metrics.activeCount} aktif`,
+              metrics.trialCount   && `${metrics.trialCount} trial`,
+              metrics.overdueCount && `${metrics.overdueCount} overdue`,
+              metrics.expiredCount && `${metrics.expiredCount} expired`,
+              metrics.noSubCount   && `${metrics.noSubCount} tanpa langganan`,
+            ].filter(Boolean).join(' · ') || '—'}
+            {metrics.suspendedCount > 0 && (
+              <span className="text-red-400"> · {metrics.suspendedCount} di-suspend (lintas-status)</span>
+            )}
+          </p>
+        )}
       </div>
 
       {/* Churn Risk Panel */}
@@ -533,14 +583,18 @@ export default function SADashboard() {
                   </div>
                 )
               })}
-              {metrics.suspendedCount > 0 && (
-                <div className="pt-2 border-t border-dark-border/40">
+              <div className="pt-2 border-t border-dark-border/40 space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted">Total tenant</span>
+                  <span className="font-semibold text-off-white tabular-nums">{metrics.total}</span>
+                </div>
+                {metrics.suspendedCount > 0 && (
                   <div className="flex items-center gap-2 text-xs text-red-400">
                     <XCircle size={12} />
-                    {metrics.suspendedCount} tenant di-suspend
+                    {metrics.suspendedCount} di-suspend (status independen, bisa menempel di mana saja)
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </CardBody>
           </Card>
         </motion.div>
