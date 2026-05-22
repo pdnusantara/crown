@@ -15,10 +15,10 @@ import { usePosStore } from '../../store/posStore.js'
 import { useUpdateQueueStatus } from '../../hooks/useQueue.js'
 import { useBranches } from '../../hooks/useBranches.js'
 import { usePublicTenantStore } from '../../store/publicTenantStore.js'
-import { useValidateVoucher, useRedeemVoucher } from '../../hooks/useVouchers.js'
+import { useValidateVoucher } from '../../hooks/useVouchers.js'
 import { useIsFeatureEnabled } from '../../hooks/useFeatureFlags.js'
 import { getBranchSlug } from '../../utils/branchSlug.js'
-import { MIN_REDEEM_POINTS, MAX_REDEEM_PERCENT, RUPIAH_PER_POINT, maxRedeemablePoints, calcRedeemValue } from '../../utils/loyalty.js'
+import { MIN_REDEEM_POINTS, MAX_REDEEM_PERCENT, RUPIAH_PER_POINT, maxRedeemablePoints, calcRedeemValue, validateRedeem } from '../../utils/loyalty.js'
 import { formatDateTimeInTz, formatInTenantTz } from '../../utils/timezone.js'
 import { useShiftStore } from '../../store/shiftStore.js'
 import { useActiveShift } from '../../hooks/useShifts.js'
@@ -398,7 +398,6 @@ function POSPageInner() {
   const { user } = useAuthStore()
   const posStore = usePosStore()
   const validateVoucherMut = useValidateVoucher()
-  const redeemVoucherMut   = useRedeemVoucher()
   const { currentShift, addTransaction: addShiftTransaction } = useShiftStore()
   const { data: apiActiveShift, isLoading: shiftLoading } = useActiveShift(user?.branchId)
   const {
@@ -606,7 +605,17 @@ function POSPageInner() {
   }, [posStore, t, toast])
 
   const handleApplyDiscount = () => {
-    posStore.setDiscount(discountInput.type, Number(discountInput.value))
+    const raw = Number(discountInput.value)
+    if (!Number.isFinite(raw) || raw < 0) {
+      return toast.error('Nilai diskon tidak valid')
+    }
+    const subtotal = posStore.getSubtotal()
+    // Clamp: persentase 0–100, nominal 0–subtotal.
+    const value = discountInput.type === 'percentage'
+      ? Math.min(100, Math.round(raw))
+      : Math.min(Math.round(raw), subtotal)
+    posStore.setDiscount(discountInput.type, value)
+    setDiscountInput(prev => ({ ...prev, value: String(value) }))
     toast.success(t('pos.discountApplied'))
   }
 
@@ -618,6 +627,9 @@ function POSPageInner() {
       const v = result.voucher
       setAppliedVoucher(v)
       setPendingVoucherId(v.id)
+      // Simpan kode ke store → ikut terkirim di payload transaksi supaya backend
+      // yang menaikkan usedCount (atomik) & membalikkannya saat refund.
+      posStore.setVoucherCode(v.code)
       if (v.type === 'percentage') posStore.setDiscount('percentage', v.value)
       else                          posStore.setDiscount('flat', v.value)
       toast.success(t('pos.voucherAppliedSuccess', {
@@ -643,6 +655,13 @@ function POSPageInner() {
       setShowPayModal(false)
       return toast.error('Pilih pelanggan terlebih dahulu')
     }
+    // Validasi tukar poin SEBELUM bayar — kalau di bawah minimum/over-cap, backend
+    // akan menolak (400) setelah uang diterima. Blokir di sini supaya tak terjadi.
+    const redeemErr = posStore.getRedeemError()
+    if (redeemErr) {
+      setShowPayModal(false)
+      return toast.error(redeemErr)
+    }
     if (posStore.paymentMethod === 'cash' && posStore.cashReceived < posStore.getTotal()) {
       return toast.error(t('pos.cashNotEnough'))
     }
@@ -657,10 +676,9 @@ function POSPageInner() {
         { queueId: queueId || null },
       )
 
-      if (pendingVoucherId) {
-        try { await redeemVoucherMut.mutateAsync(pendingVoucherId) } catch { /* non-fatal */ }
-        setPendingVoucherId(null)
-      }
+      // usedCount voucher dinaikkan backend (lewat voucherCode di payload), bukan
+      // dari klien → tak ada hitung ganda & otomatis balik saat refund.
+      setPendingVoucherId(null)
       if (currentShift && txn) addShiftTransaction(txn)
       if (queueId) {
         updateQueueStatus.mutate({ id: queueId, branchId: user.branchId, status: 'paid' })
@@ -685,6 +703,11 @@ function POSPageInner() {
     posStore.clearCart()
     setShowReceiptModal(false)
     setDiscountInput({ type: 'percentage', value: '' })
+    // Bersihkan state voucher React supaya tak bocor ke transaksi berikutnya
+    // (mis. setelah pembayaran sebelumnya gagal lalu mulai transaksi baru).
+    setAppliedVoucher(null)
+    setVoucherCode('')
+    setPendingVoucherId(null)
     if (queueId) navigate(`/${getBranchSlug(user)}/kasir/queue`)
   }
 
@@ -995,6 +1018,7 @@ function POSPageInner() {
             const cap      = maxRedeemablePoints({ balance, subtotal })
             const current  = posStore.pointsToRedeem || 0
             const discount = calcRedeemValue(current)
+            const redeemErr = validateRedeem({ points: current, balance, subtotal })
             return (
               <div className="space-y-2">
                 <div className="flex gap-2 items-center flex-wrap">
@@ -1044,6 +1068,9 @@ function POSPageInner() {
                     </button>
                   ))}
                 </div>
+                {redeemErr && (
+                  <p className="text-[11px] text-red-400 px-1">{redeemErr}</p>
+                )}
                 {current > 0 ? (
                   <div className="flex justify-between items-center text-[11px] px-2 py-1.5 rounded-md bg-emerald-500/10 border border-emerald-500/30">
                     <span className="text-emerald-300">

@@ -255,7 +255,6 @@ function ShiftClosingPageInner() {
   const openingCash       = shift?.openingCash ?? activeShift?.openingCash ?? 0
   const expectedCash      = (openingCash || 0) + (totalCash || 0)
   const closingCashNum    = parseInt(closingCash || '0', 10) || 0
-  const variance          = closingCash !== '' ? closingCashNum - expectedCash : null
   const avgPerTx          = totalTransactions > 0 ? Math.round(totalRevenue / totalTransactions) : 0
 
   const paymentRows = useMemo(() => {
@@ -270,7 +269,11 @@ function ShiftClosingPageInner() {
 
   const topServices  = summary?.topServices  || []
   const barberRows   = summary?.barberSummary || []
-  const summaryReady = !!summary
+  // summary gagal/belum dimuat → totalCash fallback ke 0, jadi "Kas Diharapkan"
+  // & selisih TIDAK valid. Jangan hitung selisih dan jangan izinkan tutup shift
+  // sampai ringkasan benar-benar siap.
+  const summaryReady = !!summary && !summaryError
+  const variance     = (summaryReady && closingCash !== '') ? closingCashNum - expectedCash : null
 
   // ── actions ──────────────────────────────────────────────────────────────
   const handleClose = async () => {
@@ -686,6 +689,8 @@ function ShiftClosingPageInner() {
           <Button
             icon={LogOut}
             onClick={() => setShowConfirm(true)}
+            disabled={!summaryReady}
+            title={!summaryReady ? 'Menunggu ringkasan shift termuat' : undefined}
             className="bg-red-600 hover:bg-red-500 text-white border-0"
           >
             Tutup Shift

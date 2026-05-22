@@ -368,12 +368,24 @@ export default function QueuePage() {
     const targetColumnId = COLUMNS.find(c => c.id === over.id)?.id
       || branchQueue.find(q => q.id === over.id)?.status
 
-    if (targetColumnId && active.id !== over.id) {
-      const draggedItem = branchQueue.find(q => q.id === active.id)
-      if (draggedItem && draggedItem.status !== targetColumnId) {
-        advanceTo(draggedItem, targetColumnId)
-      }
+    if (!targetColumnId || active.id === over.id) return
+    const draggedItem = branchQueue.find(q => q.id === active.id)
+    if (!draggedItem || draggedItem.status === targetColumnId) return
+
+    // Hanya boleh MAJU satu langkah berurutan (menunggu→dilayani→selesai→bayar).
+    // Lompatan/mundur ditolak agar tiket tak bisa ditandai "Sudah Bayar" tanpa
+    // melewati kasir (tanpa transaksi/struk/omzet).
+    if (targetColumnId !== STATUS_NEXT[draggedItem.status]) {
+      toast.error('Pindahkan antrian satu langkah berurutan')
+      return
     }
+    // "Selesai → Sudah Bayar" WAJIB lewat POS supaya transaksi tercatat.
+    if (targetColumnId === 'paid') {
+      usePosStore.getState().loadFromQueue(draggedItem, services)
+      navigate(`/${getBranchSlug(user)}/kasir/pos?queueId=${draggedItem.id}`)
+      return
+    }
+    advanceTo(draggedItem, targetColumnId)
   }
 
   const counts = useMemo(() => ({

@@ -127,7 +127,12 @@ export const usePosStore = create(
 
       setSelectedCustomer: (customer) => set({ selectedCustomer: customer, pointsToRedeem: 0 }),
 
-      setDiscount: (type, value) => set({ discountType: type, discountValue: value }),
+      // Clamp di sumber: persentase 0–100, nominal ≥0. Cegah nilai >100% (atau
+      // negatif) tersimpan & terkirim ke backend → laporan/struk tak ngawur.
+      setDiscount: (type, value) => {
+        const v = Math.max(0, Math.floor(Number(value) || 0))
+        set({ discountType: type, discountValue: type === 'percentage' ? Math.min(100, v) : v })
+      },
 
       setVoucherCode: (code) => set({ voucherCode: code }),
 
@@ -219,6 +224,9 @@ export const usePosStore = create(
           discountType: state.discountType,
           discountValue: state.discountValue,
           discountAmount: state.getDiscountAmount(),
+          // Backend yang validasi + naikkan usedCount voucher (atomik) & balikkan
+          // saat refund. JANGAN naikkan dari klien lagi → cegah hitung ganda.
+          voucherCode: state.voucherCode || null,
           pointsRedeemed: state.pointsToRedeem || 0,
           tax: state.getTax(),
           total: state.getTotal(),

@@ -211,6 +211,17 @@ const updateQueueHandler = async (req, res, next) => {
     }
 
     const body = updateQueueSchema.parse(req.body);
+
+    // Defense-in-depth: status 'paid' hanya boleh dari 'done' (alur lewat POS yg
+    // membuat transaksi). Cegah tiket ditandai lunas tanpa transaksi/omzet
+    // (mis. drag langsung ke kolom "Sudah Bayar"). 'paid'→'paid' diizinkan (idempoten).
+    if (body.status === 'paid' && !['done', 'paid'].includes(existing.status)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Antrian harus berstatus "selesai" sebelum ditandai sudah bayar',
+      });
+    }
+
     const queue = await prisma.queue.update({
       where: { id: req.params.id },
       data: body,
