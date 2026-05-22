@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   CreditCard, TrendingUp, AlertTriangle, CheckCircle, RefreshCw,
   ChevronDown, Receipt, ToggleLeft, ToggleRight, Clock, Filter, CheckSquare,
-  Search, Plus, UserX, ExternalLink, Pause, Play, Download,
+  Search, Plus, UserX, ExternalLink, Pause, Play, Download, XCircle,
 } from 'lucide-react'
 import { differenceInDays, addDays } from 'date-fns'
 import { useTenants } from '../../hooks/useTenants.js'
@@ -15,9 +16,11 @@ import {
 } from '../../hooks/useSubscription.js'
 import { usePackages } from '../../hooks/usePackages.js'
 import { useCreatePaymentOrder, usePaymentSettings } from '../../hooks/usePayment.js'
+import { getSocket } from '../../lib/socket.js'
 import api from '../../lib/api.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import Card, { CardHeader } from '../../components/ui/Card.jsx'
+import LiveBadge from '../../components/ui/LiveBadge.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Modal from '../../components/ui/Modal.jsx'
@@ -72,6 +75,23 @@ export default function SABillingPage() {
   const resumeSub        = useResumeSubscription()
   const { data: paySettings } = usePaymentSettings()
   const toast            = useToast()
+  const qc               = useQueryClient()
+
+  // Realtime: useSubscriptions sudah dengar subscription:any-updated. Di sini
+  // tambahkan invalidasi tenants/packages (dipakai utk nama tenant & "tanpa
+  // subscription") + polling 60s sbg jaring pengaman bila WS sempat putus.
+  useEffect(() => {
+    const s = getSocket()
+    const refresh = () => {
+      qc.invalidateQueries({ queryKey: ['subscriptions'] })
+      qc.invalidateQueries({ queryKey: ['tenants'] })
+      qc.invalidateQueries({ queryKey: ['packages'] })
+    }
+    const events = ['subscription:any-updated', 'subscription:updated', 'tenant:updated', 'tenant:status-changed', 'package:updated']
+    events.forEach(e => s.on(e, refresh))
+    const iv = setInterval(refresh, 60_000)
+    return () => { events.forEach(e => s.off(e, refresh)); clearInterval(iv) }
+  }, [qc])
 
   const [upgradeModal, setUpgradeModal] = useState(null)
   const [invoiceModal, setInvoiceModal] = useState(null)
@@ -96,6 +116,7 @@ export default function SABillingPage() {
   const activeCount  = subscriptions.filter(s => s.status === 'active').length
   const trialCount   = subscriptions.filter(s => s.status === 'trial').length
   const pausedCount  = subscriptions.filter(s => s.status === 'paused').length
+  const expiredCount = subscriptions.filter(s => s.status === 'expired').length
 
   // Tenants that have no subscription yet
   const tenantsWithoutSub = useMemo(() => {
@@ -346,7 +367,10 @@ export default function SABillingPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl font-display font-bold gold-text">{t('superAdmin.billing.pageTitle')}</h1>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h1 className="text-2xl font-display font-bold gold-text">{t('superAdmin.billing.pageTitle')}</h1>
+            <LiveBadge />
+          </div>
           <p className="text-muted text-sm mt-1">{t('superAdmin.billing.pageSubtitle')}</p>
         </div>
         {!isLoading && (
@@ -426,8 +450,8 @@ export default function SABillingPage() {
 
       {!isLoading && (
         <>
-          {/* KPI Row — 6 cards (incl. paused) */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          {/* KPI Row — 7 cards (incl. paused & expired) */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
             {[
               { label: t('superAdmin.billing.kpiMrr'),     value: formatRupiah(mrr),  icon: TrendingUp,    color: 'text-gold',        sub: t('superAdmin.billing.kpiMrrSub') },
               { label: t('superAdmin.billing.kpiArr'),     value: formatRupiah(arr),  icon: TrendingUp,    color: 'text-green-400',   sub: t('superAdmin.billing.kpiArrSub') },
@@ -435,6 +459,7 @@ export default function SABillingPage() {
               { label: 'Trial',                            value: trialCount,         icon: Clock,         color: 'text-amber-400',   sub: 'Masa percobaan' },
               { label: 'Paused',                           value: pausedCount,        icon: Pause,         color: 'text-blue-400',    sub: 'Sementara nonaktif' },
               { label: t('superAdmin.billing.kpiOverdue'), value: overdueCount,       icon: AlertTriangle, color: 'text-red-400',     sub: t('superAdmin.billing.kpiOverdueSub') },
+              { label: 'Expired',                          value: expiredCount,       icon: XCircle,       color: 'text-muted',       sub: 'Langganan berakhir' },
             ].map((kpi, i) => (
               <motion.div key={kpi.label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
                 <Card className="p-4">
