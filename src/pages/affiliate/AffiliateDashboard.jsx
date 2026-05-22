@@ -117,7 +117,7 @@ export default function AffiliateDashboard() {
       {/* Hero — referral link */}
       {me && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="p-5 border-gold/30 bg-gradient-to-br from-gold/10 via-dark-card to-dark-card">
+          <Card className="p-5 border-gold/30 bg-gradient-to-br from-gold/10 to-transparent">
             <div className="flex items-center gap-2 mb-3">
               <Sparkles size={14} className="text-gold" />
               <p className="text-xs text-gold uppercase tracking-wide font-semibold">Link rujukan Anda</p>
@@ -186,7 +186,7 @@ export default function AffiliateDashboard() {
 
       {/* Chart */}
       <Card className="p-5">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
           <div>
             <p className="font-semibold text-off-white">Tren 30 hari terakhir</p>
             <p className="text-xs text-muted">Komisi & rujukan harian</p>
@@ -329,7 +329,7 @@ function Sparkline({ data, max }) {
   if (!data?.length) return <div className="h-48 flex items-center justify-center text-muted text-sm">Belum ada aktivitas</div>
   const refMax = Math.max(1, ...data.map(d => d.referrals))
   return (
-    <div className="grid grid-cols-30 gap-1 items-end h-48 px-1" style={{ gridTemplateColumns: `repeat(${data.length}, minmax(0, 1fr))` }}>
+    <div className="grid grid-cols-30 gap-0.5 sm:gap-1 items-end h-48 px-1" style={{ gridTemplateColumns: `repeat(${data.length}, minmax(0, 1fr))` }}>
       {data.map((d, i) => (
         <div key={d.date} className="flex flex-col gap-0.5 items-center group relative" title={`${d.date} — Komisi ${d.commission.toLocaleString('id-ID')}, ${d.referrals} rujukan`}>
           <div className="flex-1 w-full flex flex-col-reverse gap-0.5">
