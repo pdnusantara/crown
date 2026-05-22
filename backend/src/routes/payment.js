@@ -567,7 +567,9 @@ router.post('/callback', async (req, res) => {
           where: { tenantId: order.tenantId },
           include: { affiliate: true },
         });
-        if (referral && referral.affiliate && referral.affiliate.status === 'active') {
+        // referral.status harus 'active' — klaim manual 'pending'/'rejected'
+        // TIDAK menghasilkan komisi sampai disetujui super-admin.
+        if (referral && referral.status === 'active' && referral.affiliate && referral.affiliate.status === 'active') {
           // Cari invoice yang baru saja sukses untuk order ini (paid + paidAt > 1 min lalu).
           const invoice = await prisma.invoice.findFirst({
             where: { subscriptionId: order.subscriptionId, status: 'paid' },

@@ -7,6 +7,8 @@
 //   GET   /api/affiliate/commissions     — semua commission record (filter status)
 //   GET   /api/affiliate/payouts         — riwayat payout
 //   POST  /api/affiliate/payouts         — ajukan payout (klaim semua approved commission)
+//   POST  /api/affiliate/referrals/claim — klaim manual tenant yg daftar tanpa link (status=pending)
+//   DELETE /api/affiliate/referrals/:id  — batalkan klaim manual sendiri yg masih pending
 
 const router = require('express').Router();
 const { z } = require('zod');
@@ -313,6 +315,108 @@ router.post('/payouts', async (req, res, next) => {
     if (err instanceof z.ZodError) return res.status(400).json({ success: false, error: err.errors[0]?.message });
     next(err);
   }
+});
+
+// ── Klaim manual rujukan ────────────────────────────────────────────────────
+// Affiliate mengajukan klaim atas tenant yang sudah daftar TANPA memakai link
+// rujukannya. Klaim dibuat berstatus 'pending' dan TIDAK menghasilkan komisi
+// sampai super-admin menyetujui — mencegah affiliate mengklaim sembarang tenant.
+
+const claimSchema = z.object({
+  // Subdomain tenant (slug). Boleh menerima URL lengkap; kita ekstrak slug-nya.
+  subdomain: z.string().min(2).max(120),
+  note:      z.string().max(500).optional(),
+});
+
+// "budi.sembapos.com" / "https://budi.sembapos.com/.." / "Budi" → "budi"
+function normalizeSlug(raw) {
+  let s = String(raw).trim().toLowerCase();
+  s = s.replace(/^https?:\/\//, '').split('/')[0]; // buang protokol & path
+  s = s.split('.')[0];                              // ambil subdomain pertama
+  return s.replace(/[^a-z0-9-]/g, '');
+}
+
+router.post('/referrals/claim', async (req, res, next) => {
+  try {
+    const aff = req.affiliate;
+    if (aff.status !== 'active') {
+      return res.status(403).json({ success: false, error: 'Akun affiliate Anda belum aktif.' });
+    }
+    const body = claimSchema.parse(req.body);
+    const slug = normalizeSlug(body.subdomain);
+    if (slug.length < 2) {
+      return res.status(400).json({ success: false, error: 'Subdomain tenant tidak valid.' });
+    }
+
+    const tenant = await prisma.tenant.findUnique({
+      where: { slug },
+      select: { id: true, name: true, slug: true, deletedAt: true },
+    });
+    if (!tenant || tenant.deletedAt) {
+      return res.status(404).json({ success: false, error: `Tenant "${slug}" tidak ditemukan.` });
+    }
+
+    // Tenant hanya boleh tertaut ke SATU affiliate (tenantId unik).
+    const existing = await prisma.affiliateReferral.findUnique({
+      where: { tenantId: tenant.id },
+      select: { affiliateId: true, status: true },
+    });
+    if (existing) {
+      if (existing.affiliateId === aff.id) {
+        const label = existing.status === 'pending' ? 'sedang Anda klaim (menunggu persetujuan)'
+          : existing.status === 'rejected' ? 'pernah Anda klaim namun ditolak admin'
+          : 'sudah menjadi rujukan Anda';
+        return res.status(409).json({ success: false, error: `Tenant ini ${label}.` });
+      }
+      return res.status(409).json({ success: false, error: 'Tenant ini sudah tertaut ke affiliate lain.' });
+    }
+
+    const created = await prisma.affiliateReferral.create({
+      data: {
+        affiliateId:  aff.id,
+        tenantId:     tenant.id,
+        referralCode: aff.referralCode,
+        status:       'pending',
+        source:       'manual',
+        claimNote:    body.note?.trim() || null,
+      },
+      include: {
+        tenant: { select: { id: true, name: true, slug: true } },
+      },
+    });
+
+    await recordAudit(req, {
+      action: 'affiliate.claim_request',
+      target: `referral:${created.id}`,
+      detail: `${aff.referralCode} klaim tenant ${tenant.slug} (pending)`,
+      severity: 'info',
+      actorId: req.user.id,
+      actorName: req.user.name,
+    });
+    emitSA('affiliate:claim_requested', { affiliateId: aff.id, referralId: created.id });
+
+    res.status(201).json({ success: true, data: created });
+  } catch (err) {
+    if (err instanceof z.ZodError) return res.status(400).json({ success: false, error: err.errors[0]?.message });
+    if (err?.code === 'P2002') return res.status(409).json({ success: false, error: 'Tenant ini sudah tertaut affiliate.' });
+    next(err);
+  }
+});
+
+router.delete('/referrals/:id', async (req, res, next) => {
+  try {
+    const ref = await prisma.affiliateReferral.findUnique({ where: { id: req.params.id } });
+    if (!ref || ref.affiliateId !== req.affiliate.id) {
+      return res.status(404).json({ success: false, error: 'Klaim tidak ditemukan.' });
+    }
+    // Hanya klaim manual yang masih menunggu / ditolak yang boleh ditarik.
+    // Rujukan 'active'/'churned' (komisi nyata) tidak boleh dihapus affiliate.
+    if (!(ref.source === 'manual' && (ref.status === 'pending' || ref.status === 'rejected'))) {
+      return res.status(400).json({ success: false, error: 'Hanya klaim yang menunggu/ditolak yang bisa dibatalkan.' });
+    }
+    await prisma.affiliateReferral.delete({ where: { id: ref.id } });
+    res.json({ success: true, data: { id: ref.id } });
+  } catch (err) { next(err); }
 });
 
 module.exports = router;

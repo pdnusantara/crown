@@ -944,8 +944,19 @@ model AffiliateReferral {
   // Snapshot kode rujukan yang dipakai saat tenant daftar — supaya histori
   // tetap valid bila affiliate kelak ganti kode.
   referralCode String
-  // 'active'  — masih membayar; 'churned' — langganan habis & tidak diperpanjang
+  // 'active'  — masih membayar & komisi berjalan; 'churned' — langganan habis;
+  // 'pending' — klaim manual menunggu persetujuan super-admin (KOMISI BELUM
+  // jalan sampai disetujui); 'rejected' — klaim manual ditolak admin.
   status       String     @default("active")
+  // Asal rujukan: 'link' (otomatis dari ?ref= saat tenant daftar) atau
+  // 'manual' (affiliate mengklaim tenant yang sudah daftar tanpa link-nya).
+  source       String     @default("link")
+  // Alasan/keterangan affiliate saat mengajukan klaim manual.
+  claimNote    String?
+  // Catatan super-admin saat menyetujui/menolak klaim manual.
+  reviewNote   String?
+  reviewedAt   DateTime?
+  reviewedById String?
   // Cache jumlah komisi yang sudah dihasilkan tenant ini — dipakai per-baris
   // di tabel referrals dashboard tanpa N+1.
   totalCommission Int     @default(0)

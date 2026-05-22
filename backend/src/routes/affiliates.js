@@ -16,6 +16,9 @@
 //   POST   /api/affiliates/payouts/:pid/reject  — super-admin: tolak payout
 //   POST   /api/affiliates/commissions/:cid/approve — set commission jadi 'approved'
 //   POST   /api/affiliates/commissions/:cid/void    — batalkan commission (refund/fraud)
+//   GET    /api/affiliates/claims         — antrean klaim manual (default status=pending)
+//   POST   /api/affiliates/referrals/:rid/approve-claim — setujui klaim → status=active
+//   POST   /api/affiliates/referrals/:rid/reject-claim  — tolak klaim → status=rejected
 
 const router = require('express').Router();
 const bcrypt = require('bcryptjs');
@@ -125,7 +128,7 @@ router.get('/', authenticate, requireRole('super_admin'), async (req, res, next)
 
 router.get('/stats', authenticate, requireRole('super_admin'), async (req, res, next) => {
   try {
-    const [total, active, pending, suspended, totalReferrals, totalCommissionAgg, paidCommissionAgg, pendingPayouts] = await Promise.all([
+    const [total, active, pending, suspended, totalReferrals, totalCommissionAgg, paidCommissionAgg, pendingPayouts, pendingClaims] = await Promise.all([
       prisma.affiliate.count(),
       prisma.affiliate.count({ where: { status: 'active' } }),
       prisma.affiliate.count({ where: { status: 'pending' } }),
@@ -134,6 +137,7 @@ router.get('/stats', authenticate, requireRole('super_admin'), async (req, res, 
       prisma.affiliateCommission.aggregate({ _sum: { amount: true }, where: { status: { in: ['approved', 'paid'] } } }),
       prisma.affiliateCommission.aggregate({ _sum: { amount: true }, where: { status: 'paid' } }),
       prisma.affiliatePayout.aggregate({ _sum: { amount: true }, _count: true, where: { status: { in: ['requested', 'processing'] } } }),
+      prisma.affiliateReferral.count({ where: { source: 'manual', status: 'pending' } }),
     ]);
     res.json({
       success: true,
@@ -144,10 +148,66 @@ router.get('/stats', authenticate, requireRole('super_admin'), async (req, res, 
         paidCommission:  paidCommissionAgg._sum.amount || 0,
         owedCommission:  (totalCommissionAgg._sum.amount || 0) - (paidCommissionAgg._sum.amount || 0),
         pendingPayouts:  { amount: pendingPayouts._sum.amount || 0, count: pendingPayouts._count || 0 },
+        pendingClaims,
       },
     });
   } catch (err) { next(err); }
 });
+
+// ── Klaim manual: antrean & review ──────────────────────────────────────────
+// Didaftarkan SEBELUM route GET '/:id' supaya '/claims' tidak tertangkap sebagai id.
+
+router.get('/claims', authenticate, requireRole('super_admin'), async (req, res, next) => {
+  try {
+    const status = req.query.status && req.query.status !== 'all' ? String(req.query.status) : 'pending';
+    const data = await prisma.affiliateReferral.findMany({
+      where: { source: 'manual', status },
+      orderBy: { createdAt: 'asc' }, // antrean: tertua dulu
+      take: 200,
+      include: {
+        tenant:    { select: { id: true, name: true, slug: true, createdAt: true, isSuspended: true,
+          subscription: { select: { package: true, status: true } } } },
+        affiliate: { select: { id: true, referralCode: true, commissionRate: true, status: true,
+          user: { select: { name: true, email: true } } } },
+      },
+    });
+    res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
+
+async function reviewClaim(req, res, next, decision) {
+  try {
+    const ref = await prisma.affiliateReferral.findUnique({
+      where: { id: req.params.rid },
+      include: { affiliate: { select: { userId: true, referralCode: true } }, tenant: { select: { slug: true } } },
+    });
+    if (!ref) return res.status(404).json({ success: false, error: 'Klaim tidak ditemukan' });
+    if (ref.source !== 'manual' || ref.status !== 'pending') {
+      return res.status(400).json({ success: false, error: 'Klaim tidak dalam status menunggu.' });
+    }
+    const note = String(req.body?.note || '').slice(0, 500) || null;
+    const newStatus = decision === 'approve' ? 'active' : 'rejected';
+
+    const updated = await prisma.affiliateReferral.update({
+      where: { id: ref.id },
+      data: { status: newStatus, reviewNote: note, reviewedAt: new Date(), reviewedById: req.user.id },
+      include: { tenant: { select: { id: true, name: true, slug: true } } },
+    });
+
+    await recordAudit(req, {
+      action: `affiliate.claim_${decision}`,
+      target: `referral:${ref.id}`,
+      detail: `${ref.affiliate.referralCode} klaim tenant ${ref.tenant?.slug} → ${newStatus}${note ? ` (${note})` : ''}`,
+      severity: decision === 'approve' ? 'success' : 'warning',
+    });
+    emit('affiliate:referral_updated', { affiliateId: ref.affiliateId, referralId: ref.id });
+    emitToAffiliate(ref.affiliate.userId, 'affiliate:referral_updated', { referralId: ref.id, status: newStatus });
+    res.json({ success: true, data: updated });
+  } catch (err) { next(err); }
+}
+
+router.post('/referrals/:rid/approve-claim', authenticate, requireRole('super_admin'), (req, res, next) => reviewClaim(req, res, next, 'approve'));
+router.post('/referrals/:rid/reject-claim',  authenticate, requireRole('super_admin'), (req, res, next) => reviewClaim(req, res, next, 'reject'));
 
 // ── Create ────────────────────────────────────────────────────────────────
 

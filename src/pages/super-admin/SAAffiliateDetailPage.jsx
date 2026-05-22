@@ -10,7 +10,7 @@ import {
   useAffiliate, useAffiliateReferrals, useAffiliateCommissions, useAffiliatePayouts,
   useUpdateAffiliate, useApproveAffiliate, useSuspendAffiliate, useReactivateAffiliate,
   useResetAffiliatePassword, useApproveCommission, useVoidCommission,
-  useProcessPayout, useRejectPayout,
+  useProcessPayout, useRejectPayout, useApproveClaim, useRejectClaim,
 } from '../../hooks/useAffiliates.js'
 import Card from '../../components/ui/Card.jsx'
 import Button from '../../components/ui/Button.jsx'
@@ -231,44 +231,114 @@ export default function SAAffiliateDetailPage() {
 }
 
 // ── Referrals tab ─────────────────────────────────────────────────────────
+function refStatusBadge(s) {
+  if (s === 'active')   return <Badge variant="success" dot>Aktif</Badge>
+  if (s === 'pending')  return <Badge variant="warning" dot>Klaim menunggu</Badge>
+  if (s === 'rejected') return <Badge variant="danger">Ditolak</Badge>
+  if (s === 'churned')  return <Badge variant="muted">Berhenti</Badge>
+  return <Badge variant="muted">{s || '—'}</Badge>
+}
+
 function ReferralsTab({ id }) {
+  const toast = useToast()
   const { data = [], isLoading } = useAffiliateReferrals(id)
+  const approveClaim = useApproveClaim()
+  const rejectClaim  = useRejectClaim()
+  const [rejectTarget, setRejectTarget] = useState(null)
+  const [rejectNote, setRejectNote] = useState('')
+
+  const pendingCount = data.filter(r => r.status === 'pending').length
+
+  const doApprove = async (r) => {
+    try { await approveClaim.mutateAsync({ rid: r.id }); toast.success('Klaim disetujui — komisi mulai dihitung.') }
+    catch (e) { toast.error(e?.response?.data?.error || 'Gagal menyetujui') }
+  }
+
   if (isLoading) return <SkeletonTable />
   if (!data.length) return <Card className="p-8 text-center text-muted">Belum ada tenant yang direkrut.</Card>
   return (
-    <Card className="overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-dark-surface text-xs text-muted">
-            <tr>
-              <Th>Tenant</Th>
-              <Th>Paket</Th>
-              <Th>Status Langganan</Th>
-              <Th right>Total Komisi</Th>
-              <Th>Bergabung</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map(r => (
-              <tr key={r.id} className="border-t border-dark-border hover:bg-dark-surface/40">
-                <Td>
-                  <p className="text-off-white font-medium">{r.tenant?.name || '—'}</p>
-                  <p className="text-xs text-muted">{r.tenant?.slug ? `${r.tenant.slug}.sembapos.com` : ''}</p>
-                </Td>
-                <Td>{r.tenant?.subscription?.package || '—'}</Td>
-                <Td>
-                  <Badge variant={r.tenant?.subscription?.status === 'active' ? 'success' : r.tenant?.subscription?.status === 'trial' ? 'info' : 'muted'}>
-                    {r.tenant?.subscription?.status || '—'}
-                  </Badge>
-                </Td>
-                <Td right><span className="text-gold tabular-nums">{formatRupiah(r.totalCommission)}</span></Td>
-                <Td className="text-xs text-muted">{new Date(r.createdAt).toLocaleDateString('id-ID')}</Td>
+    <>
+      {pendingCount > 0 && (
+        <div className="mb-3 flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs">
+          <AlertCircle size={14} className="flex-shrink-0" />
+          <span>{pendingCount} klaim manual menunggu peninjauan. Verifikasi sebelum menyetujui — komisi baru jalan setelah disetujui.</span>
+        </div>
+      )}
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-dark-surface text-xs text-muted">
+              <tr>
+                <Th>Tenant</Th>
+                <Th>Sumber</Th>
+                <Th>Status</Th>
+                <Th>Langganan</Th>
+                <Th right>Total Komisi</Th>
+                <Th>Bergabung</Th>
+                <Th right>Aksi</Th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </Card>
+            </thead>
+            <tbody>
+              {data.map(r => (
+                <tr key={r.id} className="border-t border-dark-border hover:bg-dark-surface/40">
+                  <Td>
+                    <p className="text-off-white font-medium">{r.tenant?.name || '—'}</p>
+                    <p className="text-xs text-muted">{r.tenant?.slug ? `${r.tenant.slug}.sembapos.com` : ''}</p>
+                    {r.status === 'pending' && r.claimNote && (
+                      <p className="text-[11px] text-muted mt-0.5 italic max-w-[260px]">“{r.claimNote}”</p>
+                    )}
+                  </Td>
+                  <Td>{r.source === 'manual'
+                    ? <Badge variant="gold">Klaim manual</Badge>
+                    : <span className="text-xs text-muted">Link</span>}</Td>
+                  <Td>{refStatusBadge(r.status)}</Td>
+                  <Td>
+                    <Badge variant={r.tenant?.subscription?.status === 'active' ? 'success' : r.tenant?.subscription?.status === 'trial' ? 'info' : 'muted'}>
+                      {r.tenant?.subscription?.status || '—'}
+                    </Badge>
+                  </Td>
+                  <Td right><span className="text-gold tabular-nums">{formatRupiah(r.totalCommission)}</span></Td>
+                  <Td className="text-xs text-muted">{new Date(r.createdAt).toLocaleDateString('id-ID')}</Td>
+                  <Td right>
+                    {r.status === 'pending' ? (
+                      <div className="flex gap-1 justify-end">
+                        <button onClick={() => doApprove(r)} disabled={approveClaim.isPending}
+                          className="text-[11px] px-2 py-0.5 rounded bg-green-500/10 border border-green-500/30 text-green-400 hover:bg-green-500/20">Setujui</button>
+                        <button onClick={() => { setRejectTarget(r); setRejectNote('') }}
+                          className="text-[11px] px-2 py-0.5 rounded bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20">Tolak</button>
+                      </div>
+                    ) : <span className="text-muted text-xs">—</span>}
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      <Modal isOpen={!!rejectTarget} onClose={() => setRejectTarget(null)} title="Tolak klaim?" size="sm">
+        <div className="space-y-3">
+          <p className="text-xs text-muted">
+            Tolak klaim <span className="text-off-white">{rejectTarget?.tenant?.name || rejectTarget?.tenant?.slug}</span>.
+            Alasan akan ditampilkan ke affiliate.
+          </p>
+          <textarea value={rejectNote} onChange={e => setRejectNote(e.target.value)} rows={3} maxLength={500}
+            className="w-full bg-dark-surface border border-dark-border rounded-xl p-3 text-sm text-off-white placeholder-muted"
+            placeholder="Mis. tenant ini bukan hasil rujukan Anda." />
+          <div className="flex gap-2">
+            <Button variant="outline" fullWidth onClick={() => setRejectTarget(null)}>Batal</Button>
+            <Button variant="danger" fullWidth loading={rejectClaim.isPending}
+              onClick={async () => {
+                try {
+                  await rejectClaim.mutateAsync({ rid: rejectTarget.id, note: rejectNote || 'Klaim ditolak admin' })
+                  toast.success('Klaim ditolak')
+                  setRejectTarget(null)
+                } catch (e) { toast.error(e?.response?.data?.error || 'Gagal') }
+              }}>Tolak klaim</Button>
+          </div>
+        </div>
+      </Modal>
+    </>
   )
 }
 

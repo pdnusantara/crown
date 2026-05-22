@@ -11,6 +11,8 @@ const REALTIME_EVENTS = [
   'affiliate:commission_updated',
   'affiliate:payout_requested',
   'affiliate:payout_updated',
+  'affiliate:claim_requested',
+  'affiliate:referral_updated',
 ]
 
 function useAffiliateRealtime() {
@@ -146,12 +148,37 @@ export function useRejectPayout() {
   })
 }
 
+// ─── Super-admin: manual claim review ─────────────────────────────────────
+export function useAffiliateClaims(status = 'pending') {
+  useAffiliateRealtime()
+  return useQuery({
+    queryKey: ['affiliate-claims', status],
+    queryFn: () => api.get('/affiliates/claims', { params: { status } }).then(r => r.data.data),
+    refetchInterval: 60_000,
+  })
+}
+function useReviewClaim(decision) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ rid, note }) =>
+      api.post(`/affiliates/referrals/${rid}/${decision}-claim`, { note }).then(r => r.data.data),
+    onSuccess: () => {
+      // invalidate(qc) sudah mencakup ['affiliates', id, 'referrals'] (prefix match).
+      invalidate(qc)
+      qc.invalidateQueries({ queryKey: ['affiliate-claims'] })
+    },
+  })
+}
+export const useApproveClaim = () => useReviewClaim('approve')
+export const useRejectClaim  = () => useReviewClaim('reject')
+
 // ─── Affiliate self-service ───────────────────────────────────────────────
 const SELF_EVENTS = [
   'affiliate:self_updated',
   'affiliate:commission_created',
   'affiliate:commission_updated',
   'affiliate:payout_updated',
+  'affiliate:referral_updated',
 ]
 
 function useSelfRealtime() {
@@ -234,6 +261,26 @@ export function useRequestPayout() {
       qc.invalidateQueries({ queryKey: ['affiliate', 'stats'] })
       qc.invalidateQueries({ queryKey: ['affiliate', 'me'] })
     },
+  })
+}
+
+// Affiliate self: ajukan & batalkan klaim manual rujukan.
+function invalidateSelfReferrals(qc) {
+  qc.invalidateQueries({ queryKey: ['affiliate', 'referrals'] })
+  qc.invalidateQueries({ queryKey: ['affiliate', 'stats'] })
+}
+export function useClaimReferral() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data) => api.post('/affiliate/referrals/claim', data).then(r => r.data.data),
+    onSuccess: () => invalidateSelfReferrals(qc),
+  })
+}
+export function useCancelClaim() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id) => api.delete(`/affiliate/referrals/${id}`).then(r => r.data.data),
+    onSuccess: () => invalidateSelfReferrals(qc),
   })
 }
 
