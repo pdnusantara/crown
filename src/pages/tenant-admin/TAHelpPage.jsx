@@ -314,7 +314,8 @@ const CATEGORIES = [
         steps: [
           'Buka menu Pesan WhatsApp untuk melihat daftar dan statusnya (Terkirim, Sampai, Dibaca, Gagal).',
           'Saring berdasarkan status "Gagal" untuk menemukan pesan yang perlu ditindak.',
-          'Klik "Kirim ulang" pada pesan — periksa atau koreksi nomor tujuan bila keliru, lalu kirim.',
+          'Klik "Kirim ulang" pada pesan — di jendela yang muncul Anda bisa mengoreksi nomor tujuan dan mengedit isi pesannya sebelum dikirim.',
+          'Untuk pesan lama, isinya mungkin hanya tersimpan sebagian (ringkasan) — lengkapi dulu teksnya sebelum mengirim.',
           'Pastikan WhatsApp toko tersambung di tab WhatsApp Beta sebelum mengirim ulang, agar tidak gagal lagi.',
         ],
         to: '/admin/whatsapp-logs',
