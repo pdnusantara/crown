@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Clock, ChevronRight, User, GripVertical, X as XIcon, ShoppingCart, Search, Users as UsersIcon } from 'lucide-react'
+import { Plus, Clock, ChevronRight, User, GripVertical, X as XIcon, ShoppingCart, Search, Users as UsersIcon, RefreshCw, AlertTriangle } from 'lucide-react'
 import {
   DndContext,
   DragOverlay,
@@ -240,7 +240,7 @@ function MobileStatusTabs({ active, onChange, counts }) {
 export default function QueuePage() {
   const { user } = useAuthStore()
   const navigate = useNavigate()
-  const { queue = [] } = useBranchQueue(user?.branchId)
+  const { queue = [], isLoading, isError, refetch } = useBranchQueue(user?.branchId)
   const addToQueueM = useAddToQueue()
   const updateStatusM = useUpdateQueueStatus()
   const deleteQueueM = useDeleteQueueItem()
@@ -264,7 +264,7 @@ export default function QueuePage() {
 
   // Tick setiap 60 detik supaya filter "Sudah Bayar > 30 menit" otomatis recompute
   // tanpa perlu user me-refresh halaman.
-  const [, setTick] = useState(0)
+  const [tick, setTick] = useState(0)
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 60_000)
     return () => clearInterval(id)
@@ -388,12 +388,14 @@ export default function QueuePage() {
     advanceTo(draggedItem, targetColumnId)
   }
 
+  // `tick` di deps → hitungan "Sudah Bayar >30 menit" ikut menyusut tiap menit
+  // tanpa menunggu mutasi antrian.
   const counts = useMemo(() => ({
     waiting: getByStatus('waiting').length,
     'in-progress': getByStatus('in-progress').length,
     done: getByStatus('done').length,
     paid: getByStatus('paid').length,
-  }), [branchQueue])
+  }), [branchQueue, tick])
 
   const activeCol = COLUMNS.find(c => c.id === mobileTab) || COLUMNS[0]
   const activeItems = getByStatus(mobileTab)
@@ -461,7 +463,22 @@ export default function QueuePage() {
         )}
       </div>
 
-      {isMobile ? (
+      {isError && (
+        <div className="flex items-center justify-between gap-3 p-3 rounded-xl border border-red-400/30 bg-red-400/5">
+          <p className="text-sm text-red-400 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" /> Gagal memuat antrian. Periksa koneksi lalu coba lagi.
+          </p>
+          <Button size="sm" variant="secondary" icon={RefreshCw} onClick={() => refetch()}>Coba Lagi</Button>
+        </div>
+      )}
+
+      {isLoading && queue.length === 0 ? (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          {[...Array(isMobile ? 1 : 4)].map((_, i) => (
+            <div key={i} className="h-48 rounded-xl bg-dark-card animate-pulse" />
+          ))}
+        </div>
+      ) : isMobile ? (
         <>
           <MobileStatusTabs active={mobileTab} onChange={setMobileTab} counts={counts} />
           <DroppableColumn

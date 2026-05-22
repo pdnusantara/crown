@@ -51,6 +51,7 @@ export const getStatusBadge = (status) => {
     completed: 'success',
     waiting: 'warning',
     'in-progress': 'info',
+    in_progress: 'info', // status booking pakai underscore → tetap biru, bukan abu
     done: 'success',
     paid: 'gold',
     cash: 'success',

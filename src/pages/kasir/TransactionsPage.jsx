@@ -317,7 +317,7 @@ export default function TransactionsPage() {
       </div>
 
       {/* Stats */}
-      <StatsGrid summary={summary} loading={!summary && isLoading} />
+      <StatsGrid summary={summary} loading={!summary && isLoading} statusFilter={statusFilter} />
 
       {/* Sticky filter bar */}
       <div className="sticky top-0 z-20 -mx-4 px-4 sm:mx-0 sm:px-0 py-2 bg-dark-bg/95 backdrop-blur-md sm:bg-transparent sm:backdrop-blur-none">
@@ -634,10 +634,17 @@ export default function TransactionsPage() {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function StatsGrid({ summary, loading }) {
+function StatsGrid({ summary, loading, statusFilter }) {
+  // Backend menghitung "Pendapatan" sesuai filter status. Saat memfilter
+  // transaksi batal/refund, angka itu BUKAN omzet → relabel + warnai merah
+  // supaya tak salah dibaca sebagai pendapatan.
+  const reversed = statusFilter === 'cancelled' || statusFilter === 'refunded'
+  const revenueLabel = statusFilter === 'cancelled' ? 'Nilai dibatalkan'
+    : statusFilter === 'refunded' ? 'Nilai refund'
+    : 'Pendapatan'
   const stats = [
-    { label: 'Transaksi',   value: summary ? summary.count.toLocaleString('id-ID') : '—' },
-    { label: 'Pendapatan',  value: summary ? formatRupiah(summary.totalRevenue) : '—',          valueShort: summary ? formatRupiahShort(summary.totalRevenue) : '—' },
+    { label: 'Transaksi',   value: summary ? (summary.count ?? 0).toLocaleString('id-ID') : '—' },
+    { label: revenueLabel,  value: summary ? formatRupiah(summary.totalRevenue) : '—',          valueShort: summary ? formatRupiahShort(summary.totalRevenue) : '—', danger: reversed },
     { label: 'Rata-rata',   value: summary ? formatRupiah(summary.avgTicket || 0) : '—',        valueShort: summary ? formatRupiahShort(summary.avgTicket || 0) : '—' },
     { label: 'Diskon',      value: summary ? formatRupiah(summary.totalDiscount || 0) : '—',    valueShort: summary ? formatRupiahShort(summary.totalDiscount || 0) : '—' },
   ]
@@ -646,7 +653,7 @@ function StatsGrid({ summary, loading }) {
       {stats.map((s, i) => (
         <div key={i} className="p-3 sm:p-4 rounded-2xl bg-dark-surface border border-dark-border">
           <p className="text-[11px] sm:text-xs text-muted">{s.label}</p>
-          <p className={`mt-1 text-base sm:text-lg font-bold tabular-nums truncate whitespace-nowrap ${loading ? 'text-muted' : 'text-off-white'}`}>
+          <p className={`mt-1 text-base sm:text-lg font-bold tabular-nums truncate whitespace-nowrap ${loading ? 'text-muted' : s.danger ? 'text-red-400' : 'text-off-white'}`}>
             {s.valueShort != null ? (
               <>
                 <span className="sm:hidden">{s.valueShort}</span>

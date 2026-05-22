@@ -844,7 +844,7 @@ export default function BookingsPage() {
 
                         <p className="font-semibold text-off-white text-base truncate">{b.customerName}</p>
                         {b.serviceName && (
-                          <p className="text-sm text-muted mt-0.5 truncate">{b.serviceName}</p>
+                          <p className="text-sm text-muted mt-0.5 truncate" title={b.serviceName}>{b.serviceName}</p>
                         )}
 
                         <div className="flex items-center gap-3 mt-2 text-xs text-muted flex-wrap">
@@ -1006,10 +1006,25 @@ export default function BookingsPage() {
                 <p className="text-xs text-muted mb-0.5">Waktu</p>
                 <p className="text-off-white">{detail.time}</p>
               </div>
-              <div className="col-span-2">
-                <p className="text-xs text-muted mb-0.5">Layanan</p>
-                <p className="text-off-white">{detail.serviceName || '—'}</p>
-              </div>
+              {(() => {
+                // Booking bisa >1 layanan; serviceName digabung "A + B". Tampilkan
+                // tiap layanan sebagai chip terpisah agar jelas & tak terpotong.
+                const list = (detail.serviceName || '').split(' + ').map(s => s.trim()).filter(Boolean)
+                return (
+                  <div className="col-span-2">
+                    <p className="text-xs text-muted mb-1">Layanan{list.length > 1 ? ` (${list.length})` : ''}</p>
+                    {list.length ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {list.map((name, i) => (
+                          <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs bg-dark-card text-off-white border border-dark-border">
+                            {name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : <p className="text-off-white">—</p>}
+                  </div>
+                )
+              })()}
               <div className="col-span-2">
                 <p className="text-xs text-muted mb-0.5">Barber</p>
                 <p className="text-off-white">{detail.barberName || <span className="text-muted">Belum ditentukan</span>}</p>

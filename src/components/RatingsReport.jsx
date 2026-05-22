@@ -178,6 +178,19 @@ export default function RatingsReport({
         {subtitle && <p className="text-sm text-muted mt-1">{subtitle}</p>}
       </div>
 
+      {(shopStats.isError || shopRatings.isError || barberRatings.isError) && (
+        <div className="flex items-center justify-between gap-3 p-3 rounded-xl border border-red-400/30 bg-red-400/5">
+          <p className="text-sm text-red-400">Gagal memuat data rating. Periksa koneksi lalu coba lagi.</p>
+          <button
+            type="button"
+            onClick={() => { shopStats.refetch?.(); shopRatings.refetch?.(); barberRatings.refetch?.() }}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium border border-dark-border text-off-white hover:bg-dark-card transition-colors whitespace-nowrap"
+          >
+            Coba Lagi
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiTile label="Rating Toko" value={shopAvg.toFixed(1)} sub={`${shopTotal} ulasan`} />
         <KpiTile label="Rating Barber" value={barberAvg.toFixed(1)} sub={`${barberTotal} penilaian`} />
