@@ -79,6 +79,27 @@ export const usePosStore = create(
         })
       },
 
+      // Pulihkan draft tersimpan. Set cartItems APA ADANYA (jaga serviceId asli) —
+      // JANGAN lewat addToCart yang memperlakukan argumen sbg service (bikin
+      // serviceId tertimpa id cart). Ikut pulihkan customer & diskon.
+      restoreDraft: ({ cartItems = [], customer = null, discount = null } = {}) => {
+        set({
+          cartItems: (Array.isArray(cartItems) ? cartItems : []).map((it, i) => ({
+            id: it.id || `cart-${Date.now()}-${i}`,
+            serviceId: it.serviceId,
+            name: it.name,
+            price: it.price,
+            duration: it.duration,
+            barberId: it.barberId || null,
+            barberName: it.barberName || null,
+          })),
+          selectedCustomer: customer || null,
+          ...(discount && discount.type
+            ? { discountType: discount.type, discountValue: Math.max(0, Math.floor(Number(discount.value) || 0)) }
+            : {}),
+        })
+      },
+
       // Pre-load a queue item into the cart — called when kasir clicks "Bayar" on a queue ticket.
       // Booking bisa >1 layanan: utamakan cocokkan via serviceIds (paling akurat);
       // fallback ke nama, dan pecah entri lama yang tergabung ("A + B") supaya
@@ -271,7 +292,9 @@ export const usePosStore = create(
           status: saved.status || 'completed',
         }
 
-        set(s => ({ lastTransaction: transaction, transactions: [transaction, ...s.transactions] }))
+        // Batasi 20 transaksi terakhir agar localStorage tak tumbuh tanpa batas
+        // (QuotaExceeded bisa diam-diam merusak autosave draft).
+        set(s => ({ lastTransaction: transaction, transactions: [transaction, ...s.transactions].slice(0, 20) }))
         return transaction
       },
     }),

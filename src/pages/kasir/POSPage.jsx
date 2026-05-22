@@ -526,12 +526,16 @@ function POSPageInner() {
 
   // Autosave draft (debounced 400ms to avoid localStorage spam on every keystroke)
   useEffect(() => {
-    const draftData = { cartItems: posStore.cartItems, customer: posStore.selectedCustomer, discount: posStore.discount }
+    const draftData = {
+      cartItems: posStore.cartItems,
+      customer: posStore.selectedCustomer,
+      discount: { type: posStore.discountType, value: posStore.discountValue },
+    }
     const id = setTimeout(() => {
       try { localStorage.setItem('pos-draft', JSON.stringify(draftData)) } catch {}
     }, 400)
     return () => clearTimeout(id)
-  }, [posStore.cartItems, posStore.selectedCustomer, posStore.discount])
+  }, [posStore.cartItems, posStore.selectedCustomer, posStore.discountType, posStore.discountValue])
 
   // Auto-pick barber default:
   //  - reset kalau id default sudah tak valid (barber dinonaktifkan → orphan id)
@@ -555,10 +559,29 @@ function POSPageInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [barbers, user?.id])
 
+  // Pelanggan yang dimuat dari antrian hanya membawa {id,name,phone} tanpa
+  // loyaltyPoints → panel tukar poin nonaktif. Ambil data lengkap sekali agar
+  // saldo poin terbaca & bisa ditukar.
+  useEffect(() => {
+    const c = posStore.selectedCustomer
+    if (!c?.id || c.loyaltyPoints != null) return
+    let cancelled = false
+    api.get(`/customers/${c.id}`)
+      .then(res => {
+        const full = res.data?.data
+        if (!cancelled && full && usePosStore.getState().selectedCustomer?.id === full.id) {
+          posStore.setSelectedCustomer(full)
+        }
+      })
+      .catch(() => { /* walk-in tanpa akun / 404 → abaikan */ })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posStore.selectedCustomer?.id])
+
   const handleRestoreDraft = () => {
     if (!draft) return
-    draft.cartItems.forEach(item => posStore.addToCart(item))
-    if (draft.customer) posStore.setSelectedCustomer(draft.customer)
+    // Pulihkan utuh (cartItems + customer + diskon) tanpa merusak serviceId.
+    posStore.restoreDraft(draft)
     setShowDraftBanner(false)
     setDraft(null)
     toast.success(t('pos.draftRestored'))
@@ -974,7 +997,7 @@ function POSPageInner() {
                     posStore.setDiscount('percentage', 0); setVoucherCode('')
                   }}
                   className="text-muted hover:text-red-400 flex-shrink-0"
-                  aria-label={t('pos.closeCart')}
+                  aria-label="Hapus voucher"
                 >
                   <X size={14} />
                 </button>

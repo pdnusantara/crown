@@ -279,6 +279,8 @@
 .light-mode .text-amber-200   { color: #92400E !important; }
 .light-mode .text-amber-100   { color: #92400E !important; }
 .light-mode .text-rose-300    { color: #BE123C !important; }
+.light-mode .text-green-300   { color: #047857 !important; }
+.light-mode .text-slate-400   { color: #475569 !important; }
 .light-mode .bg-rose-500\/15  { background-color: rgba(244, 63, 94, 0.20) !important; }
 .light-mode .border-rose-500\/30 { border-color: rgba(190, 18, 60, 0.55) !important; }
 
