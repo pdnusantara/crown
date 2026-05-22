@@ -293,7 +293,10 @@ router.get('/testimonials', requireTenant, async (req, res, next) => {
 
 const publicBookingSchema = z.object({
   branchId:      z.string().min(1, 'Cabang wajib dipilih'),
-  serviceId:     z.string().min(1, 'Layanan wajib dipilih'),
+  // Booking bisa lebih dari satu layanan. `serviceIds` adalah sumber utama;
+  // `serviceId` (tunggal) tetap diterima demi kompat klien lama.
+  serviceId:     z.string().min(1).optional(),
+  serviceIds:    z.array(z.string().min(1)).min(1, 'Pilih minimal satu layanan').max(15).optional(),
   barberId:      z.string().min(1, 'Barber wajib dipilih'),
   customerName:  z.string().min(2, 'Nama minimal 2 karakter'),
   customerPhone: z.string().min(8, 'Nomor HP tidak valid').max(15),
@@ -326,6 +329,10 @@ const publicBookingSchema = z.object({
 router.get('/availability', requireTenant, async (req, res, next) => {
   try {
     const { branchId, date, barberId, serviceId } = req.query;
+    // Multi-layanan: terima `serviceIds` (dipisah koma) atau `serviceId` tunggal.
+    const targetServiceIds = req.query.serviceIds
+      ? String(req.query.serviceIds).split(',').map(s => s.trim()).filter(Boolean)
+      : (serviceId ? [String(serviceId)] : []);
     if (!branchId || !date) {
       return res.status(400).json({ success: false, error: 'branchId dan date wajib' });
     }
@@ -345,22 +352,26 @@ router.get('/availability', requireTenant, async (req, res, next) => {
     };
     if (barberId) where.barberId = String(barberId);
 
-    const [rows, service, branch] = await Promise.all([
+    const [rows, targetServices, branch] = await Promise.all([
       prisma.booking.findMany({
         where,
         select: { time: true, barberId: true, serviceId: true },
       }),
-      serviceId
-        ? prisma.service.findFirst({
-            where: { id: String(serviceId), tenantId: req.tenant.id, isActive: true, deletedAt: null },
+      targetServiceIds.length
+        ? prisma.service.findMany({
+            where: { id: { in: targetServiceIds }, tenantId: req.tenant.id, isActive: true, deletedAt: null },
             select: { duration: true },
           })
-        : null,
+        : [],
       prisma.branch.findFirst({
         where: { id: String(branchId), tenantId: req.tenant.id, deletedAt: null },
         select: { closedDates: true },
       }),
     ]);
+    // Durasi total = jumlah durasi semua layanan terpilih (multi-layanan).
+    const service = targetServices.length
+      ? { duration: targetServices.reduce((sum, s) => sum + (s.duration || 30), 0) }
+      : null;
 
     // Cabang ditutup admin pada tanggal ini → kembalikan flag eksplisit
     // supaya UI bisa tampil banner & sembunyikan slot.
@@ -503,11 +514,25 @@ router.post('/bookings', requireTenant, async (req, res, next) => {
       });
     }
 
-    const service = await prisma.service.findFirst({
-      where: { id: body.serviceId, tenantId: req.tenant.id, isActive: true, deletedAt: null },
-      select: { name: true, duration: true },
+    // Normalisasi daftar layanan: utamakan serviceIds, fallback ke serviceId
+    // tunggal (klien lama). Buang duplikat sambil pertahankan urutan pilih.
+    const rawIds = (body.serviceIds && body.serviceIds.length) ? body.serviceIds : (body.serviceId ? [body.serviceId] : []);
+    const serviceIds = [...new Set(rawIds)];
+    if (serviceIds.length === 0) {
+      return res.status(400).json({ success: false, error: 'Pilih minimal satu layanan' });
+    }
+    const svcRows = await prisma.service.findMany({
+      where: { id: { in: serviceIds }, tenantId: req.tenant.id, isActive: true, deletedAt: null },
+      select: { id: true, name: true, duration: true },
     });
-    if (!service) return res.status(400).json({ success: false, error: 'Layanan tidak ditemukan' });
+    if (svcRows.length !== serviceIds.length) {
+      return res.status(400).json({ success: false, error: 'Sebagian layanan tidak ditemukan atau tidak aktif' });
+    }
+    // Urutkan sesuai urutan pilihan pelanggan & gabungkan nama + durasi.
+    const svcById = Object.fromEntries(svcRows.map(s => [s.id, s]));
+    const orderedServices = serviceIds.map(id => svcById[id]);
+    const totalDuration = orderedServices.reduce((sum, s) => sum + (s.duration || 30), 0);
+    const service = { name: orderedServices.map(s => s.name).join(' + '), duration: totalDuration };
 
     // Barber wajib dipilih — validasi milik tenant & masih aktif.
     const barberId = body.barberId;
@@ -578,8 +603,9 @@ router.post('/bookings', requireTenant, async (req, res, next) => {
         tenantId:      req.tenant.id,
         branchId:      body.branchId,
         customerId,
-        serviceId:     body.serviceId,
+        serviceId:     serviceIds[0],
         serviceName:   service.name,
+        serviceIds,
         barberId,
         barberName,
         customerName:  body.customerName,

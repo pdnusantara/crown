@@ -413,8 +413,12 @@ model Booking {
   customerId    String?
   customerName  String
   customerPhone String
+  // serviceId/serviceName = layanan PERTAMA (kompat mundur & tampilan ringkas).
+  // serviceIds = daftar lengkap layanan yang dipilih (booking bisa >1 layanan);
+  // serviceName diisi gabungan nama ("Potong + Cuci"). Durasi = jumlah durasi.
   serviceId     String?
   serviceName   String?
+  serviceIds    String[]      @default([])
   barberId      String?
   barberName    String?
   date          String

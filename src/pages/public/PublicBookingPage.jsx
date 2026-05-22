@@ -125,8 +125,9 @@ function PublicBookingPageInner() {
   const [error, setError]         = useState(null)
   const [booking, setBooking]     = useState(null)
 
+  // `services` = array (booking bisa lebih dari satu layanan).
   const [selected, setSelected] = useState({
-    branch: null, service: null, barber: null, date: null, time: null,
+    branch: null, services: [], barber: null, date: null, time: null,
   })
   const [form, setForm] = useState({ name: '', phone: '', notes: '', wilayah: {} })
   const [formError, setFormError] = useState({})
@@ -233,13 +234,15 @@ function PublicBookingPageInner() {
   // version only returned exact start times).
   const refetchAvailability = useCallback(async (signal) => {
     if (!selected.branch || !selected.date) { setBookedSlots([]); setBranchClosure(null); return }
+    const svcs = selected.services || []
+    const totalDur = svcs.reduce((sum, s) => sum + (s.duration || 0), 0)
     try {
       const res = await publicApi.get('/public/availability', {
         params: {
-          branchId:  selected.branch.id,
-          date:      format(selected.date, 'yyyy-MM-dd'),
-          barberId:  selected.barber?.id,
-          serviceId: selected.service?.id,
+          branchId:   selected.branch.id,
+          date:       format(selected.date, 'yyyy-MM-dd'),
+          barberId:   selected.barber?.id,
+          serviceIds: svcs.map(s => s.id).join(','),
         },
         signal,
       })
@@ -252,16 +255,16 @@ function PublicBookingPageInner() {
       }
       setBranchClosure(null)
       // Use overlap-aware ranges when backend provides them (newer API), else
-      // fall back to exact `booked` start times for back-compat.
-      if (Array.isArray(data.bookedRanges) && data.bookedRanges.length && selected.service?.duration) {
-        const targetDur = selected.service.duration
-        const blocked = computeBlockedSlotsFromRanges(data.bookedRanges, targetDur)
+      // fall back to exact `booked` start times for back-compat. Durasi target =
+      // jumlah durasi semua layanan terpilih.
+      if (Array.isArray(data.bookedRanges) && data.bookedRanges.length && totalDur) {
+        const blocked = computeBlockedSlotsFromRanges(data.bookedRanges, totalDur)
         setBookedSlots(blocked)
       } else {
         setBookedSlots(data.booked || [])
       }
     } catch { /* network error → keep last known list */ }
-  }, [selected.branch, selected.date, selected.barber, selected.service])
+  }, [selected.branch, selected.date, selected.barber, selected.services])
 
   useEffect(() => {
     const ac = new AbortController()
@@ -282,7 +285,13 @@ function PublicBookingPageInner() {
   }, [step, refetchAvailability])
 
   const pickBranch  = (b) => { setSelected(s => ({ ...s, branch: b, barber: null, date: null, time: null })); loadBarbers(b.id) }
-  const pickService = (s) => setSelected(p => ({ ...p, service: p.service?.id === s.id ? null : s }))
+  // Toggle layanan dalam daftar — booking bisa lebih dari satu layanan. Durasi
+  // total berubah → reset jam terpilih supaya slot dihitung ulang.
+  const pickService = (s) => setSelected(p => {
+    const cur = p.services || []
+    const exists = cur.some(x => x.id === s.id)
+    return { ...p, services: exists ? cur.filter(x => x.id !== s.id) : [...cur, s], time: null }
+  })
   const pickBarber  = (b) => setSelected(s => ({ ...s, barber: b, time: null }))
   const pickDate    = (d) => setSelected(s => ({ ...s, date: d, time: null }))
   const pickTime    = (t, status) => {
@@ -318,7 +327,8 @@ function PublicBookingPageInner() {
           }
         : undefined
       const res = await publicApi.post('/public/bookings', {
-        branchId: selected.branch.id, serviceId: selected.service.id,
+        branchId: selected.branch.id,
+        serviceIds: (selected.services || []).map(s => s.id),
         barberId: selected.barber?.id,
         customerName: form.name.trim(), customerPhone: form.phone.trim(),
         date: format(selected.date, 'yyyy-MM-dd'), time: selected.time,
@@ -335,7 +345,7 @@ function PublicBookingPageInner() {
 
   const resetAll = () => {
     setStep(0)
-    setSelected(s => ({ branch: branches[0] || null, service: null, barber: null, date: null, time: null }))
+    setSelected(s => ({ branch: branches[0] || null, services: [], barber: null, date: null, time: null }))
     setForm({ name: '', phone: '', notes: '', wilayah: {} })
     setFormError({}); setBooking(null); setError(null)
   }
@@ -355,9 +365,12 @@ function PublicBookingPageInner() {
   }
 
   // Barber wajib dipilih (opsi "barber bebas" dihapus) — customer harus pilih nama barber.
-  const canNextStep0 = !!selected.service && !!selected.barber
-  const canNextStep1 = !!selected.date && !!selected.time
-  const totalPrice   = selected.service?.price || 0
+  const selectedServices = selected.services || []
+  const totalPrice    = selectedServices.reduce((sum, s) => sum + (s.price || 0), 0)
+  const totalDuration = selectedServices.reduce((sum, s) => sum + (s.duration || 0), 0)
+  const serviceSummary = selectedServices.map(s => s.name).join(', ')
+  const canNextStep0  = selectedServices.length > 0 && !!selected.barber
+  const canNextStep1  = !!selected.date && !!selected.time
 
   return (
     <BookShell accent={accent} tenantName={tenantName} tenantLogo={tenantLogo} bp={bp}
@@ -370,7 +383,7 @@ function PublicBookingPageInner() {
             onClick={() => { if (canNextStep0) { setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }) } }}
             accent={accent}
             note={canNextStep0
-              ? `${selected.service.name} · ${formatRupiah(selected.service.price)}`
+              ? `${selectedServices.length} layanan · ${formatRupiah(totalPrice)}${totalDuration ? ` · ${totalDuration} mnt` : ''}`
               : !selected.barber ? 'Pilih barber & layanan untuk lanjut' : 'Pilih layanan untuk lanjut'}
           />
         ) : null
@@ -824,10 +837,10 @@ function Step1Pick({ tenantName, tenantLogo, bp, branches, services, barbers, te
             <BarberCarousel barbers={barbers} selected={selected.barber} onPick={onPickBarber} accent={accent} />
           </div>
 
-          {/* Service list */}
+          {/* Service list — boleh pilih lebih dari satu */}
           <div>
-            <SectionTitle accent={accent} step="02" title="Pilih Layanan" />
-            <ServiceList services={services} selected={selected.service} onPick={onPickService} accent={accent} />
+            <SectionTitle accent={accent} step="02" title="Pilih Layanan" hint="bisa lebih dari satu" />
+            <ServiceList services={services} selected={selected.services} onPick={onPickService} accent={accent} />
           </div>
 
           {/* Testimoni pelanggan — hanya tampil kalau ada published testimoni */}
@@ -983,7 +996,8 @@ function SocialContactSection({ bp, accent }) {
 // Sidebar summary card — appears as right rail on desktop, replaces the
 // bottom-fixed StickyCta. Always shows what's been picked + the next-step CTA.
 function SidebarSummary({ accent, selected, tenantName, ctaLabel, ctaDisabled, onCta }) {
-  const totalPrice = selected.service?.price || 0
+  const svcs = selected.services || []
+  const totalPrice = svcs.reduce((sum, s) => sum + (s.price || 0), 0)
   return (
     <div className="bk-card p-5 space-y-4">
       <div>
@@ -994,7 +1008,12 @@ function SidebarSummary({ accent, selected, tenantName, ctaLabel, ctaDisabled, o
       <div className="space-y-2.5 text-sm">
         <SidebarRow label="Cabang"  value={selected.branch?.name} />
         <SidebarRow label="Barber"  value={selected.barber?.name} muted={!selected.barber} />
-        <SidebarRow label="Layanan" value={selected.service?.name} highlight={!!selected.service} accent={accent} />
+        <SidebarRow
+          label={svcs.length > 1 ? `Layanan (${svcs.length})` : 'Layanan'}
+          value={svcs.length ? svcs.map(s => s.name).join(', ') : null}
+          highlight={svcs.length > 0}
+          accent={accent}
+        />
         {selected.date && (
           <SidebarRow label="Jadwal" value={`${format(selected.date, 'd MMM', { locale: idLocale })} · ${selected.time || ''}`} />
         )}
@@ -1215,6 +1234,11 @@ function BarberCarousel({ barbers, selected, onPick, accent }) {
 }
 
 function ServiceList({ services, selected, onPick, accent }) {
+  // `selected` kini array layanan terpilih (bisa lebih dari satu).
+  const selectedList = Array.isArray(selected) ? selected : (selected ? [selected] : [])
+  const selCount = selectedList.length
+  const selTotal = selectedList.reduce((sum, s) => sum + (s.price || 0), 0)
+  const selDur   = selectedList.reduce((sum, s) => sum + (s.duration || 0), 0)
   // Surface category chips only when there's more than one distinct category —
   // otherwise the filter row is just noise. "All" reset chip first, then the
   // categories in the order they first appear in the services list (backend
@@ -1255,7 +1279,7 @@ function ServiceList({ services, selected, onPick, accent }) {
       )}
       <div className="space-y-2.5 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
       {filtered.map(svc => {
-        const isSel = selected?.id === svc.id
+        const isSel = selectedList.some(s => s.id === svc.id)
         return (
           <button key={svc.id} onClick={() => onPick(svc)}
             className="w-full text-left p-4 transition-all"
@@ -1294,11 +1318,20 @@ function ServiceList({ services, selected, onPick, accent }) {
         )
       })}
       </div>
+      {selCount > 0 && (
+        <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl"
+          style={{ background: 'var(--bk-accent-soft)', border: `1px solid ${accent}55` }}>
+          <span className="text-xs font-medium" style={{ color: 'var(--bk-text-2)' }}>
+            {selCount} layanan dipilih{selDur ? ` · ${selDur} mnt` : ''}
+          </span>
+          <span className="font-display text-base font-bold" style={{ color: accent }}>{formatRupiah(selTotal)}</span>
+        </div>
+      )}
     </div>
   )
 }
 
-function SectionTitle({ step, title, accent }) {
+function SectionTitle({ step, title, accent, hint }) {
   return (
     <div className="flex items-center gap-2.5 mb-3">
       {step && (
@@ -1307,6 +1340,11 @@ function SectionTitle({ step, title, accent }) {
         }}>{step}</span>
       )}
       <h2 className="font-display text-base font-bold tracking-tight" style={{ color: 'var(--bk-text)' }}>{title}</h2>
+      {hint && (
+        <span className="text-[11px] font-medium px-2 py-0.5 rounded-full" style={{
+          color: accent, background: 'var(--bk-accent-soft)',
+        }}>{hint}</span>
+      )}
     </div>
   )
 }
@@ -1580,7 +1618,10 @@ function Step3Confirm({ tenantName, tenantWilayah, selected, form, formError, se
               <SummaryRow label="Barbershop" value={tenantName} />
               <SummaryRow label="Cabang"     value={selected.branch?.name} />
               <SummaryRow label="Barber"     value={selected.barber?.name || 'Barber tersedia'} />
-              <SummaryRow label="Layanan"    value={selected.service?.name} />
+              <SummaryRow
+                label={(selected.services || []).length > 1 ? `Layanan (${selected.services.length})` : 'Layanan'}
+                value={(selected.services || []).map(s => s.name).join(', ')}
+              />
               <SummaryRow label="Tanggal"    value={format(selected.date, 'EEEE, d MMMM yyyy', { locale: idLocale })} />
               <SummaryRow label="Jam"        value={selected.time} />
               <SummaryRow label="Harga"      value={formatRupiah(totalPrice)} bold last />
