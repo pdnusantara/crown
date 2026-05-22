@@ -73,7 +73,9 @@ const affiliateSelect = {
   user: {
     select: { id: true, email: true, name: true, phone: true, photo: true, isActive: true, createdAt: true },
   },
-  _count: { select: { referrals: true, commissions: true, payouts: true } },
+  // referrals: hanya hitung yang tenant-nya belum dihapus (soft delete) — konsisten
+  // dengan daftar rujukan yang juga memfilter tenant.deletedAt.
+  _count: { select: { referrals: { where: { tenant: { deletedAt: null } } }, commissions: true, payouts: true } },
 };
 
 const createSchema = z.object({
@@ -133,11 +135,11 @@ router.get('/stats', authenticate, requireRole('super_admin'), async (req, res, 
       prisma.affiliate.count({ where: { status: 'active' } }),
       prisma.affiliate.count({ where: { status: 'pending' } }),
       prisma.affiliate.count({ where: { status: 'suspended' } }),
-      prisma.affiliateReferral.count(),
+      prisma.affiliateReferral.count({ where: { tenant: { deletedAt: null } } }),
       prisma.affiliateCommission.aggregate({ _sum: { amount: true }, where: { status: { in: ['approved', 'paid'] } } }),
       prisma.affiliateCommission.aggregate({ _sum: { amount: true }, where: { status: 'paid' } }),
       prisma.affiliatePayout.aggregate({ _sum: { amount: true }, _count: true, where: { status: { in: ['requested', 'processing'] } } }),
-      prisma.affiliateReferral.count({ where: { source: 'manual', status: 'pending' } }),
+      prisma.affiliateReferral.count({ where: { source: 'manual', status: 'pending', tenant: { deletedAt: null } } }),
     ]);
     res.json({
       success: true,
@@ -161,7 +163,7 @@ router.get('/claims', authenticate, requireRole('super_admin'), async (req, res,
   try {
     const status = req.query.status && req.query.status !== 'all' ? String(req.query.status) : 'pending';
     const data = await prisma.affiliateReferral.findMany({
-      where: { source: 'manual', status },
+      where: { source: 'manual', status, tenant: { deletedAt: null } },
       orderBy: { createdAt: 'asc' }, // antrean: tertua dulu
       take: 200,
       include: {
@@ -385,7 +387,9 @@ router.post('/:id/reset-password', authenticate, requireRole('super_admin'), asy
 router.get('/:id/referrals', authenticate, requireRole('super_admin'), async (req, res, next) => {
   try {
     const data = await prisma.affiliateReferral.findMany({
-      where: { affiliateId: req.params.id },
+      // Sembunyikan rujukan ke tenant yang sudah dihapus super-admin (konsisten
+      // dengan _count.referrals & halaman affiliate). Baris tetap ada di DB.
+      where: { affiliateId: req.params.id, tenant: { deletedAt: null } },
       orderBy: { createdAt: 'desc' },
       take: 200,
       include: {
