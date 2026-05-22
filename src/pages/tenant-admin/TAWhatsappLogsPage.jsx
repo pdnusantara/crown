@@ -94,6 +94,7 @@ export default function TAWhatsappLogsPage() {
   const [exporting, setExporting] = useState(false)
   const [resendTarget, setResendTarget] = useState(null)
   const [resendPhone, setResendPhone] = useState('')
+  const [resendMsg, setResendMsg] = useState('')
   const toast = useToast()
   const resend = useResendWhatsappMessage()
 
@@ -130,16 +131,18 @@ export default function TAWhatsappLogsPage() {
   const resetFilters = () => { setStatus(''); setCategory(''); setSearchInput(''); setSearch(''); setFrom(''); setTo('') }
 
   // ── Kirim ulang ───────────────────────────────────────────────────────────
-  const openResend = (m) => { setResendTarget(m); setResendPhone(m.recipient || '') }
-  const closeResend = () => { if (!resend.isPending) { setResendTarget(null); setResendPhone('') } }
+  const openResend = (m) => { setResendTarget(m); setResendPhone(m.recipient || ''); setResendMsg(m.body || m.preview || '') }
+  const closeResend = () => { if (!resend.isPending) { setResendTarget(null); setResendPhone(''); setResendMsg('') } }
   const confirmResend = async () => {
     if (!resendTarget) return
     const phone = resendPhone.trim()
-    const changed = phone && phone !== resendTarget.recipient
+    const msg = resendMsg.trim()
+    if (!msg) { toast.error('Isi pesan tidak boleh kosong'); return }
+    const phoneChanged = phone && phone !== resendTarget.recipient
     try {
-      await resend.mutateAsync({ id: resendTarget.id, recipient: changed ? phone : undefined })
+      await resend.mutateAsync({ id: resendTarget.id, recipient: phoneChanged ? phone : undefined, message: msg })
       toast.success('Pesan dikirim ulang')
-      setResendTarget(null); setResendPhone('')
+      setResendTarget(null); setResendPhone(''); setResendMsg('')
     } catch (e) {
       toast.error(e?.response?.data?.error || 'Gagal mengirim ulang pesan')
     }
@@ -303,7 +306,7 @@ export default function TAWhatsappLogsPage() {
                   </div>
                   <div className="flex flex-col items-end gap-2 flex-shrink-0">
                     <span className="text-[11px] text-muted whitespace-nowrap">{formatDateTimeInTz(m.createdAt)}</span>
-                    {(m.status === 'failed' || m.status === 'skipped') && m.body && (
+                    {(m.status === 'failed' || m.status === 'skipped') && (
                       <button
                         type="button"
                         onClick={() => openResend(m)}
@@ -371,13 +374,23 @@ export default function TAWhatsappLogsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-muted mb-1.5">Isi pesan</label>
-              <div className="max-h-48 overflow-y-auto rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-xs text-off-white whitespace-pre-wrap leading-relaxed">
-                {resendTarget.body || resendTarget.preview}
-              </div>
+              <textarea
+                value={resendMsg}
+                onChange={(e) => setResendMsg(e.target.value)}
+                rows={6}
+                maxLength={4096}
+                className="w-full appearance-none rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-xs text-off-white placeholder-muted focus:outline-none focus:border-gold/50 whitespace-pre-wrap leading-relaxed resize-y"
+              />
+              {!resendTarget.body && (
+                <p className="text-[11px] text-amber-400 mt-1 flex items-start gap-1">
+                  <AlertTriangle size={11} className="flex-shrink-0 mt-0.5" />
+                  Pesan ini terkirim sebelum fitur kirim ulang aktif, jadi hanya tersimpan ringkasannya. Lengkapi isinya sebelum mengirim.
+                </p>
+              )}
             </div>
             <div className="flex justify-end gap-2 pt-1">
               <Button variant="secondary" size="sm" onClick={closeResend} disabled={resend.isPending}>Batal</Button>
-              <Button size="sm" icon={Send} onClick={confirmResend} disabled={resend.isPending || !resendPhone.trim()}>
+              <Button size="sm" icon={Send} onClick={confirmResend} disabled={resend.isPending || !resendPhone.trim() || !resendMsg.trim()}>
                 {resend.isPending ? 'Mengirim...' : 'Kirim ulang'}
               </Button>
             </div>

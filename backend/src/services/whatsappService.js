@@ -584,19 +584,22 @@ async function dispatchMessage(tenantId, phone, text, idempotencyKey, category =
   }
 }
 
-// Kirim ulang sebuah pesan dari log (hanya yang gagal/dilewati). Memakai isi
-// penuh yang tersimpan + idempotency key BARU agar gateway tak menganggapnya
-// duplikat. Membuat baris log baru (jejak audit utuh), tak menimpa yang lama.
-// `recipientOverride` mengizinkan koreksi nomor (mis. kasus invalid_phone).
-async function resendLoggedMessage(tenantId, logId, recipientOverride = null) {
+// Kirim ulang sebuah pesan dari log (hanya yang gagal/dilewati). Pakai idempotency
+// key BARU agar gateway tak menganggapnya duplikat, dan buat baris log baru (jejak
+// audit utuh), tak menimpa yang lama. `recipient` mengoreksi nomor (mis. kasus
+// invalid_phone). `message` mengganti isi pesan — wajib untuk log lama yang `body`-nya
+// null (terkirim sebelum fitur ini), juga memungkinkan koreksi isi.
+async function resendLoggedMessage(tenantId, logId, { recipient = null, message = null } = {}) {
   const log = await prisma.whatsappMessageLog.findFirst({ where: { id: logId, tenantId } });
   if (!log) return { ok: false, code: 'not_found' };
   if (!['failed', 'skipped'].includes(log.status)) return { ok: false, code: 'not_resendable' };
-  if (!log.body) return { ok: false, code: 'no_body' };
 
-  const recipient = (recipientOverride && String(recipientOverride).trim()) || log.recipient;
+  const text = (message && String(message).trim()) || log.body;
+  if (!text) return { ok: false, code: 'no_body' };
+
+  const to = (recipient && String(recipient).trim()) || log.recipient;
   try {
-    const result = await dispatchMessage(tenantId, recipient, log.body, `resend-${log.id}-${Date.now()}`, log.category);
+    const result = await dispatchMessage(tenantId, to, text, `resend-${log.id}-${Date.now()}`, log.category);
     return { ok: result.sent === true, result };
   } catch (err) {
     return { ok: false, code: 'gateway_error', reason: err?.message || 'gateway_error' };

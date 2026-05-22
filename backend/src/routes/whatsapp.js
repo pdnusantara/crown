@@ -249,6 +249,7 @@ router.get('/messages/stats', authenticate, requireRole('super_admin', 'tenant_a
 // Body opsional { recipient } untuk mengoreksi nomor tujuan. Tenant-scoped.
 const resendSchema = z.object({
   recipient: z.string().trim().min(3).max(32).optional(),
+  message: z.string().trim().min(1).max(4096).optional(),
 });
 router.post('/messages/:id/resend', authenticate, requireRole('super_admin', 'tenant_admin'), requireWhatsappLogsFeature, async (req, res, next) => {
   try {
@@ -256,12 +257,15 @@ router.post('/messages/:id/resend', authenticate, requireRole('super_admin', 'te
     if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId wajib' });
 
     const parsed = resendSchema.safeParse(req.body || {});
-    if (!parsed.success) return res.status(400).json({ success: false, error: 'Nomor tujuan tidak valid' });
+    if (!parsed.success) return res.status(400).json({ success: false, error: 'Nomor tujuan / isi pesan tidak valid' });
 
-    const out = await resendLoggedMessage(tenantId, req.params.id, parsed.data.recipient || null);
+    const out = await resendLoggedMessage(tenantId, req.params.id, {
+      recipient: parsed.data.recipient || null,
+      message: parsed.data.message || null,
+    });
     if (out.code === 'not_found') return res.status(404).json({ success: false, error: 'Pesan tidak ditemukan' });
     if (out.code === 'not_resendable') return res.status(400).json({ success: false, error: 'Hanya pesan gagal atau dilewati yang bisa dikirim ulang' });
-    if (out.code === 'no_body') return res.status(400).json({ success: false, error: 'Pesan ini tidak menyimpan isi lengkap (terkirim sebelum fitur kirim ulang aktif), jadi tidak bisa dikirim ulang' });
+    if (out.code === 'no_body') return res.status(400).json({ success: false, error: 'Isi pesan kosong. Ketik dulu pesan yang ingin dikirim ulang.' });
     if (!out.ok) {
       const reason = out.reason || out.result?.reason || 'gateway_error';
       return res.status(502).json({ success: false, error: `Gagal mengirim ulang: ${reason}`, reason });

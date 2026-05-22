@@ -45,8 +45,11 @@ export function useWhatsappMessageStats(range = {}) {
 export function useResendWhatsappMessage() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, recipient }) => {
-      const res = await api.post(`/whatsapp/messages/${id}/resend`, recipient ? { recipient } : {})
+    mutationFn: async ({ id, recipient, message }) => {
+      const payload = {}
+      if (recipient) payload.recipient = recipient
+      if (message) payload.message = message
+      const res = await api.post(`/whatsapp/messages/${id}/resend`, payload)
       return res.data.data
     },
     onSuccess: () => {
