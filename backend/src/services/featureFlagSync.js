@@ -21,8 +21,8 @@ const PACKAGE_FLAG_DEFAULTS = {
   Basic:      ['pos', 'queue', 'booking', 'loyalty', 'voucher', 'barber_rating',
                'schedule', 'attendance', 'expense_tracking', 'pwa'],
   Pro:        ['pos', 'queue', 'booking', 'loyalty', 'voucher', 'reports', 'schedule',
-               'multi_branch', 'expense_tracking', 'attendance', 'whatsapp', 'whatsapp_logs',
-               'barber_rating', 'heatmap', 'clv', 'wilayah_report', 'pwa', 'backup'],
+               'expense_tracking', 'attendance', 'whatsapp', 'whatsapp_logs',
+               'barber_rating', 'heatmap', 'clv', 'wilayah_report', 'pwa'],
   Enterprise: [...KNOWN_FLAG_IDS],
 };
 
