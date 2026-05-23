@@ -156,7 +156,7 @@ const BENEFIT_ORDER = [
   ['multi_branch',    'Kelola banyak cabang sekaligus'],
   ['backup',          'Backup & restore data toko'],
   ['api_access',      'Akses API untuk integrasi'],
-  ['white_label',     'Branding sendiri tanpa logo BarberOS'],
+  ['white_label',     'Branding sendiri tanpa logo SembaPOS'],
 ]
 
 // Susun daftar manfaat kartu harga. Paket dasar tampil utuh; paket lebih
@@ -782,7 +782,7 @@ function PricingSection({ ctx }) {
 
         <p className="text-center text-[13px] text-[#9A9189] mt-9 inline-flex w-full items-center justify-center gap-2 flex-wrap">
           <Lucide.ShieldCheck size={14} className="text-[#C9A84C]" />
-          Semua paket sudah termasuk SSL, backup harian otomatis, update gratis & dukungan tim kami.
+          Semua paket sudah termasuk SSL, keamanan data, update gratis & dukungan tim kami.
         </p>
       </div>
     </section>
@@ -1298,87 +1298,229 @@ function Footer({ text, logo, contact = {}, siteName = 'SembaPOS' }) {
 }
 
 // Mock dashboard untuk hero — versi terang, full div styling (tanpa aset).
-function DashboardMock() {
+// Mini sparkline untuk kartu KPI.
+function Sparkline({ data, w = 46, h = 16 }) {
+  const max = Math.max(...data)
+  const pts = data
+    .map((v, i) => `${(i * (w / (data.length - 1))).toFixed(1)},${(h - (v / max) * (h - 2) - 1).toFixed(1)}`)
+    .join(' ')
   return (
-    <div className="aspect-[16/10] bg-[#FBFAF6] p-4 sm:p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <div className="w-2.5 h-2.5 rounded-full bg-[#E5786E]" />
-          <div className="w-2.5 h-2.5 rounded-full bg-[#E8C268]" />
-          <div className="w-2.5 h-2.5 rounded-full bg-[#7BC98A]" />
-          <span className="ml-2 text-[10px] text-[#9A9189]">sembapos.com/admin/dashboard</span>
+    <svg width={w} height={h} className="overflow-visible">
+      <polyline points={pts} fill="none" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function DashboardMock() {
+  // ── Data dummy untuk grafik pendapatan 7 hari (skala 0-100) ──
+  const series = [42, 58, 49, 73, 64, 86, 98]
+  const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
+  const W = 300, H = 92, pad = 12, MAX = 108
+  const pts = series.map((v, i) => [
+    pad + i * ((W - pad * 2) / (series.length - 1)),
+    H - pad - (v / MAX) * (H - pad * 2),
+  ])
+  // Catmull-Rom → kurva mulus.
+  const smooth = (p) => {
+    if (p.length < 2) return ''
+    let d = `M ${p[0][0].toFixed(1)} ${p[0][1].toFixed(1)}`
+    for (let i = 0; i < p.length - 1; i++) {
+      const p0 = p[i - 1] || p[i], p1 = p[i], p2 = p[i + 1], p3 = p[i + 2] || p2
+      const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6
+      const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6
+      d += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`
+    }
+    return d
+  }
+  const linePath = smooth(pts)
+  const last = pts[pts.length - 1]
+  const areaPath = `${linePath} L ${last[0].toFixed(1)} ${H - pad} L ${pts[0][0].toFixed(1)} ${H - pad} Z`
+
+  const nav = [
+    { icon: 'LayoutDashboard', label: 'Dashboard', active: true },
+    { icon: 'CalendarDays', label: 'Antrian & Booking' },
+    { icon: 'Scissors', label: 'Layanan' },
+    { icon: 'Users', label: 'Tim & Komisi' },
+    { icon: 'BarChart3', label: 'Laporan' },
+    { icon: 'Wallet', label: 'Keuangan' },
+  ]
+  const kpis = [
+    { label: 'Omzet hari ini', value: 'Rp 4,2jt', up: '18%', spark: [30, 40, 35, 55, 50, 70, 82] },
+    { label: 'Transaksi', value: '47', up: '12%', spark: [20, 35, 30, 45, 55, 60, 72] },
+    { label: 'Pelanggan baru', value: '12', up: '8%', spark: [40, 38, 52, 48, 60, 58, 75] },
+  ]
+  const barbers = [
+    { name: 'Andi', rating: '4.9', value: 'Rp 1,4jt', tone: '#C9A84C' },
+    { name: 'Budi', rating: '4.8', value: 'Rp 1,1jt', tone: '#7BAEC9' },
+    { name: 'Citra', rating: '4.7', value: 'Rp 0,9jt', tone: '#C97B9B' },
+  ]
+
+  return (
+    <div className="aspect-[16/10] bg-[#FBFAF6] flex flex-col overflow-hidden">
+      {/* Browser chrome */}
+      <div className="flex items-center justify-between px-4 sm:px-5 py-2.5 bg-white border-b border-[#EAE3D3]">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className="w-2.5 h-2.5 rounded-full bg-[#E5786E]" />
+            <div className="w-2.5 h-2.5 rounded-full bg-[#E8C268]" />
+            <div className="w-2.5 h-2.5 rounded-full bg-[#7BC98A]" />
+          </div>
+          <span className="ml-1.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#F0EADC] text-[10px] text-[#9A9189] truncate">
+            <Lucide.Lock size={9} /> sembapos.com/admin/dashboard
+          </span>
         </div>
-        <div className="text-[10px] text-[#9A9189]">Hari ini</div>
+        <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-semibold text-[#3E9E57] shrink-0">
+          <span className="relative flex h-1.5 w-1.5">
+            <motion.span
+              className="absolute inline-flex h-full w-full rounded-full bg-[#7BC98A]"
+              animate={{ scale: [1, 2.4, 1], opacity: [0.7, 0, 0.7] }}
+              transition={{ duration: 1.8, repeat: Infinity }}
+            />
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#3E9E57]" />
+          </span>
+          Live
+        </span>
       </div>
 
-      <div className="grid grid-cols-12 gap-3">
-        <div className="col-span-3 hidden sm:block space-y-1">
-          {['Dashboard', 'Cabang', 'Layanan', 'Tim', 'Laporan', 'Billing'].map((item, i) => (
-            <div key={item} className={`px-2.5 py-1.5 rounded-md text-[10px] font-medium ${
-              i === 0 ? 'bg-[#C9A84C] text-[#1C1A17]' : 'text-[#9A9189]'
-            }`}>
-              {item}
+      {/* Body */}
+      <div className="flex-1 grid grid-cols-12 min-h-0">
+        {/* Sidebar */}
+        <aside className="col-span-3 hidden sm:flex flex-col p-3 gap-3 border-r border-[#EAE3D3] bg-white/50">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#E8C875] to-[#C9A84C] flex items-center justify-center shadow-sm shrink-0">
+              <Lucide.Scissors size={14} className="text-[#1C1A17]" />
             </div>
-          ))}
-        </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold text-[#1C1A17] font-display leading-none">SembaPOS</p>
+              <p className="text-[8px] text-[#9A9189] mt-1 truncate">Barber Kingdom</p>
+            </div>
+          </div>
+          <div className="space-y-0.5">
+            {nav.map((n) => {
+              const Icon = Lucide[n.icon] || Lucide.Circle
+              return (
+                <div
+                  key={n.label}
+                  className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] font-medium ${
+                    n.active ? 'bg-[#C9A84C] text-[#1C1A17] shadow-sm' : 'text-[#9A9189]'
+                  }`}
+                >
+                  <Icon size={12} className="shrink-0" /> <span className="truncate">{n.label}</span>
+                </div>
+              )
+            })}
+          </div>
+          <div className="mt-auto rounded-lg border border-[#EAE0C6] bg-[#FBF4E1] p-2">
+            <p className="text-[9px] font-semibold text-[#A8893A]">Paket Pro aktif</p>
+            <p className="text-[8px] text-[#9A9189] mt-0.5 leading-tight">3 cabang • 12 staf</p>
+          </div>
+        </aside>
 
-        <div className="col-span-12 sm:col-span-9 space-y-3">
+        {/* Main */}
+        <main className="col-span-12 sm:col-span-9 p-3 sm:p-4 flex flex-col gap-2.5 min-h-0">
+          {/* header */}
+          <div className="flex items-center justify-between">
+            <div className="min-w-0">
+              <p className="text-[11px] sm:text-xs font-bold text-[#1C1A17] font-display truncate">Selamat pagi, Barber Kingdom 👋</p>
+              <p className="text-[9px] text-[#9A9189]">Ringkasan performa hari ini</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-md border border-[#EAE3D3] bg-white text-[9px] text-[#57534E]">
+                <Lucide.Calendar size={9} /> Hari ini <Lucide.ChevronDown size={9} />
+              </span>
+              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#1C1A17] to-[#3A352D] flex items-center justify-center text-[8px] font-bold text-[#E8C875]">BK</div>
+            </div>
+          </div>
+
+          {/* KPI cards */}
           <div className="grid grid-cols-3 gap-2">
-            {[
-              { label: 'Omzet hari ini', value: 'Rp 4,2 jt', up: '+18%' },
-              { label: 'Transaksi',      value: '47',        up: '+5'  },
-              { label: 'Antrian',        value: '8',         up: ''    },
-            ].map((k) => (
-              <div key={k.label} className="p-2.5 rounded-lg bg-white border border-[#EAE3D3]">
-                <p className="text-[9px] text-[#9A9189]">{k.label}</p>
-                <p className="text-base font-bold text-[#1C1A17] mt-0.5 font-display">{k.value}</p>
-                {k.up && <p className="text-[9px] text-[#3E9E57] mt-0.5">↑ {k.up}</p>}
-              </div>
+            {kpis.map((k, i) => (
+              <motion.div
+                key={k.label}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.1 + i * 0.08 }}
+                className="p-2.5 rounded-xl bg-white border border-[#EAE3D3] shadow-[0_6px_18px_-10px_rgba(28,26,23,0.3)]"
+              >
+                <div className="flex items-start justify-between gap-1">
+                  <p className="text-[8px] sm:text-[9px] text-[#9A9189] truncate">{k.label}</p>
+                  <Sparkline data={k.spark} />
+                </div>
+                <div className="flex items-end justify-between mt-1 gap-1">
+                  <p className="text-sm sm:text-base font-bold text-[#1C1A17] font-display leading-none">{k.value}</p>
+                  <span className="inline-flex items-center gap-0.5 text-[8px] font-semibold text-[#3E9E57]">
+                    <Lucide.TrendingUp size={9} />{k.up}
+                  </span>
+                </div>
+              </motion.div>
             ))}
           </div>
 
-          <div className="p-3 rounded-lg bg-white border border-[#EAE3D3]">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] text-[#9A9189]">Omzet 7 hari terakhir</p>
-              <p className="text-[9px] text-[#A8893A] font-semibold">+24%</p>
+          {/* chart + barber leaderboard */}
+          <div className="grid grid-cols-3 gap-2 flex-1 min-h-0">
+            {/* Revenue chart */}
+            <div className="col-span-3 sm:col-span-2 p-2.5 rounded-xl bg-white border border-[#EAE3D3] shadow-[0_6px_18px_-10px_rgba(28,26,23,0.3)] flex flex-col min-h-0">
+              <div className="flex items-center justify-between">
+                <p className="text-[9px] sm:text-[10px] font-medium text-[#57534E]">Pendapatan 7 hari</p>
+                <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-[#A8893A]">
+                  <Lucide.ArrowUpRight size={10} /> 24%
+                </span>
+              </div>
+              <div className="flex-1 min-h-0 mt-1">
+                <svg viewBox={`0 0 ${W} ${H + 14}`} className="w-full h-full">
+                  <defs>
+                    <linearGradient id="mockArea" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#C9A84C" stopOpacity="0.32" />
+                      <stop offset="100%" stopColor="#C9A84C" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  {[0.25, 0.5, 0.75].map((g) => (
+                    <line key={g} x1={pad} x2={W - pad} y1={pad + (H - pad * 2) * g} y2={pad + (H - pad * 2) * g} stroke="#F0EADC" strokeWidth="1" />
+                  ))}
+                  <motion.path
+                    d={areaPath} fill="url(#mockArea)"
+                    initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.5 }}
+                  />
+                  <motion.path
+                    d={linePath} fill="none" stroke="#C9A84C" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
+                    initial={{ pathLength: 0 }} whileInView={{ pathLength: 1 }} viewport={{ once: true }} transition={{ duration: 1.2, ease: 'easeInOut' }}
+                  />
+                  <motion.circle
+                    cx={last[0]} cy={last[1]} r="3.4" fill="#C9A84C" stroke="#fff" strokeWidth="1.6"
+                    initial={{ scale: 0 }} whileInView={{ scale: 1 }} viewport={{ once: true }} transition={{ delay: 1.2, type: 'spring', stiffness: 300 }}
+                  />
+                  {days.map((d, i) => (
+                    <text key={d} x={pts[i][0]} y={H + 9} textAnchor="middle" fontSize="6.5" fill="#B8B0A4">{d}</text>
+                  ))}
+                </svg>
+              </div>
             </div>
-            <div className="flex items-end gap-1.5 h-16">
-              {[40, 65, 50, 80, 70, 90, 100].map((h, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ height: 0 }}
-                  whileInView={{ height: `${h}%` }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.6, delay: 0.2 + i * 0.05 }}
-                  className="flex-1 rounded-sm bg-gradient-to-t from-[#E8C875] to-[#C9A84C]"
-                />
-              ))}
-            </div>
-          </div>
 
-          <div className="p-3 rounded-lg bg-white border border-[#EAE3D3]">
-            <p className="text-[10px] text-[#9A9189] mb-2">Aktivitas terbaru</p>
-            <div className="space-y-1.5">
-              {[
-                { name: 'Andi · Potong + Cuci', time: '2m'  },
-                { name: 'Budi · Booking 14:30', time: '8m'  },
-                { name: 'Citra · Bayar Rp 75k', time: '15m' },
-              ].map((a, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: -10 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: 0.5 + i * 0.1 }}
-                  className="flex items-center justify-between text-[10px]"
-                >
-                  <span className="text-[#57534E]">• {a.name}</span>
-                  <span className="text-[#9A9189]">{a.time}</span>
-                </motion.div>
-              ))}
+            {/* Barber leaderboard */}
+            <div className="hidden sm:flex flex-col col-span-1 p-2.5 rounded-xl bg-white border border-[#EAE3D3] shadow-[0_6px_18px_-10px_rgba(28,26,23,0.3)]">
+              <p className="text-[9px] sm:text-[10px] font-medium text-[#57534E] mb-1.5">Barber terbaik</p>
+              <div className="space-y-1.5">
+                {barbers.map((b, i) => (
+                  <motion.div
+                    key={b.name}
+                    initial={{ opacity: 0, x: 8 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: 0.6 + i * 0.12 }}
+                    className="flex items-center gap-2"
+                  >
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white shrink-0" style={{ backgroundColor: b.tone }}>{b.name[0]}</div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[9px] font-medium text-[#1C1A17] truncate leading-none">{b.name}</p>
+                      <p className="text-[8px] text-[#9A9189] flex items-center gap-0.5 mt-1">
+                        <Lucide.Star size={7} className="fill-[#E8C268] text-[#E8C268]" /> {b.rating}
+                      </p>
+                    </div>
+                    <span className="text-[8px] font-semibold text-[#57534E] shrink-0">{b.value}</span>
+                  </motion.div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        </main>
       </div>
     </div>
   )
