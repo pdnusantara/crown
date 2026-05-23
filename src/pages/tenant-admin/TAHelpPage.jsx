@@ -329,6 +329,18 @@ const CATEGORIES = [
         toLabel: 'Buka Jadwal',
       },
       {
+        id: 's-isi-paket',
+        q: 'Apa saja isi tiap paket?',
+        a: 'Ada tiga paket dan sifatnya bertingkat — paket di atasnya mencakup semua fitur paket di bawahnya, plus tambahan.',
+        steps: [
+          'Basic — POS kasir, manajemen antrian, booking online, loyalti/poin, voucher & promo, rating barber, jadwal shift, absensi digital, manajemen pengeluaran, dan install aplikasi (PWA).',
+          'Pro — semua fitur Basic, plus laporan lanjutan, heatmap jam sibuk, Customer CLV, laporan wilayah, struk WhatsApp, dan laporan pesan WhatsApp.',
+          'Enterprise — semua fitur Pro, plus multi-cabang, backup & restore, akses API, dan white label (branding tanpa logo BarberOS).',
+        ],
+        to: '/admin/billing',
+        toLabel: 'Buka Billing',
+      },
+      {
         id: 's-langganan',
         q: 'Bagaimana memperpanjang langganan?',
         a: 'Masa langganan toko terlihat di sidebar dan menu Billing. Sebelum kedaluwarsa, perpanjang lewat Billing agar toko tetap aktif.',
@@ -343,7 +355,7 @@ const CATEGORIES = [
       {
         id: 's-paket',
         q: 'Beberapa fitur tidak muncul — kenapa?',
-        a: 'Sebagian fitur (mis. rating barber) hanya aktif pada paket tertentu. Bila fitur yang Anda butuhkan terkunci, naikkan paket lewat menu Billing.',
+        a: 'Sebagian fitur (mis. laporan lanjutan & struk WhatsApp di Pro, atau multi-cabang di Enterprise) hanya aktif pada paket tertentu. Bila fitur yang Anda butuhkan terkunci, naikkan paket lewat menu Billing.',
         to: '/admin/billing',
         toLabel: 'Buka Billing',
       },
