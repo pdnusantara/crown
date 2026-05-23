@@ -84,6 +84,19 @@ function buildCategories(slug) {
           toLabel: 'Buka Kasir',
         },
         {
+          id: 'tx-rating-qr',
+          q: 'Bagaimana meminta pelanggan memberi rating?',
+          a: 'Setelah pembayaran berhasil, di struk muncul kode QR rating (bila fitur Rating Barber aktif). Pelanggan tinggal memindai untuk menilai layanan — tanpa perlu WhatsApp, jadi pelanggan walk-in tanpa nomor HP pun bisa memberi rating.',
+          steps: [
+            'Selesaikan pembayaran seperti biasa.',
+            'Tunjukkan kode QR di layar struk kepada pelanggan untuk dipindai, atau cetak struk — QR ikut tercetak.',
+            'Bila ingin dibagikan secara digital, tekan "Salin link rating" lalu kirimkan linknya.',
+            'Hasil penilaian masuk ke laporan rating toko & barber.',
+          ],
+          to: pos,
+          toLabel: 'Buka Kasir',
+        },
+        {
           id: 'tx-riwayat',
           q: 'Di mana melihat transaksi yang sudah dibuat?',
           a: 'Menu Transaksi menampilkan seluruh transaksi pada cabang ini. Anda bisa mencari, melihat detail, dan mencetak ulang struk.',

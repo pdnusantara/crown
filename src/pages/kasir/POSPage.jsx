@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Plus, X, User, Printer, CheckCircle, Check, Tag, Trash2,
   MessageCircle, AlertCircle, Clock, Scissors, Star, ListOrdered, ShoppingCart,
-  Banknote, RotateCcw, ArrowDown, Wallet, Crown,
+  Banknote, RotateCcw, ArrowDown, Wallet, Crown, Copy,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { id as idLocale, enUS as enLocale } from 'date-fns/locale'
@@ -32,6 +32,7 @@ import Modal from '../../components/ui/Modal.jsx'
 import Input from '../../components/ui/Input.jsx'
 import ErrorBoundary from '../../components/ui/ErrorBoundary.jsx'
 import { formatRupiah } from '../../utils/format.js'
+import { QRCodeSVG } from 'qrcode.react'
 
 // Rumus earn sama dengan backend (`backend/src/routes/transactions.js`):
 // 1 poin per Rp10.000 dari `total` (setelah diskon).
@@ -422,6 +423,9 @@ function POSPageInner() {
 
   // Feature flag checks — backend-backed, realtime invalidate on `featureFlag:changed`.
   const voucherEnabled       = useIsFeatureEnabled(user?.tenantId, 'voucher')
+  // Rating via QR: kanal mandiri tanpa WhatsApp. Endpoint publik /rating/:txId
+  // tidak butuh ratingConfig.enabled, jadi QR cukup digate flag fitur ini.
+  const ratingEnabled        = useIsFeatureEnabled(user?.tenantId, 'barber_rating')
 
   // Transaksi hanya boleh saat shift terbuka. `noActiveShift` baru true setelah
   // query selesai (hindari flash blokir saat masih memuat). Backend tetap jadi
@@ -466,6 +470,8 @@ function POSPageInner() {
   // Tinggi keyboard on-screen (mobile). Dipakai mengangkat bottom-sheet keranjang
   // supaya tombol "Bayar" tidak ketutup keyboard saat input voucher/diskon/poin.
   const [kbInset, setKbInset] = useState(0)
+  // Feedback tombol "Salin link" rating (centang sesaat setelah disalin).
+  const [ratingCopied, setRatingCopied] = useState(false)
 
   const receipt = useRef(null)
 
@@ -769,6 +775,22 @@ function POSPageInner() {
   }
 
   const lastTxn = posStore.lastTransaction
+
+  // Link halaman rating publik. Kasir sudah berada di subdomain tenant, jadi
+  // origin-nya sudah benar (tenant resolver backend baca dari host header).
+  const ratingUrl = lastTxn ? `${window.location.origin}/rating/${lastTxn.id}` : ''
+  const showRatingQr = ratingEnabled && !!lastTxn
+
+  const copyRatingLink = async () => {
+    if (!ratingUrl) return
+    try {
+      await navigator.clipboard.writeText(ratingUrl)
+      setRatingCopied(true)
+      setTimeout(() => setRatingCopied(false), 2000)
+    } catch {
+      toast.error(t('pos.copyFailed'))
+    }
+  }
 
   // ─── Cart panel (extracted so we can reuse for desktop side + mobile sheet) ──
   const cartPanel = (
@@ -1500,6 +1522,21 @@ function POSPageInner() {
               <div className="border-t border-dashed border-gray-300 my-2" />
               <p className="text-center text-xs text-gray-400">{t('pos.receiptThanksLong')}</p>
               <p className="text-center text-xs text-gray-300 mt-0.5">{t('pos.poweredBy')}</p>
+
+              {/* QR rating — tampil di layar (dalam preview struk) & ikut tercetak.
+                  Kanal mandiri tanpa WhatsApp; berguna juga untuk walk-in tanpa HP. */}
+              {showRatingQr && (
+                <>
+                  <div className="border-t border-dashed border-gray-300 my-2" />
+                  <div className="flex flex-col items-center gap-1.5 pt-0.5">
+                    <p className="text-center text-[11px] font-semibold text-gray-700">{t('pos.ratingQrTitle')}</p>
+                    <div className="bg-white p-1.5 rounded-lg">
+                      <QRCodeSVG value={ratingUrl} size={104} level="M" marginSize={2} />
+                    </div>
+                    <p className="text-center text-[10px] text-gray-400 leading-tight">{t('pos.ratingQrCaption')}</p>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -1552,6 +1589,16 @@ function POSPageInner() {
               <MessageCircle size={16} />
               {t('pos.whatsapp')}
             </button>
+            )}
+            {showRatingQr && (
+              <Button
+                variant="secondary"
+                icon={ratingCopied ? Check : Copy}
+                fullWidth
+                onClick={copyRatingLink}
+              >
+                {ratingCopied ? t('pos.ratingLinkCopied') : t('pos.copyRatingLink')}
+              </Button>
             )}
             <Button fullWidth onClick={handleNewTransaction}>{t('pos.newTransaction')}</Button>
           </div>
