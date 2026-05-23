@@ -65,6 +65,21 @@ function buildCategories(slug) {
           toLabel: 'Buka Kasir',
         },
         {
+          id: 'tx-cetak-bluetooth',
+          q: 'Bagaimana mencetak struk ke printer Bluetooth?',
+          a: 'Struk bisa langsung dicetak ke printer thermal Bluetooth (58mm/80mm) dari HP Android lewat Chrome. Tombol "Cetak" biasa memakai dialog cetak bawaan browser; untuk printer thermal Bluetooth, gunakan tombol "Cetak Bluetooth" di layar struk.',
+          steps: [
+            'Nyalakan printer thermal Bluetooth Anda.',
+            'Selesaikan pembayaran hingga struk muncul.',
+            'Pilih lebar kertas (58mm atau 80mm) sesuai printer.',
+            'Tekan "Hubungkan & Cetak", lalu pilih printer dari daftar yang muncul.',
+            'Struk langsung tercetak; cetakan berikutnya cukup tekan "Cetak Bluetooth".',
+            'Catatan: fitur ini berjalan di Chrome (Android/komputer), bukan di iPhone/Safari.',
+          ],
+          to: pos,
+          toLabel: 'Buka Kasir',
+        },
+        {
           id: 'tx-poin',
           q: 'Bagaimana memakai poin loyalti pelanggan?',
           a: 'Pelanggan terdaftar bisa menukar poin sebagai potongan. 1 poin bernilai Rp100, dengan batas maksimal 50% dari subtotal.',
