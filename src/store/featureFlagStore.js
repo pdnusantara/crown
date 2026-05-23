@@ -41,7 +41,7 @@ const ALL_FLAGS = [
 // Default fitur per paket — fallback tampilan saja (mis. /super-admin/feature-flags).
 // Kebenaran per-tenant tetap di TenantFeatureFlag (backend).
 const PACKAGE_DEFAULTS = {
-  Basic:      ['pos', 'queue', 'booking', 'loyalty', 'pwa'],
+  Basic:      ['pos', 'queue', 'booking', 'loyalty', 'voucher', 'barber_rating', 'schedule', 'attendance', 'expense_tracking', 'pwa'],
   Pro:        ['pos', 'queue', 'booking', 'loyalty', 'voucher', 'reports', 'schedule', 'multi_branch', 'expense_tracking', 'attendance', 'whatsapp', 'whatsapp_logs', 'barber_rating', 'heatmap', 'clv', 'wilayah_report', 'pwa', 'backup'],
   Enterprise: ALL_FLAGS.map(f => f.id),
 }
