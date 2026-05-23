@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Plus, X, User, Printer, CheckCircle, Check, Tag, Trash2,
   MessageCircle, AlertCircle, Clock, Scissors, Star, ListOrdered, ShoppingCart,
-  Banknote, RotateCcw, ArrowDown, Wallet, Crown, Copy,
+  Banknote, RotateCcw, ArrowDown, Wallet, Crown, Copy, Bluetooth,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { id as idLocale, enUS as enLocale } from 'date-fns/locale'
@@ -28,6 +28,8 @@ import { useCustomers, useCreateCustomer } from '../../hooks/useCustomers.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import WilayahPicker from '../../components/WilayahPicker.jsx'
 import Button from '../../components/ui/Button.jsx'
+import { useBtPrinter } from '../../lib/btPrinter.js'
+import { buildReceipt } from '../../utils/escpos.js'
 import Modal from '../../components/ui/Modal.jsx'
 import Input from '../../components/ui/Input.jsx'
 import ErrorBoundary from '../../components/ui/ErrorBoundary.jsx'
@@ -473,6 +475,13 @@ function POSPageInner() {
   // Feedback tombol "Salin link" rating (centang sesaat setelah disalin).
   const [ratingCopied, setRatingCopied] = useState(false)
 
+  // Cetak struk Bluetooth (Web Bluetooth + ESC/POS).
+  const bt = useBtPrinter()
+  const [paperWidth, setPaperWidth] = useState(() => {
+    try { return Number(localStorage.getItem('btPaperWidth')) || 58 } catch { return 58 }
+  })
+  const [btBusy, setBtBusy] = useState(false)
+
   const receipt = useRef(null)
 
   // Debounce customer search → server-side filter
@@ -789,6 +798,48 @@ function POSPageInner() {
       setTimeout(() => setRatingCopied(false), 2000)
     } catch {
       toast.error(t('pos.copyFailed'))
+    }
+  }
+
+  // Susun data struk → kirim ke printer thermal Bluetooth (ESC/POS).
+  const buildReceiptData = () => {
+    const meta = [
+      { label: t('pos.receiptNo'),   value: `#${lastTxn.id.slice(-8).toUpperCase()}` },
+      { label: t('pos.receiptDate'), value: formatDateTimeInTz(lastTxn.createdAt) },
+    ]
+    if (lastTxn.customerName && lastTxn.customerName !== 'Walk-in Customer')
+      meta.push({ label: t('pos.receiptCustomer'), value: lastTxn.customerName })
+    const items = lastTxn.services.map((s) => ({ name: s.name, price: formatRupiah(s.price), barber: s.barberName || '' }))
+    const rows = [{ label: t('pos.receiptSubtotal'), value: formatRupiah(lastTxn.subtotal) }]
+    if (lastTxn.discountAmount > 0) rows.push({ label: t('pos.receiptDiscount'), value: `-${formatRupiah(lastTxn.discountAmount)}` })
+    if (lastTxn.pointsRedeemed > 0) rows.push({ label: t('pos.receiptPointsRedeemed', { points: lastTxn.pointsRedeemed }), value: `-${formatRupiah(calcRedeemValue(lastTxn.pointsRedeemed))}` })
+    rows.push({ label: t('pos.receiptTotalUpper'), value: formatRupiah(lastTxn.total), bold: true })
+    rows.push({ label: t('pos.receiptPaymentRow'), value: methodLabel(lastTxn.paymentMethod) })
+    if (lastTxn.cashReceived > 0) rows.push({ label: t('pos.receiptReceived'), value: formatRupiah(lastTxn.cashReceived) })
+    if (lastTxn.change > 0)       rows.push({ label: t('pos.receiptChange'),   value: formatRupiah(lastTxn.change) })
+    return {
+      shopName: tenantName, branchName, branchAddr,
+      branchPhone: branchPhone ? `${t('pos.receiptPhonePrefix')}: ${branchPhone}` : '',
+      meta, items, rows,
+      thanks: t('pos.receiptThanksLong'),
+      poweredBy: t('pos.poweredBy'),
+      rating: (showRatingQr && ratingUrl) ? { title: t('pos.ratingQrTitle'), url: ratingUrl } : null,
+    }
+  }
+
+  const handleBtPrint = async () => {
+    if (!lastTxn) return
+    if (!bt.supported) { toast.error('Browser ini tidak mendukung Bluetooth. Gunakan Chrome di Android.'); return }
+    setBtBusy(true)
+    try {
+      if (!bt.connected) await bt.connect()        // tampilkan pemilih perangkat (butuh klik)
+      await bt.write(buildReceipt(buildReceiptData(), paperWidth >= 80 ? 42 : 32))
+      toast.success('Struk terkirim ke printer')
+    } catch (err) {
+      // NotFoundError = pengguna menutup dialog pemilih perangkat → diam saja.
+      if (err?.name !== 'NotFoundError') toast.error(err?.message || 'Gagal mencetak via Bluetooth')
+    } finally {
+      setBtBusy(false)
     }
   }
 
@@ -1540,7 +1591,31 @@ function POSPageInner() {
             </div>
           )}
 
+          {bt.supported && (
+            <div className="no-print flex items-center justify-between gap-2 text-xs">
+              <span className="text-muted truncate min-w-0">
+                {bt.connected
+                  ? <>Printer: <b className="text-off-white">{bt.deviceName}</b> · <button type="button" onClick={bt.disconnect} className="text-gold hover:underline">putuskan</button></>
+                  : 'Printer Bluetooth belum tersambung'}
+              </span>
+              <select
+                value={paperWidth}
+                onChange={(e) => { const v = Number(e.target.value); setPaperWidth(v); try { localStorage.setItem('btPaperWidth', String(v)) } catch { /* noop */ } }}
+                className="bg-dark-surface border border-dark-border rounded-lg px-2 py-1 text-xs text-off-white shrink-0"
+                aria-label="Lebar kertas struk"
+              >
+                <option value={58}>58mm</option>
+                <option value={80}>80mm</option>
+              </select>
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row gap-2 no-print">
+            {bt.supported && (
+              <Button icon={Bluetooth} fullWidth loading={btBusy} onClick={handleBtPrint}>
+                {bt.connected ? 'Cetak Bluetooth' : 'Hubungkan & Cetak'}
+              </Button>
+            )}
             <Button variant="secondary" icon={Printer} fullWidth onClick={() => window.print()}>
               {t('pos.print')}
             </Button>
