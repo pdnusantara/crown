@@ -206,13 +206,43 @@ async function testConnection() {
   const c = await getConfig(true);
   if (!c.botToken) { const e = new Error('Bot token belum diisi.'); e.code = 'NO_TOKEN'; throw e; }
   if (!c.chatId)   { const e = new Error('Chat ID grup belum diisi.'); e.code = 'NO_CHAT_ID'; throw e; }
-  const me = await tgFetch(c.botToken, 'getMe', {});
-  await tgFetch(c.botToken, 'sendMessage', {
-    chat_id: c.chatId,
-    text: '✅ <b>SembaPOS terhubung</b>\nNotifikasi pendaftaran tenant akan dikirim ke grup ini.',
-    parse_mode: 'HTML',
-    disable_web_page_preview: true,
-  });
+
+  // 1) Validasi token via getMe — 404/401 dari Telegram = token salah.
+  let me;
+  try {
+    me = await tgFetch(c.botToken, 'getMe', {});
+  } catch (err) {
+    if (err.code === 404 || err.code === 401 || err.code === 'HTTP_404' || err.code === 'HTTP_401') {
+      const e = new Error('Token bot tidak valid — salin ulang token lengkap dari @BotFather (format: angka:huruf, mis. 8123456789:AAH...).');
+      e.code = 'INVALID_TOKEN';
+      throw e;
+    }
+    throw err;
+  }
+
+  // 2) Kirim pesan uji ke grup — bedakan "chat tidak ditemukan" vs "tak ada izin".
+  try {
+    await tgFetch(c.botToken, 'sendMessage', {
+      chat_id: c.chatId,
+      text: '✅ <b>SembaPOS terhubung</b>\nNotifikasi pendaftaran tenant akan dikirim ke grup ini.',
+      parse_mode: 'HTML',
+      disable_web_page_preview: true,
+    });
+  } catch (err) {
+    const msg = err?.message || '';
+    if (/chat not found/i.test(msg)) {
+      const e = new Error('Chat ID salah, atau bot belum ditambahkan sebagai anggota grup tujuan.');
+      e.code = 'CHAT_NOT_FOUND';
+      throw e;
+    }
+    if (/kicked|not enough rights|chat_write_forbidden|not a member/i.test(msg)) {
+      const e = new Error('Bot ada di grup tapi tidak boleh mengirim pesan — cek izin bot di grup.');
+      e.code = 'NO_PERMISSION';
+      throw e;
+    }
+    throw err;
+  }
+
   return { ok: true, botUsername: me?.username || null };
 }
 
