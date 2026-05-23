@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import {
   Send, Save, Eye, EyeOff, ExternalLink, ToggleLeft, ToggleRight,
   Plug, CheckCircle, AlertTriangle, Bell, CalendarDays,
@@ -6,9 +7,9 @@ import {
 import {
   useTelegramConfig, useUpdateTelegramConfig, useTestTelegramConfig,
 } from '../../hooks/useTelegramConfig.js'
-import { useToast } from '../../components/ui/Toast.jsx'
-import Card, { CardHeader } from '../../components/ui/Card.jsx'
-import Button from '../../components/ui/Button.jsx'
+import { useToast } from '../ui/Toast.jsx'
+import Card, { CardHeader } from '../ui/Card.jsx'
+import Button from '../ui/Button.jsx'
 
 function FieldRow({ label, hint, children }) {
   return (
@@ -42,7 +43,9 @@ function ToggleRow({ icon: Icon, title, desc, checked, disabled, onChange }) {
   )
 }
 
-export default function SATelegramSettingsPage() {
+// Panel konfigurasi notifikasi Telegram — disematkan di halaman Laporan
+// Pendaftaran (satu halaman). Memuat & menyimpan via /api/telegram/config.
+export default function TelegramSettingsPanel() {
   const { data: config, isLoading } = useTelegramConfig()
   const update = useUpdateTelegramConfig()
   const test = useTestTelegramConfig()
@@ -108,29 +111,21 @@ export default function SATelegramSettingsPage() {
   }
 
   if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <div className="h-10 bg-dark-card rounded-xl animate-pulse w-64" />
-        <div className="h-64 bg-dark-card rounded-2xl animate-pulse" />
-      </div>
-    )
+    return <div className="h-48 bg-dark-card rounded-2xl animate-pulse" />
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl font-bold text-off-white">Notifikasi Telegram</h1>
-        <p className="text-muted text-sm mt-1">
-          Kirim notifikasi pendaftaran tenant baru & laporan berkala ke grup Telegram
-        </p>
-      </div>
-
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: 'auto' }}
+      className="space-y-4 overflow-hidden"
+    >
       {/* Kredensial */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
             <Send size={18} className="text-gold" />
-            <span className="font-semibold text-off-white">Kredensial Bot</span>
+            <span className="font-semibold text-off-white">Notifikasi Telegram — Kredensial Bot</span>
           </div>
           <a
             href="https://core.telegram.org/bots#how-do-i-create-a-bot"
@@ -143,7 +138,6 @@ export default function SATelegramSettingsPage() {
         </CardHeader>
 
         <div className="p-5 space-y-5">
-          {/* Master switch */}
           <ToggleRow
             title="Aktifkan Notifikasi Telegram"
             desc="Saklar utama — mematikan ini menghentikan semua notifikasi & laporan ke Telegram"
@@ -203,7 +197,7 @@ export default function SATelegramSettingsPage() {
         </div>
       </Card>
 
-      {/* Apa yang dikirim */}
+      {/* Notifikasi & laporan */}
       <Card>
         <CardHeader>
           <span className="font-semibold text-off-white">Notifikasi & Laporan</span>
@@ -241,21 +235,12 @@ export default function SATelegramSettingsPage() {
             disabled={!form.enabled}
             onChange={v => set('monthly', v)}
           />
+          <div className="text-xs text-muted leading-relaxed pt-1">
+            Setup: buat bot via <span className="text-off-white">@BotFather</span> → salin token; tambahkan bot ke grup;
+            ambil <span className="text-off-white">Chat ID</span> grup (mis. lewat <span className="text-off-white">@userinfobot</span>, biasanya diawali <span className="font-mono text-off-white">-100</span>); aktifkan saklar, simpan, lalu <span className="text-off-white">Test Kirim</span>.
+          </div>
         </div>
       </Card>
-
-      {/* Cara setup */}
-      <Card>
-        <CardHeader>
-          <span className="font-semibold text-off-white">Cara Setup</span>
-        </CardHeader>
-        <div className="p-5 text-sm text-muted space-y-1.5">
-          <p>1. Buka <span className="text-off-white">@BotFather</span> di Telegram → <span className="font-mono text-off-white">/newbot</span> → salin <span className="text-off-white">Bot Token</span> ke kolom di atas.</p>
-          <p>2. Buat/buka grup tujuan, lalu tambahkan bot tadi sebagai anggota grup.</p>
-          <p>3. Dapatkan <span className="text-off-white">Chat ID</span> grup: tambahkan <span className="text-off-white">@userinfobot</span> ke grup, atau kirim pesan lalu cek <span className="font-mono text-off-white">getUpdates</span> API bot. ID grup biasanya diawali <span className="font-mono text-off-white">-100</span>.</p>
-          <p>4. Aktifkan saklar utama, simpan, lalu klik <span className="text-off-white">Test Kirim</span> untuk memastikan pesan masuk ke grup.</p>
-        </div>
-      </Card>
-    </div>
+    </motion.div>
   )
 }

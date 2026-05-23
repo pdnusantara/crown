@@ -2,13 +2,14 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import {
   UserPlus, Download, RefreshCw, Search, Users, CalendarDays,
-  Handshake, TrendingUp, ExternalLink, Megaphone,
+  TrendingUp, ExternalLink, Megaphone, Send, ChevronDown,
 } from 'lucide-react'
 import { useTenantRegistrations, useTenantRegistrationStats } from '../../hooks/useTenantRegistrations.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import Card, { CardHeader } from '../../components/ui/Card.jsx'
 import Button from '../../components/ui/Button.jsx'
 import { tenantHostname } from '../../utils/platform.js'
+import TelegramSettingsPanel from '../../components/super-admin/TelegramSettingsPanel.jsx'
 
 const TZ = 'Asia/Jakarta'
 
@@ -92,6 +93,7 @@ function KpiTile({ label, value, icon: Icon, color, delay = 0 }) {
 
 export default function SATenantRegistrationsPage() {
   const { showToast } = useToast()
+  const [showTelegram, setShowTelegram] = useState(false)
   const [preset, setPreset] = useState('7days')
   const [from, setFrom] = useState(() => presetRange('7days').from)
   const [to, setTo] = useState(() => presetRange('7days').to)
@@ -157,10 +159,22 @@ export default function SATenantRegistrationsPage() {
           <p className="text-muted text-sm mt-1">Pantau siapa yang mendaftar, kapan, dan dari sumber mana</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          <Button
+            variant={showTelegram ? 'primary' : 'secondary'}
+            icon={Send}
+            onClick={() => setShowTelegram(v => !v)}
+          >
+            <span className="hidden sm:inline">Notifikasi Telegram</span>
+            <span className="sm:hidden">Telegram</span>
+            <ChevronDown size={14} className={`transition-transform ${showTelegram ? 'rotate-180' : ''}`} />
+          </Button>
           <Button variant="secondary" icon={RefreshCw} onClick={() => refetch()} loading={isFetching}>Segarkan</Button>
           <Button variant="secondary" icon={Download} onClick={handleExport}>Export CSV</Button>
         </div>
       </div>
+
+      {/* Konfigurasi notifikasi Telegram — satu halaman dgn laporan (collapsible) */}
+      {showTelegram && <TelegramSettingsPanel />}
 
       {/* KPI */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">

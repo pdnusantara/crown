@@ -8,7 +8,7 @@ import {
   Tag, GitCompare, Megaphone, Flag, MessageSquare, Activity,
   PieChart, UserCircle, DollarSign, Package, ShieldAlert, MapPin,
   ChevronRight, Wallet, Landmark, LifeBuoy, Fingerprint, Handshake,
-  Banknote, UserPlus, MessageCircle, Send,
+  Banknote, UserPlus, MessageCircle,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useTenantStore } from '../../store/tenantStore.js'
@@ -30,7 +30,6 @@ const navConfig = {
     { labelKey: 'nav.billing',          icon: DollarSign,  path: '/super-admin/billing' },
     { labelKey: 'nav.paymentSettings',  icon: Landmark,    path: '/super-admin/payment-settings' },
     { labelKey: 'nav.whatsappSettings', icon: MessageSquare, path: '/super-admin/whatsapp-settings' },
-    { labelKey: 'nav.telegramSettings', icon: Send,         path: '/super-admin/telegram-settings' },
     { labelKey: 'nav.promotions',       icon: Tag,         path: '/super-admin/promotions' },
     { labelKey: 'nav.landing',          icon: Megaphone,   path: '/super-admin/landing' },
     { labelKey: 'nav.broadcast',        icon: Megaphone,   path: '/super-admin/broadcast' },
