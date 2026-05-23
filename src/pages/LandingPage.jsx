@@ -133,21 +133,30 @@ const PKG_TAGLINE = {
   Enterprise: 'Skala besar, banyak cabang, semua fitur kebuka.',
 }
 
-// Fitur yang ditonjolkan sebagai "manfaat" di kartu harga — diurutkan dari
-// paling penting. Sisanya sengaja disembunyikan supaya pelanggan tidak
-// kebanjiran istilah teknis.
+// Label ramah untuk SETIAP fitur — kartu harga menampilkan seluruh fitur yang
+// benar-benar ada di paket (bukan subset). Urutan = dari fitur Basic, lalu
+// tambahan Pro, lalu tambahan Enterprise, supaya daftar "plus" tampil logis.
 const BENEFIT_ORDER = [
-  ['pos',            'Kasir cepat: layanan, produk & struk'],
-  ['queue',          'Papan antrian biar giliran rapi'],
-  ['booking',        'Pelanggan booking online sendiri'],
-  ['whatsapp',       'Struk & pengingat via WhatsApp'],
-  ['loyalty',        'Poin & reward buat pelanggan setia'],
-  ['voucher',        'Bikin voucher & promo diskon'],
-  ['barber_rating',  'Pelanggan kasih rating ke barber'],
-  ['reports',        'Laporan omzet otomatis tiap hari'],
-  ['schedule',       'Atur jadwal kerja barber'],
-  ['multi_branch',   'Kelola banyak cabang sekaligus'],
-  ['wilayah_report', 'Lihat pelanggan datang dari mana'],
+  ['pos',             'Kasir cepat: layanan, produk & struk'],
+  ['queue',           'Papan antrian biar giliran rapi'],
+  ['booking',         'Pelanggan booking online sendiri'],
+  ['loyalty',         'Poin & reward buat pelanggan setia'],
+  ['voucher',         'Bikin voucher & promo diskon'],
+  ['barber_rating',   'Pelanggan kasih rating ke barber'],
+  ['schedule',        'Atur jadwal kerja barber'],
+  ['attendance',      'Absensi staf via GPS'],
+  ['expense_tracking','Catat pengeluaran & hitung laba bersih'],
+  ['pwa',             'Aplikasi bisa dipasang di HP'],
+  ['reports',         'Laporan omzet & analitik lengkap'],
+  ['heatmap',         'Lihat jam tersibuk toko'],
+  ['clv',             'Kenali pelanggan paling bernilai'],
+  ['wilayah_report',  'Lihat pelanggan datang dari mana'],
+  ['whatsapp',        'Struk & pengingat via WhatsApp'],
+  ['whatsapp_logs',   'Pantau status pesan WhatsApp terkirim'],
+  ['multi_branch',    'Kelola banyak cabang sekaligus'],
+  ['backup',          'Backup & restore data toko'],
+  ['api_access',      'Akses API untuk integrasi'],
+  ['white_label',     'Branding sendiri tanpa logo BarberOS'],
 ]
 
 // Susun daftar manfaat kartu harga. Paket dasar tampil utuh; paket lebih
@@ -161,7 +170,7 @@ function cardBenefits(p, prev) {
   if (!prev) {
     const lines = [branchLine, staffLine]
     for (const [id, text] of BENEFIT_ORDER) {
-      if (feats.has(id) && lines.length < 6) lines.push(text)
+      if (feats.has(id)) lines.push(text)
     }
     return { inheritFrom: null, lines }
   }
@@ -171,7 +180,7 @@ function cardBenefits(p, prev) {
   if (p.maxStaff > prev.maxStaff) lines.push(staffLine)
   if (p.maxBranches > prev.maxBranches) lines.push(branchLine)
   for (const [id, text] of BENEFIT_ORDER) {
-    if (feats.has(id) && !prevFeats.has(id) && lines.length < 6) lines.push(text)
+    if (feats.has(id) && !prevFeats.has(id)) lines.push(text)
   }
   if (lines.length === 0) lines.push('Kapasitas lebih besar & prioritas dukungan')
   return { inheritFrom: prev.name, lines }
@@ -1102,14 +1111,9 @@ function Nav({ isAuthed, userRole, logo, siteName = 'SembaPOS' }) {
               Buka Dashboard
             </Link>
           ) : (
-            <>
-              <Link to="/login" className="hidden sm:inline-flex px-4 py-2 rounded-lg text-sm font-medium text-[#1C1A17] hover:bg-[#F0EADC] transition-colors">
-                Masuk
-              </Link>
-              <Link to="/register" onClick={() => trackPixel('Lead')} className="px-4 py-2 rounded-lg bg-[#C9A84C] text-[#1C1A17] text-sm font-semibold hover:bg-[#E8C875] transition-colors">
-                Daftar Gratis
-              </Link>
-            </>
+            <Link to="/register" onClick={() => trackPixel('Lead')} className="px-4 py-2 rounded-lg bg-[#C9A84C] text-[#1C1A17] text-sm font-semibold hover:bg-[#E8C875] transition-colors">
+              Daftar Gratis
+            </Link>
           )}
         </div>
       </div>
