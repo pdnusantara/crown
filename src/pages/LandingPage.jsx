@@ -1245,7 +1245,6 @@ function Footer({ text, logo, contact = {}, siteName = 'SembaPOS' }) {
           <ul className="space-y-2 text-[13px]">
             <li><a href="#fitur" className="hover:text-[#C9A84C] transition-colors">Fitur</a></li>
             <li><a href="#harga" className="hover:text-[#C9A84C] transition-colors">Harga</a></li>
-            <li><Link to="/login" className="hover:text-[#C9A84C] transition-colors">Masuk</Link></li>
             <li><Link to="/register" className="hover:text-[#C9A84C] transition-colors">Daftar Gratis</Link></li>
           </ul>
         </div>
