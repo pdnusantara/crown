@@ -8,7 +8,7 @@ import {
   Tag, GitCompare, Megaphone, Flag, MessageSquare, Activity,
   PieChart, UserCircle, DollarSign, Package, ShieldAlert, MapPin,
   ChevronRight, Wallet, Landmark, LifeBuoy, Fingerprint, Handshake,
-  Banknote, UserPlus, MessageCircle,
+  Banknote, UserPlus, MessageCircle, Send,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useTenantStore } from '../../store/tenantStore.js'
@@ -25,10 +25,12 @@ const navConfig = {
   super_admin: [
     { labelKey: 'nav.dashboard',    icon: LayoutDashboard, path: '/super-admin/dashboard' },
     { labelKey: 'nav.tenants',      icon: Building2,       path: '/super-admin/tenants' },
+    { labelKey: 'nav.tenantRegistrations', icon: UserPlus, path: '/super-admin/tenant-registrations' },
     { labelKey: 'nav.packages',     icon: Package,         path: '/super-admin/packages' },
     { labelKey: 'nav.billing',          icon: DollarSign,  path: '/super-admin/billing' },
     { labelKey: 'nav.paymentSettings',  icon: Landmark,    path: '/super-admin/payment-settings' },
     { labelKey: 'nav.whatsappSettings', icon: MessageSquare, path: '/super-admin/whatsapp-settings' },
+    { labelKey: 'nav.telegramSettings', icon: Send,         path: '/super-admin/telegram-settings' },
     { labelKey: 'nav.promotions',       icon: Tag,         path: '/super-admin/promotions' },
     { labelKey: 'nav.landing',          icon: Megaphone,   path: '/super-admin/landing' },
     { labelKey: 'nav.broadcast',        icon: Megaphone,   path: '/super-admin/broadcast' },

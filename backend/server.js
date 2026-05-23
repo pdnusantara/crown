@@ -17,6 +17,7 @@ const { initVisitReminderJob } = require('./src/jobs/visitReminder');
 const { initAttendanceFinalizeJob } = require('./src/jobs/attendanceFinalize');
 const { initRatingLinkDispatchJob } = require('./src/jobs/ratingLinkDispatch');
 const { initBookingAutoCheckinJob } = require('./src/jobs/bookingAutoCheckin');
+const { initRegistrationSummaryJob } = require('./src/jobs/registrationSummary');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -166,12 +167,13 @@ const httpServer = http.createServer(app);
 initSocket(httpServer);
 
 httpServer.listen(PORT, () => {
-  console.log(`BarberOS backend running on port ${PORT} [${process.env.NODE_ENV || 'development'}] (HTTP + Socket.io)`);
+  console.log(`SembaPOS backend running on port ${PORT} [${process.env.NODE_ENV || 'development'}] (HTTP + Socket.io)`);
   initRenewalJob();
   initVisitReminderJob();
   initAttendanceFinalizeJob();
   initRatingLinkDispatchJob();
   initBookingAutoCheckinJob();
+  initRegistrationSummaryJob();
 });
 
 module.exports = app;

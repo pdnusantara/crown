@@ -202,6 +202,14 @@ model Tenant {
   //   autoSendMinutes    = delay sebelum link dikirim (default 15 menit)
   //   messageTemplate    = teks pesan, placeholder {nama} {toko} {link}
   ratingConfig        Json?
+  // Atribusi pendaftaran — dari mana tenant ini datang saat /register.
+  //   signupChannel = kanal ternormalisasi untuk grouping cepat di laporan:
+  //     'facebook_ads' | 'google_ads' | 'campaign' | 'referral' | 'direct'.
+  //     Sumber affiliate ditentukan terpisah lewat relasi affiliateReferral.
+  //   signupMeta    = data mentah { utmSource, utmMedium, utmCampaign,
+  //     utmContent, utmTerm, fbclid, gclid, referrer, landingPath, ref }.
+  signupChannel       String?
+  signupMeta          Json?
   isSuspended         Boolean              @default(false)
   deletedAt           DateTime?
   createdAt           DateTime             @default(now())

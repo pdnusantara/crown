@@ -11,6 +11,7 @@ import { useLanding } from '../hooks/useLanding.js'
 import { useReferralCodeLookup } from '../hooks/useAffiliates.js'
 import { initMetaPixel, trackPixel } from '../lib/metaPixel.js'
 import { formatRupiah } from '../utils/format.js'
+import { getAttribution } from '../utils/attribution.js'
 import { tenantHostname, tenantLoginUrl, PLATFORM_NAME } from '../utils/platform.js'
 
 const STEPS = ['Pilih Paket', 'Profil Bisnis', 'Akun Owner']
@@ -70,7 +71,10 @@ export default function RegisterPage() {
   const initialRef = useMemo(() => {
     if (typeof window === 'undefined') return ''
     const params = new URLSearchParams(window.location.search)
-    return (params.get('ref') || '').toUpperCase().trim().slice(0, 32)
+    // ?ref= di URL saat ini diutamakan; jika tidak ada (mis. pengunjung mendarat
+    // di landing dengan ?ref= lalu klik Daftar), pakai atribusi first-touch.
+    const fromUrl = params.get('ref') || getAttribution().ref || ''
+    return fromUrl.toUpperCase().trim().slice(0, 32)
   }, [])
   // Daftar paket diambil dari /api/landing — endpoint PUBLIK. (/api/packages
   // butuh auth, jadi tidak bisa dipakai di halaman registrasi yang publik.)
@@ -155,6 +159,7 @@ export default function RegisterPage() {
         phone:        form.phone.trim(),
         password:     form.password,
         referralCode: initialRef || undefined,
+        signupMeta:   getAttribution(),
       })
       // Akun tenant TIDAK boleh aktif di domain utama (sembapos.com) — login &
       // refresh di-enforce per subdomain. Maka jangan auto-login di sini;

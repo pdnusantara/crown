@@ -4,8 +4,13 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App.jsx'
 import { ErrorBoundary } from './components/ErrorBoundary.jsx'
 import { reloadOnceForChunkError } from './lib/chunkReload.js'
+import { captureAttribution } from './utils/attribution.js'
 import './i18n/index.js'
 import './index.css'
+
+// Tangkap atribusi marketing first-touch sedini mungkin (sebelum navigasi
+// client-side menghapus query ?utm_*/?ref= dari URL).
+captureAttribution()
 
 // Vite memancarkan 'vite:preloadError' saat sebuah chunk dynamic-import gagal
 // dimuat — hampir selalu karena deploy baru me-rotate hash file sementara tab

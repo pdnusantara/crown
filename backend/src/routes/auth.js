@@ -31,7 +31,49 @@ const registerSchema = z.object({
   // Kode referral affiliate opsional (?ref=XXXX). Diabaikan jika kode invalid /
   // affiliate tidak aktif — pendaftaran tetap berhasil supaya UX mulus.
   referralCode: z.string().min(3).max(32).nullish(),
+  // Atribusi marketing opsional, dikirim frontend dari URL kedatangan (UTM,
+  // klik iklan, referrer, landing path). Semua best-effort & tidak memengaruhi
+  // keberhasilan pendaftaran.
+  signupMeta: z.object({
+    utmSource:   z.string().max(120).optional(),
+    utmMedium:   z.string().max(120).optional(),
+    utmCampaign: z.string().max(200).optional(),
+    utmContent:  z.string().max(200).optional(),
+    utmTerm:     z.string().max(200).optional(),
+    fbclid:      z.string().max(255).optional(),
+    gclid:       z.string().max(255).optional(),
+    referrer:    z.string().max(500).optional(),
+    landingPath: z.string().max(500).optional(),
+    ref:         z.string().max(60).optional(),
+  }).partial().optional(),
 });
+
+// Tentukan kanal pendaftaran ternormalisasi untuk grouping laporan.
+// Sumber affiliate ditangani terpisah (relasi affiliateReferral) — di sini kita
+// fokus ke kanal traffic: iklan FB, iklan Google, kampanye UTM lain, referral
+// situs lain, atau langsung.
+function computeSignupChannel(meta) {
+  if (!meta || typeof meta !== 'object') return 'direct';
+  const src = String(meta.utmSource || '').toLowerCase();
+  const med = String(meta.utmMedium || '').toLowerCase();
+  const paid = /(cpc|ppc|paid|ads?)/.test(med);
+  if (meta.fbclid || /facebook|fb|meta|instagram|^ig$/.test(src)) return 'facebook_ads';
+  if (meta.gclid  || /google|adwords|gads|youtube/.test(src))      return 'google_ads';
+  if (src || meta.utmCampaign || paid) return 'campaign';
+  if (meta.referrer) return 'referral';
+  return 'direct';
+}
+
+// Bersihkan signupMeta: buang field kosong agar tak menyimpan JSON penuh "".
+function cleanSignupMeta(meta) {
+  if (!meta || typeof meta !== 'object') return null;
+  const out = {};
+  for (const [k, v] of Object.entries(meta)) {
+    const s = typeof v === 'string' ? v.trim() : v;
+    if (s) out[k] = s;
+  }
+  return Object.keys(out).length ? out : null;
+}
 
 // GET /api/auth/check-slug?slug=xxx — preflight ke frontend
 router.get('/check-slug', async (req, res, next) => {
@@ -73,6 +115,9 @@ router.post('/register', async (req, res, next) => {
     const now = new Date();
     const trialEnd = new Date(now.getTime() + TRIAL_DAYS * 86400 * 1000);
 
+    const signupMeta = cleanSignupMeta(body.signupMeta);
+    const signupChannel = computeSignupChannel(signupMeta);
+
     const result = await prisma.$transaction(async (tx) => {
       const tenant = await tx.tenant.create({
         data: {
@@ -80,6 +125,8 @@ router.post('/register', async (req, res, next) => {
           slug,
           email: body.email,
           phone: body.phone,
+          signupChannel,
+          signupMeta: signupMeta || undefined,
         },
         select: { id: true, name: true, slug: true, email: true },
       });
@@ -149,6 +196,23 @@ router.post('/register', async (req, res, next) => {
 
       return { tenant, user, affiliate };
     });
+
+    // Notifikasi Telegram grup (best-effort — jangan blokir pendaftaran).
+    try {
+      const telegramService = require('../services/telegramService');
+      telegramService.notifyNewTenant({
+        name:        result.tenant.name,
+        slug:        result.tenant.slug,
+        email:       result.tenant.email,
+        phone:       body.phone,
+        packageName: body.packageName,
+        channel:     signupChannel,
+        affiliate:   result.affiliate ? { name: result.affiliate.displayName, code: result.affiliate.referralCode } : null,
+        meta:        signupMeta,
+      }).catch((err) => console.error('[Register] Telegram notify failed:', err?.message || err));
+    } catch (err) {
+      console.error('[Register] Telegram notify error:', err?.message || err);
+    }
 
     const payload = {
       id:       result.user.id,

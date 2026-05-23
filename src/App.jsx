@@ -30,6 +30,8 @@ const SATenantsDetailPage = lazy(() => import('./pages/super-admin/SATenantsDeta
 const SABillingPage          = lazy(() => import('./pages/super-admin/SABillingPage.jsx'))
 const SAPaymentSettingsPage  = lazy(() => import('./pages/super-admin/SAPaymentSettingsPage.jsx'))
 const SAWhatsAppSettingsPage = lazy(() => import('./pages/super-admin/SAWhatsAppSettingsPage.jsx'))
+const SATelegramSettingsPage = lazy(() => import('./pages/super-admin/SATelegramSettingsPage.jsx'))
+const SATenantRegistrationsPage = lazy(() => import('./pages/super-admin/SATenantRegistrationsPage.jsx'))
 const SABroadcastPage        = lazy(() => import('./pages/super-admin/SABroadcastPage.jsx'))
 const SAFeatureFlagsPage = lazy(() => import('./pages/super-admin/SAFeatureFlagsPage.jsx'))
 const SATicketsPage      = lazy(() => import('./pages/super-admin/SATicketsPage.jsx'))
@@ -194,7 +196,7 @@ function TenantSuspended({ name }) {
         <p className="text-muted text-sm mb-1">
           Akun <span className="text-off-white font-medium">{name}</span> sedang ditangguhkan.
         </p>
-        <p className="text-muted text-sm">Hubungi BarberOS support untuk informasi lebih lanjut.</p>
+        <p className="text-muted text-sm">Hubungi SembaPOS support untuk informasi lebih lanjut.</p>
       </div>
     </div>
   )
@@ -286,11 +288,13 @@ export default function App() {
           >
             <Route path="dashboard"      element={<SADashboard />} />
             <Route path="tenants"        element={<SATenantsPage />} />
+            <Route path="tenant-registrations" element={<SATenantRegistrationsPage />} />
             <Route path="tenants/:id"    element={<SATenantsDetailPage />} />
             <Route path="packages"         element={<SAPackagesPage />} />
             <Route path="billing"          element={<SABillingPage />} />
             <Route path="payment-settings" element={<SAPaymentSettingsPage />} />
             <Route path="whatsapp-settings" element={<SAWhatsAppSettingsPage />} />
+            <Route path="telegram-settings" element={<SATelegramSettingsPage />} />
             <Route path="promotions"       element={<SAPromotionsPage />} />
             <Route path="landing"          element={<SALandingPage />} />
             <Route path="broadcast"        element={<SABroadcastPage />} />

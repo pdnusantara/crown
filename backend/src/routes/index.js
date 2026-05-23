@@ -35,6 +35,8 @@ const auditLogRoutes = require('./auditLogs');
 const attendanceRoutes = require('./attendance');
 const affiliatesRoutes = require('./affiliates');
 const affiliateSelfRoutes = require('./affiliate');
+const telegramRoutes = require('./telegram');
+const superAdminTenantRegistrationsRoutes = require('./superAdminTenantRegistrations');
 
 // Tolak operasi tulis dari tenant yang langganannya berakhir (allowlist:
 // auth/subscriptions/payment/public/landing). GET tetap lolos.
@@ -73,5 +75,7 @@ router.use('/audit-logs',       auditLogRoutes);
 router.use('/attendance',       attendanceRoutes);
 router.use('/affiliates',       affiliatesRoutes);
 router.use('/affiliate',        affiliateSelfRoutes);
+router.use('/telegram',         telegramRoutes);
+router.use('/super-admin/tenant-registrations', superAdminTenantRegistrationsRoutes);
 
 module.exports = router;
