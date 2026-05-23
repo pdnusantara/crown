@@ -1391,7 +1391,7 @@ function DashboardMock() {
               <Lucide.Scissors size={14} className="text-[#1C1A17]" />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-bold text-[#1C1A17] font-display leading-none">SembaPOS</p>
+              <p className="text-[11px] font-bold text-[#1C1A17] font-display leading-none">BarberOS</p>
               <p className="text-[8px] text-[#9A9189] mt-1 truncate">Barber Kingdom</p>
             </div>
           </div>
