@@ -96,7 +96,7 @@ export default function AffiliateDashboard() {
       <Card className="p-8 text-center max-w-md mx-auto">
         <AlertCircle size={28} className="mx-auto text-red-400 mb-3" />
         <h1 className="font-display text-xl font-bold text-off-white">Akun affiliate Anda dibekukan</h1>
-        <p className="text-muted text-sm mt-2">Komisi baru tidak akan terhitung selama dibekukan. Hubungi tim BarberOS untuk informasi lebih lanjut.</p>
+        <p className="text-muted text-sm mt-2">Komisi baru tidak akan terhitung selama dibekukan. Hubungi tim SembaPOS untuk informasi lebih lanjut.</p>
       </Card>
     )
   }
@@ -276,7 +276,7 @@ export default function AffiliateDashboard() {
             <p className="text-xs text-red-400">Metode pencairan belum diisi. Lengkapi profil dulu.</p>
           )}
           <div>
-            <label className="text-xs text-muted block mb-1.5">Catatan untuk tim BarberOS (opsional)</label>
+            <label className="text-xs text-muted block mb-1.5">Catatan untuk tim SembaPOS (opsional)</label>
             <textarea value={payoutNote} onChange={e => setPayoutNote(e.target.value)} rows={2} maxLength={500}
               className="w-full bg-dark-surface border border-dark-border rounded-xl p-3 text-sm text-off-white placeholder:text-muted focus:outline-none focus:border-gold/40"
               placeholder="Mis. mohon transfer secepatnya" />

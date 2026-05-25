@@ -141,7 +141,7 @@ function PublicBookingPageInner() {
   }, [])
 
   // SEO + share metadata. Updates the document title/description/og tags so
-  // links shared via WA/IG show the tenant's name instead of "BarberOS".
+  // links shared via WA/IG show the tenant's name instead of "SembaPOS".
   useEffect(() => {
     if (!tenantName) return
     const prevTitle = document.title

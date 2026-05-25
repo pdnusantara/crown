@@ -18,9 +18,9 @@ export default defineConfig({
       // di semua halaman.
       injectRegister: false,
       manifest: {
-        name: 'BarberOS',
-        short_name: 'BarberOS',
-        description: 'Multi-tenant Barbershop Management System',
+        name: 'SembaPOS',
+        short_name: 'SembaPOS',
+        description: 'Sistem Manajemen Barbershop Modern',
         theme_color: '#0A0A0A',
         background_color: '#0A0A0A',
         display: 'standalone',

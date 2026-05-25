@@ -84,7 +84,7 @@ export default function TAInvoicePrintPage() {
             )}
           </div>
           <div className="text-right">
-            <p className="text-lg font-bold text-gray-900">SembaPOS / BarberOS</p>
+            <p className="text-lg font-bold text-gray-900">SembaPOS / SembaPOS</p>
             <p className="text-xs text-gray-600">Sistem Manajemen Barbershop</p>
             <p className="text-xs text-gray-600">sembapos.com</p>
           </div>

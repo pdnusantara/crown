@@ -7,7 +7,7 @@ import HelpCenter from '../../components/HelpCenter.jsx'
 
 // ── /admin/bantuan — Pusat Bantuan untuk pemilik toko (tenant_admin) ──────────
 // Konten statis: panduan langkah demi langkah tiap fitur, plus tautan langsung
-// ke halaman terkait. Footer mengarah ke tiket support BarberOS.
+// ke halaman terkait. Footer mengarah ke tiket support SembaPOS.
 const CATEGORIES = [
   {
     id: 'mulai',
@@ -335,7 +335,7 @@ const CATEGORIES = [
         steps: [
           'Basic — POS kasir, manajemen antrian, booking online, loyalti/poin, voucher & promo, rating barber, jadwal shift, absensi digital, manajemen pengeluaran, dan install aplikasi (PWA).',
           'Pro — semua fitur Basic, plus laporan lanjutan, heatmap jam sibuk, Customer CLV, laporan wilayah, struk WhatsApp, dan laporan pesan WhatsApp.',
-          'Enterprise — semua fitur Pro, plus multi-cabang, backup & restore, akses API, dan white label (branding tanpa logo BarberOS).',
+          'Enterprise — semua fitur Pro, plus multi-cabang, backup & restore, akses API, dan white label (branding tanpa logo SembaPOS).',
         ],
         to: '/admin/billing',
         toLabel: 'Buka Billing',
@@ -373,7 +373,7 @@ export default function TAHelpPage() {
       categories={CATEGORIES}
       support={{
         title: 'Masih butuh bantuan?',
-        desc: 'Kirim tiket ke tim support BarberOS dan kami akan membantu Anda.',
+        desc: 'Kirim tiket ke tim support SembaPOS dan kami akan membantu Anda.',
         action: {
           label: 'Hubungi Support',
           onClick: () => navigate('/admin/tickets'),

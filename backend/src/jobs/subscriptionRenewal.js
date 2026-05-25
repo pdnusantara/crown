@@ -203,7 +203,7 @@ async function runRenewalJob() {
       });
 
       const waMsg = [
-        `[BarberOS] Pengingat Perpanjang Langganan`,
+        `[SembaPOS] Pengingat Perpanjang Langganan`,
         ``,
         `Halo ${sub.tenant.name},`,
         `Subscription ${sub.package} Anda akan berakhir dalam ${days} hari (${endStr}).`,

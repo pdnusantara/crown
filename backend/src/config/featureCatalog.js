@@ -30,7 +30,7 @@ const FEATURE_CATALOG = [
   { id: 'whatsapp_logs',    label: 'Laporan Pesan WhatsApp', description: 'Pantau status terkirim/sampai/gagal pesan WhatsApp ke pelanggan', category: 'UX' },
   { id: 'barber_rating',    label: 'Rating Barber',         description: 'Pelanggan beri bintang setelah transaksi',            category: 'UX' },
   { id: 'api_access',       label: 'API Access',            description: 'Akses API untuk integrasi pihak ketiga',              category: 'Enterprise' },
-  { id: 'white_label',      label: 'White Label',           description: 'Custom domain & branding tanpa logo BarberOS',        category: 'Enterprise' },
+  { id: 'white_label',      label: 'White Label',           description: 'Custom domain & branding tanpa logo SembaPOS',        category: 'Enterprise' },
   { id: 'backup',           label: 'Backup & Restore',      description: 'Export dan import data tenant',                       category: 'Enterprise' },
 ];
 

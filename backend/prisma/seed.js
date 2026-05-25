@@ -489,9 +489,9 @@ async function main() {
   // ─── Sample Broadcast ──────────────────────────────────────────────
   const broadcast = await prisma.broadcast.create({
     data: {
-      title: 'Selamat Datang di BarberOS!',
+      title: 'Selamat Datang di SembaPOS!',
       message:
-        'Terima kasih telah bergabung dengan platform BarberOS. Nikmati fitur-fitur lengkap untuk mengelola bisnis barbershop Anda dengan lebih efisien.',
+        'Terima kasih telah bergabung dengan platform SembaPOS. Nikmati fitur-fitur lengkap untuk mengelola bisnis barbershop Anda dengan lebih efisien.',
       type: 'info',
       active: true,
     },

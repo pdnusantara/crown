@@ -66,7 +66,7 @@ export const TopBar = ({ onMenuClick, onSearchClick }) => {
     for (const [key, tkey] of Object.entries(pageTitleKeys)) {
       if (path.endsWith(key)) return t(tkey)
     }
-    return 'BarberOS'
+    return 'SembaPOS'
   }
 
   return (

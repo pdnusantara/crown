@@ -83,7 +83,7 @@ export default function Login() {
                 }
               </div>
               <h1 className="font-display text-3xl font-bold text-off-white mb-1">{tenantName}</h1>
-              <p className="text-muted text-sm">Powered by <span className="gold-text font-semibold">BarberOS</span></p>
+              <p className="text-muted text-sm">Powered by <span className="gold-text font-semibold">SembaPOS</span></p>
             </>
           ) : (
             <>
@@ -226,7 +226,7 @@ export default function Login() {
           <a href="/affiliate/register" className="text-gold hover:underline">Daftar Affiliate</a>
         </p>
         <p className="text-center text-muted text-xs mt-2">
-          BarberOS v1.0 • Premium Barbershop Management
+          SembaPOS v1.0 • Premium Barbershop Management
         </p>
       </div>
     </div>

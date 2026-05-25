@@ -391,7 +391,7 @@ router.post('/orders/:merchantOrderId/resend', authenticate, async (req, res, ne
     }
 
     const text = [
-      '[BarberOS] Link Pembayaran',
+      '[SembaPOS] Link Pembayaran',
       '',
       `Halo ${tenant?.name || ''},`,
       `Berikut ulang link pembayaran Anda:`,

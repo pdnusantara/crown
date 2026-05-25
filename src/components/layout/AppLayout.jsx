@@ -360,7 +360,7 @@ export const AppLayout = () => {
           >
             <div className="flex items-center gap-2">
               <Download size={15} />
-              <span>Pasang BarberOS di HP kamu untuk pengalaman lebih baik!</span>
+              <span>Pasang SembaPOS di HP kamu untuk pengalaman lebih baik!</span>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <button

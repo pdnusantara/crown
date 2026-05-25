@@ -93,7 +93,7 @@ export default function TATicketsPage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold text-off-white">Support Tickets</h1>
-          <p className="text-muted text-sm mt-1">Hubungi tim support platform BarberOS</p>
+          <p className="text-muted text-sm mt-1">Hubungi tim support platform SembaPOS</p>
         </div>
         <Button icon={Plus} onClick={() => setShowNew(true)}>Buat Tiket</Button>
       </div>

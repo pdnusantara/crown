@@ -18,7 +18,7 @@ export class ErrorBoundary extends Component {
     // Guard berbasis waktu: pulih dari episode berulang tanpa loop tak-terbatas.
     if (isChunkLoadError(error) && reloadOnceForChunkError()) return
 
-    console.error('BarberOS Error:', error, errorInfo)
+    console.error('SembaPOS Error:', error, errorInfo)
     this.setState({ errorInfo })
     api.post('/error-logs', {
       level:    'error',

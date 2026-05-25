@@ -685,7 +685,7 @@ async function sendTestMessage(tenantId) {
 
   const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { timezone: true } }).catch(() => null);
   const body = [
-    'Pesan tes BarberOS',
+    'Pesan tes SembaPOS',
     '',
     'Jika Anda menerima pesan ini, integrasi WhatsApp sudah berfungsi.',
     `Waktu kirim: ${formatInTz(new Date(), tenant?.timezone)}`,

@@ -6,7 +6,7 @@ import {
   Plus, Edit2, Trash2, ToggleLeft, ToggleRight, Building2, Users, TrendingUp,
   ExternalLink, Eye, ChevronRight, Check, AlertTriangle, Search,
   Clock, CheckCircle, XCircle, CreditCard, Calendar, LogIn,
-  KeyRound, Copy, EyeOff, RefreshCw, Download, MoreVertical, Globe2, ArrowUpDown,
+  KeyRound, Copy, EyeOff, RefreshCw, Download, MoreVertical, Globe2, ArrowUpDown, UserPlus,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { differenceInDays } from 'date-fns'
@@ -610,6 +610,10 @@ export default function SATenantsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          <Button variant="secondary" icon={UserPlus} onClick={() => navigate('/super-admin/tenant-registrations')}>
+            <span className="hidden sm:inline">Laporan Pendaftaran</span>
+            <span className="sm:hidden">Pendaftaran</span>
+          </Button>
           <Button variant="secondary" icon={Download} onClick={handleExportCsv} disabled={isLoading || filtered.length === 0}>
             <span className="hidden sm:inline">Export CSV</span>
             <span className="sm:hidden">Export</span>

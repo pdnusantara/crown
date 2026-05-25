@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   Globe, Edit3, Trash2, Plus, Save, MessageSquare, HelpCircle, Star, Eye, EyeOff, ExternalLink,
-  LayoutTemplate, Layers, Search, Upload, Image as ImageIcon,
+  LayoutTemplate, Layers, Search, Upload, Image as ImageIcon, LayoutGrid, Check,
 } from 'lucide-react'
+import * as Lucide from 'lucide-react'
 import LandingLayoutBuilder from './LandingLayoutBuilder.jsx'
 import {
   useLanding, useUpdateHero,
@@ -418,6 +419,116 @@ function ImageUploadField({ label, hint, value, accept = 'image/png,image/jpeg,i
   )
 }
 
+// ── Katalog fitur on-brand ───────────────────────────────────────────────
+// Diturunkan langsung dari Brand Guidelines SembaPOS (20 fitur berflag + sorotan
+// fitur selalu-aktif). Tujuannya: super-admin bisa menyusun "Fitur Unggulan"
+// landing yang konsisten brand tanpa mengetik ulang ikon, judul, & deskripsi.
+// Voice mengikuti pedoman: santai, sapaan "kamu", manfaat dulu.
+const FEATURE_PRESETS = [
+  { category: 'Operasional harian', items: [
+    { icon: 'Scissors',      title: 'Kasir khusus barbershop', desc: 'Catat layanan, produk, sampai komisi barber sekali tap. Cepat, antrean nggak numpuk.' },
+    { icon: 'CalendarClock', title: 'Booking online',          desc: 'Pelanggan booking sendiri lewat link toko. Giliran rapi, nggak ada rebutan.' },
+    { icon: 'ListOrdered',   title: 'Antrian realtime',         desc: 'Papan antrian kasir & barber yang update otomatis. Semua tahu siapa giliran berikutnya.' },
+    { icon: 'Gift',          title: 'Loyalty & poin',           desc: 'Poin dan reward bikin pelanggan balik lagi, bukan sekali datang terus hilang.' },
+    { icon: 'TicketPercent', title: 'Voucher & promo',          desc: 'Bikin kode diskon yang terlacak — pas buat grand opening atau hari yang lagi sepi.' },
+  ]},
+  { category: 'Keputusan berbasis data', items: [
+    { icon: 'BarChart3',     title: 'Laporan yang ngerti sendiri', desc: 'Omzet harian, layanan terlaris, performa barber — kebaca otomatis tanpa Excel.' },
+    { icon: 'Flame',         title: 'Heatmap jam sibuk',           desc: 'Tahu jam tersibuk toko, biar jumlah barber pas — nggak kebanyakan atau kekurangan.' },
+    { icon: 'Gem',           title: 'Pelanggan paling bernilai',   desc: 'Kenali pelanggan yang paling cuan, lalu rawat mereka biar makin betah.' },
+    { icon: 'MapPin',        title: 'Laporan wilayah',             desc: 'Lihat pelanggan datang dari kecamatan mana, biar iklan lokal lebih tepat sasaran.' },
+  ]},
+  { category: 'Kelola tim & cabang', items: [
+    { icon: 'CalendarDays',  title: 'Jadwal shift',              desc: 'Atur kalender shift barber mingguan tanpa grup WA yang berantakan.' },
+    { icon: 'Building2',     title: 'Banyak cabang, satu layar', desc: 'Pantau semua cabang dari satu dashboard. Kelihatan mana yang paling cuan.' },
+    { icon: 'Wallet',        title: 'Catat pengeluaran',         desc: 'Hitung laba bersih, bukan cuma omzet. Tahu beneran untung atau enggak.' },
+    { icon: 'Fingerprint',   title: 'Absensi digital',           desc: 'Absen staf via GPS plus laporan kehadiran. Pantau yang telat tanpa nungguin di toko.' },
+  ]},
+  { category: 'Pengalaman & WhatsApp', items: [
+    { icon: 'MessageCircle', title: 'Struk & pengingat WhatsApp', desc: 'Konfirmasi booking dan struk langsung mampir ke WhatsApp pelanggan.' },
+    { icon: 'Star',          title: 'Rating barber',              desc: 'Pelanggan kasih bintang setelah potong. Tahu barber terbaik buat bahan promosi.' },
+    { icon: 'MessageSquare', title: 'Laporan pesan WhatsApp',     desc: 'Pantau status pesan terkirim, sampai, atau gagal. Pastikan notifikasi beneran nyampe.' },
+    { icon: 'Smartphone',    title: 'Pasang di HP (PWA)',         desc: 'Buka dari home screen seperti aplikasi biasa, tanpa lewat Play Store.' },
+  ]},
+  { category: 'Skala & integrasi', items: [
+    { icon: 'Code2',         title: 'Akses API',        desc: 'Integrasi dengan sistem lain buat kebutuhan jaringan besar atau custom.' },
+    { icon: 'Palette',       title: 'White label',      desc: 'Pakai domain dan branding sendiri, tanpa logo SembaPOS.' },
+    { icon: 'DatabaseBackup',title: 'Backup & restore', desc: 'Export dan import data toko. Aman dan tenang soal data toko kamu.' },
+  ]},
+  { category: 'Selalu aktif (semua paket)', items: [
+    { icon: 'LayoutDashboard', title: 'Dashboard pemilik',      desc: 'Ringkasan omzet, antrian, dan insight — dipantau dari HP, dari mana aja.' },
+    { icon: 'Users',           title: 'Database pelanggan',     desc: 'Profil, riwayat kunjungan, poin, dan segmen pelanggan (VIP, baru, berisiko).' },
+    { icon: 'ShieldCheck',     title: 'Aman & sesuai peran',    desc: 'Owner, kasir, barber — tiap orang punya akses sendiri. Data toko tetap aman.' },
+    { icon: 'Percent',         title: 'Komisi barber otomatis', desc: 'Komisi tiap barber dihitung otomatis dari transaksi. Stop hitung manual tiap bulan.' },
+  ]},
+]
+
+// Modal pemilih: super-admin centang fitur dari katalog brand lalu tambahkan
+// sekaligus ke daftar "Fitur Unggulan". Fitur yang judulnya sudah ada dinonaktifkan.
+function FeaturePresetModal({ open, onClose, existingTitles, onAdd }) {
+  const [picked, setPicked] = useState([])
+  useEffect(() => { if (open) setPicked([]) }, [open])
+
+  const toggle = (item) => setPicked(p =>
+    p.some(x => x.title === item.title) ? p.filter(x => x.title !== item.title) : [...p, item]
+  )
+
+  return (
+    <Modal isOpen={open} onClose={onClose} title="Katalog Fitur SembaPOS" size="xl">
+      <p className="text-xs text-muted mb-4">
+        Pilih fitur dari Brand Guidelines untuk ditambahkan ke daftar "Fitur Unggulan". Ikon, judul, & deskripsi sudah on-brand — bisa kamu sunting lagi setelah ditambahkan.
+      </p>
+      <div className="space-y-5 max-h-[58vh] overflow-y-auto pr-1">
+        {FEATURE_PRESETS.map(group => (
+          <div key={group.category}>
+            <p className="text-[11px] font-bold text-gold uppercase tracking-[0.12em] mb-2">{group.category}</p>
+            <div className="grid sm:grid-cols-2 gap-2">
+              {group.items.map(item => {
+                const added = existingTitles.includes(item.title.trim().toLowerCase())
+                const sel = picked.some(x => x.title === item.title)
+                const Icon = Lucide[item.icon] || Lucide.Sparkles
+                return (
+                  <button
+                    key={item.title}
+                    type="button"
+                    disabled={added}
+                    onClick={() => toggle(item)}
+                    className={`text-left p-3 rounded-xl border flex gap-3 transition-colors ${
+                      added
+                        ? 'opacity-40 cursor-not-allowed border-dark-border bg-dark-surface'
+                        : sel
+                          ? 'border-gold bg-gold/10'
+                          : 'border-dark-border bg-dark-surface hover:border-gold/40'
+                    }`}
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-gold/15 border border-gold/20 flex items-center justify-center flex-shrink-0">
+                      <Icon size={17} className="text-gold" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-off-white flex items-center gap-1.5">
+                        {item.title}
+                        {added && <span className="text-[10px] text-muted">(sudah ada)</span>}
+                        {sel && !added && <Check size={13} className="text-gold flex-shrink-0" />}
+                      </p>
+                      <p className="text-xs text-muted line-clamp-2 mt-0.5">{item.desc}</p>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-2 pt-4 mt-3 border-t border-dark-border">
+        <Button variant="outline" fullWidth onClick={onClose}>Batal</Button>
+        <Button fullWidth icon={Plus} disabled={picked.length === 0} onClick={() => { onAdd(picked); onClose() }}>
+          Tambah{picked.length > 0 ? ` ${picked.length} fitur` : ''}
+        </Button>
+      </div>
+    </Modal>
+  )
+}
+
 // ── Hero / branding editor ───────────────────────────────────────────────
 function HeroEditor() {
   const toast = useToast()
@@ -427,6 +538,7 @@ function HeroEditor() {
   const [form, setForm] = useState(null)
   const [features, setFeatures] = useState([])
   const [trustItems, setTrustItems] = useState([])
+  const [showPresets, setShowPresets] = useState(false)
 
   useEffect(() => {
     if (data?.hero && !form) {
@@ -471,6 +583,16 @@ function HeroEditor() {
   }
   function removeFeature(i) {
     setFeatures(arr => arr.filter((_, idx) => idx !== i))
+  }
+  // Tambahkan fitur dari katalog brand, lewati yang judulnya sudah ada.
+  function addPresets(items) {
+    setFeatures(arr => {
+      const have = new Set(arr.map(f => (f.title || '').trim().toLowerCase()))
+      const fresh = items
+        .filter(it => !have.has(it.title.trim().toLowerCase()))
+        .map(it => ({ icon: it.icon, title: it.title, desc: it.desc }))
+      return [...arr, ...fresh]
+    })
   }
 
   return (
@@ -624,9 +746,12 @@ function HeroEditor() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <h3 className="font-semibold text-off-white">Fitur Unggulan</h3>
-            <Button size="sm" variant="secondary" icon={Plus} onClick={addFeature}>Tambah</Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="secondary" icon={LayoutGrid} onClick={() => setShowPresets(true)}>Dari Katalog</Button>
+              <Button size="sm" variant="outline" icon={Plus} onClick={addFeature}>Kosong</Button>
+            </div>
           </div>
         </CardHeader>
         <CardBody className="space-y-3 max-h-[600px] overflow-y-auto">
@@ -663,7 +788,7 @@ function HeroEditor() {
             </div>
           ))}
           <p className="text-xs text-muted">
-            Nama icon dari <a className="text-gold hover:underline" href="https://lucide.dev/icons" target="_blank" rel="noopener noreferrer">lucide.dev</a> (case-sensitive). Contoh: Scissors, Building2, BarChart3.
+            Pakai <span className="text-off-white">Dari Katalog</span> untuk menyusun cepat dari fitur on-brand, atau <span className="text-off-white">Kosong</span> untuk fitur custom. Nama icon dari <a className="text-gold hover:underline" href="https://lucide.dev/icons" target="_blank" rel="noopener noreferrer">lucide.dev</a> (case-sensitive). Contoh: Scissors, Building2, BarChart3.
           </p>
           <Button onClick={handleSave} loading={updateHero.isPending} icon={Save} fullWidth variant="secondary">
             Simpan Fitur
@@ -671,6 +796,13 @@ function HeroEditor() {
         </CardBody>
       </Card>
       </div>
+
+      <FeaturePresetModal
+        open={showPresets}
+        onClose={() => setShowPresets(false)}
+        existingTitles={features.map(f => (f.title || '').trim().toLowerCase())}
+        onAdd={addPresets}
+      />
     </div>
   )
 }

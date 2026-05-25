@@ -103,7 +103,7 @@ function FeatureOff() {
         <AlertTriangle className="w-10 h-10 text-amber-400 mx-auto mb-3" />
         <h2 className="text-lg font-semibold text-off-white mb-1">Fitur belum aktif</h2>
         <p className="text-sm text-muted">
-          Absensi Digital tersedia di paket Pro &amp; Enterprise. Hubungi BarberOS untuk mengaktifkannya.
+          Absensi Digital tersedia di paket Pro &amp; Enterprise. Hubungi SembaPOS untuk mengaktifkannya.
         </p>
       </CardBody>
     </Card>
