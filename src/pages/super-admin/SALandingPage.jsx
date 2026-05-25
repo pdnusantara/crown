@@ -156,7 +156,9 @@ function SeoEditor() {
     try {
       const fd = new FormData()
       fd.append('image', file)
-      const res = await api.post('/landing/upload', fd)
+      // WAJIB multipart — default instance pakai application/json yg bikin axios
+      // v1 merusak FormData (jadi [object Object]) → upload gagal.
+      const res = await api.post('/landing/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       setForm(f => ({ ...f, seoOgImage: res.data?.data?.url || '' }))
       toast.success('Gambar diunggah — jangan lupa simpan')
     } catch (err) {
@@ -398,7 +400,9 @@ function ImageUploadField({ label, hint, value, accept = 'image/png,image/jpeg,i
     try {
       const fd = new FormData()
       fd.append('image', file)
-      const res = await api.post('/landing/upload', fd)
+      // WAJIB multipart — default instance pakai application/json yg bikin axios
+      // v1 merusak FormData (jadi [object Object]) → upload gagal.
+      const res = await api.post('/landing/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       onChange(res.data?.data?.url || '')
       toast.success('Gambar diunggah — jangan lupa simpan')
     } catch (err) {
