@@ -82,10 +82,22 @@ export function buildReceipt(data, width = 32) {
   const b = new EscPosBuilder(width)
   b.init().align('center')
 
-  if (data.shopName) { b.bold(true).size(true).center(data.shopName).size(false).bold(false) }
-  if (data.branchName)  b.center(data.branchName)
-  if (data.branchAddr)  b.center(data.branchAddr)
-  if (data.branchPhone) b.center(data.branchPhone)
+  // Header rata tengah lewat printer (ESC a 1), JANGAN dipad spasi manual:
+  // padding manual + double-width bikin spasi ikut dobel → baris melebihi
+  // lebar kertas → nama toko melipat/terpotong. Nama toko pakai double-width
+  // hanya bila muat (≤ separuh kolom karena tiap karakter = 2 sel); kalau
+  // kepanjangan, turun ke ukuran normal supaya tetap utuh dalam satu baris.
+  if (data.shopName) {
+    const bigFits = data.shopName.length <= Math.floor(width / 2)
+    b.bold(true)
+    if (bigFits) b.size(true)
+    b.line(data.shopName)
+    if (bigFits) b.size(false)
+    b.bold(false)
+  }
+  if (data.branchName)  b.line(data.branchName)
+  if (data.branchAddr)  b.line(data.branchAddr)
+  if (data.branchPhone) b.line(data.branchPhone)
 
   b.align('left').divider()
   for (const m of data.meta || []) b.twoCol(m.label, m.value)
