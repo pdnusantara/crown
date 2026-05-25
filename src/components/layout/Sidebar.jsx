@@ -96,7 +96,7 @@ const navConfig = {
   ],
 }
 
-export const Sidebar = ({ collapsed = false, onSearchClick }) => {
+export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
   const { user, logout } = useAuthStore()
   const { getTenantById, getLowStockProducts } = useTenantStore()
   const { theme, toggleTheme } = useThemeStore()
@@ -162,7 +162,7 @@ export const Sidebar = ({ collapsed = false, onSearchClick }) => {
           {!collapsed && (
             <div>
               <h1 className="font-display font-bold text-off-white text-lg leading-tight gold-text">
-                BARBER OS
+                SembaPOS
               </h1>
               {tenant && (
                 <p className="text-xs text-muted leading-tight mt-0.5">{tenant.name}</p>
@@ -174,7 +174,10 @@ export const Sidebar = ({ collapsed = false, onSearchClick }) => {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 overflow-y-auto">
-        <ul className="space-y-1">
+        {/* onClick di <ul> menutup drawer mobile begitu menu ditekan (termasuk
+            saat menekan menu halaman yang sedang aktif — yang tak memicu
+            perubahan rute). Di desktop onNavigate tak diberikan → no-op. */}
+        <ul className="space-y-1" onClick={() => onNavigate?.()}>
           {navItems.map(item => {
             const isLowStockBadge   = item.badge === 'lowstock'   && lowStockCount > 0
             const isTicketsBadge    = item.badge === 'tickets'    && openTickets > 0

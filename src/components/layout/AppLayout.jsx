@@ -71,6 +71,13 @@ export const AppLayout = () => {
   const navigate = useNavigate()
   const isOnline = useOnlineStatus()
 
+  // Tutup drawer sidebar mobile otomatis tiap pindah halaman. Tanpa ini, setelah
+  // memilih menu di drawer, halaman berpindah TAPI drawer tetap menutupi layar
+  // (terasa "macet") — pengguna harus menutup manual dulu.
+  useEffect(() => {
+    setMobileSidebarOpen(false)
+  }, [location.pathname])
+
   // Listen for PWA install prompt
   useEffect(() => {
     const dismissed = localStorage.getItem('pwa-banner-dismissed')
@@ -414,7 +421,10 @@ export const AppLayout = () => {
                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
                 className="fixed left-0 top-0 h-full z-50"
               >
-                <Sidebar onSearchClick={() => { setCmdOpen(true); setMobileSidebarOpen(false) }} />
+                <Sidebar
+                  onSearchClick={() => { setCmdOpen(true); setMobileSidebarOpen(false) }}
+                  onNavigate={() => setMobileSidebarOpen(false)}
+                />
               </motion.div>
             </>
           )}
