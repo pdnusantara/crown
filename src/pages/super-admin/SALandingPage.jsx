@@ -1,10 +1,16 @@
 import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
-  Globe, Edit3, Trash2, Plus, Save, MessageSquare, HelpCircle, Star, Eye, EyeOff, ExternalLink,
-  LayoutTemplate, Layers, Search, Upload, Image as ImageIcon, LayoutGrid, Check,
+  // ikon UI editor
+  Globe, Edit3, Trash2, Plus, Save, HelpCircle, Eye, EyeOff, ExternalLink,
+  LayoutTemplate, Layers, Search, Upload, Image as ImageIcon, LayoutGrid,
+  // ikon yang juga dipakai untuk lookup dinamis (registry `Lucide` di bawah)
+  ArrowRight, ArrowUpRight, BarChart3, Building2, Calendar, CalendarClock,
+  CalendarDays, Check, ChevronDown, Circle, Code2, DatabaseBackup, Fingerprint,
+  Flame, Gem, Gift, LayoutDashboard, ListOrdered, Lock, Mail, MapPin,
+  MessageCircle, MessageSquare, Palette, Percent, Phone, Play, Receipt, Scissors,
+  ShieldCheck, Smartphone, Sparkles, Star, TicketPercent, TrendingUp, Users, Wallet,
 } from 'lucide-react'
-import * as Lucide from 'lucide-react'
 import LandingLayoutBuilder from './LandingLayoutBuilder.jsx'
 import {
   useLanding, useUpdateHero,
@@ -18,6 +24,18 @@ import Modal from '../../components/ui/Modal.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import { useToast } from '../../components/ui/Toast.jsx'
 import api from '../../lib/api.js'
+
+// Registry ikon untuk lookup dinamis (item.icon disimpan sebagai string di
+// config landing). Named import di atas → Rollup tree-shake, jadi seluruh
+// lucide-react (~824KB) tak ikut ter-bundle ke chunk editor ini. Ikon tak
+// dikenal jatuh ke fallback (Sparkles).
+const Lucide = {
+  ArrowRight, ArrowUpRight, BarChart3, Building2, Calendar, CalendarClock,
+  CalendarDays, Check, ChevronDown, Circle, Code2, DatabaseBackup, Fingerprint,
+  Flame, Gem, Gift, LayoutDashboard, ListOrdered, Lock, Mail, MapPin,
+  MessageCircle, MessageSquare, Palette, Percent, Phone, Play, Receipt, Scissors,
+  ShieldCheck, Smartphone, Sparkles, Star, TicketPercent, TrendingUp, Users, Wallet,
+}
 
 const TABS = [
   { id: 'layout',       label: 'Tata Letak',       icon: Layers },

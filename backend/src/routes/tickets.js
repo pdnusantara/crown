@@ -67,7 +67,10 @@ const uploadTicketImage = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => cb(null, TICKET_UPLOAD_DIR),
     filename:    (req, file, cb) => {
-      const ext = (path.extname(file.originalname) || '.jpg').toLowerCase();
+      // Ekstensi dari MIME tervalidasi, BUKAN nama file klien — cegah simpan
+      // nama .html/.svg yang lalu disajikan inline (stored-XSS). fileFilter
+      // di bawah sudah membatasi mimetype ke daftar gambar.
+      const ext = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/gif': '.gif' }[file.mimetype] || '.jpg';
       cb(null, `${crypto.randomUUID()}${ext}`);
     },
   }),

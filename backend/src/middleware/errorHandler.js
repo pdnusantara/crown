@@ -2,6 +2,22 @@ const { ZodError } = require('zod');
 const { Prisma } = require('@prisma/client');
 const prisma = require('../config/database');
 
+// Redaksi field sensitif sebelum body/query request disimpan ke ErrorLog —
+// tanpa ini, 500 di /auth/* menyimpan password plaintext (& token) ke tabel
+// yang bisa dibaca di /super-admin/error-logs.
+const SENSITIVE_KEY = /pass|token|secret|api[-_]?key|authorization|otp|pin|cvv|card/i;
+function redactSensitive(obj, depth = 0) {
+  if (!obj || typeof obj !== 'object' || depth > 4) return obj;
+  if (Array.isArray(obj)) return obj.map((v) => redactSensitive(v, depth + 1));
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (SENSITIVE_KEY.test(k)) out[k] = '[REDACTED]';
+    else if (v && typeof v === 'object') out[k] = redactSensitive(v, depth + 1);
+    else out[k] = v;
+  }
+  return out;
+}
+
 function errorHandler(err, req, res, next) {
   // Zod validation errors
   if (err instanceof ZodError) {
@@ -80,7 +96,7 @@ function errorHandler(err, req, res, next) {
         statusCode,
         tenantId:   req.user?.tenantId || null,
         userId:     req.user?.id       || null,
-        metadata:   { query: req.query, body: req.body },
+        metadata:   { query: redactSensitive(req.query), body: redactSensitive(req.body) },
       },
     }).catch(() => {}); // never throw from within error handler
   }

@@ -1,7 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useInView, useScroll, useTransform, AnimatePresence } from 'framer-motion'
-import * as Lucide from 'lucide-react'
+import {
+  ArrowRight, ArrowUpRight, BarChart3, Building2, Calendar, CalendarClock,
+  CalendarDays, Check, ChevronDown, Circle, Code2, DatabaseBackup, Fingerprint,
+  Flame, Gem, Gift, LayoutDashboard, ListOrdered, Lock, Mail, MapPin,
+  MessageCircle, MessageSquare, Palette, Percent, Phone, Play, Receipt, Scissors,
+  ShieldCheck, Smartphone, Sparkles, Star, TicketPercent, TrendingUp, Users, Wallet,
+} from 'lucide-react'
 import { useLanding } from '../hooks/useLanding.js'
 import { useAuthStore } from '../store/authStore.js'
 import { initMetaPixel, trackPixel } from '../lib/metaPixel.js'
@@ -35,6 +41,18 @@ function CountUp({ to = 0, duration = 1500, suffix = '' }) {
     return () => cancelAnimationFrame(raf)
   }, [inView, to, duration])
   return <span ref={ref}>{val.toLocaleString('id-ID')}{suffix}</span>
+}
+
+// Registry ikon untuk lookup dinamis (nama ikon disimpan sebagai string di
+// config landing). Dengan named import di atas, Rollup tree-shake → hanya ikon
+// ini yang masuk bundle, bukan seluruh lucide-react (~824KB). Ikon tak dikenal
+// jatuh ke fallback (Sparkles/Circle), jadi config lama tetap aman.
+const Lucide = {
+  ArrowRight, ArrowUpRight, BarChart3, Building2, Calendar, CalendarClock,
+  CalendarDays, Check, ChevronDown, Circle, Code2, DatabaseBackup, Fingerprint,
+  Flame, Gem, Gift, LayoutDashboard, ListOrdered, Lock, Mail, MapPin,
+  MessageCircle, MessageSquare, Palette, Percent, Phone, Play, Receipt, Scissors,
+  ShieldCheck, Smartphone, Sparkles, Star, TicketPercent, TrendingUp, Users, Wallet,
 }
 
 function getIcon(name) {

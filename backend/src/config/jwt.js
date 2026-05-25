@@ -1,7 +1,14 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'barberos-dev-secret';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'barberos-refresh-secret';
+// Secret WAJIB dari environment. Di PRODUKSI, ketiadaan secret = fatal: tanpa
+// guard ini server diam-diam menandatangani & menerima token dengan secret
+// default publik → siapa pun bisa memalsukan token (auth bypass total). Maka
+// hentikan boot. Di non-produksi pakai fallback dev yang jelas (setup lokal).
+if (process.env.NODE_ENV === 'production' && (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET)) {
+  throw new Error('FATAL: JWT_SECRET & JWT_REFRESH_SECRET wajib diset di environment produksi.');
+}
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-only-secret-DO-NOT-USE-IN-PRODUCTION';
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'dev-only-refresh-secret-DO-NOT-USE-IN-PRODUCTION';
 const ACCESS_EXPIRY = '15m';
 const REFRESH_EXPIRY = '7d';
 
