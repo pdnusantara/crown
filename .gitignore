@@ -10,6 +10,12 @@ backend/dist
 node_modules
 dist
 
+# Env backups / dumps — JANGAN pernah di-commit (berisi secret)
+*.env.bak*
+.env.bak*
+.env.*.bak
+*.env.save
+
 # Docker
 *.log
 node_modules
