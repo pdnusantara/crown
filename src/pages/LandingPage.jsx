@@ -642,35 +642,83 @@ function StatsSection({ ctx }) {
   )
 }
 
+// Bingkai "browser" untuk screenshot fitur — gambar TIDAK dipotong
+// (object-contain) supaya seluruh tampilan aplikasi terlihat utuh & terbaca.
+function BrowserFrame({ src, alt }) {
+  return (
+    <div className="rounded-2xl border border-[#EAE3D3] bg-white shadow-[0_24px_60px_-28px_rgba(28,26,23,0.4)] overflow-hidden">
+      <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-[#F0EAD9] bg-[#FBFAF6]">
+        <span className="w-2.5 h-2.5 rounded-full bg-[#E0573E]/70" />
+        <span className="w-2.5 h-2.5 rounded-full bg-[#E8B84B]/70" />
+        <span className="w-2.5 h-2.5 rounded-full bg-[#3FB950]/60" />
+      </div>
+      <div className="aspect-[16/10] bg-[#F5EFE3]">
+        <img src={src} alt={alt} loading="lazy" className="w-full h-full object-contain" />
+      </div>
+    </div>
+  )
+}
+
 function FeaturesSection({ ctx }) {
   const { features, sections } = ctx
+  const indexed  = features.map((f, i) => ({ f, i }))
+  const showcase = indexed.filter((x) => x.f.image)   // fitur dgn screenshot → showcase besar
+  const compact  = indexed.filter((x) => !x.f.image)  // sisanya → grid ikon rapi
   return (
     <section id="fitur" className="py-24 px-6">
       <div className="max-w-6xl mx-auto">
         <SectionHeading {...sections.features} />
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px mt-14 rounded-2xl overflow-hidden border border-[#EAE3D3] bg-[#EAE3D3]">
-          {features.map((f, i) => {
-            const Icon = getIcon(f.icon)
-            return (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-60px' }}
-                transition={{ delay: (i % 3) * 0.07 }}
-                className="group relative bg-white hover:bg-[#FDFBF4] transition-colors flex flex-col"
-              >
-                {f.image && (
-                  <div className="aspect-[16/10] w-full overflow-hidden bg-[#F5EFE3]">
-                    <img
-                      src={f.image}
-                      alt={f.title}
-                      loading="lazy"
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-                    />
+
+        {/* Showcase besar bergantian kiri-kanan untuk fitur yang punya gambar */}
+        {showcase.length > 0 && (
+          <div className="space-y-16 sm:space-y-24 mt-14">
+            {showcase.map(({ f, i }, pos) => {
+              const Icon = getIcon(f.icon)
+              const imageRight = pos % 2 === 1
+              return (
+                <motion.div
+                  key={`sc-${i}`}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-80px' }}
+                  transition={{ duration: 0.5 }}
+                  className="grid lg:grid-cols-2 gap-8 lg:gap-14 items-center"
+                >
+                  <div className={imageRight ? 'lg:order-1' : 'lg:order-2'}>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-11 h-11 rounded-xl bg-[#FBF4E1] border border-[#EAE0C6] flex items-center justify-center">
+                        <Icon size={19} className="text-[#A8893A]" />
+                      </div>
+                      <span className="font-display text-sm font-semibold text-[#C9A84C]">
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                    </div>
+                    <h3 className="font-display text-2xl sm:text-3xl font-semibold text-[#1C1A17] mb-3 leading-tight">{f.title}</h3>
+                    <p className="text-[#6B6459] leading-relaxed sm:text-lg">{f.desc}</p>
                   </div>
-                )}
-                <div className="p-7">
+                  <div className={imageRight ? 'lg:order-2' : 'lg:order-1'}>
+                    <BrowserFrame src={f.image} alt={f.title} />
+                  </div>
+                </motion.div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Fitur tanpa gambar → grid ikon bernomor (tampilan lama yang bersih) */}
+        {compact.length > 0 && (
+          <div className={`grid sm:grid-cols-2 lg:grid-cols-3 gap-px rounded-2xl overflow-hidden border border-[#EAE3D3] bg-[#EAE3D3] ${showcase.length > 0 ? 'mt-16' : 'mt-14'}`}>
+            {compact.map(({ f, i }) => {
+              const Icon = getIcon(f.icon)
+              return (
+                <motion.div
+                  key={`cp-${i}`}
+                  initial={{ opacity: 0, y: 24 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-60px' }}
+                  transition={{ delay: 0.05 }}
+                  className="group relative bg-white p-7 hover:bg-[#FDFBF4] transition-colors"
+                >
                   <span className="font-display text-sm font-semibold text-[#C9A84C]">
                     {String(i + 1).padStart(2, '0')}
                   </span>
@@ -679,11 +727,11 @@ function FeaturesSection({ ctx }) {
                   </div>
                   <h3 className="font-display text-xl font-semibold text-[#1C1A17] mb-1.5">{f.title}</h3>
                   <p className="text-sm text-[#6B6459] leading-relaxed">{f.desc}</p>
-                </div>
-              </motion.div>
-            )
-          })}
-        </div>
+                </motion.div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </section>
   )
