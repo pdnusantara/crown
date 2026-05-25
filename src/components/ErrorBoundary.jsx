@@ -1,6 +1,6 @@
 import { Component } from 'react'
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
-import api from '../lib/api.js'
+import { reportError } from '../lib/errorReporter.js'
 import { isChunkLoadError, reloadOnceForChunkError } from '../lib/chunkReload.js'
 
 export class ErrorBoundary extends Component {
@@ -20,13 +20,13 @@ export class ErrorBoundary extends Component {
 
     console.error('SembaPOS Error:', error, errorInfo)
     this.setState({ errorInfo })
-    api.post('/error-logs', {
+    reportError({
       level:    'error',
       type:     'js_error',
       message:  error.message || 'Unknown React render error',
       stack:    error.stack   || null,
-      metadata: { componentStack: errorInfo.componentStack },
-    }).catch(() => {})
+      metadata: { source: 'react_render', componentStack: errorInfo.componentStack },
+    })
   }
 
   render() {

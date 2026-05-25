@@ -49,6 +49,35 @@ async function authenticate(req, res, next) {
 }
 
 /**
+ * Like `authenticate`, but never rejects the request. If a valid Bearer token
+ * is present, attaches the fresh user to req.user; otherwise just continues
+ * with req.user undefined. Used by endpoints that should accept both
+ * authenticated and anonymous callers — e.g. client error reporting, which
+ * must also capture crashes on public pages (landing, /book, /register) and
+ * before login, where requiring auth would silently drop the report (401).
+ */
+async function optionalAuth(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) return next();
+
+    const token = authHeader.split(' ')[1];
+    const decoded = verifyAccess(token);
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: {
+        id: true, email: true, name: true, role: true,
+        tenantId: true, branchId: true, isActive: true, deletedAt: true,
+      },
+    });
+    if (user && user.isActive && !user.deletedAt) req.user = user;
+  } catch {
+    /* invalid/expired token → treat as anonymous, never block */
+  }
+  next();
+}
+
+/**
  * Middleware factory: require one of the given roles
  */
 function requireRole(...roles) {
@@ -93,4 +122,4 @@ function requireTenant(req, res, next) {
   next();
 }
 
-module.exports = { authenticate, requireRole, requireTenant };
+module.exports = { authenticate, optionalAuth, requireRole, requireTenant };

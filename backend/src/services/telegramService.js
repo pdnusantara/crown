@@ -10,6 +10,7 @@ const SETTING_KEYS = [
   'telegram_chat_id',
   'telegram_enabled',
   'telegram_notify_register',
+  'telegram_notify_error',
   'telegram_daily',
   'telegram_weekly',
   'telegram_monthly',
@@ -46,6 +47,8 @@ async function getConfig(force = false) {
     enabled:        asBool(m.telegram_enabled, false),
     // Notifikasi instan tiap ada pendaftaran baru (default nyala bila master on).
     notifyRegister: asBool(m.telegram_notify_register, true),
+    // Alert instan tiap ada error aplikasi level "error" (default nyala bila master on).
+    notifyError:    asBool(m.telegram_notify_error, true),
     // Ringkasan berkala.
     daily:          asBool(m.telegram_daily,   true),
     weekly:         asBool(m.telegram_weekly,  true),
@@ -61,6 +64,7 @@ async function updateConfig(patch) {
     chatId:         'telegram_chat_id',
     enabled:        'telegram_enabled',
     notifyRegister: 'telegram_notify_register',
+    notifyError:    'telegram_notify_error',
     daily:          'telegram_daily',
     weekly:         'telegram_weekly',
     monthly:        'telegram_monthly',
@@ -86,6 +90,7 @@ async function getConfigPublic() {
   return {
     enabled:        c.enabled,
     notifyRegister: c.notifyRegister,
+    notifyError:    c.notifyError,
     daily:          c.daily,
     weekly:         c.weekly,
     monthly:        c.monthly,
@@ -201,6 +206,71 @@ async function notifyNewTenant(info = {}) {
   }
 }
 
+// ── Alert error aplikasi ─────────────────────────────────────────────────────
+// Anti-spam berlapis (state in-memory, reset saat restart — itu wajar):
+//   • Cooldown per-pesan: error yang sama tak mem-ping grup lagi dalam 10 menit.
+//   • Cap global per jam: walau pesan-pesannya unik semua, maksimal N alert/jam.
+const ERROR_DEDUPE_MS    = 10 * 60 * 1000;
+const ERROR_MAX_PER_HOUR = 15;
+const errorDedupe = new Map(); // signature → ts terakhir kirim
+let   errorAlertTimes = [];    // timestamp alert dalam 1 jam terakhir
+
+const ERROR_TYPE_LABEL = {
+  api_error:     'API',
+  js_error:      'JS / Frontend',
+  payment_error: 'Pembayaran',
+  system_error:  'Sistem',
+  auth_error:    'Auth',
+};
+
+// Normalisasi pesan jadi signature: potong panjang, kecilkan huruf, dan ganti
+// angka dengan '#' supaya error "sama" yang cuma beda ID/angka di-dedupe bareng.
+function errorSignature(info) {
+  const msg = String(info.message || '').slice(0, 120).toLowerCase().replace(/\d+/g, '#');
+  return `${info.type || 'js_error'}|${msg}`;
+}
+
+// Kirim alert error ke grup. Best-effort + di-throttle. Tak pernah throw.
+//   info = { level, type, message, path, tenantName, tenantId }
+async function notifyError(info = {}) {
+  const c = await getConfig();
+  if (!c.enabled || !c.notifyError) return { sent: false, reason: 'disabled' };
+  // Hanya alert untuk level "error" — warning/info cukup tercatat di log.
+  if ((info.level || 'error') !== 'error') return { sent: false, reason: 'not_error_level' };
+
+  const now = Date.now();
+  const sig = errorSignature(info);
+  const last = errorDedupe.get(sig);
+  if (last && now - last < ERROR_DEDUPE_MS) return { sent: false, reason: 'deduped' };
+
+  errorAlertTimes = errorAlertTimes.filter((t) => now - t < 60 * 60 * 1000);
+  if (errorAlertTimes.length >= ERROR_MAX_PER_HOUR) return { sent: false, reason: 'rate_capped' };
+
+  errorDedupe.set(sig, now);
+  errorAlertTimes.push(now);
+  // Jaga map dedupe tak tumbuh tanpa batas.
+  if (errorDedupe.size > 500) {
+    for (const [k, ts] of errorDedupe) if (now - ts > ERROR_DEDUPE_MS) errorDedupe.delete(k);
+  }
+
+  const lines = [];
+  lines.push('🚨 <b>Error Aplikasi</b>');
+  lines.push('');
+  lines.push(`⚙️ Jenis: <b>${escapeHtml(ERROR_TYPE_LABEL[info.type] || info.type || 'error')}</b>`);
+  lines.push(`💬 ${escapeHtml(String(info.message || '-').slice(0, 300))}`);
+  if (info.path)            lines.push(`📍 <code>${escapeHtml(info.path)}</code>`);
+  if (info.tenantName)      lines.push(`🏪 Tenant: <b>${escapeHtml(info.tenantName)}</b>`);
+  else if (info.tenantId)   lines.push(`🏪 Tenant: <code>${escapeHtml(info.tenantId)}</code>`);
+  lines.push('');
+  lines.push('🔎 <a href="https://sembapos.com/super-admin/error-logs">Buka log error</a>');
+
+  try {
+    return await sendMessage(lines.join('\n'));
+  } catch (err) {
+    return { sent: false, reason: err?.message || 'send_error' };
+  }
+}
+
 // Tes koneksi: validasi token via getMe, lalu kirim pesan uji ke grup.
 async function testConnection() {
   const c = await getConfig(true);
@@ -252,6 +322,7 @@ module.exports = {
   getConfigPublic,
   sendMessage,
   notifyNewTenant,
+  notifyError,
   testConnection,
   channelLabel,
   escapeHtml,

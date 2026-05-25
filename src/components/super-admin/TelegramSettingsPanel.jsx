@@ -53,7 +53,7 @@ export default function TelegramSettingsPanel() {
 
   const [form, setForm] = useState({
     botToken: '', chatId: '',
-    enabled: false, notifyRegister: true, daily: true, weekly: true, monthly: true,
+    enabled: false, notifyRegister: true, notifyError: true, daily: true, weekly: true, monthly: true,
   })
   const [showToken, setShowToken] = useState(false)
   const [tokenDirty, setTokenDirty] = useState(false)
@@ -66,6 +66,7 @@ export default function TelegramSettingsPanel() {
         chatId: config.chatId || '',
         enabled: config.enabled ?? false,
         notifyRegister: config.notifyRegister ?? true,
+        notifyError: config.notifyError ?? true,
         daily: config.daily ?? true,
         weekly: config.weekly ?? true,
         monthly: config.monthly ?? true,
@@ -81,6 +82,7 @@ export default function TelegramSettingsPanel() {
       chatId: form.chatId.trim(),
       enabled: form.enabled,
       notifyRegister: form.notifyRegister,
+      notifyError: form.notifyError,
       daily: form.daily,
       weekly: form.weekly,
       monthly: form.monthly,
@@ -210,6 +212,14 @@ export default function TelegramSettingsPanel() {
             checked={form.notifyRegister}
             disabled={!form.enabled}
             onChange={v => set('notifyRegister', v)}
+          />
+          <ToggleRow
+            icon={AlertTriangle}
+            title="Alert error aplikasi (instan)"
+            desc="Kirim pesan ke grup tiap ada error aplikasi (di-throttle: error sama maks. 1x / 10 menit)"
+            checked={form.notifyError}
+            disabled={!form.enabled}
+            onChange={v => set('notifyError', v)}
           />
           <ToggleRow
             icon={CalendarDays}

@@ -1,10 +1,23 @@
 const router = require('express').Router();
 const { z } = require('zod');
+const rateLimit = require('express-rate-limit');
 const prisma = require('../config/database');
-const { authenticate, requireRole } = require('../middleware/auth');
+const { authenticate, optionalAuth, requireRole } = require('../middleware/auth');
 const { parsePagination, paginatedResponse } = require('../utils/pagination');
 const { buildTenantDateRange, formatYmdInTz, normalizeTimezone, DEFAULT_TZ } = require('../utils/timezone');
 const { getIO } = require('../config/socket');
+const { notifyError } = require('../services/telegramService');
+
+// POST /error-logs menerima laporan anonim (halaman publik / pra-login), jadi
+// tak terlindungi `authenticate`. Cap per-IP terpisah agar tak bisa dipakai
+// membanjiri tabel ErrorLog. generalLimiter /api tetap berlaku di atasnya.
+const reportLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many error reports, slow down.' },
+});
 
 // Super-admins all join the 'support' room on connect (see config/socket.js).
 // Reuse it for error-log notifications so the SAErrorLogPage can react live
@@ -146,8 +159,11 @@ router.get('/stats/trend', authenticate, requireRole('super_admin'), async (req,
   }
 });
 
-// POST /api/error-logs — frontend JS error capture
-router.post('/', authenticate, async (req, res, next) => {
+// POST /api/error-logs — frontend JS error capture (anonymous-friendly).
+// optionalAuth: attaches tenant/user when a token is present, but still records
+// crashes on public pages and before login (where authenticate would 401 the
+// report and we'd stay blind — exactly how a render bug can hide for days).
+router.post('/', reportLimiter, optionalAuth, async (req, res, next) => {
   try {
     const body = createErrorSchema.parse(req.body);
     const log  = await prisma.errorLog.create({
@@ -155,6 +171,15 @@ router.post('/', authenticate, async (req, res, next) => {
     });
     // Live broadcast — SAErrorLogPage refetches on receipt.
     emitErrorEvent('errorLog:created', { id: log.id, level: log.level, type: log.type, tenantId: log.tenantId });
+    // Push alert to the Telegram group — throttled/deduped inside the service so
+    // a crash loop can't spam it. Fire-and-forget: never delay the response.
+    notifyError({
+      level:    log.level,
+      type:     log.type,
+      message:  log.message,
+      path:     log.path,
+      tenantId: log.tenantId,
+    }).catch(() => {});
     return res.status(201).json({ success: true, data: log });
   } catch (err) {
     next(err);

@@ -4,9 +4,15 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App.jsx'
 import { ErrorBoundary } from './components/ErrorBoundary.jsx'
 import { reloadOnceForChunkError } from './lib/chunkReload.js'
+import { installGlobalErrorHandlers } from './lib/errorReporter.js'
 import { captureAttribution } from './utils/attribution.js'
 import './i18n/index.js'
 import './index.css'
+
+// Pasang penangkap error global sedini mungkin: error di event handler &
+// promise rejection tanpa .catch() tak menjalar ke React Error Boundary, jadi
+// tanpa ini bug semacam itu bisa "diam" di produksi berhari-hari.
+installGlobalErrorHandlers()
 
 // Tangkap atribusi marketing first-touch sedini mungkin (sebelum navigasi
 // client-side menghapus query ?utm_*/?ref= dari URL).
