@@ -48,6 +48,14 @@ cd "${APP_ROOT}"
 npm install --legacy-peer-deps
 npm --prefix "${BACKEND_DIR}" install --legacy-peer-deps
 
+echo "==> Lint gate (blok deploy bila ada ERROR; warning tidak memblokir)"
+npm run lint || {
+  echo "✖ Lint GAGAL — deploy DIBATALKAN sebelum build.";
+  echo "  Perbaiki error di atas (mis. 'is not defined' = import/variabel hilang),";
+  echo "  lalu jalankan ulang deploy. Produksi belum tersentuh.";
+  exit 1;
+}
+
 echo "==> Build frontend to temporary directory"
 npm run build -- --outDir "${TMP_DIST}"
 

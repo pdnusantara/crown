@@ -276,6 +276,7 @@ function ChartTooltip({ active, payload, label }) {
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function TADashboard() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const { user } = useAuthStore()
   const tenantId = user?.tenantId
 
