@@ -162,7 +162,7 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
           {!collapsed && (
             <div>
               <h1 className="font-display font-bold text-off-white text-lg leading-tight gold-text">
-                SembaPOS
+                BARBER OS
               </h1>
               {tenant && (
                 <p className="text-xs text-muted leading-tight mt-0.5">{tenant.name}</p>
