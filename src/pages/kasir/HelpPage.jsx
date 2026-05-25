@@ -74,6 +74,7 @@ function buildCategories(slug) {
             'Pilih lebar kertas (58mm atau 80mm) sesuai printer.',
             'Tekan "Hubungkan & Cetak", lalu pilih printer dari daftar yang muncul.',
             'Struk langsung tercetak; cetakan berikutnya cukup tekan "Cetak Bluetooth".',
+            'Mau cetak ulang struk lama? Buka menu Transaksi → ketuk transaksinya → bagian "Cetak Struk" punya tombol "Cetak Bluetooth" yang sama.',
             'Catatan: fitur ini berjalan di Chrome (Android/komputer), bukan di iPhone/Safari.',
           ],
           to: pos,
@@ -114,7 +115,7 @@ function buildCategories(slug) {
         {
           id: 'tx-riwayat',
           q: 'Di mana melihat transaksi yang sudah dibuat?',
-          a: 'Menu Transaksi menampilkan seluruh transaksi pada cabang ini. Anda bisa mencari, melihat detail, dan mencetak ulang struk.',
+          a: 'Menu Transaksi menampilkan seluruh transaksi pada cabang ini. Anda bisa mencari, melihat detail, dan mencetak ulang struk — lewat dialog cetak browser ("Cetak") maupun printer thermal Bluetooth ("Cetak Bluetooth").',
           to: transactions,
           toLabel: 'Buka Transaksi',
         },

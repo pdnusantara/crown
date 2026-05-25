@@ -5,7 +5,7 @@ import {
   Search, Receipt, Eye, Calendar, X as XIcon, User, Store, CreditCard,
   Printer, Download, Filter, ChevronLeft, ChevronRight, AlertTriangle,
   RefreshCcw, Ban, CheckCircle2, TrendingUp, BookmarkCheck, Footprints,
-  Phone, Star, Clock,
+  Phone, Star, Clock, Bluetooth,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import {
@@ -13,6 +13,11 @@ import {
 } from '../../hooks/useTransactions.js'
 import { useUsers } from '../../hooks/useUsers.js'
 import { useBarberRatings } from '../../hooks/useBarberRatings.js'
+import { useBranches } from '../../hooks/useBranches.js'
+import { usePublicTenantStore } from '../../store/publicTenantStore.js'
+import { useBtPrinter } from '../../lib/btPrinter.js'
+import { buildReceipt } from '../../utils/escpos.js'
+import { calcRedeemValue } from '../../utils/loyalty.js'
 import api from '../../lib/api.js'
 import Card from '../../components/ui/Card.jsx'
 import Badge, { getStatusBadge } from '../../components/ui/Badge.jsx'
@@ -830,6 +835,18 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
   const toast = useToast()
   const { user } = useAuthStore()
   const [confirmAction, setConfirmAction] = useState(null) // 'cancel' | 'refund' | null
+
+  // Cetak ulang struk — sama seperti di kasir/POS: dialog cetak browser
+  // (window.print → blok .receipt-content) atau printer thermal Bluetooth
+  // (Web Bluetooth + ESC/POS). Info toko/cabang diambil dari store publik &
+  // daftar cabang (transaksi hanya membawa nama cabang, bukan alamat/telepon).
+  const bt = useBtPrinter()
+  const [paperWidth, setPaperWidth] = useState(() => {
+    try { return Number(localStorage.getItem('btPaperWidth')) || 58 } catch { return 58 }
+  })
+  const [btBusy, setBtBusy] = useState(false)
+  const { name: publicTenantName, logo: tenantLogo } = usePublicTenantStore()
+  const { data: branches = [] } = useBranches(user?.tenantId)
   // Fetch ratings yang sudah diberikan untuk transaksi ini (max 20 — biasanya 1-3 barber)
   const { data: ratingsData } = useBarberRatings(tx?.id ? { transactionId: tx.id, limit: 20 } : {})
   const ratings = tx?.id ? (ratingsData?.items || []) : []
@@ -859,6 +876,63 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
   const meta = STATUS_META[tx.status] || STATUS_META.completed
   const isCompleted = tx.status === 'completed' || !tx.status
 
+  // ── Data struk (untuk cetak) ──────────────────────────────────────────────
+  const shortId8 = tx.id.slice(-8).toUpperCase()
+  const custName = customerDisplayName(tx)
+  const txBranch = branches.find(b => b.id === tx.branchId) || null
+  const shopName     = txBranch?.tenant?.name || publicTenantName || 'Barbershop'
+  const rcBranchName = txBranch?.name || tx.branch?.name || ''
+  const branchAddr   = txBranch?.address || ''
+  const branchPhone  = txBranch?.phone || ''
+
+  // Susun data struk → kirim ke printer thermal Bluetooth (ESC/POS).
+  const buildTxReceiptData = () => {
+    const rcMeta = [
+      { label: 'No',      value: `#${shortId8}` },
+      { label: 'Tanggal', value: formatDateTimeInTz(tx.createdAt) },
+    ]
+    if (custName && custName !== 'Walk-in') rcMeta.push({ label: 'Pelanggan', value: custName })
+    rcMeta.push({ label: 'Status', value: meta.label })
+    const rcItems = items.map((it) => ({
+      name: it.name,
+      price: formatRupiah(it.price),
+      barber: it.barber?.name || it.barberName || '',
+    }))
+    const rows = [{ label: 'Subtotal', value: formatRupiah(subtotal) }]
+    if (discount > 0) rows.push({ label: `Diskon${tx.voucherCode ? ` (${tx.voucherCode})` : ''}`, value: `-${formatRupiah(discount)}` })
+    if (tx.pointsRedeemed > 0) rows.push({ label: `Poin dipakai (${tx.pointsRedeemed} pt)`, value: `-${formatRupiah(calcRedeemValue(tx.pointsRedeemed))}` })
+    if (tax > 0) rows.push({ label: 'Pajak', value: formatRupiah(tax) })
+    rows.push({ label: 'TOTAL', value: formatRupiah(tx.total), bold: true })
+    rows.push({ label: 'Bayar', value: PAYMENT_LABELS[tx.paymentMethod] || tx.paymentMethod || '-' })
+    if (tx.paymentMethod === 'cash' && cashReceived > 0) {
+      rows.push({ label: 'Diterima', value: formatRupiah(cashReceived) })
+      rows.push({ label: 'Kembalian', value: formatRupiah(change) })
+    }
+    if (tx.loyaltyPointsEarned > 0) rows.push({ label: 'Poin loyalti', value: `+${tx.loyaltyPointsEarned}` })
+    return {
+      shopName, branchName: rcBranchName, branchAddr,
+      branchPhone: branchPhone ? `Telp: ${branchPhone}` : '',
+      meta: rcMeta, items: rcItems, rows,
+      thanks: 'Terima kasih sudah berkunjung!',
+      poweredBy: 'Powered by SembaPos',
+    }
+  }
+
+  const handleBtPrint = async () => {
+    if (!bt.supported) { toast.error('Browser ini tidak mendukung Bluetooth. Gunakan Chrome di Android.'); return }
+    setBtBusy(true)
+    try {
+      if (!bt.connected) await bt.connect()        // tampilkan pemilih perangkat (butuh klik)
+      await bt.write(buildReceipt(buildTxReceiptData(), paperWidth >= 80 ? 42 : 32))
+      toast.success('Struk terkirim ke printer')
+    } catch (err) {
+      // NotFoundError = pengguna menutup dialog pemilih perangkat → diam saja.
+      if (err?.name !== 'NotFoundError') toast.error(err?.message || 'Gagal mencetak via Bluetooth')
+    } finally {
+      setBtBusy(false)
+    }
+  }
+
   const doStatusChange = async (status) => {
     try {
       await updateStatus.mutateAsync({ id: tx.id, status })
@@ -875,6 +949,78 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
     <>
       <Modal isOpen onClose={onClose} size="md" showClose={false} title={null}>
         <div className="-mx-6 -my-4">
+          {/* Struk cetak — tersembunyi di layar, hanya tampil saat window.print().
+              Global @media print di index.css menyembunyikan elemen lain dan
+              menaikkan .receipt-content jadi posisi tetap selebar 80mm. */}
+          <div className="receipt-content hidden print:block bg-white text-gray-900 font-mono text-sm p-4">
+            <div className="text-center mb-3">
+              {tenantLogo && (
+                <img src={tenantLogo} alt={shopName} className="w-14 h-14 rounded-xl object-cover mx-auto mb-2" />
+              )}
+              <p className="font-bold text-gray-900 text-base leading-tight">{shopName}</p>
+              {rcBranchName && <p className="text-gray-600 text-xs mt-0.5">{rcBranchName}</p>}
+              {branchAddr && <p className="text-gray-500 text-xs">{branchAddr}</p>}
+              {branchPhone && <p className="text-gray-500 text-xs">Telp: {branchPhone}</p>}
+            </div>
+
+            <div className="border-t border-dashed border-gray-300 my-2" />
+
+            <div className="text-xs text-gray-500 space-y-0.5 mb-2">
+              <div className="flex justify-between"><span>No</span><span className="font-medium text-gray-700">#{shortId8}</span></div>
+              <div className="flex justify-between"><span>Tanggal</span><span>{formatDateTimeInTz(tx.createdAt)}</span></div>
+              {custName && custName !== 'Walk-in' && (
+                <div className="flex justify-between gap-3"><span>Pelanggan</span><span className="text-gray-700 text-right truncate">{custName}</span></div>
+              )}
+              <div className="flex justify-between"><span>Status</span><span className="text-gray-700">{meta.label}</span></div>
+            </div>
+
+            <div className="border-t border-dashed border-gray-300 my-2" />
+
+            <div className="space-y-1.5">
+              {items.map((it, i) => (
+                <div key={it.id || i}>
+                  <div className="flex justify-between text-gray-800 gap-2">
+                    <span className="truncate font-medium">{it.name}</span>
+                    <span className="flex-shrink-0 tabular-nums">{formatRupiah(it.price)}</span>
+                  </div>
+                  {(it.barber?.name || it.barberName) && (
+                    <p className="text-xs text-gray-400 ml-1 truncate">↳ {it.barber?.name || it.barberName}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t border-dashed border-gray-300 my-2" />
+
+            <div className="space-y-1 text-xs">
+              <div className="flex justify-between text-gray-600"><span>Subtotal</span><span className="tabular-nums">{formatRupiah(subtotal)}</span></div>
+              {discount > 0 && (
+                <div className="flex justify-between text-green-700"><span>Diskon{tx.voucherCode ? ` (${tx.voucherCode})` : ''}</span><span className="tabular-nums">-{formatRupiah(discount)}</span></div>
+              )}
+              {tx.pointsRedeemed > 0 && (
+                <div className="flex justify-between text-gray-600 italic text-[10px]"><span>Poin dipakai ({tx.pointsRedeemed} pt)</span><span className="tabular-nums">-{formatRupiah(calcRedeemValue(tx.pointsRedeemed))}</span></div>
+              )}
+              {tax > 0 && (
+                <div className="flex justify-between text-gray-600"><span>Pajak</span><span className="tabular-nums">{formatRupiah(tax)}</span></div>
+              )}
+              <div className="flex justify-between font-bold text-sm text-gray-900 border-t border-gray-200 pt-1 mt-1"><span>TOTAL</span><span className="tabular-nums">{formatRupiah(tx.total)}</span></div>
+              <div className="flex justify-between text-gray-600"><span>Bayar</span><span>{PAYMENT_LABELS[tx.paymentMethod] || tx.paymentMethod || '—'}</span></div>
+              {tx.paymentMethod === 'cash' && cashReceived > 0 && (
+                <>
+                  <div className="flex justify-between text-gray-600"><span>Diterima</span><span className="tabular-nums">{formatRupiah(cashReceived)}</span></div>
+                  <div className="flex justify-between font-semibold text-gray-800"><span>Kembalian</span><span className="tabular-nums">{formatRupiah(change)}</span></div>
+                </>
+              )}
+              {tx.loyaltyPointsEarned > 0 && (
+                <div className="flex justify-between text-gray-600"><span>Poin loyalti</span><span className="tabular-nums">+{tx.loyaltyPointsEarned}</span></div>
+              )}
+            </div>
+
+            <div className="border-t border-dashed border-gray-300 my-2" />
+            <p className="text-center text-xs text-gray-400">Terima kasih sudah berkunjung!</p>
+            <p className="text-center text-xs text-gray-300 mt-0.5">Powered by SembaPos</p>
+          </div>
+
           {/* Header */}
           <div className="px-6 pt-5 pb-4 border-b border-dark-border flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -897,14 +1043,6 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
               <p className="text-xs text-muted">{formatDateTimeInTz(tx.createdAt)}</p>
             </div>
             <div className="flex items-center gap-1 shrink-0">
-              <button
-                onClick={() => window.print()}
-                title="Cetak"
-                aria-label="Cetak"
-                className="hidden sm:inline-flex w-9 h-9 items-center justify-center rounded-lg text-muted hover:text-off-white hover:bg-dark-card transition-colors"
-              >
-                <Printer className="w-4 h-4" />
-              </button>
               <button
                 onClick={onClose}
                 aria-label="Tutup"
@@ -1012,6 +1150,52 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
             )}
             {tx.loyaltyPointsEarned > 0 && (
               <Row label="Poin loyalti" value={`+${tx.loyaltyPointsEarned}`} valueClass="text-blue-300" />
+            )}
+          </div>
+
+          {/* Cetak ulang struk — dialog cetak browser atau printer thermal Bluetooth */}
+          <div className="px-6 py-4 border-t border-dark-border no-print space-y-3">
+            <p className="text-[11px] font-semibold text-muted uppercase tracking-wider">Cetak Struk</p>
+            {bt.supported && (
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <span className="text-muted truncate min-w-0">
+                  {bt.connected
+                    ? <>Printer: <b className="text-off-white">{bt.deviceName}</b> · <button type="button" onClick={bt.disconnect} className="text-gold hover:underline">putuskan</button></>
+                    : 'Printer Bluetooth belum tersambung'}
+                </span>
+                <select
+                  value={paperWidth}
+                  onChange={(e) => { const v = Number(e.target.value); setPaperWidth(v); try { localStorage.setItem('btPaperWidth', String(v)) } catch { /* noop */ } }}
+                  className="bg-dark-bg border border-dark-border rounded-lg px-2 py-1 text-xs text-off-white shrink-0"
+                  aria-label="Lebar kertas struk"
+                >
+                  <option value={58}>58mm</option>
+                  <option value={80}>80mm</option>
+                </select>
+              </div>
+            )}
+            <div className="flex flex-col sm:flex-row gap-2">
+              {bt.supported && (
+                <button
+                  onClick={handleBtPrint}
+                  disabled={btBusy}
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gold text-dark-bg text-sm font-semibold hover:bg-gold/90 disabled:opacity-50 transition-colors"
+                >
+                  <Bluetooth className="w-4 h-4" />
+                  {btBusy ? 'Mencetak…' : (bt.connected ? 'Cetak Bluetooth' : 'Hubungkan & Cetak')}
+                </button>
+              )}
+              <button
+                onClick={() => window.print()}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-dark-card border border-dark-border text-off-white text-sm font-semibold hover:border-gold/40 transition-colors"
+              >
+                <Printer className="w-4 h-4" /> Cetak
+              </button>
+            </div>
+            {!bt.supported && (
+              <p className="text-[11px] text-muted leading-snug">
+                Untuk cetak ke printer thermal Bluetooth, buka halaman ini lewat Chrome di Android.
+              </p>
             )}
           </div>
 
