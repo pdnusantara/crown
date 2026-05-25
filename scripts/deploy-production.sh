@@ -81,3 +81,18 @@ curl -fkIs "${SITE_HEALTH_URL}" >/dev/null
 
 echo "==> Deploy success"
 echo "Backup kept at: ${BACKUP_DIST}"
+
+# ── Housekeeping ────────────────────────────────────────────────────────────
+# Deploy sudah sukses — lepas trap rollback supaya error pembersihan TIDAK
+# memicu rollback. Mencegah disk penuh: backups (6.7GB/46 snapshot pernah
+# bikin disk 90%) dan chunk lama yang terus di-carry-forward via `cp -an`.
+trap - ERR
+KEEP_BACKUPS="${KEEP_BACKUPS:-5}"
+ASSET_MAX_AGE_DAYS="${ASSET_MAX_AGE_DAYS:-14}"
+# Simpan hanya N backup terbaru (rollback hanya butuh yang terakhir).
+ls -1dt "${BACKUP_ROOT}"/dist-* 2>/dev/null | tail -n +$((KEEP_BACKUPS + 1)) | xargs -r rm -rf || true
+# Age-prune chunk lama yang di-carry-forward; klien stale yang minta chunk
+# hilang akan auto-reload (vite:preloadError → chunkReload). Chunk build saat
+# ini ber-mtime hari ini, jadi tak akan terhapus.
+find "${APP_ROOT}/dist/assets" -type f -mtime +"${ASSET_MAX_AGE_DAYS}" -delete 2>/dev/null || true
+echo "==> Housekeeping selesai (simpan ${KEEP_BACKUPS} backup, prune asset > ${ASSET_MAX_AGE_DAYS} hari)"

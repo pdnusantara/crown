@@ -191,6 +191,17 @@ router.put('/:id', authenticate, requireRole('super_admin', 'tenant_admin'), asy
     }
 
     const body = updateUserSchema.parse(req.body);
+
+    // tenant_admin TIDAK boleh memindahkan user antar-tenant atau menaikkan ke
+    // peran admin (cegah eskalasi hak akses & injeksi akun lintas-tenant).
+    // Sejalan dengan guard di handler POST.
+    if (req.user.role === 'tenant_admin') {
+      delete body.tenantId;
+      if (body.role === 'super_admin' || body.role === 'tenant_admin') {
+        return res.status(403).json({ success: false, error: 'Cannot assign admin roles' });
+      }
+    }
+
     const passwordChanged = !!body.password;
 
     if (body.password) {

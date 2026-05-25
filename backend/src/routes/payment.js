@@ -440,10 +440,18 @@ router.post('/callback', async (req, res) => {
     const success = resultCode === '00';
     const status  = success ? 'success' : 'failed';
 
-    await prisma.paymentOrder.update({
-      where: { merchantOrderId },
+    // Idempotency — callback Duitku publik & kerap di-retry; body valid bisa
+    // di-replay. Klaim order secara ATOMIK: hanya satu callback yang boleh
+    // memindahkan order dari non-'success' ke status final. Callback yang
+    // di-replay (order sudah 'success') mendapat count 0 lalu diabaikan —
+    // mencegah perpanjangan langganan/lisensi cabang/invoice ganda.
+    const claim = await prisma.paymentOrder.updateMany({
+      where: { merchantOrderId, status: { not: 'success' } },
       data:  { status, paymentMethod: paymentCode || null, reference: reference || order.reference },
     });
+    if (claim.count === 0) {
+      return res.status(200).send('OK');
+    }
 
     if (success) {
       const now = new Date();
