@@ -8,6 +8,7 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 export const usePublicTenantStore = create((set) => ({
   slug: null,
   name: null,
+  ownerName: null,   // nama akun pemilik — dipakai /book sebagai nama tampil
   logo: null,
   timezone: null,
   address: null,
@@ -36,6 +37,7 @@ export const usePublicTenantStore = create((set) => ({
       set({
         status: t.isSuspended ? 'suspended' : 'found',
         name: t.name,
+        ownerName: info.ownerName || null,
         logo: t.logo || info.logo || null,
         timezone: t.timezone || 'Asia/Jakarta',
         address: info.address || null,

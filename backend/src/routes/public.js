@@ -165,10 +165,19 @@ router.get('/info', requireTenant, async (req, res, next) => {
       },
     });
     if (!full) return res.status(404).json({ success: false, error: 'Tenant tidak ditemukan' });
+
+    // Nama akun pemilik (tenant_admin tertua) — dipakai halaman /book sebagai
+    // nama yang ditampilkan, sesuai preferensi tenant. Fallback ke nama bisnis.
+    const owner = await prisma.user.findFirst({
+      where: { tenantId: req.tenant.id, role: 'tenant_admin', deletedAt: null },
+      orderBy: { createdAt: 'asc' },
+      select: { name: true },
+    });
     res.json({
       success: true,
       data: {
         name:        full.name,
+        ownerName:   owner?.name || null,
         slug:        full.slug,
         logo:        full.logo || null,
         address:     full.address || null,

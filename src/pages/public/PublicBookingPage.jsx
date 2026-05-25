@@ -105,9 +105,12 @@ export default function PublicBookingPage() {
 
 function PublicBookingPageInner() {
   const {
-    name: tenantName, logo: tenantLogo, status: tenantStatus,
+    name: businessName, ownerName, logo: tenantLogo, status: tenantStatus,
     timezone: tenantTz, bookingPage, wilayah: tenantWilayah, resolve,
   } = usePublicTenantStore()
+  // Nama yang ditampilkan di /book mengikuti Nama Akun pemilik (preferensi
+  // tenant); fallback ke Nama Bisnis bila owner/akun tak tersedia.
+  const tenantName = ownerName || businessName
   const bp = bookingPage || {}
   const accent = bp.primaryColor || '#C9A84C'
 
