@@ -4,6 +4,8 @@ import {
   Rocket, Store, Users, BarChart3, Settings, Fingerprint,
 } from 'lucide-react'
 import HelpCenter from '../../components/HelpCenter.jsx'
+import { useAuthStore } from '../../store/authStore.js'
+import { useFeatureFlags } from '../../hooks/useFeatureFlags.js'
 
 // ── /admin/bantuan — Pusat Bantuan untuk pemilik toko (tenant_admin) ──────────
 // Konten statis: panduan langkah demi langkah tiap fitur, plus tautan langsung
@@ -363,14 +365,36 @@ const CATEGORIES = [
   },
 ]
 
+// Peta topik → feature flag. Topik yang fiturnya tidak aktif di paket tenant
+// tampil "terkunci" + ajakan upgrade (lihat HelpCenter). Topik inti (memulai,
+// pengaturan umum, isi paket, langganan) sengaja tak digate — selalu relevan.
+const FEATURE_BY_ARTICLE = {
+  'o-pos': 'pos', 'o-antrian': 'queue', 'o-booking': 'booking',
+  'p-loyalti': 'loyalty', 'p-voucher': 'voucher', 'p-rating': 'barber_rating',
+  'l-laporan': 'reports', 'l-perbandingan': 'multi_branch',
+  'l-pengeluaran': 'expense_tracking', 'l-gaji-barber': 'expense_tracking',
+  'a-mulai': 'attendance', 'a-jadwal': 'attendance', 'a-staf': 'attendance', 'a-rekap': 'attendance',
+  's-pesan-transaksi': 'whatsapp', 's-pengingat-kunjungan': 'whatsapp',
+  's-pesan-wa-log': 'whatsapp_logs', 's-jadwal': 'schedule',
+}
+CATEGORIES.forEach(c => c.items.forEach(it => {
+  if (FEATURE_BY_ARTICLE[it.id]) it.feature = FEATURE_BY_ARTICLE[it.id]
+}))
+
 export default function TAHelpPage() {
   const navigate = useNavigate()
+  const { user } = useAuthStore()
+  // Saat flag belum termuat, JANGAN gating (kirim undefined) → hindari kedipan
+  // "terkunci" sesaat. Setelah termuat, topik fitur nonaktif jadi terkunci.
+  const { data: enabledFlags, isSuccess } = useFeatureFlags(user?.tenantId)
 
   return (
     <HelpCenter
       title="Pusat Bantuan"
       subtitle="Panduan mengelola toko Anda — dari menyiapkan cabang hingga membaca laporan."
       categories={CATEGORIES}
+      enabledFlags={isSuccess ? (enabledFlags || []) : undefined}
+      lockedAction={{ label: 'Lihat Paket', onClick: () => navigate('/admin/billing') }}
       support={{
         title: 'Masih butuh bantuan?',
         desc: 'Kirim tiket ke tim support SembaPOS dan kami akan membantu Anda.',

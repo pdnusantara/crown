@@ -4,7 +4,16 @@ import {
 } from 'lucide-react'
 import HelpCenter from '../../components/HelpCenter.jsx'
 import { useAuthStore } from '../../store/authStore.js'
+import { useFeatureFlags } from '../../hooks/useFeatureFlags.js'
 import { getBranchSlug } from '../../utils/branchSlug.js'
+
+// Topik → feature flag. Yang fiturnya tidak aktif di paket toko tampil
+// "terkunci" (kasir tak bisa upgrade → HelpCenter arahkan hubungi pemilik).
+const FEATURE_BY_ARTICLE = {
+  'tx-poin': 'loyalty', 'tx-voucher': 'voucher', 'tx-rating-qr': 'barber_rating',
+  'an-checkin': 'booking',
+  'ab-checkin': 'attendance', 'ab-checkout': 'attendance', 'ab-luar': 'attendance',
+}
 
 // ── /:branchId/kasir/bantuan — Pusat Bantuan untuk kasir ─────────────────────
 // Panduan operasional harian: buka shift → transaksi → antrian → tutup shift.
@@ -242,13 +251,23 @@ function buildCategories(slug) {
 export default function KasirHelpPage() {
   const { user } = useAuthStore()
   const slug = getBranchSlug(user)
-  const categories = useMemo(() => buildCategories(slug), [slug])
+  const categories = useMemo(() => {
+    const cats = buildCategories(slug)
+    cats.forEach(c => c.items.forEach(it => {
+      if (FEATURE_BY_ARTICLE[it.id]) it.feature = FEATURE_BY_ARTICLE[it.id]
+    }))
+    return cats
+  }, [slug])
+  // Saat flag belum termuat → undefined (tanpa gating) agar tak ada kedipan
+  // "terkunci". Kasir tak diberi tombol upgrade (lockedAction tak di-pass).
+  const { data: enabledFlags, isSuccess } = useFeatureFlags(user?.tenantId)
 
   return (
     <HelpCenter
       title="Pusat Bantuan Kasir"
       subtitle="Panduan kerja harian — buka shift, catat transaksi, kelola antrian, tutup shift."
       categories={categories}
+      enabledFlags={isSuccess ? (enabledFlags || []) : undefined}
       support={{
         title: 'Ada kendala?',
         desc: 'Untuk perubahan layanan, harga, atau akun, hubungi pemilik toko Anda.',
