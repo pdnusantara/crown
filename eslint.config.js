@@ -32,6 +32,9 @@ export default [
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
     settings: { react: { version: 'detect' } },
+    // Komentar eslint-disable yang sudah mati = WARNING (kebersihan), bukan
+    // error — supaya tidak memblokir deploy seperti bug nyata.
+    linterOptions: { reportUnusedDisableDirectives: 'warn' },
     plugins: { react, 'react-hooks': reactHooks },
     rules: {
       ...js.configs.recommended.rules,
