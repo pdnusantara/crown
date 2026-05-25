@@ -647,7 +647,7 @@ export default function SADashboard() {
                 </button>
               </div>
             </CardHeader>
-            <div className="overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full min-w-[460px] text-sm">
                 <thead>
                   <tr className="border-b border-dark-border text-[10px] text-muted uppercase">
@@ -711,6 +711,56 @@ export default function SADashboard() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile card list */}
+            <div className="md:hidden divide-y divide-dark-border/40">
+              {[...tenants]
+                .sort((a, b) => (b.monthlyRevenue || 0) - (a.monthlyRevenue || 0))
+                .slice(0, 8)
+                .map(tenant => (
+                <div key={tenant.id} className="px-4 py-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${tenant.isSuspended ? 'bg-red-500/10' : 'bg-gold/10'}`}>
+                        <span className={`font-bold text-[10px] ${tenant.isSuspended ? 'text-red-400' : 'text-gold'}`}>{tenant.name[0]}</span>
+                      </div>
+                      <span className="text-sm font-medium text-off-white truncate">{tenant.name}</span>
+                    </div>
+                    <span className="text-sm font-semibold text-gold tabular-nums flex-shrink-0">
+                      {tenant.monthlyRevenue > 0 ? `${(tenant.monthlyRevenue / 1_000_000).toFixed(1)}M` : '—'}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center gap-2 flex-wrap">
+                    {tenant.package ? (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                        style={{ color: PKG_COLOR[tenant.package], background: PKG_COLOR[tenant.package] + '20' }}>
+                        {tenant.package}
+                      </span>
+                    ) : <span className="text-muted text-[10px]">—</span>}
+                    <Badge
+                      variant={
+                        tenant.subscriptionStatus === 'active'  ? 'success' :
+                        tenant.subscriptionStatus === 'trial'   ? 'info' :
+                        tenant.subscriptionStatus === 'overdue' ? 'danger' : 'muted'
+                      }
+                      className="text-[10px]"
+                    >
+                      {tenant.subscriptionStatus || 'no sub'}
+                    </Badge>
+                  </div>
+                  <div className="mt-2 flex gap-2">
+                    <button onClick={() => navigate(`/super-admin/tenants/${tenant.id}`)}
+                      className="border border-dark-border text-muted hover:text-off-white rounded-lg px-2.5 py-1.5 text-xs inline-flex items-center gap-1.5">
+                      <Eye size={12} /> Detail
+                    </button>
+                    <button onClick={() => handleImpersonate(tenant)}
+                      className="border border-dark-border text-muted hover:text-off-white rounded-lg px-2.5 py-1.5 text-xs inline-flex items-center gap-1.5">
+                      <ExternalLink size={12} /> Login sebagai tenant
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </Card>
         </motion.div>

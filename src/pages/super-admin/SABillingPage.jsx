@@ -552,7 +552,7 @@ export default function SABillingPage() {
                 </div>
               </div>
             </CardHeader>
-            <div className="overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-dark-border text-xs text-muted uppercase">
@@ -637,12 +637,89 @@ export default function SABillingPage() {
                   })}
                 </tbody>
               </table>
-              <p className="text-xs text-muted text-center py-2 border-t border-dark-border/40">
-                {filteredSubs.length === subscriptions.length
-                  ? `${subscriptions.length} subscription`
-                  : `Menampilkan ${filteredSubs.length} dari ${subscriptions.length} subscription`}
-              </p>
             </div>
+
+            {/* Mobile card list */}
+            <div className="md:hidden space-y-2.5 px-3 pb-1">
+              {filteredSubs.length === 0 && (
+                <div className="text-center py-8 text-muted">
+                  <CreditCard size={32} className="mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">{t('superAdmin.billing.noSubscriptions')}</p>
+                </div>
+              )}
+              {filteredSubs.map(sub => {
+                const variant = STATUS_VARIANTS[sub.status] || 'success'
+                const tz = sub.tenant?.timezone || tenantTz(sub.tenantId)
+                return (
+                  <div key={sub.id} className={`rounded-xl border border-dark-border bg-dark-surface/40 p-3 ${rowHighlight(sub.status)}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-medium text-off-white">{sub.tenant?.name || tenantName(sub.tenantId)}</p>
+                      <Badge variant={variant}>{statusLabel(sub.status)}</Badge>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 mt-2">
+                      <span className={`text-xs font-semibold px-2 py-1 rounded-full border ${PACKAGE_COLORS[sub.package] || 'text-muted border-dark-border'}`}>{sub.package}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] text-muted">Auto-perpanjang</span>
+                        <button
+                          onClick={() => handleToggleAuto(sub)}
+                          disabled={busyId === sub.id}
+                          className="disabled:opacity-40"
+                          title={sub.autoRenew ? t('superAdmin.billing.autoRenewOn') : t('superAdmin.billing.autoRenewOff')}
+                        >
+                          {sub.autoRenew
+                            ? <ToggleRight size={22} className="text-green-400" />
+                            : <ToggleLeft size={22} className="text-muted" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 mt-3">
+                      <div>
+                        <p className="text-[10px] text-muted uppercase">{t('superAdmin.billing.colEnds')}</p>
+                        <p className="text-off-white text-xs mt-0.5">{formatDate(sub.endDate, tz)}</p>
+                        <DaysLeft endDate={sub.endDate} />
+                        {sub.status === 'paused' && sub.pauseUntil && (
+                          <p className="text-[10px] text-blue-400/80 mt-0.5">
+                            Pause hingga {formatDate(sub.pauseUntil, tz)}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-muted uppercase">{t('superAdmin.billing.colPrice')}</p>
+                        <p className="text-gold font-semibold text-sm mt-0.5">{formatRupiah(sub.price)}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 flex-wrap mt-3">
+                      <Button size="sm" variant="secondary" onClick={() => setInvoiceModal(sub)}>
+                        <Receipt size={13} className="mr-1" />{t('superAdmin.billing.invoiceBtn')}
+                      </Button>
+                      <Button size="sm" onClick={() => { setUpgradeModal({ subscriptionId: sub.id, tenantName: sub.tenant?.name || tenantName(sub.tenantId), currentPackage: sub.package }); setSelectedPkg(sub.package) }}>
+                        <ChevronDown size={13} className="mr-1" />{t('superAdmin.billing.packageBtn')}
+                      </Button>
+                      {sub.status !== 'active' && sub.status !== 'paused' && (
+                        <Button size="sm" variant="secondary" disabled={busyId === sub.id} onClick={() => handleRenew(sub)}>
+                          <RefreshCw size={13} className="mr-1" />{t('superAdmin.billing.extendBtn')}
+                        </Button>
+                      )}
+                      {sub.status === 'paused' ? (
+                        <Button size="sm" variant="secondary" disabled={busyId === sub.id || resumeSub.isPending} onClick={() => handleResume(sub)} title="Resume — kembali aktif">
+                          <Play size={13} className="mr-1" />Resume
+                        </Button>
+                      ) : (sub.status === 'active' || sub.status === 'trial') && (
+                        <Button size="sm" variant="secondary" onClick={() => openPauseModal(sub)} title="Pause subscription sementara">
+                          <Pause size={13} className="mr-1" />Pause
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <p className="text-xs text-muted text-center py-2 border-t border-dark-border/40">
+              {filteredSubs.length === subscriptions.length
+                ? `${subscriptions.length} subscription`
+                : `Menampilkan ${filteredSubs.length} dari ${subscriptions.length} subscription`}
+            </p>
           </Card>
         </>
       )}

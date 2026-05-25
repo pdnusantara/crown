@@ -401,7 +401,7 @@ export default function SAUsagePage() {
             <h3 className="font-semibold text-off-white">{t('superAdmin.usage.perTenantTitle')}</h3>
           </div>
         </CardHeader>
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-dark-border text-[11px] text-muted uppercase tracking-wider">
@@ -445,6 +445,54 @@ export default function SAUsagePage() {
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile card list */}
+        <div className="md:hidden space-y-2.5 px-3 pb-3">
+          {tenants.map(tt => {
+            const isSel = tt.id === selectedTenant?.id
+            return (
+              <button
+                key={tt.id}
+                type="button"
+                onClick={() => setSelectedTenantId(tt.id)}
+                className={`w-full text-left rounded-xl border p-3 transition-colors ${isSel ? 'border-gold/40 bg-gold/5' : 'border-dark-border bg-dark-surface/40 hover:border-gold/20'}`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-off-white font-medium">{tt.name}</span>
+                  {tt.suspended && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-400/10 text-amber-400 border border-amber-400/30">
+                      suspended
+                    </span>
+                  )}
+                </div>
+                <div className="text-[11px] text-muted">{tt.slug} · {tt.timezone}</div>
+                <div className="text-[11px] text-muted mt-0.5">Paket: {tt.package || '—'}</div>
+                <div className="grid grid-cols-3 gap-2 mt-2 text-center">
+                  <div>
+                    <div className="text-[10px] text-muted uppercase">{t('superAdmin.usage.uniqueUsers')}</div>
+                    <div className="text-sm text-off-white">{tt.uniqueUsers}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-muted uppercase">{t('superAdmin.usage.totalSessions')}</div>
+                    <div className="text-sm text-off-white">{tt.sessions}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-muted uppercase">{t('superAdmin.usage.totalTransactions')}</div>
+                    <div className="text-sm text-off-white">{tt.transactions}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-muted uppercase">{t('superAdmin.usage.totalBookings')}</div>
+                    <div className="text-sm text-off-white">{tt.bookings}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-muted uppercase">Fitur</div>
+                    <div className="text-sm text-gold font-semibold">{tt.activeFeatureCount}</div>
+                  </div>
+                </div>
+              </button>
+            )
+          })}
         </div>
       </Card>
 

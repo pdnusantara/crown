@@ -894,7 +894,7 @@ export default function SAPackagesPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-dark-border text-xs text-muted uppercase">
-                    <th className="px-4 py-3 text-left">{t('superAdmin.packages.colFeature')}</th>
+                    <th className="px-4 py-3 text-left sticky left-0 bg-dark-card z-10">{t('superAdmin.packages.colFeature')}</th>
                     <th className="px-4 py-3 text-left">{t('superAdmin.packages.colCategory')}</th>
                     {packageList.map(pkg => (
                       <th key={pkg.name} className="px-4 py-3 text-center">
@@ -914,7 +914,7 @@ export default function SAPackagesPage() {
                         transition={{ delay: Math.min(i * 0.01, 0.2) }}
                         className="border-b border-dark-border/40 hover:bg-dark-surface/30 transition-colors"
                       >
-                        <td className="px-4 py-2.5">
+                        <td className="px-4 py-2.5 sticky left-0 bg-dark-card z-10">
                           <p className="text-off-white font-medium text-sm">{flag.label}</p>
                           <p className="text-xs text-muted">{flag.description}</p>
                         </td>
