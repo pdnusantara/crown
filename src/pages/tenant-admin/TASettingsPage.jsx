@@ -25,10 +25,28 @@ const AUDIT_LIMIT = 15
 
 export default function TASettingsPage() {
   const { t } = useTranslation()
-  const { user } = useAuthStore()
+  const { user, updateProfile } = useAuthStore()
   const navigate = useNavigate()
   const toast = useToast()
   const updateMyTenant = useUpdateMyTenant()
+
+  // Nama AKUN (user.name) — dipakai sapaan dashboard. Beda dari nama TOKO.
+  const [accountName, setAccountName] = useState('')
+  const [savingAccount, setSavingAccount] = useState(false)
+  useEffect(() => { if (user?.name) setAccountName(user.name) }, [user?.name])
+  const handleSaveAccount = async () => {
+    const name = accountName.trim()
+    if (!name) { toast.error('Nama akun tidak boleh kosong'); return }
+    setSavingAccount(true)
+    try {
+      await updateProfile({ name })   // PATCH /auth/me → update user di store → sapaan dashboard ikut berubah
+      toast.success('Nama akun diperbarui')
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal memperbarui nama akun')
+    } finally {
+      setSavingAccount(false)
+    }
+  }
 
   const { data: tenant } = useTenant(user?.tenantId)
   const { data: sub } = useSubscription(user?.tenantId)
@@ -695,6 +713,30 @@ export default function TASettingsPage() {
                 </p>
               </div>
               <Button onClick={handleSave} fullWidth loading={updateMyTenant.isPending}>{t('tenantAdmin.settings.saveSettings')}</Button>
+            </CardBody>
+          </Card>
+
+          {/* Akun Saya — nama yang muncul di sapaan dashboard (BEDA dari nama toko) */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Shield className="w-5 h-5 text-gold" />
+                <h3 className="font-semibold text-off-white">Akun Saya</h3>
+              </div>
+            </CardHeader>
+            <CardBody className="space-y-4">
+              <Input
+                label="Nama akun"
+                placeholder="Nama Anda"
+                value={accountName}
+                onChange={e => setAccountName(e.target.value)}
+              />
+              <p className="text-xs text-muted">
+                Nama ini dipakai untuk sapaan di dashboard (&ldquo;Selamat Pagi, …&rdquo;) dan inisial avatar Anda — <span className="text-off-white">berbeda dari Nama Bisnis</span> di kartu sebelah. Email &amp; peran akun tidak bisa diubah dari sini.
+              </p>
+              <Button variant="secondary" onClick={handleSaveAccount} fullWidth loading={savingAccount}>
+                Simpan Nama Akun
+              </Button>
             </CardBody>
           </Card>
 
