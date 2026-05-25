@@ -210,9 +210,15 @@
 .light-mode .text-dark-bg {
   color: #0A0A0A !important;
 }
-/* Tabel/list hover state harus keliatan di latar putih */
+/* Tabel/list hover state harus keliatan di latar putih.
+   Catatan: di light, kelas STATIS .bg-dark-surface di-override jadi putih, tapi
+   varian hover (.hover:bg-dark-surface[/40]) selektornya beda dan TAK ikut ter-
+   override → tanpa baris ini, hover baris/kartu memunculkan strip GELAP (mis.
+   list "Baru Bergabung" & banyak tabel super-admin). */
 .light-mode .hover\:bg-dark-card\/40:hover,
 .light-mode .hover\:bg-dark-card\/50:hover,
+.light-mode .hover\:bg-dark-surface:hover,
+.light-mode .hover\:bg-dark-surface\/40:hover,
 .light-mode .active\:bg-dark-card\/60:active {
   background-color: #ECEAE2 !important;
 }
