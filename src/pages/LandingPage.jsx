@@ -658,16 +658,28 @@ function FeaturesSection({ ctx }) {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: '-60px' }}
                 transition={{ delay: (i % 3) * 0.07 }}
-                className="group relative bg-white p-7 hover:bg-[#FDFBF4] transition-colors"
+                className="group relative bg-white hover:bg-[#FDFBF4] transition-colors flex flex-col"
               >
-                <span className="font-display text-sm font-semibold text-[#C9A84C]">
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-                <div className="w-11 h-11 rounded-xl bg-[#FBF4E1] border border-[#EAE0C6] flex items-center justify-center mt-3 mb-4 group-hover:bg-[#C9A84C] transition-colors">
-                  <Icon size={19} className="text-[#A8893A] group-hover:text-[#1C1A17] transition-colors" />
+                {f.image && (
+                  <div className="aspect-[16/10] w-full overflow-hidden bg-[#F5EFE3]">
+                    <img
+                      src={f.image}
+                      alt={f.title}
+                      loading="lazy"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                    />
+                  </div>
+                )}
+                <div className="p-7">
+                  <span className="font-display text-sm font-semibold text-[#C9A84C]">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <div className="w-11 h-11 rounded-xl bg-[#FBF4E1] border border-[#EAE0C6] flex items-center justify-center mt-3 mb-4 group-hover:bg-[#C9A84C] transition-colors">
+                    <Icon size={19} className="text-[#A8893A] group-hover:text-[#1C1A17] transition-colors" />
+                  </div>
+                  <h3 className="font-display text-xl font-semibold text-[#1C1A17] mb-1.5">{f.title}</h3>
+                  <p className="text-sm text-[#6B6459] leading-relaxed">{f.desc}</p>
                 </div>
-                <h3 className="font-display text-xl font-semibold text-[#1C1A17] mb-1.5">{f.title}</h3>
-                <p className="text-sm text-[#6B6459] leading-relaxed">{f.desc}</p>
               </motion.div>
             )
           })}

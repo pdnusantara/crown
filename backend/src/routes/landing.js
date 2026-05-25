@@ -213,6 +213,7 @@ const heroUpdateSchema = z.object({
     icon:  z.string().max(40),
     title: z.string().max(120),
     desc:  z.string().max(400),
+    image: z.string().max(500).optional(),  // URL screenshot/foto opsional per fitur
   })).optional(),
   trustItems:   z.array(z.string().max(60)).max(6).optional(),
   steps:        z.array(z.object({
@@ -346,6 +347,12 @@ function collectUploadFilenames(value, set = new Set()) {
 async function gcUploads(layout) {
   try {
     const referenced = collectUploadFilenames(layout);
+    // Gambar yang disimpan TERPISAH dari layout (di SystemSetting hero) juga
+    // harus dihitung agar tak terhapus sebagai "yatim": gambar per-fitur,
+    // logo, favicon, OG image, dan heading section. getAllHero() mencakup
+    // semuanya (features, siteLogo, siteFavicon, seoOgImage, sections).
+    const hero = await getAllHero().catch(() => null);
+    if (hero) collectUploadFilenames(hero, referenced);
     const files = await fs.promises.readdir(UPLOAD_DIR);
     const cutoff = Date.now() - 60 * 60 * 1000;
     for (const f of files) {

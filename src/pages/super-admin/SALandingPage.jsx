@@ -597,7 +597,7 @@ function HeroEditor() {
     setFeatures(arr => arr.map((f, idx) => idx === i ? { ...f, [key]: value } : f))
   }
   function addFeature() {
-    setFeatures(arr => [...arr, { icon: 'Sparkles', title: '', desc: '' }])
+    setFeatures(arr => [...arr, { icon: 'Sparkles', title: '', desc: '', image: '' }])
   }
   function removeFeature(i) {
     setFeatures(arr => arr.filter((_, idx) => idx !== i))
@@ -803,6 +803,13 @@ function HeroEditor() {
                   onChange={e => updateFeature(i, 'desc', e.target.value)}
                 />
               </div>
+              <ImageUploadField
+                label="Gambar fitur (opsional)"
+                value={f.image || ''}
+                accept="image/png,image/jpeg,image/webp"
+                onChange={url => updateFeature(i, 'image', url)}
+                hint="Screenshot/foto fitur — tampil sebagai banner di atas kartu fitur di landing. Disarankan rasio ~16:10 (mis. 1200×750). Kosongkan untuk pakai ikon saja."
+              />
             </div>
           ))}
           <p className="text-xs text-muted">
