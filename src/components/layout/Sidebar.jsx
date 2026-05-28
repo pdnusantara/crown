@@ -207,7 +207,12 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
 
   return (
     <aside
+      // `sidebar-modern` wajib — dipakai CSS scope di index.css untuk UNDO
+      // .light-mode overrides yang akan menggelapkan text-indigo-300/off-white/
+      // amber-X/red-X (text-on-light asumsi). Tanpa class ini, sidebar TIDAK
+      // TERBACA di light mode karena text gelap di atas indigo-900.
       className={`
+        sidebar-modern
         fixed top-0 left-0 h-screen z-40 flex flex-col overflow-hidden
         bg-indigo-900 text-off-white
         transition-all duration-300

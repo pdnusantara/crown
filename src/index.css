@@ -325,6 +325,29 @@
 .light-mode .ring-offset-dark         { --tw-ring-offset-color: #F4F4FA !important; }
 .light-mode .ring-offset-dark-surface { --tw-ring-offset-color: #FFFFFF !important; }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   SIDEBAR — selalu dark-themed di KEDUA mode (kontinuitas visual rebrand).
+   Sidebar pakai `bg-indigo-900` yang TIDAK di-override .light-mode, jadi BG
+   tetap dark. TAPI banyak text/bg class (text-off-white, text-indigo-300,
+   text-amber-X, text-red-X, bg-amber-X/10|15, bg-red-X/10|15) di-override
+   .light-mode untuk asumsi latar TERANG. Dibiarkan → text gelap di atas
+   indigo-900 = INVISIBLE.
+
+   Rules berikut UNDO override-override itu HANYA di dalam `.sidebar-modern`
+   (wrapper class di <aside> Sidebar). Sidebar jadi konsisten apa pun mode.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.light-mode .sidebar-modern .text-off-white  { color: #F5F5F0 !important; }
+.light-mode .sidebar-modern .text-muted      { color: #9B98C8 !important; }
+.light-mode .sidebar-modern .text-indigo-300 { color: #A5A2FF !important; }
+.light-mode .sidebar-modern .text-amber-300  { color: #FCD34D !important; }
+.light-mode .sidebar-modern .text-amber-400  { color: #FBBF24 !important; }
+.light-mode .sidebar-modern .text-red-300    { color: #FCA5A5 !important; }
+.light-mode .sidebar-modern .text-red-400    { color: #F87171 !important; }
+.light-mode .sidebar-modern .bg-amber-400\/10 { background-color: rgba(252, 211, 77, 0.12) !important; }
+.light-mode .sidebar-modern .bg-amber-400\/15 { background-color: rgba(252, 211, 77, 0.18) !important; }
+.light-mode .sidebar-modern .bg-red-500\/10   { background-color: rgba(252, 165, 165, 0.10) !important; }
+.light-mode .sidebar-modern .bg-red-500\/15   { background-color: rgba(252, 165, 165, 0.15) !important; }
+
 /* ── Accessibility & Keyboard Navigation ──────────────────────────────────── */
 
 /* Skip to main content — Phase A: dipindah ke brand indigo */
