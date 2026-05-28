@@ -54,10 +54,10 @@ export default function AffiliateRegisterPage() {
           </p>
           <div className="mt-5 p-4 rounded-xl bg-dark-surface border border-dark-border text-left">
             <p className="text-[11px] text-muted uppercase tracking-wider mb-1">Kode rujukan Anda (sementara)</p>
-            <p className="font-mono text-2xl font-bold text-gold">{done.referralCode}</p>
+            <p className="font-mono text-2xl font-bold text-brand">{done.referralCode}</p>
             <p className="text-[11px] text-muted mt-2">Setelah akun aktif, masuk ke dashboard untuk mendapatkan link rujukan lengkap.</p>
           </div>
-          <Link to="/login" className="mt-6 w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gold text-dark font-semibold hover:bg-gold-light transition-colors">
+          <Link to="/login" className="mt-6 w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-brand text-dark font-semibold hover:bg-brand-light transition-colors">
             Masuk ke Login
           </Link>
         </motion.div>
@@ -73,7 +73,7 @@ export default function AffiliateRegisterPage() {
             <ArrowLeft size={14} /> Kembali
           </Link>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-gold to-amber-600 flex items-center justify-center text-dark font-bold text-sm">S</div>
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand to-amber-600 flex items-center justify-center text-dark font-bold text-sm">S</div>
             <span className="font-display font-bold">{PLATFORM}</span>
           </div>
         </div>
@@ -81,7 +81,7 @@ export default function AffiliateRegisterPage() {
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
         <div className="text-center max-w-2xl mx-auto mb-10">
-          <Sparkles className="text-gold mx-auto mb-2" size={24} />
+          <Sparkles className="text-brand mx-auto mb-2" size={24} />
           <h1 className="font-display text-3xl lg:text-4xl font-bold">Jadi Mitra Affiliate {PLATFORM}</h1>
           <p className="text-muted mt-3">
             Bagikan link rujukan ke pemilik barbershop di jaringan Anda. Setiap tenant yang daftar & membayar lewat link Anda, Anda dapat komisi 10% — selama mereka tetap berlangganan.
@@ -109,13 +109,13 @@ export default function AffiliateRegisterPage() {
             <div>
               <label className="text-xs text-muted block mb-1.5">Cerita singkat tentang Anda (opsional)</label>
               <textarea value={form.bio} onChange={e => update('bio', e.target.value)} rows={3} maxLength={500}
-                className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl p-3 text-sm focus:outline-none focus:border-gold/60"
+                className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl p-3 text-sm focus:outline-none focus:border-brand/60"
                 placeholder="Misal: pemilik barbershop, content creator, atau punya komunitas pengusaha." />
             </div>
 
             <label className="flex items-start gap-2.5 mt-2 cursor-pointer">
               <input type="checkbox" checked={form.agree} onChange={e => update('agree', e.target.checked)}
-                className="mt-0.5 accent-gold w-4 h-4 flex-shrink-0" />
+                className="mt-0.5 accent-brand w-4 h-4 flex-shrink-0" />
               <span className="text-xs text-muted leading-relaxed">
                 Saya setuju komisi affiliate dibayarkan setelah verifikasi tim {PLATFORM} dan saldo minimum Rp 100.000 tercapai.
               </span>
@@ -129,12 +129,12 @@ export default function AffiliateRegisterPage() {
             )}
 
             <button onClick={submit} disabled={register.isPending}
-              className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gold text-dark font-semibold hover:bg-gold-light transition-colors disabled:opacity-60">
+              className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-brand text-dark font-semibold hover:bg-brand-light transition-colors disabled:opacity-60">
               {register.isPending ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
               {register.isPending ? 'Mendaftarkan…' : 'Daftar Affiliate'}
             </button>
             <p className="text-center text-xs text-muted">
-              Sudah punya akun? <Link to="/login" className="text-gold hover:underline">Masuk</Link>
+              Sudah punya akun? <Link to="/login" className="text-brand hover:underline">Masuk</Link>
             </p>
           </div>
         </div>
@@ -146,8 +146,8 @@ export default function AffiliateRegisterPage() {
 function Perk({ icon: Icon, title, desc }) {
   return (
     <div className="rounded-xl bg-dark-card border border-dark-border p-4 text-center">
-      <div className="w-9 h-9 rounded-lg bg-gold/10 border border-gold/30 flex items-center justify-center mx-auto mb-2">
-        <Icon size={16} className="text-gold" />
+      <div className="w-9 h-9 rounded-lg bg-brand/10 border border-brand/30 flex items-center justify-center mx-auto mb-2">
+        <Icon size={16} className="text-brand" />
       </div>
       <p className="font-semibold text-off-white text-sm">{title}</p>
       <p className="text-xs text-muted mt-1">{desc}</p>
@@ -162,7 +162,7 @@ function Field({ id, label, icon: Icon, value, onChange, type = 'text', placehol
       <div className="relative flex items-center">
         {Icon && <Icon size={14} className="absolute left-3 text-muted pointer-events-none" />}
         <input id={id} type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-          className={`w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl py-2.5 text-sm focus:outline-none focus:border-gold/60 ${Icon ? 'pl-9' : 'pl-3'} ${RightIcon ? 'pr-10' : 'pr-3'}`} />
+          className={`w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl py-2.5 text-sm focus:outline-none focus:border-brand/60 ${Icon ? 'pl-9' : 'pl-3'} ${RightIcon ? 'pr-10' : 'pr-3'}`} />
         {RightIcon && (
           <button type="button" onClick={onRightClick} className="absolute right-3 text-muted hover:text-off-white">
             <RightIcon size={14} />

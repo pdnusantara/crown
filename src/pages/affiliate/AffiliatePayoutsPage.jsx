@@ -56,7 +56,7 @@ export default function AffiliatePayoutsPage() {
         <div className="grid md:grid-cols-3 gap-4">
           <div>
             <p className="text-xs text-muted">Saldo siap ditarik</p>
-            <p className="text-3xl font-bold text-gold mt-1 tabular-nums">{formatRupiah(stats?.balance || 0)}</p>
+            <p className="text-3xl font-bold text-brand mt-1 tabular-nums">{formatRupiah(stats?.balance || 0)}</p>
             <p className="text-[11px] text-muted mt-1">Minimum: {formatRupiah(stats?.minPayout || 100000)}</p>
           </div>
           <div>
@@ -103,7 +103,7 @@ export default function AffiliatePayoutsPage() {
                 {data.map(p => (
                   <tr key={p.id} className="border-t border-dark-border hover:bg-dark-surface/40">
                     <td className="px-4 py-3 text-xs">{new Date(p.createdAt).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                    <td className="px-4 py-3 text-right text-gold font-semibold tabular-nums">{formatRupiah(p.amount)}</td>
+                    <td className="px-4 py-3 text-right text-brand font-semibold tabular-nums">{formatRupiah(p.amount)}</td>
                     <td className="px-4 py-3 text-xs">
                       <p className="text-off-white">{METHOD_LABEL[p.method] || p.method}</p>
                       <p className="text-muted font-mono">{p.account}</p>
@@ -117,7 +117,7 @@ export default function AffiliatePayoutsPage() {
                     </td>
                     <td className="px-4 py-3">
                       {p.proofUrl ? (
-                        <a href={p.proofUrl} target="_blank" rel="noreferrer" className="text-xs text-gold inline-flex items-center gap-1 hover:underline">
+                        <a href={p.proofUrl} target="_blank" rel="noreferrer" className="text-xs text-brand inline-flex items-center gap-1 hover:underline">
                           Lihat <ExternalLink size={10} />
                         </a>
                       ) : <span className="text-muted text-xs">—</span>}
@@ -134,7 +134,7 @@ export default function AffiliatePayoutsPage() {
         <div className="space-y-3">
           <div className="bg-dark-surface rounded-xl p-3">
             <p className="text-muted text-xs">Nominal pencairan</p>
-            <p className="text-gold text-2xl font-bold tabular-nums mt-0.5">{formatRupiah(stats?.balance || 0)}</p>
+            <p className="text-brand text-2xl font-bold tabular-nums mt-0.5">{formatRupiah(stats?.balance || 0)}</p>
           </div>
           {me?.payoutMethod && (
             <div className="bg-dark-surface rounded-xl p-3 text-sm">
@@ -147,7 +147,7 @@ export default function AffiliatePayoutsPage() {
           <div>
             <label className="text-xs text-muted block mb-1.5">Catatan (opsional)</label>
             <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} maxLength={500}
-              className="w-full bg-dark-surface border border-dark-border rounded-xl p-3 text-sm text-off-white focus:outline-none focus:border-gold/40" />
+              className="w-full bg-dark-surface border border-dark-border rounded-xl p-3 text-sm text-off-white focus:outline-none focus:border-brand/40" />
           </div>
           <div className="flex gap-2">
             <Button variant="outline" fullWidth onClick={() => setOpen(false)}>Batal</Button>

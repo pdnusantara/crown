@@ -9,7 +9,7 @@ import { formatRupiah } from '../../utils/format.js'
 const TIERS = [
   { name: 'Bronze', min: 0, max: 100, color: 'text-amber-700', bg: 'bg-amber-700/10', border: 'border-amber-700/20' },
   { name: 'Silver', min: 100, max: 250, color: 'text-gray-300', bg: 'bg-gray-400/10', border: 'border-gray-400/20' },
-  { name: 'Gold', min: 250, max: 500, color: 'text-gold', bg: 'bg-gold/10', border: 'border-gold/20' },
+  { name: 'Gold', min: 250, max: 500, color: 'text-brand', bg: 'bg-brand/10', border: 'border-brand/20' },
   { name: 'Platinum', min: 500, max: 99999, color: 'text-violet-400', bg: 'bg-violet-400/10', border: 'border-violet-400/20' },
 ]
 
@@ -68,7 +68,7 @@ export default function CustomerLoyalty() {
           {nextTier && (
             <div className="h-2 bg-dark-surface rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-700 bg-gradient-to-r from-gold to-gold-light`}
+                className={`h-full rounded-full transition-all duration-700 bg-gradient-to-r from-brand to-brand-light`}
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -90,7 +90,7 @@ export default function CustomerLoyalty() {
                 {tier.max === 99999 ? t('customer.pointsPlus', { min: tier.min }) : t('customer.pointsRange', { min: tier.min, max: tier.max })}
               </p>
               {tier.name === currentTier.name && (
-                <span className="text-xs text-gold mt-1 block">{t('customer.yourCurrentLevel')}</span>
+                <span className="text-xs text-brand mt-1 block">{t('customer.yourCurrentLevel')}</span>
               )}
             </Card>
           ))}
@@ -108,20 +108,20 @@ export default function CustomerLoyalty() {
                 <Card className={`p-4 ${canRedeem ? 'card-hover' : 'opacity-50'}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-gold/10 flex items-center justify-center">
-                        <Gift className="w-5 h-5 text-gold" />
+                      <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center">
+                        <Gift className="w-5 h-5 text-brand" />
                       </div>
                       <div>
                         <p className="font-medium text-off-white">{reward.name}</p>
                         <div className="flex items-center gap-1 mt-0.5">
-                          <Star className="w-3.5 h-3.5 text-gold" />
-                          <span className="text-xs text-gold font-semibold">{t('customer.pointsRequired', { n: reward.points })}</span>
+                          <Star className="w-3.5 h-3.5 text-brand" />
+                          <span className="text-xs text-brand font-semibold">{t('customer.pointsRequired', { n: reward.points })}</span>
                         </div>
                       </div>
                     </div>
                     <button
                       disabled={!canRedeem}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${canRedeem ? 'bg-gold text-dark hover:bg-gold-light' : 'bg-dark-surface text-muted cursor-not-allowed'}`}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${canRedeem ? 'bg-brand text-dark hover:bg-brand-light' : 'bg-dark-surface text-muted cursor-not-allowed'}`}
                     >
                       {t('customer.redeem')}
                     </button>
@@ -136,7 +136,7 @@ export default function CustomerLoyalty() {
       {/* How to earn */}
       <Card className="p-5">
         <h3 className="font-semibold text-off-white mb-3 flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-gold" />
+          <TrendingUp className="w-4 h-4 text-brand" />
           {t('customer.howToEarn')}
         </h3>
         <div className="space-y-2 text-sm">
@@ -149,8 +149,8 @@ export default function CustomerLoyalty() {
             <div key={i} className="flex justify-between items-center py-2 border-b border-dark-border last:border-0">
               <span className="text-muted">{item.action}</span>
               <div className="flex items-center gap-1">
-                <Star className="w-3.5 h-3.5 text-gold fill-gold" />
-                <span className="text-gold font-medium">+{item.points}</span>
+                <Star className="w-3.5 h-3.5 text-brand fill-premium" />
+                <span className="text-brand font-medium">+{item.points}</span>
               </div>
             </div>
           ))}

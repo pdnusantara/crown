@@ -12,7 +12,7 @@ import { getTenantSlug } from '../lib/tenantSlug.js'
 // Peran untuk tombol dev-login di subdomain tenant — login tanpa password ke
 // akun tenant subdomain saat ini. Hanya muncul kalau backend DEV_LOGIN=1.
 const DEV_ROLES = [
-  { role: 'tenant_admin', label: 'Tenant Admin', color: 'from-gold to-gold-light' },
+  { role: 'tenant_admin', label: 'Tenant Admin', color: 'from-brand to-brand-light' },
   { role: 'kasir',        label: 'Kasir',        color: 'from-blue-500 to-cyan-500' },
   { role: 'barber',       label: 'Barber',       color: 'from-green-500 to-emerald-500' },
 ]
@@ -61,9 +61,9 @@ export default function Login() {
     <div className="min-h-screen bg-dark flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gold/5 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gold/5 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gold/3 rounded-full blur-[100px]" />
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-brand/5 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-brand/5 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-brand/3 rounded-full blur-[100px]" />
       </div>
 
       <div className="w-full max-w-md relative z-10">
@@ -79,19 +79,19 @@ export default function Login() {
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-dark-card border border-dark-border mb-4 overflow-hidden">
                 {tenantLogo
                   ? <img src={tenantLogo} alt={tenantName} className="w-full h-full object-cover" />
-                  : <Scissors className="w-8 h-8 text-gold" />
+                  : <Scissors className="w-8 h-8 text-brand" />
                 }
               </div>
               <h1 className="font-display text-3xl font-bold text-off-white mb-1">{tenantName}</h1>
-              <p className="text-muted text-sm">Powered by <span className="gold-text font-semibold">SembaPOS</span></p>
+              <p className="text-muted text-sm">Powered by <span className="brand-text font-semibold">SembaPOS</span></p>
             </>
           ) : (
             <>
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gold mb-4 shadow-gold-lg">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand mb-4 shadow-brand-lg">
                 <Scissors className="w-8 h-8 text-dark" />
               </div>
               <h1 className="font-display text-4xl font-bold text-off-white mb-1">
-                BARBER<span className="gold-text">OS</span>
+                BARBER<span className="brand-text">OS</span>
               </h1>
               <p className="text-muted text-sm">Premium Barbershop Management System</p>
             </>
@@ -119,8 +119,8 @@ export default function Login() {
             </div>
           )}
           {isTenantContext && (
-            <div className="flex items-start gap-2 bg-gold/10 border border-gold/30 rounded-xl p-3 mb-4 text-off-white text-xs leading-relaxed">
-              <Building2 size={14} className="mt-0.5 flex-shrink-0 text-gold" />
+            <div className="flex items-start gap-2 bg-brand/10 border border-brand/30 rounded-xl p-3 mb-4 text-off-white text-xs leading-relaxed">
+              <Building2 size={14} className="mt-0.5 flex-shrink-0 text-brand" />
               <p>
                 Login tenant <span className="font-semibold">{tenantName}</span>. Super-admin tidak bisa login dari subdomain ini.
               </p>
@@ -137,7 +137,7 @@ export default function Login() {
               {redirectUrl && (
                 <a
                   href={redirectUrl}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-gold hover:text-gold-light underline underline-offset-2"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand hover:text-brand-light underline underline-offset-2"
                 >
                   <ExternalLink size={12} />
                   Buka domain yang benar
@@ -205,7 +205,7 @@ export default function Login() {
                     key={r.role}
                     onClick={() => handleDevLogin(r.role)}
                     disabled={isLoading}
-                    className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-dark-card border border-dark-border hover:border-gold/30 transition-all"
+                    className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-dark-card border border-dark-border hover:border-brand/30 transition-all"
                   >
                     <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${r.color} flex items-center justify-center`}>
                       <span className="text-xs font-bold text-white">{r.label[0]}</span>
@@ -223,7 +223,7 @@ export default function Login() {
 
         <p className="text-center text-muted text-xs mt-6">
           Mau jadi mitra & dapat komisi?{' '}
-          <a href="/affiliate/register" className="text-gold hover:underline">Daftar Affiliate</a>
+          <a href="/affiliate/register" className="text-brand hover:underline">Daftar Affiliate</a>
         </p>
         <p className="text-center text-muted text-xs mt-2">
           SembaPOS v1.0 • Premium Barbershop Management

@@ -202,7 +202,7 @@ export default function RegisterPage() {
             <ArrowLeft size={14} /> Kembali
           </Link>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-gold to-amber-600 flex items-center justify-center text-dark font-bold text-sm">S</div>
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand to-amber-600 flex items-center justify-center text-dark font-bold text-sm">S</div>
             <span className="font-display font-bold">{PLATFORM_NAME}</span>
           </div>
         </div>
@@ -211,12 +211,12 @@ export default function RegisterPage() {
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         {/* Referral banner — terlihat saat ?ref=XXX dan affiliate aktif */}
         {refInfo.data && (
-          <div className="mb-6 p-3 rounded-xl bg-gold/10 border border-gold/30 flex items-center gap-3 text-sm">
-            <div className="w-9 h-9 rounded-lg bg-gold/20 flex items-center justify-center flex-shrink-0">
-              <Handshake size={16} className="text-gold" />
+          <div className="mb-6 p-3 rounded-xl bg-brand/10 border border-brand/30 flex items-center gap-3 text-sm">
+            <div className="w-9 h-9 rounded-lg bg-brand/20 flex items-center justify-center flex-shrink-0">
+              <Handshake size={16} className="text-brand" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-off-white">Direkrut oleh <span className="text-gold font-semibold">{refInfo.data.name}</span></p>
+              <p className="text-off-white">Direkrut oleh <span className="text-brand font-semibold">{refInfo.data.name}</span></p>
               <p className="text-[11px] text-muted">Kode rujukan {refInfo.data.code} akan terhubung otomatis dengan akun Anda.</p>
             </div>
           </div>
@@ -228,23 +228,23 @@ export default function RegisterPage() {
             <React.Fragment key={label}>
               <div className="flex flex-col items-center min-w-0">
                 <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
-                  i < step ? 'bg-gold text-dark' :
-                  i === step ? 'bg-gold/20 text-gold border-2 border-gold' :
+                  i < step ? 'bg-brand text-dark' :
+                  i === step ? 'bg-brand/20 text-brand border-2 border-brand' :
                   'bg-dark-card text-muted border border-dark-border'
                 }`}>
                   {i < step ? <CheckCircle size={16} /> : i + 1}
                 </div>
-                <p className={`text-[11px] mt-1.5 hidden sm:block ${i === step ? 'text-gold' : 'text-muted'}`}>{label}</p>
+                <p className={`text-[11px] mt-1.5 hidden sm:block ${i === step ? 'text-brand' : 'text-muted'}`}>{label}</p>
               </div>
               {i < STEPS.length - 1 && (
-                <div className={`flex-1 h-0.5 mx-2 transition-colors ${i < step ? 'bg-gold' : 'bg-dark-border'}`} />
+                <div className={`flex-1 h-0.5 mx-2 transition-colors ${i < step ? 'bg-brand' : 'bg-dark-border'}`} />
               )}
             </React.Fragment>
           ))}
         </div>
 
         <div className="text-center mb-6 sm:mb-8">
-          <Sparkles className="text-gold mx-auto mb-2" size={24} />
+          <Sparkles className="text-brand mx-auto mb-2" size={24} />
           <h1 className="font-display text-2xl lg:text-3xl font-bold">Mulai Uji Coba 14 Hari Gratis</h1>
           <p className="text-muted text-sm mt-1">Tanpa kartu kredit. Aktivasi instan.</p>
         </div>
@@ -271,7 +271,7 @@ export default function RegisterPage() {
                     <p className="text-sm text-off-white">Gagal memuat daftar paket</p>
                     <button
                       onClick={() => refetchPkgs()}
-                      className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gold text-dark text-sm font-semibold hover:bg-gold-light transition-colors"
+                      className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand text-dark text-sm font-semibold hover:bg-brand-light transition-colors"
                     >
                       <RefreshCw size={14} /> Coba Lagi
                     </button>
@@ -292,15 +292,15 @@ export default function RegisterPage() {
                           onClick={() => update('packageName', p.name)}
                           aria-pressed={active}
                           className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                            active ? 'border-gold bg-gold/5' : 'border-dark-border bg-dark-surface hover:border-gold/30'
+                            active ? 'border-brand bg-brand/5' : 'border-dark-border bg-dark-surface hover:border-brand/30'
                           }`}
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <p className="font-bold text-off-white">{p.name}</p>
-                                {p.name === 'Pro' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-gold text-dark font-bold">POPULER</span>}
-                                {active && <CheckCircle size={14} className="text-gold" />}
+                                {p.name === 'Pro' && <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand text-dark font-bold">POPULER</span>}
+                                {active && <CheckCircle size={14} className="text-brand" />}
                               </div>
                               <p className="text-xs text-muted mt-1">
                                 Maks. {p.maxBranches} cabang · {p.maxStaff} staf
@@ -414,7 +414,7 @@ export default function RegisterPage() {
                     type="checkbox"
                     checked={form.agree}
                     onChange={e => update('agree', e.target.checked)}
-                    className="mt-0.5 accent-gold w-4 h-4 flex-shrink-0"
+                    className="mt-0.5 accent-brand w-4 h-4 flex-shrink-0"
                   />
                   <span className="text-xs text-muted leading-relaxed">
                     Saya setuju dengan syarat layanan {PLATFORM_NAME} dan paham bahwa langganan akan otomatis berakhir setelah 14 hari trial bila tidak dibayar.
@@ -430,7 +430,7 @@ export default function RegisterPage() {
                   </div>
                   <div className="flex justify-between gap-3 text-sm mt-2 pt-2 border-t border-dark-border">
                     <span className="text-off-white">Paket {form.packageName}</span>
-                    <span className="text-gold font-semibold whitespace-nowrap">{selectedPkg ? formatRupiah(selectedPkg.price) : '—'}/bulan</span>
+                    <span className="text-brand font-semibold whitespace-nowrap">{selectedPkg ? formatRupiah(selectedPkg.price) : '—'}/bulan</span>
                   </div>
                   <div className="flex justify-between gap-3 text-sm mt-2 pt-2 border-t border-dark-border">
                     <span className="text-green-400 font-medium">Trial 14 hari</span>
@@ -461,7 +461,7 @@ export default function RegisterPage() {
                   type="button"
                   onClick={next}
                   disabled={step === 0 ? (pkgsLoading || pkgsError || packages.length === 0) : false}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gold text-dark font-semibold hover:bg-gold-light transition-colors disabled:opacity-40"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-brand text-dark font-semibold hover:bg-brand-light transition-colors disabled:opacity-40"
                 >
                   Lanjut <ArrowRight size={14} />
                 </button>
@@ -470,7 +470,7 @@ export default function RegisterPage() {
                   type="button"
                   onClick={handleSubmit}
                   disabled={register.isPending}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gold text-dark font-semibold hover:bg-gold-light transition-colors disabled:opacity-60"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-brand text-dark font-semibold hover:bg-brand-light transition-colors disabled:opacity-60"
                 >
                   {register.isPending ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
                   {register.isPending ? 'Mendaftarkan…' : 'Daftarkan Saya'}
@@ -481,7 +481,7 @@ export default function RegisterPage() {
         </AnimatePresence>
 
         <p className="text-center text-xs text-muted mt-6">
-          Sudah punya akun? <Link to="/login" className="text-gold hover:underline">Masuk di sini</Link>
+          Sudah punya akun? <Link to="/login" className="text-brand hover:underline">Masuk di sini</Link>
         </p>
       </main>
     </div>
@@ -526,7 +526,7 @@ function SuccessScreen({ data }) {
         <div className="mt-5 p-4 rounded-xl bg-dark-surface border border-dark-border text-left">
           <p className="text-[11px] text-muted uppercase tracking-wider mb-1.5">Alamat aplikasi Anda</p>
           <div className="flex items-center gap-2">
-            <code className="flex-1 min-w-0 truncate text-gold font-semibold text-sm">{host}</code>
+            <code className="flex-1 min-w-0 truncate text-brand font-semibold text-sm">{host}</code>
             <button
               type="button"
               onClick={copyHost}
@@ -558,7 +558,7 @@ function SuccessScreen({ data }) {
 
         <a
           href={loginUrl}
-          className="mt-6 w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gold text-dark font-semibold hover:bg-gold-light transition-colors"
+          className="mt-6 w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-brand text-dark font-semibold hover:bg-brand-light transition-colors"
         >
           Masuk ke Dashboard <ExternalLink size={15} />
         </a>
@@ -589,7 +589,7 @@ function Field({
           placeholder={placeholder}
           autoComplete={autoComplete}
           inputMode={inputMode}
-          className={`w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl py-2.5 text-sm outline-none focus:border-gold/60 transition-colors ${Icon ? 'pl-9' : 'pl-3'} ${suffix ? 'pr-32' : RightIcon ? 'pr-10' : 'pr-3'}`}
+          className={`w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl py-2.5 text-sm outline-none focus:border-brand/60 transition-colors ${Icon ? 'pl-9' : 'pl-3'} ${suffix ? 'pr-32' : RightIcon ? 'pr-10' : 'pr-3'}`}
         />
         {suffix && <span className="absolute right-3 text-xs text-muted pointer-events-none truncate max-w-[40%]">{suffix}</span>}
         {RightIcon && (

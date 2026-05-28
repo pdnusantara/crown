@@ -69,7 +69,7 @@ export default function AffiliateCommissionsPage() {
           {['all', 'pending', 'approved', 'paid', 'void'].map(s => (
             <button key={s} onClick={() => setStatus(s)}
               className={`px-3 py-1 text-xs rounded-full border ${
-                status === s ? 'bg-gold/15 text-gold border-gold/40' : 'border-dark-border text-muted hover:text-off-white'
+                status === s ? 'bg-brand/15 text-brand border-brand/40' : 'border-dark-border text-muted hover:text-off-white'
               }`}>{s === 'all' ? 'Semua' : s}</button>
           ))}
         </div>
@@ -106,7 +106,7 @@ export default function AffiliateCommissionsPage() {
                     <td className="px-4 py-3 text-xs text-muted">{c.period || '—'}</td>
                     <td className="px-4 py-3 text-right tabular-nums text-muted">{formatRupiah(c.baseAmount)}</td>
                     <td className="px-4 py-3 text-right">
-                      <p className="text-gold font-semibold tabular-nums">{formatRupiah(c.amount)}</p>
+                      <p className="text-brand font-semibold tabular-nums">{formatRupiah(c.amount)}</p>
                       <p className="text-[10px] text-muted">{Math.round(c.commissionRate * 100)}%</p>
                     </td>
                     <td className="px-4 py-3">

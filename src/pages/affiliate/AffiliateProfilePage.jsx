@@ -85,11 +85,11 @@ export default function AffiliateProfilePage() {
         <p className="text-muted text-sm mt-1">Atur informasi & metode pencairan saldo komisi Anda.</p>
       </div>
 
-      <Card className="p-5 border-gold/20">
+      <Card className="p-5 border-brand/20">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <p className="text-xs text-muted">Kode rujukan Anda</p>
-            <p className="font-mono text-2xl font-bold text-gold mt-1">{me.referralCode}</p>
+            <p className="font-mono text-2xl font-bold text-brand mt-1">{me.referralCode}</p>
             <p className="text-[11px] text-muted mt-0.5">Komisi: {Math.round(me.commissionRate * 100)}% per pembayaran</p>
           </div>
           <Button variant="outline" size="sm" icon={Copy} onClick={copyCode}>Salin kode</Button>
@@ -106,7 +106,7 @@ export default function AffiliateProfilePage() {
           <div className="md:col-span-2">
             <label className="text-sm font-medium text-muted block mb-1.5">Bio singkat</label>
             <textarea value={form.bio} onChange={e => setForm(f => ({ ...f, bio: e.target.value }))} rows={3} maxLength={500}
-              className="w-full bg-dark-surface border border-dark-border rounded-xl p-3 text-sm text-off-white focus:outline-none focus:border-gold/40" />
+              className="w-full bg-dark-surface border border-dark-border rounded-xl p-3 text-sm text-off-white focus:outline-none focus:border-brand/40" />
           </div>
         </div>
       </Card>
@@ -136,7 +136,7 @@ export default function AffiliateProfilePage() {
       {/* Keamanan — ganti password mandiri */}
       <Card className="p-5">
         <div className="flex items-center gap-2 mb-1">
-          <Lock size={15} className="text-gold" />
+          <Lock size={15} className="text-brand" />
           <p className="font-semibold text-off-white">Keamanan</p>
         </div>
         <p className="text-xs text-muted mb-3">Ganti password akun Anda. Masukkan password lama untuk verifikasi.</p>

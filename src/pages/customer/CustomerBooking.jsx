@@ -114,7 +114,7 @@ export default function CustomerBooking() {
             </div>
             <div className="flex justify-between font-semibold border-t border-dark-border pt-2">
               <span className="text-muted">{t('customer.estimatedCost')}</span>
-              <span className="text-gold">{formatRupiah(totalPrice)}</span>
+              <span className="text-brand">{formatRupiah(totalPrice)}</span>
             </div>
           </div>
         </Card>
@@ -136,13 +136,13 @@ export default function CustomerBooking() {
       <div className="flex items-center gap-1 overflow-x-auto pb-1">
         {STEPS.map((s, i) => (
           <React.Fragment key={i}>
-            <div className={`flex items-center gap-2 flex-shrink-0 ${i <= step ? 'text-gold' : 'text-muted'}`}>
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 ${i < step ? 'bg-gold border-gold text-dark' : i === step ? 'border-gold text-gold' : 'border-dark-border text-muted'}`}>
+            <div className={`flex items-center gap-2 flex-shrink-0 ${i <= step ? 'text-brand' : 'text-muted'}`}>
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 ${i < step ? 'bg-brand border-brand text-dark' : i === step ? 'border-brand text-brand' : 'border-dark-border text-muted'}`}>
                 {i < step ? <Check className="w-3 h-3" /> : i + 1}
               </div>
               <span className="text-xs font-medium hidden md:block">{s}</span>
             </div>
-            {i < STEPS.length - 1 && <div className={`flex-1 h-px min-w-4 ${i < step ? 'bg-gold' : 'bg-dark-border'}`} />}
+            {i < STEPS.length - 1 && <div className={`flex-1 h-px min-w-4 ${i < step ? 'bg-brand' : 'bg-dark-border'}`} />}
           </React.Fragment>
         ))}
       </div>
@@ -156,7 +156,7 @@ export default function CustomerBooking() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {availableBranches.map(branch => (
                 <button key={branch.id} onClick={() => { setSelected(s => ({ ...s, branch })); setStep(1) }}
-                  className={`p-5 rounded-2xl border text-left transition-all ${selected.branch?.id === branch.id ? 'border-gold bg-gold/5' : 'border-dark-border bg-dark-card hover:border-gold/30'}`}
+                  className={`p-5 rounded-2xl border text-left transition-all ${selected.branch?.id === branch.id ? 'border-brand bg-brand/5' : 'border-dark-border bg-dark-card hover:border-brand/30'}`}
                 >
                   <h3 className="font-semibold text-off-white text-lg">{branch.name}</h3>
                   <div className="flex items-start gap-2 mt-2">
@@ -180,7 +180,7 @@ export default function CustomerBooking() {
                   const isSelected = selected.services.find(s => s.id === svc.id)
                   return (
                     <button key={svc.id} onClick={() => toggleService(svc)}
-                      className={`flex items-center gap-4 p-4 rounded-xl border text-left transition-all ${isSelected ? 'border-gold bg-gold/5' : 'border-dark-border bg-dark-card hover:border-gold/30'}`}
+                      className={`flex items-center gap-4 p-4 rounded-xl border text-left transition-all ${isSelected ? 'border-brand bg-brand/5' : 'border-dark-border bg-dark-card hover:border-brand/30'}`}
                     >
                       <span className="text-2xl">{svc.icon}</span>
                       <div className="flex-1">
@@ -188,17 +188,17 @@ export default function CustomerBooking() {
                         <p className="text-xs text-muted">{svc.duration} {t('customer.minutes')}</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold text-gold">{formatRupiah(svc.price)}</p>
-                        {isSelected && <Check className="w-4 h-4 text-gold ml-auto mt-1" />}
+                        <p className="font-semibold text-brand">{formatRupiah(svc.price)}</p>
+                        {isSelected && <Check className="w-4 h-4 text-brand ml-auto mt-1" />}
                       </div>
                     </button>
                   )
                 })}
               </div>
               {selected.services.length > 0 && (
-                <div className="p-3 bg-gold/10 border border-gold/20 rounded-xl flex justify-between text-sm">
+                <div className="p-3 bg-brand/10 border border-brand/20 rounded-xl flex justify-between text-sm">
                   <span className="text-muted">{t('customer.servicesSelectedSummary', { count: selected.services.length, minutes: totalDuration })}</span>
-                  <span className="text-gold font-semibold">{formatRupiah(totalPrice)}</span>
+                  <span className="text-brand font-semibold">{formatRupiah(totalPrice)}</span>
                 </div>
               )}
               <div className="flex gap-3">
@@ -213,27 +213,27 @@ export default function CustomerBooking() {
             <div className="space-y-4">
               <button
                 onClick={() => { setSelected(s => ({ ...s, barber: null })); setStep(3) }}
-                className="w-full p-4 rounded-xl border border-dashed border-dark-border text-muted hover:border-gold/30 transition-all text-sm"
+                className="w-full p-4 rounded-xl border border-dashed border-dark-border text-muted hover:border-brand/30 transition-all text-sm"
               >
                 {t('customer.anyAvailable')}
               </button>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {branchBarbers.map(barber => (
                   <button key={barber.id} onClick={() => { setSelected(s => ({ ...s, barber })); setStep(3) }}
-                    className={`flex items-center gap-3 p-4 rounded-xl border text-left transition-all ${selected.barber?.id === barber.id ? 'border-gold bg-gold/5' : 'border-dark-border bg-dark-card hover:border-gold/30'}`}
+                    className={`flex items-center gap-3 p-4 rounded-xl border text-left transition-all ${selected.barber?.id === barber.id ? 'border-brand bg-brand/5' : 'border-dark-border bg-dark-card hover:border-brand/30'}`}
                   >
                     <Avatar src={barber.photo} name={barber.name} size="lg" />
                     <div>
                       <p className="font-semibold text-off-white">{barber.name}</p>
                       {barber.rating && (
                         <div className="flex items-center gap-1 mt-0.5">
-                          <Star className="w-3.5 h-3.5 text-gold fill-gold" />
-                          <span className="text-xs text-gold">{barber.rating}</span>
+                          <Star className="w-3.5 h-3.5 text-brand fill-premium" />
+                          <span className="text-xs text-brand">{barber.rating}</span>
                         </div>
                       )}
                       <div className="flex flex-wrap gap-1 mt-1">
                         {barber.specializations?.slice(0, 2).map(s => (
-                          <span key={s} className="px-1.5 py-0.5 bg-gold/10 text-gold text-xs rounded">{s}</span>
+                          <span key={s} className="px-1.5 py-0.5 bg-brand/10 text-brand text-xs rounded">{s}</span>
                         ))}
                       </div>
                     </div>
@@ -252,7 +252,7 @@ export default function CustomerBooking() {
                 <div className="flex gap-2 overflow-x-auto pb-2">
                   {nextDays.map(day => (
                     <button key={day.toISOString()} onClick={() => setSelected(s => ({ ...s, date: day, time: null }))}
-                      className={`flex-shrink-0 px-4 py-3 rounded-xl text-center transition-all ${selected.date?.toDateString() === day.toDateString() ? 'bg-gold text-dark' : 'bg-dark-card border border-dark-border text-off-white hover:border-gold/30'}`}
+                      className={`flex-shrink-0 px-4 py-3 rounded-xl text-center transition-all ${selected.date?.toDateString() === day.toDateString() ? 'bg-brand text-dark' : 'bg-dark-card border border-dark-border text-off-white hover:border-brand/30'}`}
                     >
                       <p className="text-xs font-medium">{format(day, 'EEE', { locale: idLocale })}</p>
                       <p className="text-lg font-bold">{format(day, 'd')}</p>
@@ -267,7 +267,7 @@ export default function CustomerBooking() {
                   <div className="grid grid-cols-4 gap-2">
                     {TIME_SLOTS.map(time => (
                       <button key={time} onClick={() => setSelected(s => ({ ...s, time }))}
-                        className={`py-2.5 rounded-xl text-sm font-medium transition-all ${selected.time === time ? 'bg-gold text-dark' : 'bg-dark-card border border-dark-border text-off-white hover:border-gold/30'}`}
+                        className={`py-2.5 rounded-xl text-sm font-medium transition-all ${selected.time === time ? 'bg-brand text-dark' : 'bg-dark-card border border-dark-border text-off-white hover:border-brand/30'}`}
                       >
                         {time}
                       </button>
@@ -314,7 +314,7 @@ export default function CustomerBooking() {
                   </div>
                   <div className="flex justify-between font-semibold border-t border-dark-border pt-3">
                     <span className="text-off-white">{t('customer.totalEstimate')}</span>
-                    <span className="text-gold">{formatRupiah(totalPrice)}</span>
+                    <span className="text-brand">{formatRupiah(totalPrice)}</span>
                   </div>
                 </div>
               </Card>

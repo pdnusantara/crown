@@ -117,15 +117,15 @@ export default function AffiliateDashboard() {
       {/* Hero — referral link */}
       {me && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="p-5 border-gold/30 bg-gradient-to-br from-gold/10 to-transparent">
+          <Card className="p-5 border-brand/30 bg-gradient-to-br from-brand/10 to-transparent">
             <div className="flex items-center gap-2 mb-3">
-              <Sparkles size={14} className="text-gold" />
-              <p className="text-xs text-gold uppercase tracking-wide font-semibold">Link rujukan Anda</p>
+              <Sparkles size={14} className="text-brand" />
+              <p className="text-xs text-brand uppercase tracking-wide font-semibold">Link rujukan Anda</p>
             </div>
 
             {/* URL bar */}
             <div className="flex items-center gap-2 bg-dark-surface border border-dark-border rounded-xl p-3 mb-3">
-              <code className="flex-1 font-mono text-sm text-gold truncate select-all">{refUrl}</code>
+              <code className="flex-1 font-mono text-sm text-brand truncate select-all">{refUrl}</code>
               <button onClick={() => handleCopy(refUrl, 'link')}
                 className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-dark-card border border-dark-border text-xs text-muted hover:text-off-white">
                 {copiedKind === 'link' ? <><CheckCircle size={12} className="text-green-400" /> Tersalin</> : <><Copy size={12} /> Salin</>}
@@ -162,7 +162,7 @@ export default function AffiliateDashboard() {
               <button onClick={() => handleCopy(me.referralCode, 'code')}
                 className="px-3 py-1.5 rounded-xl bg-dark-surface border border-dark-border text-xs text-muted hover:text-off-white inline-flex items-center gap-1.5">
                 <Copy size={11} />
-                Kode: <span className="font-mono text-gold font-bold">{me.referralCode}</span>
+                Kode: <span className="font-mono text-brand font-bold">{me.referralCode}</span>
                 {copiedKind === 'code' && <CheckCircle size={11} className="text-green-400" />}
               </button>
               <a href={refUrl} target="_blank" rel="noreferrer"
@@ -178,7 +178,7 @@ export default function AffiliateDashboard() {
 
       {/* KPI */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard label="Total Rujukan" sub={`+${stats?.referrals.last30 || 0} dalam 30 hari`} value={stats?.referrals.total ?? '—'} color="text-gold" icon={Users} loading={isLoading} delay={0} />
+        <KpiCard label="Total Rujukan" sub={`+${stats?.referrals.last30 || 0} dalam 30 hari`} value={stats?.referrals.total ?? '—'} color="text-brand" icon={Users} loading={isLoading} delay={0} />
         <KpiCard label="Komisi Bulan Lalu" value={formatRupiahShort(stats?.commissionApproved.amount || 0)} sub={`${stats?.commissionApproved.count || 0} transaksi`} color="text-emerald-400" icon={TrendingUp} loading={isLoading} delay={0.05} />
         <KpiCard label="Saldo Siap Tarik" value={formatRupiahShort(stats?.balance || 0)} sub={formatRupiah(stats?.balance || 0)} color="text-blue-400" icon={Wallet} loading={isLoading} delay={0.10} />
         <KpiCard label="Sudah Diterima" value={formatRupiahShort(stats?.commissionPaid.amount || 0)} sub={formatRupiah(stats?.commissionPaid.amount || 0)} color="text-purple-400" icon={CheckCircle} loading={isLoading} delay={0.15} />
@@ -205,7 +205,7 @@ export default function AffiliateDashboard() {
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <p className="text-xs text-muted">Saldo siap dicairkan</p>
-            <p className="font-display text-3xl font-bold text-gold mt-1">{formatRupiah(stats?.balance || 0)}</p>
+            <p className="font-display text-3xl font-bold text-brand mt-1">{formatRupiah(stats?.balance || 0)}</p>
             <p className="text-xs text-muted mt-1">Minimum pencairan: {formatRupiah(stats?.minPayout || 100000)}</p>
           </div>
           <div className="flex flex-col gap-2 min-w-[200px]">
@@ -230,7 +230,7 @@ export default function AffiliateDashboard() {
       <Card>
         <div className="px-5 py-3 border-b border-dark-border flex items-center justify-between">
           <p className="font-semibold text-off-white">Rujukan terbaru</p>
-          <Link to="/affiliate/referrals" className="text-xs text-gold hover:underline">Lihat semua →</Link>
+          <Link to="/affiliate/referrals" className="text-xs text-brand hover:underline">Lihat semua →</Link>
         </div>
         {refsLoading ? (
           <div className="p-5 space-y-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-10 bg-dark-surface animate-pulse rounded-lg" />)}</div>
@@ -251,7 +251,7 @@ export default function AffiliateDashboard() {
                     <span className="ml-1">{new Date(r.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
                   </p>
                 </div>
-                <span className="text-gold tabular-nums text-sm">{formatRupiah(r.totalCommission)}</span>
+                <span className="text-brand tabular-nums text-sm">{formatRupiah(r.totalCommission)}</span>
               </div>
             ))}
           </div>
@@ -263,7 +263,7 @@ export default function AffiliateDashboard() {
         <div className="space-y-3">
           <div className="bg-dark-surface rounded-xl p-3 text-sm">
             <p className="text-muted text-xs">Nominal pencairan</p>
-            <p className="text-gold text-2xl font-bold tabular-nums mt-0.5">{formatRupiah(stats?.balance || 0)}</p>
+            <p className="text-brand text-2xl font-bold tabular-nums mt-0.5">{formatRupiah(stats?.balance || 0)}</p>
           </div>
           {me?.payoutMethod ? (
             <div className="bg-dark-surface rounded-xl p-3 text-sm">
@@ -278,7 +278,7 @@ export default function AffiliateDashboard() {
           <div>
             <label className="text-xs text-muted block mb-1.5">Catatan untuk tim SembaPOS (opsional)</label>
             <textarea value={payoutNote} onChange={e => setPayoutNote(e.target.value)} rows={2} maxLength={500}
-              className="w-full bg-dark-surface border border-dark-border rounded-xl p-3 text-sm text-off-white placeholder:text-muted focus:outline-none focus:border-gold/40"
+              className="w-full bg-dark-surface border border-dark-border rounded-xl p-3 text-sm text-off-white placeholder:text-muted focus:outline-none focus:border-brand/40"
               placeholder="Mis. mohon transfer secepatnya" />
           </div>
           <div className="flex gap-2">
@@ -316,7 +316,7 @@ function ChartLegend() {
   return (
     <div className="flex items-center gap-3 text-[11px]">
       <span className="inline-flex items-center gap-1 text-muted">
-        <span className="w-3 h-3 rounded bg-gold/70" /> Komisi
+        <span className="w-3 h-3 rounded bg-brand/70" /> Komisi
       </span>
       <span className="inline-flex items-center gap-1 text-muted">
         <span className="w-3 h-3 rounded bg-blue-400/50" /> Rujukan
@@ -333,7 +333,7 @@ function Sparkline({ data, max }) {
       {data.map((d, i) => (
         <div key={d.date} className="flex flex-col gap-0.5 items-center group relative" title={`${d.date} — Komisi ${d.commission.toLocaleString('id-ID')}, ${d.referrals} rujukan`}>
           <div className="flex-1 w-full flex flex-col-reverse gap-0.5">
-            <div className="w-full bg-gold/70 rounded-t" style={{ height: `${(d.commission / max) * 100}%` }} />
+            <div className="w-full bg-brand/70 rounded-t" style={{ height: `${(d.commission / max) * 100}%` }} />
             <div className="w-full bg-blue-400/50 rounded-t" style={{ height: `${(d.referrals / refMax) * 30}%` }} />
           </div>
           {(i === 0 || i === data.length - 1) && (

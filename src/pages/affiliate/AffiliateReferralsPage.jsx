@@ -119,15 +119,15 @@ export default function AffiliateReferralsPage() {
 
       {/* KPI ringkas */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiTile label="Total Rujukan" value={counts.total} icon={Building2} color="text-gold" />
+        <KpiTile label="Total Rujukan" value={counts.total} icon={Building2} color="text-brand" />
         <KpiTile label="Aktif" value={counts.active} icon={CheckCircle2} color="text-emerald-400" />
         <KpiTile label="Menunggu Klaim" value={counts.pending} icon={Clock} color="text-amber-400" />
         <KpiTile label="Total Komisi" value={formatRupiah(totalCommission)} icon={Users} color="text-blue-400" small />
       </div>
 
       {/* Info klaim manual */}
-      <div className="flex items-start gap-2 p-3 rounded-xl bg-gold/10 border border-gold/30 text-xs text-off-white">
-        <Info size={14} className="text-gold mt-0.5 flex-shrink-0" />
+      <div className="flex items-start gap-2 p-3 rounded-xl bg-brand/10 border border-brand/30 text-xs text-off-white">
+        <Info size={14} className="text-brand mt-0.5 flex-shrink-0" />
         <span>
           Ada tenant yang Anda ajak tapi lupa pakai link rujukan Anda? Klik <b>Klaim Tenant</b> dan masukkan
           subdomain tokonya. Klaim ditinjau tim kami dulu — komisi mulai dihitung setelah <b>disetujui</b>.
@@ -139,7 +139,7 @@ export default function AffiliateReferralsPage() {
         <div className="flex flex-wrap items-center gap-2">
           <Filter size={13} className="text-muted" />
           <select value={status} onChange={e => setStatus(e.target.value)}
-            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-gold/40">
+            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-brand/40">
             <option value="all">Semua status</option>
             <option value="active">Aktif</option>
             <option value="pending">Menunggu</option>
@@ -149,7 +149,7 @@ export default function AffiliateReferralsPage() {
           <div className="relative flex-1 min-w-[160px]">
             <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari nama / subdomain"
-              className="w-full bg-dark-surface border border-dark-border rounded-xl pl-8 pr-3 py-1.5 text-xs text-off-white placeholder-muted focus:outline-none focus:border-gold/40" />
+              className="w-full bg-dark-surface border border-dark-border rounded-xl pl-8 pr-3 py-1.5 text-xs text-off-white placeholder-muted focus:outline-none focus:border-brand/40" />
           </div>
         </div>
       </Card>
@@ -196,7 +196,7 @@ export default function AffiliateReferralsPage() {
                       <td className="px-4 py-3">{refStatusBadge(r.status)}</td>
                       <td className="px-4 py-3 text-off-white">{r.tenant?.subscription?.package || '—'}</td>
                       <td className="px-4 py-3">{subBadge(r.tenant?.subscription?.status)}</td>
-                      <td className="px-4 py-3 text-right text-gold tabular-nums">{formatRupiah(r.totalCommission)}</td>
+                      <td className="px-4 py-3 text-right text-brand tabular-nums">{formatRupiah(r.totalCommission)}</td>
                       <td className="px-4 py-3 text-xs text-muted">{new Date(r.createdAt).toLocaleDateString('id-ID')}</td>
                       <td className="px-4 py-3 text-right">
                         {r.source === 'manual' && (r.status === 'pending' || r.status === 'rejected') ? (
@@ -233,7 +233,7 @@ export default function AffiliateReferralsPage() {
                 </div>
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-[11px] text-muted">{new Date(r.createdAt).toLocaleDateString('id-ID')}</span>
-                  <span className="text-gold tabular-nums text-sm font-semibold">{formatRupiah(r.totalCommission)}</span>
+                  <span className="text-brand tabular-nums text-sm font-semibold">{formatRupiah(r.totalCommission)}</span>
                 </div>
                 {r.status === 'rejected' && r.reviewNote && (
                   <p className="text-[11px] text-red-400 mt-2">Ditolak: {r.reviewNote}</p>
@@ -260,7 +260,7 @@ export default function AffiliateReferralsPage() {
           </p>
           <div>
             <label className="text-xs text-muted block mb-1.5">Subdomain tenant</label>
-            <div className="flex items-center bg-dark-surface border border-dark-border rounded-xl overflow-hidden focus-within:border-gold/40">
+            <div className="flex items-center bg-dark-surface border border-dark-border rounded-xl overflow-hidden focus-within:border-brand/40">
               <input value={subdomain} onChange={e => setSubdomain(e.target.value)} autoFocus
                 placeholder="budibarber"
                 className="flex-1 bg-transparent px-3 py-2 text-sm text-off-white placeholder-muted focus:outline-none" />
@@ -270,7 +270,7 @@ export default function AffiliateReferralsPage() {
           <div>
             <label className="text-xs text-muted block mb-1.5">Alasan / bukti (opsional)</label>
             <textarea value={note} onChange={e => setNote(e.target.value)} rows={3} maxLength={500}
-              className="w-full bg-dark-surface border border-dark-border rounded-xl p-3 text-sm text-off-white placeholder-muted focus:outline-none focus:border-gold/40"
+              className="w-full bg-dark-surface border border-dark-border rounded-xl p-3 text-sm text-off-white placeholder-muted focus:outline-none focus:border-brand/40"
               placeholder="Mis. saya yang ajak via WhatsApp, sempat demo langsung di tokonya." />
           </div>
           <div className="flex gap-2">

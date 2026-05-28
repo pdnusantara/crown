@@ -80,7 +80,7 @@ export default function CustomerHistory() {
                       <p className="text-sm text-muted">{formatDateTime(txn.createdAt)}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-gold">{formatRupiah(txn.total)}</p>
+                      <p className="font-semibold text-brand">{formatRupiah(txn.total)}</p>
                       <Badge variant={getStatusBadge(txn.paymentMethod)} className="mt-1">
                         {txn.paymentMethod}
                       </Badge>
