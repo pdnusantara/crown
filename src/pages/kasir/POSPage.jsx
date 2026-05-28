@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams, useNavigate, useParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Plus, X, User, Printer, CheckCircle, Check, Tag, Trash2,
@@ -17,7 +17,7 @@ import { useBranches } from '../../hooks/useBranches.js'
 import { usePublicTenantStore } from '../../store/publicTenantStore.js'
 import { useValidateVoucher } from '../../hooks/useVouchers.js'
 import { useIsFeatureEnabled } from '../../hooks/useFeatureFlags.js'
-import { getBranchSlug } from '../../utils/branchSlug.js'
+import { getBranchSlug, matchesBranch } from '../../utils/branchSlug.js'
 import { MIN_REDEEM_POINTS, MAX_REDEEM_PERCENT, RUPIAH_PER_POINT, maxRedeemablePoints, calcRedeemValue, validateRedeem } from '../../utils/loyalty.js'
 import { formatDateTimeInTz, formatInTenantTz } from '../../utils/timezone.js'
 import { useShiftStore } from '../../store/shiftStore.js'
@@ -416,9 +416,19 @@ function POSPageInner() {
   const updateQueueStatus = useUpdateQueueStatus()
   const toast = useToast()
 
-  // Real tenant & branch info for receipt
+  // Real tenant & branch info for receipt.
+  // Bug fix 2026-05-28: resolve current branch dari URL slug (`/:branchId/kasir/...`,
+  // misal `/kuningan/kasir/pos`) lebih dulu — BUKAN dari user.branchId yang
+  // mungkin tidak match (kasir akun tanpa branch tertentu, atau tenant_admin
+  // yang akses kasir multi-cabang). URL adalah single-source-of-truth untuk
+  // konteks cabang aktif. `matchesBranch` cocokkan slug ke branch.code maupun
+  // branch.id (kompatibel dengan account lama yang slug-nya = CUID).
+  const { branchId: urlBranchSlug } = useParams()
   const { name: publicTenantName, logo: tenantLogo } = usePublicTenantStore()
-  const currentBranch = branches.find(b => b.id === user?.branchId)
+  const currentBranch =
+    branches.find(b => matchesBranch(urlBranchSlug, b))
+    || branches.find(b => b.id === user?.branchId)
+    || null
   const tenantName  = currentBranch?.tenant?.name || publicTenantName || 'Barbershop'
   const branchName  = currentBranch?.name  || ''
   const branchAddr  = currentBranch?.address || ''
