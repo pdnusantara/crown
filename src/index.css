@@ -242,7 +242,11 @@
 
 /* ── 5. Hover states on white cards (catatan: kelas STATIS .bg-dark-surface
    di-override jadi putih, tapi varian HOVER selektornya beda dan TAK ikut
-   ter-override → tanpa baris ini, hover row di tabel/list muncul strip gelap) */
+   ter-override → tanpa baris ini, hover row di tabel/list muncul strip gelap.
+   2026-05-28 bug fix: tambah `hover:bg-dark-card` polos juga — sebelumnya
+   cuma `/40` `/50` yg di-cover, akibatnya user-button TopBar muncul 'blok
+   hitam' menutupi nama saat hover di light mode.) */
+.light-mode .hover\:bg-dark-card:hover,
 .light-mode .hover\:bg-dark-card\/40:hover,
 .light-mode .hover\:bg-dark-card\/50:hover,
 .light-mode .hover\:bg-dark-surface:hover,

@@ -178,8 +178,7 @@ export const TopBar = ({ onMenuClick, onSearchClick }) => {
                 : 'cursor-default'}
               transition-all
             `}
-            title={profilePath ? 'Profil & Pengaturan' : user?.name}
-            aria-label="Akun pengguna"
+            aria-label={profilePath ? 'Buka profil & pengaturan' : (user?.name || 'Akun pengguna')}
           >
             <div
               className="w-8 h-8 rounded-full bg-brand-gradient flex items-center justify-center flex-shrink-0 shadow-brand text-white font-bold text-xs"
