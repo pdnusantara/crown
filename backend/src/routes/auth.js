@@ -6,6 +6,7 @@ const { signAccess, signRefresh, verifyRefresh, REFRESH_EXPIRY } = require('../c
 const { authenticate } = require('../middleware/auth');
 const { recordAudit } = require('../utils/auditLog');
 const { seedTenantFlags } = require('../services/featureFlagSync');
+const { normalizePhone } = require('../services/customerService');
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -75,6 +76,24 @@ function cleanSignupMeta(meta) {
   return Object.keys(out).length ? out : null;
 }
 
+// Variasi penulisan nomor HP Indonesia (0812…, 62812…, +62812…) untuk pencocokan
+// duplikat lintas-format saat memastikan nomor HP pendaftaran tenant unik —
+// data lama mungkin tersimpan dalam format berbeda.
+function phoneVariants(raw) {
+  const norm = normalizePhone(raw); // canonical → 0xx
+  const set = new Set();
+  const trimmed = String(raw || '').trim();
+  if (trimmed) set.add(trimmed);
+  if (norm) {
+    set.add(norm);
+    if (norm.startsWith('0')) {
+      set.add('62' + norm.slice(1));
+      set.add('+62' + norm.slice(1));
+    }
+  }
+  return [...set];
+}
+
 // GET /api/auth/check-slug?slug=xxx — preflight ke frontend
 router.get('/check-slug', async (req, res, next) => {
   try {
@@ -100,13 +119,31 @@ router.post('/register', async (req, res, next) => {
       return res.status(400).json({ success: false, error: 'Slug sudah dipakai sistem, pilih yang lain' });
     }
 
-    const [emailExists, tenantEmailExists, slugExists] = await Promise.all([
+    // Simpan nomor HP dalam format ternormalisasi (0xx) supaya seragam dengan
+    // pelanggan/booking & cek duplikat ke depan bisa diandalkan.
+    const phone = normalizePhone(body.phone) || body.phone.trim();
+    const phoneOptions = phoneVariants(body.phone);
+
+    const [emailExists, tenantEmailExists, slugExists, phoneTenantExists, phoneOwnerExists] = await Promise.all([
       prisma.user.findUnique({ where: { email: body.email }, select: { id: true } }),
       prisma.tenant.findUnique({ where: { email: body.email }, select: { id: true } }),
       prisma.tenant.findFirst({ where: { slug, deletedAt: null }, select: { id: true } }),
+      // Nomor HP wajib unik lintas tenant aktif (1 nomor = 1 akun owner).
+      // Tenant yang sudah dihapus (deletedAt) tidak menghalangi pakai-ulang.
+      prisma.tenant.findFirst({ where: { deletedAt: null, phone: { in: phoneOptions } }, select: { id: true } }),
+      prisma.user.findFirst({
+        where: {
+          role: 'tenant_admin',
+          deletedAt: null,
+          phone: { in: phoneOptions },
+          tenant: { is: { deletedAt: null } },
+        },
+        select: { id: true },
+      }),
     ]);
     if (emailExists || tenantEmailExists) return res.status(409).json({ success: false, error: 'Email sudah terdaftar' });
     if (slugExists)  return res.status(409).json({ success: false, error: 'Slug sudah dipakai' });
+    if (phoneTenantExists || phoneOwnerExists) return res.status(409).json({ success: false, error: 'Nomor HP sudah terdaftar di akun lain' });
 
     const pkg = await prisma.package.findUnique({ where: { name: body.packageName } });
     const pkgPrice = pkg?.price ?? 0;
@@ -124,7 +161,7 @@ router.post('/register', async (req, res, next) => {
           name:  body.businessName,
           slug,
           email: body.email,
-          phone: body.phone,
+          phone,
           signupChannel,
           signupMeta: signupMeta || undefined,
         },
@@ -137,7 +174,7 @@ router.post('/register', async (req, res, next) => {
           password: passwordHash,
           name:     body.ownerName,
           role:     'tenant_admin',
-          phone:    body.phone,
+          phone,
           tenantId: tenant.id,
           isActive: true,
         },
@@ -204,7 +241,7 @@ router.post('/register', async (req, res, next) => {
         name:        result.tenant.name,
         slug:        result.tenant.slug,
         email:       result.tenant.email,
-        phone:       body.phone,
+        phone,
         packageName: body.packageName,
         channel:     signupChannel,
         affiliate:   result.affiliate ? { name: result.affiliate.displayName, code: result.affiliate.referralCode } : null,
