@@ -1,5 +1,5 @@
 import React from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate, useParams } from 'react-router-dom'
 import {
   LayoutDashboard, Building2, Scissors, Users, BarChart3,
   Settings, CreditCard, ListOrdered, CalendarDays, Receipt,
@@ -16,7 +16,8 @@ import { useTicketStats } from '../../hooks/useTickets.js'
 import { useSubscriptionStore } from '../../store/subscriptionStore.js'
 import { useErrorLogStats } from '../../hooks/useErrorLogs.js'
 import { useFeatureFlags } from '../../hooks/useFeatureFlags.js'
-import { getBranchSlug } from '../../utils/branchSlug.js'
+import { useBranches } from '../../hooks/useBranches.js'
+import { getBranchSlug, matchesBranch } from '../../utils/branchSlug.js'
 import { useTranslation } from 'react-i18next'
 
 // ── Konfigurasi nav per role ────────────────────────────────────────────────
@@ -151,6 +152,12 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
   const toggleLang = () => i18n.changeLanguage(i18n.language === 'id' ? 'en' : 'id')
   // Item nav ber-`flag` hanya tampil bila fitur paket tenant mengaktifkannya.
   const { data: enabledFlags = [] } = useFeatureFlags(user?.tenantId)
+  // URL slug + branches list untuk resolve cabang aktif di context chip.
+  // Route kasir/barber pakai pattern `/:branchId/kasir/...` — useParams ambil
+  // slug-nya (boleh branch.code 'kuningan' atau CUID). Kalau bukan route ber-
+  // slug, urlBranchSlug=undefined dan fallback ke user.branchId tetap berlaku.
+  const { branchId: urlBranchSlug } = useParams()
+  const { data: branches = [] } = useBranches(user?.tenantId)
 
   if (!user) return null
 
@@ -190,15 +197,34 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
     return 0
   }
 
-  // Label "konteks" di bawah brand: tenant.name (tenant_admin/super_admin),
-  // nama cabang (kasir/barber), atau role (lainnya). Dijaga read-only di Fase B;
-  // branch switcher penuh di Fase C kalau dibutuhkan.
+  // Label "konteks" di bawah brand. Per role:
+  //   kasir/barber → NAMA CABANG aktif (priority: URL slug → user.branchId
+  //                   → user.branchName); tenant.name TIDAK dipakai karena
+  //                   konteks operasional kasir = cabang, bukan tenant.
+  //   tenant_admin / super_admin → tenant.name
+  //   lainnya → label peran
+  //
+  // Bug fix 2026-05-28: dulu logika `if (tenant?.name) return tenant.name`
+  // di paling atas → kasir/barber selalu lihat nama tenant, tidak pernah
+  // nama cabang. Sekarang role-driven.
+  const findBranchByUrl = () => {
+    if (!urlBranchSlug || branches.length === 0) return null
+    return branches.find(b => matchesBranch(urlBranchSlug, b)) || null
+  }
+  const findBranchByUserId = () => {
+    if (!user.branchId || branches.length === 0) return null
+    return branches.find(b => b.id === user.branchId) || null
+  }
+  const activeBranch = findBranchByUrl() || findBranchByUserId() || null
+
   const contextLabel = (() => {
-    if (tenant?.name) return tenant.name
     if (user.role === 'kasir' || user.role === 'barber') {
-      const branch = user.branchName || (user.branchId ? `Cabang ${user.branchId.slice(-4).toUpperCase()}` : null)
-      return branch || 'Cabang'
+      // 1) Nama cabang dari branches list (URL atau user.branchId)
+      // 2) Fallback ke user.branchName (kalau ter-cache di akun)
+      // 3) Last resort: "Cabang"
+      return activeBranch?.name || user.branchName || 'Cabang'
     }
+    if (tenant?.name) return tenant.name
     if (user.role === 'super_admin') return 'Super Admin'
     if (user.role === 'affiliate')   return 'Mitra Afiliasi'
     if (user.role === 'customer')    return 'Pelanggan'
