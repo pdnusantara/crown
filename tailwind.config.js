@@ -97,10 +97,12 @@ export default {
         'gold':    '0 0 20px rgba(201, 168, 76, 0.15)',
         'gold-lg': '0 0 40px rgba(201, 168, 76, 0.25)',
         'card':    '0 4px 24px rgba(0, 0, 0, 0.4)',
-        // NEW
-        'brand':    '0 0 20px rgba(99, 102, 241, 0.20)',
-        'brand-lg': '0 0 40px rgba(99, 102, 241, 0.30)',
-        'fresh':    '0 0 20px rgba(16, 185, 129, 0.18)',
+        // NEW (soft elevation, bukan neon glow — 2026-05-28 user feedback:
+        // halo terlalu 'rame' di white card. Bentuknya jadi drop shadow lembut
+        // dengan brand tint, bukan box-shadow simetris 0 0 X 0.X).
+        'brand':    '0 4px 14px rgba(99, 102, 241, 0.10)',
+        'brand-lg': '0 8px 24px rgba(99, 102, 241, 0.14)',
+        'fresh':    '0 4px 14px rgba(16, 185, 129, 0.10)',
       },
 
       animation: {

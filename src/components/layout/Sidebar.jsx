@@ -222,9 +222,11 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
         // Border kanan halus + soft brand glow di pojok kiri-atas (kedalaman,
         // tidak datar). Direpresentasikan inline supaya tak ikut dipindah
         // .light-mode override (sidebar tetap dark di kedua mode — by design).
+        // 2026-05-28: opacity 0.28 → 0.14, spread 38% → 28% (user feedback:
+        // glow terlalu rame; sekarang lebih halus, sekadar petunjuk kedalaman).
         borderRight: '1px solid rgba(255,255,255,0.06)',
         backgroundImage:
-          'radial-gradient(circle at 0% 0%, rgba(99,102,241,0.28), transparent 38%)',
+          'radial-gradient(circle at 0% 0%, rgba(99,102,241,0.14), transparent 28%)',
       }}
     >
       {/* ── Brand row ────────────────────────────────────────────────── */}
@@ -310,12 +312,13 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
                     >
                       {({ isActive }) => (
                         <>
-                          {/* Bar 3px di kiri saat aktif (modern Linear-style),
-                              dengan glow brand-light. */}
+                          {/* Bar 3px di kiri saat aktif (modern Linear-style).
+                              2026-05-28: hapus box-shadow neon (12px glow ke
+                              segala arah jadi terlihat seperti tabung lampu);
+                              bar solid sudah cukup signal aktif. */}
                           {isActive && !collapsed && (
                             <span
                               className="absolute -left-[2px] top-2 bottom-2 w-[3px] rounded-full bg-indigo-300"
-                              style={{ boxShadow: '0 0 12px #A5A2FF' }}
                             />
                           )}
                           <item.icon
