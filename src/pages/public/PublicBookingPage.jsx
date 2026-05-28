@@ -562,26 +562,29 @@ function BookShell({ accent = '#6366F1', tenantName, tenantLogo, bp = {}, sticky
   // Tokens swap based on mode. Both palettes share the same accent so the
   // brand identity stays consistent regardless of theme. Designed so that
   // sub-components reading `var(--bk-*)` need ZERO awareness of the mode.
+  // Tokens v2 (rebrand Electric Indigo + Mint, 2026-05-28): light = lavender
+  // bg + pure white card; dark = indigo-tinted neutral (nyambung dengan dalam-
+  // app). Aksen tetap pakai accent prop tenant (default brand #6366F1).
   const tokens = isLight ? {
-    '--bk-bg':            '#FAFAFA',
-    '--bk-bg-translucent':'rgba(250,250,250,0.92)',
+    '--bk-bg':            '#F4F4FA',
+    '--bk-bg-translucent':'rgba(244,244,250,0.92)',
     '--bk-surface':       '#FFFFFF',
-    '--bk-surface-2':     '#F4F4F4',
-    '--bk-border':        '#E5E5E5',
-    '--bk-border-strong': '#CFCFCF',
-    '--bk-text':          '#111111',
-    '--bk-text-2':        '#555555',
-    '--bk-text-muted':    '#888888',
+    '--bk-surface-2':     '#EEEEF5',
+    '--bk-border':        '#D5D8E8',
+    '--bk-border-strong': '#C7CBE0',
+    '--bk-text':          '#1E1B2E',
+    '--bk-text-2':        '#56548A',
+    '--bk-text-muted':    '#7C7AA8',
   } : {
-    '--bk-bg':            '#111111',
-    '--bk-bg-translucent':'rgba(17,17,17,0.92)',
-    '--bk-surface':       '#1A1A1A',
-    '--bk-surface-2':     '#202020',
-    '--bk-border':        '#252525',
-    '--bk-border-strong': '#3A3A3A',
-    '--bk-text':          '#F0F0F0',
-    '--bk-text-2':        '#888888',
-    '--bk-text-muted':    '#555555',
+    '--bk-bg':            '#0E0E1A',
+    '--bk-bg-translucent':'rgba(14,14,26,0.92)',
+    '--bk-surface':       '#1A1A2E',
+    '--bk-surface-2':     '#222236',
+    '--bk-border':        '#2A2A40',
+    '--bk-border-strong': '#3A3A55',
+    '--bk-text':          '#F0F0F5',
+    '--bk-text-2':        '#9B98C8',
+    '--bk-text-muted':    '#6B6890',
   }
 
   return (
@@ -612,17 +615,17 @@ function BookShell({ accent = '#6366F1', tenantName, tenantLogo, bp = {}, sticky
         }
         .book-root .bk-cta {
           background: var(--bk-accent);
-          color: #111111;
+          color: #FFFFFF;
           font-weight: 700;
           font-size: 15px;
           letter-spacing: 0.01em;
           border-radius: 14px;
           min-height: 52px;
           padding: 0 22px;
-          box-shadow: 0 12px 28px -10px var(--bk-accent-glow);
-          transition: filter .15s ease, transform .12s ease;
+          box-shadow: 0 4px 14px -4px var(--bk-accent-glow);
+          transition: filter .15s ease, transform .12s ease, box-shadow .15s ease;
         }
-        .book-root .bk-cta:hover { filter: brightness(1.08); }
+        .book-root .bk-cta:hover { filter: brightness(1.06); box-shadow: 0 6px 18px -4px var(--bk-accent-glow); }
         .book-root .bk-cta:active { transform: scale(.98); }
         .book-root .bk-cta:disabled { filter: none; opacity: .35; cursor: not-allowed; box-shadow: none; }
         .book-root .bk-cta-outline {
@@ -680,6 +683,120 @@ function BookShell({ accent = '#6366F1', tenantName, tenantLogo, bp = {}, sticky
           80% { transform: translateX(2px); }
         }
         .book-root .bk-shake { animation: bk-shake 0.4s ease-in-out; }
+
+        /* ── Hero v2: dark indigo gradient untuk identity tenant ─────────── */
+        .book-root .bk-hero-v2 {
+          border-radius: 18px;
+          background: linear-gradient(135deg, #1E1B4B 0%, #4F46E5 100%);
+          color: #FFFFFF;
+          padding: 20px;
+          position: relative; overflow: hidden;
+          box-shadow: 0 12px 30px rgba(99,102,241,0.10), 0 4px 10px rgba(0,0,0,0.04);
+        }
+        .book-root .bk-hero-v2::before {
+          content: ''; position: absolute; top: -30px; right: -30px;
+          width: 180px; height: 180px;
+          background: radial-gradient(closest-side, rgba(165,162,255,0.22), transparent);
+          pointer-events: none;
+        }
+        .book-root .bk-hero-v2 > * { position: relative; }
+
+        /* Status chip pulse mint */
+        .book-root .bk-status-chip {
+          display: inline-flex; align-items: center; gap: 5px;
+          padding: 3px 9px; border-radius: 999px;
+          background: rgba(16,185,129,0.20); color: #5EE3B5;
+          font-size: 10.5px; font-weight: 700;
+          border: 1px solid rgba(16,185,129,0.30);
+        }
+        .book-root .bk-status-chip .bk-pulse-dot {
+          width: 6px; height: 6px; border-radius: 999px; background: #34D399;
+          box-shadow: 0 0 0 3px rgba(16,185,129,0.25);
+          animation: bk-pulse 1.6s ease-in-out infinite;
+        }
+        @keyframes bk-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+        .book-root .bk-soft-chip {
+          display: inline-flex; align-items: center; gap: 5px;
+          padding: 3px 9px; border-radius: 999px;
+          background: rgba(255,255,255,0.10); color: rgba(255,255,255,0.85);
+          font-size: 10.5px; font-weight: 600;
+        }
+
+        /* Progress bar (numbered steps) — pengganti dots */
+        .book-root .bk-progress-v2 {
+          padding: 14px 16px;
+          background: var(--bk-surface);
+          border: 1px solid var(--bk-border);
+          border-radius: 14px;
+          box-shadow: 0 1px 3px rgba(0,0,0,.04);
+        }
+        .book-root .bk-progress-v2 .lbl {
+          display: flex; justify-content: space-between; align-items: baseline;
+          margin-bottom: 10px;
+          font-size: 11px; font-weight: 700; color: var(--bk-text-2);
+          text-transform: uppercase; letter-spacing: 0.12em;
+        }
+        .book-root .bk-progress-v2 .lbl .curr { color: var(--bk-accent); }
+        .book-root .bk-progress-v2 .bar {
+          height: 6px; border-radius: 999px;
+          background: var(--bk-surface-2);
+          position: relative; overflow: hidden;
+        }
+        .book-root .bk-progress-v2 .fill {
+          height: 100%; border-radius: 999px;
+          background: linear-gradient(90deg, var(--bk-accent) 0%, var(--bk-accent) 100%);
+          transition: width .25s ease;
+        }
+        .book-root .bk-progress-v2 .dots {
+          display: flex; justify-content: space-between; margin-top: 10px;
+        }
+        .book-root .bk-progress-v2 .dot {
+          display: flex; flex-direction: column; align-items: center; gap: 4px;
+          font-size: 10px; font-weight: 600; color: var(--bk-text-muted);
+          text-transform: uppercase; letter-spacing: 0.06em;
+        }
+        .book-root .bk-progress-v2 .circle {
+          width: 22px; height: 22px; border-radius: 999px;
+          background: var(--bk-surface-2); color: var(--bk-text-muted);
+          display: grid; place-items: center;
+          font-size: 11px; font-weight: 700;
+          border: 1.5px solid var(--bk-border);
+        }
+        .book-root .bk-progress-v2 .dot.done .circle,
+        .book-root .bk-progress-v2 .dot.active .circle {
+          background: var(--bk-accent); color: #FFFFFF; border-color: var(--bk-accent);
+        }
+        .book-root .bk-progress-v2 .dot.done,
+        .book-root .bk-progress-v2 .dot.active { color: var(--bk-accent); }
+        .book-root .bk-progress-v2 .dot.active .circle {
+          box-shadow: 0 0 0 4px var(--bk-accent-soft);
+        }
+
+        /* Animated success check ring */
+        @keyframes bk-pop {
+          0% { transform: scale(0.4); opacity: 0; }
+          60% { transform: scale(1.08); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes bk-ring {
+          0%, 100% { transform: scale(1); opacity: 0.16; }
+          50% { transform: scale(1.12); opacity: 0; }
+        }
+        .book-root .bk-check-v2 {
+          width: 96px; height: 96px;
+          border-radius: 999px;
+          background: linear-gradient(135deg, #10B981 0%, #34D399 100%);
+          display: grid; place-items: center;
+          box-shadow: 0 12px 30px rgba(16,185,129,0.28);
+          position: relative; margin: 0 auto;
+          animation: bk-pop 0.6s cubic-bezier(0.4, 0.0, 0.2, 1.4);
+        }
+        .book-root .bk-check-v2::before {
+          content: ''; position: absolute; inset: -8px;
+          border-radius: 999px;
+          background: #10B981; opacity: 0.16;
+          animation: bk-ring 2s ease-in-out infinite;
+        }
       `}</style>
 
       {/* Slim sticky brand bar */}
@@ -746,41 +863,33 @@ function BookShell({ accent = '#6366F1', tenantName, tenantLogo, bp = {}, sticky
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// STEP INDICATOR — 4 dots dengan garis penghubung
+// STEP INDICATOR — progress bar bernomor (Tier 3 redesign, 2026-05-28)
+// Pengganti dots + connecting line. Bar fill di atas + 4 step dots numbered di
+// bawah, dengan label step yang sedang aktif eksplisit.
 // ═══════════════════════════════════════════════════════════════════════════
 
-function StepIndicator({ current, accent }) {
+function StepIndicator({ current }) {
+  const pct = ((current + 1) / STEPS.length) * 100
   return (
-    <div className="flex items-center gap-1">
-      {STEPS.map((s, i) => {
-        const isDone = i < current
-        const isActive = i === current
-        return (
-          <React.Fragment key={s.key}>
-            <div className="flex flex-col items-center gap-1.5 min-w-0">
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-all"
-                style={{
-                  background: isDone || isActive ? accent : 'transparent',
-                  color: isDone || isActive ? '#111' : 'var(--bk-text-muted)',
-                  border: `1.5px solid ${isDone || isActive ? accent : 'var(--bk-border-strong)'}`,
-                  boxShadow: isActive ? `0 0 0 4px ${accent}1F` : 'none',
-                }}
-              >
-                {isDone ? <Check className="w-4 h-4" strokeWidth={3} /> : i + 1}
-              </div>
-              <p className="text-[9.5px] uppercase tracking-wider font-semibold whitespace-nowrap leading-none"
-                style={{ color: isDone || isActive ? 'var(--bk-text)' : 'var(--bk-text-muted)' }}>
-                {s.label}
-              </p>
+    <div className="bk-progress-v2">
+      <div className="lbl">
+        <span>Step <span className="curr">{current + 1} / {STEPS.length}</span></span>
+        <span>{STEPS[current]?.label}</span>
+      </div>
+      <div className="bar"><div className="fill" style={{ width: `${pct}%` }} /></div>
+      <div className="dots">
+        {STEPS.map((s, i) => {
+          const isDone = i < current
+          const isActive = i === current
+          const cls = isDone ? 'dot done' : isActive ? 'dot active' : 'dot'
+          return (
+            <div key={s.key} className={cls}>
+              <span className="circle">{isDone ? <Check className="w-3 h-3" strokeWidth={3} /> : i + 1}</span>
+              {s.label}
             </div>
-            {i < STEPS.length - 1 && (
-              <div className="flex-1 h-px relative top-[-12px] mx-1"
-                style={{ background: i < current ? accent : 'var(--bk-border)' }} />
-            )}
-          </React.Fragment>
-        )
-      })}
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -1023,7 +1132,7 @@ function SidebarSummary({ accent, selected, tenantName, ctaLabel, ctaDisabled, o
       </div>
 
       {totalPrice > 0 && (
-        <div className="rounded-xl p-3.5 flex items-center justify-between" style={{ background: accent, color: '#111' }}>
+        <div className="rounded-xl p-3.5 flex items-center justify-between" style={{ background: accent, color: '#FFFFFF' }}>
           <span className="text-[10px] uppercase tracking-[0.22em] font-bold opacity-70">Total</span>
           <span className="font-display text-xl font-bold">{formatRupiah(totalPrice)}</span>
         </div>
@@ -1056,65 +1165,119 @@ function SidebarRow({ label, value, highlight, accent, muted }) {
   )
 }
 
+// Compute status "Buka sekarang" vs "Tutup" dari openTime/closeTime branch
+// (HH:mm). Sengaja TZ-naive: pakai jam lokal browser sebagai approximasi —
+// untuk presisi penuh perlu pakai tenantTz dari context (over-engineering
+// untuk MVP). Kalau jam buka/tutup hilang, return null = chip tidak tampil.
+function computeOpenStatus(branch) {
+  const open = branch?.openTime
+  const close = branch?.closeTime
+  if (!open || !close) return null
+  const now = new Date()
+  const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+  const isOpen = hhmm >= open && hhmm < close
+  return { isOpen, open, close }
+}
+
 function ShopHeader({ bp, tenantName, tenantLogo, branch, accent }) {
   const heroImage = bp.heroImage
   const showLogo  = bp.showLogo !== false
   const tagline   = bp.tagline
-  return (
-    <div className="relative overflow-hidden rounded-3xl" style={{ border: '1px solid var(--bk-border)' }}>
-      {/* Background image / fallback */}
-      {heroImage ? (
-        <div
-          className="absolute inset-0"
-          style={{ backgroundImage: `url(${heroImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
-        />
-      ) : (
-        <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 30% 20%, ${accent}33 0%, transparent 55%), var(--bk-surface)` }} />
-      )}
-      {/* Dark overlay only when a hero image exists — keeps the white hero
-          title legible on top of arbitrary user-uploaded photos. Without an
-          image the fallback gradient already provides contrast for the title
-          rendered in `var(--bk-text)`. */}
-      {heroImage && (
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(17,17,17,0.55) 0%, rgba(17,17,17,0.85) 100%)' }} />
-      )}
+  const status    = computeOpenStatus(branch)
+  const useImage  = !!heroImage
 
-      <div className="relative px-5 pt-7 pb-5 lg:px-10 lg:pt-16 lg:pb-10 lg:min-h-[360px] lg:flex lg:flex-col lg:justify-end">
-        <div className="flex items-start gap-3 lg:gap-5">
-          {showLogo && tenantLogo ? (
-            <img src={tenantLogo} alt={tenantName}
-              className="w-14 h-14 lg:w-20 lg:h-20 rounded-2xl object-cover flex-shrink-0"
-              style={{ outline: `2px solid ${accent}`, outlineOffset: 2, background: 'var(--bk-bg)' }} />
-          ) : showLogo ? (
-            <div className="w-14 h-14 lg:w-20 lg:h-20 rounded-2xl flex-shrink-0 flex items-center justify-center"
-              style={{ background: `${accent}20`, outline: `2px solid ${accent}`, outlineOffset: 2 }}>
-              <Scissors className="w-6 h-6 lg:w-9 lg:h-9" style={{ color: accent }} />
+  // Mode A: tenant punya heroImage → pertahankan visual asli (image + overlay)
+  // supaya identity foto barbershop tetap shining.
+  // Mode B: tanpa hero image → pakai gradient brand indigo dark (rebrand 2026-05-28
+  // Tier 3) supaya feels premium tanpa perlu asset upload.
+  if (useImage) {
+    return (
+      <div className="relative overflow-hidden rounded-3xl" style={{ border: '1px solid var(--bk-border)' }}>
+        <div className="absolute inset-0" style={{ backgroundImage: `url(${heroImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg, rgba(17,17,17,0.55) 0%, rgba(17,17,17,0.85) 100%)' }} />
+
+        <div className="relative px-5 pt-7 pb-5 lg:px-10 lg:pt-16 lg:pb-10 lg:min-h-[360px] lg:flex lg:flex-col lg:justify-end">
+          {status && (
+            <div className="mb-3 flex items-center gap-2 flex-wrap">
+              <span className="bk-status-chip"><span className="bk-pulse-dot" />{status.isOpen ? 'Buka sekarang' : 'Tutup'}</span>
+              <span className="bk-soft-chip">{status.isOpen ? `Tutup ${status.close}` : `Buka ${status.open}`}</span>
             </div>
-          ) : null}
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] lg:text-[11px] uppercase tracking-[0.22em] font-semibold drop-shadow" style={{ color: accent }}>
-              {tagline || 'Premium Barbershop'}
-            </p>
-            <h1 className="font-display text-2xl lg:text-5xl font-bold tracking-tight leading-tight mt-1 lg:mt-2 drop-shadow-md"
-              style={{ color: heroImage ? '#FFF' : 'var(--bk-text)' }}>
-              {tenantName}
-            </h1>
+          )}
+          <div className="flex items-start gap-3 lg:gap-5">
+            {showLogo && tenantLogo ? (
+              <img src={tenantLogo} alt={tenantName}
+                className="w-14 h-14 lg:w-20 lg:h-20 rounded-2xl object-cover flex-shrink-0"
+                style={{ outline: `2px solid ${accent}`, outlineOffset: 2, background: 'var(--bk-bg)' }} />
+            ) : showLogo ? (
+              <div className="w-14 h-14 lg:w-20 lg:h-20 rounded-2xl flex-shrink-0 flex items-center justify-center"
+                style={{ background: `${accent}20`, outline: `2px solid ${accent}`, outlineOffset: 2 }}>
+                <Scissors className="w-6 h-6 lg:w-9 lg:h-9" style={{ color: accent }} />
+              </div>
+            ) : null}
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] lg:text-[11px] uppercase tracking-[0.22em] font-semibold drop-shadow" style={{ color: accent }}>
+                {tagline || 'Premium Barbershop'}
+              </p>
+              <h1 className="font-display text-2xl lg:text-5xl font-bold tracking-tight leading-tight mt-1 lg:mt-2 drop-shadow-md"
+                style={{ color: '#FFF' }}>
+                {tenantName}
+              </h1>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-1.5 lg:gap-2 mt-4 lg:mt-5">
+            {branch?.address && (
+              <Badge icon={MapPin} accent={accent} label={branch.address} onDark />
+            )}
+            {branch?.openTime && branch?.closeTime && (
+              <Badge icon={Clock} accent={accent} label={`${branch.openTime} – ${branch.closeTime}`} onDark />
+            )}
+            <Badge icon={Star} accent={accent} label="Booking Online" filled onDark />
           </div>
         </div>
+      </div>
+    )
+  }
 
-        {/* Badges row: address + hours. `onDark` flag drives badge styling so
-            they're legible on the dark overlay (image case) and on the lighter
-            radial fallback (no-image case). */}
-        <div className="flex flex-wrap gap-1.5 lg:gap-2 mt-4 lg:mt-5">
-          {branch?.address && (
-            <Badge icon={MapPin} accent={accent} label={branch.address} onDark={!!heroImage} />
-          )}
-          {branch?.openTime && branch?.closeTime && (
-            <Badge icon={Clock} accent={accent} label={`${branch.openTime} – ${branch.closeTime}`} onDark={!!heroImage} />
-          )}
-          <Badge icon={Star} accent={accent} label="Booking Online" filled onDark={!!heroImage} />
+  // Mode B: brand gradient hero (Tier 3 modern)
+  return (
+    <div className="bk-hero-v2 lg:min-h-[280px] lg:flex lg:flex-col lg:justify-end lg:p-10">
+      {status && (
+        <div className="mb-3 flex items-center gap-2 flex-wrap">
+          <span className="bk-status-chip"><span className="bk-pulse-dot" />{status.isOpen ? 'Buka sekarang' : 'Tutup'}</span>
+          <span className="bk-soft-chip">{status.isOpen ? `Tutup ${status.close}` : `Buka ${status.open}`}</span>
+        </div>
+      )}
+      <div className="flex items-start gap-3 lg:gap-5">
+        {showLogo && tenantLogo ? (
+          <img src={tenantLogo} alt={tenantName}
+            className="w-14 h-14 lg:w-20 lg:h-20 rounded-2xl object-cover flex-shrink-0 bg-white/10" />
+        ) : showLogo ? (
+          <div className="w-14 h-14 lg:w-20 lg:h-20 rounded-2xl flex-shrink-0 flex items-center justify-center"
+            style={{ background: 'rgba(255,255,255,0.15)' }}>
+            <Scissors className="w-6 h-6 lg:w-9 lg:h-9" style={{ color: '#FFFFFF' }} />
+          </div>
+        ) : null}
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] lg:text-[11px] uppercase tracking-[0.22em] font-semibold" style={{ color: '#C7C9FF' }}>
+            {tagline || 'Premium Barbershop'}
+          </p>
+          <h1 className="font-display text-2xl lg:text-5xl font-bold tracking-tight leading-tight mt-1 lg:mt-2 text-white">
+            {tenantName}
+          </h1>
         </div>
       </div>
+
+      {(branch?.address || (branch?.openTime && branch?.closeTime)) && (
+        <div className="flex flex-wrap gap-1.5 lg:gap-2 mt-4 lg:mt-5">
+          {branch?.address && (
+            <Badge icon={MapPin} accent={accent} label={branch.address} onDark />
+          )}
+          {branch?.openTime && branch?.closeTime && (
+            <Badge icon={Clock} accent={accent} label={`${branch.openTime} – ${branch.closeTime}`} onDark />
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -1158,12 +1321,13 @@ function BranchSelector({ branches, selected, onPick, accent }) {
           const isSel = selected?.id === b.id
           return (
             <button key={b.id} onClick={() => onPick(b)}
-              className="flex-shrink-0 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-all"
+              className="flex-shrink-0 px-4 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all"
               style={{
                 background: isSel ? accent : 'var(--bk-surface)',
-                color: isSel ? '#111' : 'var(--bk-text)',
+                color: isSel ? '#FFFFFF' : 'var(--bk-text)',
                 border: `1px solid ${isSel ? accent : 'var(--bk-border)'}`,
                 minHeight: '44px',
+                boxShadow: isSel ? `0 4px 12px -4px ${accent}66` : 'none',
               }}
             >
               {b.name}
@@ -1209,7 +1373,7 @@ function BarberCarousel({ barbers, selected, onPick, accent }) {
               </div>
               {isSel && (
                 <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center"
-                  style={{ background: accent, color: '#111', border: '2px solid var(--bk-bg)' }}>
+                  style={{ background: accent, color: '#FFFFFF', border: '2px solid var(--bk-bg)' }}>
                   <Check className="w-3 h-3" strokeWidth={3} />
                 </div>
               )}
@@ -1270,7 +1434,7 @@ function ServiceList({ services, selected, onPick, accent }) {
                 className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap"
                 style={{
                   background: isSel ? accent : 'var(--bk-surface)',
-                  color: isSel ? '#111' : 'var(--bk-text-2)',
+                  color: isSel ? '#FFFFFF' : 'var(--bk-text-2)',
                   border: `1px solid ${isSel ? accent : 'var(--bk-border)'}`,
                 }}
               >
@@ -1306,15 +1470,17 @@ function ServiceList({ services, selected, onPick, accent }) {
                       <Clock className="w-3 h-3" />{svc.duration} mnt
                     </span>
                   )}
-                  <span className="font-bold" style={{ color: accent }}>{formatRupiah(svc.price)}</span>
                 </div>
               </div>
-              <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all"
+              <span className="font-display text-base font-bold whitespace-nowrap" style={{ color: isSel ? accent : 'var(--bk-text)' }}>
+                {formatRupiah(svc.price)}
+              </span>
+              <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all ml-1"
                 style={{
                   background: isSel ? accent : 'transparent',
                   border: `2px solid ${isSel ? accent : 'var(--bk-border-strong)'}`,
                 }}>
-                {isSel && <Check className="w-4 h-4" strokeWidth={3} style={{ color: '#111' }} />}
+                {isSel && <Check className="w-4 h-4" strokeWidth={3} style={{ color: '#FFFFFF' }} />}
               </div>
             </div>
           </button>
@@ -1491,7 +1657,7 @@ function Step2Schedule({ selected, timeSlots, bookedSlots, branchClosure, tenant
               const isSel  = selected.time === time
               const isShaking = shake.key === time
               const styles = (() => {
-                if (isSel) return { background: accent, color: '#111', border: `1.5px solid ${accent}`, boxShadow: `0 6px 18px -8px ${accent}80` }
+                if (isSel) return { background: accent, color: '#FFFFFF', border: `1.5px solid ${accent}`, boxShadow: `0 4px 12px -4px ${accent}80` }
                 if (status === 'past' || status === 'penuh') return {
                   background: 'var(--bk-surface-2)', color: 'var(--bk-text-muted)',
                   border: '1px solid var(--bk-border)', textDecoration: 'line-through',
@@ -1633,7 +1799,7 @@ function Step3Confirm({ tenantName, tenantWilayah, selected, form, formError, se
 
           {/* Total bar */}
           <div className="rounded-2xl p-4 flex items-center justify-between"
-            style={{ background: accent, color: '#111' }}>
+            style={{ background: accent, color: '#FFFFFF' }}>
             <div>
               <p className="text-[10px] uppercase tracking-[0.22em] font-bold opacity-70">Total Pembayaran</p>
               <p className="font-display text-2xl font-bold mt-0.5">{formatRupiah(totalPrice)}</p>
@@ -1721,25 +1887,24 @@ function Step4Success({ booking, accent, tenantName, tenantPhone, onAnother }) {
 
   return (
     <div className="space-y-6 lg:max-w-lg lg:mx-auto">
-      {/* Animated check */}
+      {/* Animated check — mint untuk semantik success (bukan accent indigo) */}
       <div className="text-center">
         <motion.div
           initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200, damping: 14 }}
           className="w-24 h-24 rounded-full mx-auto flex items-center justify-center relative"
-          style={{ border: `1.5px solid ${accent}`, background: `${accent}10` }}
+          style={{
+            background: 'linear-gradient(135deg, #10B981 0%, #34D399 100%)',
+            boxShadow: '0 12px 30px rgba(16,185,129,0.28)',
+          }}
         >
           <motion.div
-            initial={{ scale: 0, opacity: 0.7 }} animate={{ scale: 1.6, opacity: 0 }}
-            transition={{ duration: 1.4, repeat: Infinity }}
-            className="absolute inset-0 rounded-full" style={{ border: `1.5px solid ${accent}` }}
+            initial={{ scale: 0, opacity: 0.6 }} animate={{ scale: 1.5, opacity: 0 }}
+            transition={{ duration: 1.6, repeat: Infinity }}
+            className="absolute inset-0 rounded-full" style={{ background: '#10B981', opacity: 0.16 }}
           />
-          <motion.div
-            initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ delay: 0.25, duration: 0.4 }}
-          >
-            <Check className="w-11 h-11" strokeWidth={2.5} style={{ color: accent }} />
-          </motion.div>
+          <Check className="w-11 h-11" strokeWidth={3} style={{ color: '#FFFFFF' }} />
         </motion.div>
-        <h2 className="font-display text-2xl font-bold tracking-tight mt-5">Booking Berhasil</h2>
+        <h2 className="font-display text-2xl font-bold tracking-tight mt-5">Booking dikonfirmasi! 🎉</h2>
         <p className="text-sm mt-1.5" style={{ color: 'var(--bk-text-2)' }}>
           Simpan kode di bawah & datang sesuai jadwal
         </p>
