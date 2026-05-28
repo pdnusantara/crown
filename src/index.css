@@ -23,7 +23,7 @@
   }
 
   body {
-    background-color: #0A0A0A;
+    background-color: #0E0E1A;
     color: #F5F5F0;
     margin: 0;
     padding: 0;
@@ -35,20 +35,21 @@
     min-height: 100vh;
   }
 
-  /* Scrollbar */
+  /* Scrollbar — brand indigo (Phase A: thumb dipindah dari gold ke brand,
+     track ikut dark.surface yang sekarang indigo-tinted) */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: #1A1A1A;
+    background: #1A1A2E;
   }
   ::-webkit-scrollbar-thumb {
-    background: #C9A84C;
+    background: #6366F1;
     border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #E8C875;
+    background: #818CF8;
   }
 }
 
@@ -107,7 +108,7 @@
   }
 
   .shimmer {
-    background: linear-gradient(90deg, #1A1A1A 25%, #2A2A2A 50%, #1A1A1A 75%);
+    background: linear-gradient(90deg, #1A1A2E 25%, #2A2A40 50%, #1A1A2E 75%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
   }
@@ -150,197 +151,190 @@
   100% { background-position: 400px 0; }
 }
 .skeleton-shimmer {
-  background: linear-gradient(90deg, #1A1A1A 25%, #252525 50%, #1A1A1A 75%);
+  background: linear-gradient(90deg, #1A1A2E 25%, #252540 50%, #1A1A2E 75%);
   background-size: 800px 100%;
   animation: shimmer 1.6s infinite linear;
 }
 
-/* ── Light mode overrides ──────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════════════
+   LIGHT MODE — Electric Indigo + Mint (Fase A · 2026-05-28)
+   ───────────────────────────────────────────────────────────────────────────
+   Palet:  page #F4F4FA · card #FFFFFF · text #1E1B2E · border #D5D8E8
+           brand indigo #6366F1 (action utama) · mint #10B981 (fresh accent)
+   GOLD dipertahankan: text-gold/bg-gold masih jalan di Fase A. Migrasi per-page
+   ke text-brand (action utama) atau text-premium (loyalti/trial/achievement)
+   akan dilakukan di Fase C.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Surfaces ──────────────────────────────────────────────────────── */
 .light-mode body {
-  background-color: #F0EFE9 !important;
-  color: #111111 !important;
+  background-color: #F4F4FA !important;
+  color: #1E1B2E !important;
 }
-.light-mode .bg-dark {
-  background-color: #F0EFE9 !important;
+.light-mode .bg-dark,
+.light-mode .bg-dark-bg,
+.light-mode .bg-dark-bg\/60,
+.light-mode .bg-dark-bg\/95,
+.light-mode .min-h-screen {
+  background-color: #F4F4FA !important;
 }
-.light-mode .bg-dark-surface {
+.light-mode .bg-dark-surface { background-color: #FFFFFF !important; }
+.light-mode .border-dark-surface { border-color: #FFFFFF !important; }
+.light-mode .bg-dark-card,
+.light-mode .bg-dark-card\/40,
+.light-mode .bg-dark-card\/50,
+.light-mode .bg-dark-card\/60 {
   background-color: #FFFFFF !important;
 }
-.light-mode .bg-dark-card {
-  background-color: #F5F4EF !important;
+.light-mode .bg-dark-card\/80 { background-color: rgba(255, 255, 255, 0.92) !important; }
+.light-mode .bg-dark-card\/90 { background-color: rgba(255, 255, 255, 0.96) !important; }
+
+/* ── 2. Text & borders ────────────────────────────────────────────────── */
+.light-mode .text-off-white { color: #1E1B2E !important; }
+.light-mode .text-muted     { color: #56548A !important; }
+.light-mode .text-dark-bg   { color: #1E1B2E !important; }
+.light-mode .border-dark-border,
+.light-mode .border-dark-border\/50 { border-color: #D5D8E8 !important; }
+.light-mode .divide-dark-border > :not([hidden]) ~ :not([hidden]),
+.light-mode .divide-dark-border\/60 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #D5D8E8 !important;
 }
-.light-mode .text-off-white {
-  color: #111111 !important;
-}
-.light-mode .text-muted {
-  color: #555555 !important;
-}
-.light-mode .border-dark-border {
-  border-color: #DDDBD0 !important;
-}
+
+/* ── 3. Glass (panel/modal/header) — border digeser ke indigo ─────────── */
 .light-mode .glass {
-  background: rgba(255, 255, 255, 0.88) !important;
-  border-color: rgba(201, 168, 76, 0.25) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  border-color: rgba(99, 102, 241, 0.20) !important;
 }
-.light-mode .sidebar-link {
-  color: #333333;
-}
-.light-mode .sidebar-link:hover {
-  background-color: #ECEAE2;
-  color: #111111;
-}
-.light-mode .sidebar-link.active {
-  background-color: rgba(201, 168, 76, 0.12);
-  color: #A8893A;
+.light-mode .glass-strong {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border-color: rgba(99, 102, 241, 0.28) !important;
 }
 .light-mode header {
   background-color: #FFFFFF !important;
-  border-color: #DDDBD0 !important;
-}
-.light-mode .min-h-screen {
-  background-color: #F0EFE9;
+  border-color: #D5D8E8 !important;
 }
 
-/* ── Light mode polish: kelas2 yang baru ditambahkan / sebelumnya terlewat ── */
-.light-mode .bg-dark-bg,
-.light-mode .bg-dark-bg\/60,
-.light-mode .bg-dark-bg\/95 {
-  background-color: #F0EFE9 !important;
+/* ── 4. Sidebar links — active = brand indigo, hover = lavender raised ── */
+.light-mode .sidebar-link { color: #56548A; }
+.light-mode .sidebar-link:hover {
+  background-color: #E8EAF5;
+  color: #1E1B2E;
 }
-.light-mode .text-dark-bg {
-  color: #0A0A0A !important;
+.light-mode .sidebar-link.active {
+  background-color: rgba(99, 102, 241, 0.12);
+  color: #4F46E5;
+  border-left-color: #6366F1;
 }
-/* Tabel/list hover state harus keliatan di latar putih.
-   Catatan: di light, kelas STATIS .bg-dark-surface di-override jadi putih, tapi
-   varian hover (.hover:bg-dark-surface[/40]) selektornya beda dan TAK ikut ter-
-   override → tanpa baris ini, hover baris/kartu memunculkan strip GELAP (mis.
-   list "Baru Bergabung" & banyak tabel super-admin). */
+
+/* ── 5. Hover states on white cards (catatan: kelas STATIS .bg-dark-surface
+   di-override jadi putih, tapi varian HOVER selektornya beda dan TAK ikut
+   ter-override → tanpa baris ini, hover row di tabel/list muncul strip gelap) */
 .light-mode .hover\:bg-dark-card\/40:hover,
 .light-mode .hover\:bg-dark-card\/50:hover,
 .light-mode .hover\:bg-dark-surface:hover,
 .light-mode .hover\:bg-dark-surface\/40:hover,
 .light-mode .active\:bg-dark-card\/60:active {
-  background-color: #ECEAE2 !important;
-}
-.light-mode .bg-dark-card\/50,
-.light-mode .bg-dark-card\/40,
-.light-mode .bg-dark-card\/60 {
-  background-color: #F0EFE9 !important;
-}
-.light-mode .divide-dark-border\/60 > :not([hidden]) ~ :not([hidden]),
-.light-mode .divide-dark-border > :not([hidden]) ~ :not([hidden]) {
-  border-color: #DDDBD0 !important;
-}
-.light-mode .border-dark-border\/50 {
-  border-color: #DDDBD0 !important;
-}
-/* Modal backdrop sedikit lebih lembut di light */
-.light-mode .bg-black\/70 {
-  background-color: rgba(20, 20, 20, 0.45) !important;
-}
-/* Status pill background di light supaya kontras */
-.light-mode .bg-dark-card {
-  background-color: #F5F4EF !important;
-}
-/* Text-gold tetap, tapi pastikan agak gelap di light agar readable di card putih */
-.light-mode .text-gold {
-  color: #A8893A !important;
-}
-/* Search ikon, etc. di light */
-.light-mode .placeholder-muted::placeholder {
-  color: #6B7280 !important;
+  background-color: rgba(99, 102, 241, 0.06) !important;
 }
 
-/* ── Kanban kolom (Queue) — naikkan opacity tints di light supaya tetap terbaca ── */
-.light-mode .bg-amber-400\/10 { background-color: rgba(251, 191, 36, 0.18) !important; }
-.light-mode .bg-blue-400\/10  { background-color: rgba(96,  165, 250, 0.18) !important; }
-.light-mode .bg-green-400\/10 { background-color: rgba(74,  222, 128, 0.18) !important; }
-.light-mode .bg-gold\/10      { background-color: rgba(201, 168, 76,  0.18) !important; }
-.light-mode .border-amber-400\/20 { border-color: rgba(180, 130, 0, 0.45) !important; }
-.light-mode .border-blue-400\/20  { border-color: rgba(40,  100, 180, 0.45) !important; }
-.light-mode .border-green-400\/20 { border-color: rgba(20,  130, 60, 0.45) !important; }
-.light-mode .border-gold\/20      { border-color: rgba(168, 137, 58, 0.45) !important; }
-.light-mode .text-amber-400 { color: #B45309 !important; }
-.light-mode .text-blue-400  { color: #1D4ED8 !important; }
-.light-mode .text-green-400 { color: #15803D !important; }
+/* ── 6. Modal backdrop — sedikit indigo undertone ─────────────────────── */
+.light-mode .bg-black\/70 { background-color: rgba(30, 27, 75, 0.48) !important; }
+
+/* ── 7. Gold (PREMIUM ACCENT — dipertahankan) ──────────────────────────
+   Dipakai banyak halaman untuk warna utama; di Fase C dimigrasi per-page
+   (action utama → text-brand, loyalti/trial → text-premium). Sementara
+   dijaga readable di card putih. */
+.light-mode .text-gold       { color: #8A6E2E !important; }
+.light-mode .bg-gold\/10     { background-color: rgba(201, 168, 76, 0.18) !important; }
+.light-mode .bg-gold\/15     { background-color: rgba(201, 168, 76, 0.22) !important; }
+.light-mode .bg-gold\/25     { background-color: rgba(201, 168, 76, 0.30) !important; }
+.light-mode .bg-gold\/40     { background-color: rgba(201, 168, 76, 0.40) !important; }
+.light-mode .border-gold\/20 { border-color: rgba(168, 137, 58, 0.45) !important; }
+.light-mode .border-gold\/30 { border-color: rgba(168, 137, 58, 0.55) !important; }
+
+/* ── 8. Placeholder ───────────────────────────────────────────────────── */
+.light-mode .placeholder-muted::placeholder { color: #6B7280 !important; }
+
+/* ── 9. Status colors (amber/blue/green/emerald/red/rose/purple)
+   Blue family digeser ke nilai indigo agar nyambung dengan brand baru.
+   Green family digeser ke mint (#10B981) sebagai pasangan fresh accent. */
+.light-mode .bg-amber-400\/10 { background-color: rgba(245, 158, 11, 0.16) !important; }
+.light-mode .bg-blue-400\/10  { background-color: rgba(99,  102, 241, 0.14) !important; }
+.light-mode .bg-green-400\/10 { background-color: rgba(16,  185, 129, 0.14) !important; }
+.light-mode .border-amber-400\/20 { border-color: rgba(180, 130, 0,  0.40) !important; }
+.light-mode .border-blue-400\/20  { border-color: rgba(79,  70,  229, 0.40) !important; }
+.light-mode .border-green-400\/20 { border-color: rgba(16,  185, 129, 0.40) !important; }
+
+.light-mode .text-amber-400   { color: #B45309 !important; }
+.light-mode .text-blue-400    { color: #4F46E5 !important; }
+.light-mode .text-green-400   { color: #059669 !important; }
 .light-mode .text-emerald-400 { color: #047857 !important; }
 .light-mode .text-red-400     { color: #B91C1C !important; }
-/* Status pill background on dark cards */
-.light-mode .bg-red-500\/10    { background-color: rgba(239, 68, 68, 0.14) !important; }
-.light-mode .bg-amber-500\/10  { background-color: rgba(245, 158, 11, 0.14) !important; }
-.light-mode .bg-amber-500\/15  { background-color: rgba(245, 158, 11, 0.20) !important; }
-.light-mode .bg-emerald-500\/10{ background-color: rgba(16, 185, 129, 0.14) !important; }
-.light-mode .bg-emerald-500\/15{ background-color: rgba(16, 185, 129, 0.20) !important; }
-.light-mode .bg-emerald-500\/25{ background-color: rgba(16, 185, 129, 0.30) !important; }
-.light-mode .bg-blue-500\/10   { background-color: rgba(59, 130, 246, 0.14) !important; }
-.light-mode .bg-blue-500\/15   { background-color: rgba(59, 130, 246, 0.20) !important; }
-.light-mode .bg-blue-500\/25   { background-color: rgba(59, 130, 246, 0.30) !important; }
-.light-mode .border-amber-500\/30  { border-color: rgba(180, 130, 0, 0.55) !important; }
-.light-mode .border-emerald-500\/30{ border-color: rgba(20, 130, 60, 0.55) !important; }
-.light-mode .border-blue-500\/30   { border-color: rgba(40, 100, 180, 0.55) !important; }
-.light-mode .border-gold\/30       { border-color: rgba(168, 137, 58, 0.55) !important; }
+
+.light-mode .bg-red-500\/10     { background-color: rgba(239, 68,  68,  0.14) !important; }
+.light-mode .bg-amber-500\/10   { background-color: rgba(245, 158, 11,  0.14) !important; }
+.light-mode .bg-amber-500\/15   { background-color: rgba(245, 158, 11,  0.20) !important; }
+.light-mode .bg-emerald-500\/10 { background-color: rgba(16,  185, 129, 0.14) !important; }
+.light-mode .bg-emerald-500\/15 { background-color: rgba(16,  185, 129, 0.20) !important; }
+.light-mode .bg-emerald-500\/25 { background-color: rgba(16,  185, 129, 0.30) !important; }
+.light-mode .bg-blue-500\/10    { background-color: rgba(99,  102, 241, 0.10) !important; }
+.light-mode .bg-blue-500\/15    { background-color: rgba(99,  102, 241, 0.16) !important; }
+.light-mode .bg-blue-500\/25    { background-color: rgba(99,  102, 241, 0.24) !important; }
+.light-mode .bg-rose-500\/15    { background-color: rgba(244, 63,  94,  0.20) !important; }
+.light-mode .border-amber-500\/30   { border-color: rgba(180, 130, 0,   0.50) !important; }
+.light-mode .border-emerald-500\/30 { border-color: rgba(16,  185, 129, 0.50) !important; }
+.light-mode .border-blue-500\/30    { border-color: rgba(79,  70,  229, 0.55) !important; }
+.light-mode .border-rose-500\/30    { border-color: rgba(190, 18,  60,  0.55) !important; }
+
 .light-mode .text-emerald-300 { color: #047857 !important; }
-.light-mode .text-blue-300    { color: #1E40AF !important; }
+.light-mode .text-blue-300    { color: #4338CA !important; }
 .light-mode .text-amber-300   { color: #B45309 !important; }
 .light-mode .text-amber-200   { color: #92400E !important; }
 .light-mode .text-amber-100   { color: #92400E !important; }
 .light-mode .text-rose-300    { color: #BE123C !important; }
-.light-mode .text-green-300   { color: #047857 !important; }
+.light-mode .text-green-300   { color: #059669 !important; }
 .light-mode .text-slate-400   { color: #475569 !important; }
-.light-mode .bg-rose-500\/15  { background-color: rgba(244, 63, 94, 0.20) !important; }
-.light-mode .border-rose-500\/30 { border-color: rgba(190, 18, 60, 0.55) !important; }
 
-/* ── green-500 family (Badge success, tombol share WhatsApp) ── */
-.light-mode .text-green-300 { color: #15803D !important; }
-.light-mode .bg-green-500\/15 { background-color: rgba(34, 197, 94, 0.18) !important; }
-.light-mode .bg-green-500\/25 { background-color: rgba(34, 197, 94, 0.28) !important; }
-.light-mode .hover\:bg-green-500\/25:hover { background-color: rgba(34, 197, 94, 0.30) !important; }
-.light-mode .border-green-500\/20 { border-color: rgba(20, 130, 60, 0.45) !important; }
-.light-mode .border-green-500\/30 { border-color: rgba(20, 130, 60, 0.55) !important; }
+/* green-500 family (Badge success, tombol share WhatsApp) — digeser ke mint */
+.light-mode .bg-green-500\/15 { background-color: rgba(16, 185, 129, 0.18) !important; }
+.light-mode .bg-green-500\/25 { background-color: rgba(16, 185, 129, 0.28) !important; }
+.light-mode .hover\:bg-green-500\/25:hover { background-color: rgba(16, 185, 129, 0.30) !important; }
+.light-mode .border-green-500\/20 { border-color: rgba(16, 185, 129, 0.40) !important; }
+.light-mode .border-green-500\/30 { border-color: rgba(16, 185, 129, 0.50) !important; }
 
-/* ── indigo-500 family (tombol share Facebook) ── */
-.light-mode .text-indigo-300 { color: #4338CA !important; }
-.light-mode .bg-indigo-500\/15 { background-color: rgba(99, 102, 241, 0.18) !important; }
-.light-mode .bg-indigo-500\/25 { background-color: rgba(99, 102, 241, 0.28) !important; }
-.light-mode .hover\:bg-indigo-500\/25:hover { background-color: rgba(99, 102, 241, 0.30) !important; }
+/* indigo-500 family (tombol share Facebook — kini = brand color) */
+.light-mode .text-indigo-300       { color: #4338CA !important; }
+.light-mode .bg-indigo-500\/15     { background-color: rgba(99, 102, 241, 0.18) !important; }
+.light-mode .bg-indigo-500\/25     { background-color: rgba(99, 102, 241, 0.28) !important; }
+.light-mode .hover\:bg-indigo-500\/25:hover { background-color: rgba(99, 102, 241, 0.32) !important; }
 .light-mode .border-indigo-500\/30 { border-color: rgba(67, 56, 202, 0.55) !important; }
 
-/* ── purple-500 family (Badge purple, KPI komisi diterima) ── */
-.light-mode .text-purple-400 { color: #7E22CE !important; }
-.light-mode .bg-purple-500\/15 { background-color: rgba(168, 85, 247, 0.18) !important; }
+/* purple-500 family (Badge purple, KPI komisi diterima) */
+.light-mode .text-purple-400       { color: #7E22CE !important; }
+.light-mode .bg-purple-500\/15     { background-color: rgba(168, 85, 247, 0.18) !important; }
 .light-mode .border-purple-500\/20 { border-color: rgba(126, 34, 206, 0.45) !important; }
 
-/* Hover state biru (tombol share Telegram) */
-.light-mode .hover\:bg-blue-500\/25:hover { background-color: rgba(59, 130, 246, 0.30) !important; }
+/* Hover state biru (tombol share Telegram) — digeser ke brand indigo */
+.light-mode .hover\:bg-blue-500\/25:hover { background-color: rgba(99, 102, 241, 0.30) !important; }
 
 /* Bar grafik biru (rujukan) supaya kontras di latar putih */
-.light-mode .bg-blue-400\/50 { background-color: rgba(37, 99, 235, 0.55) !important; }
+.light-mode .bg-blue-400\/50 { background-color: rgba(67, 56, 202, 0.55) !important; }
 
-/* Ring offset (Avatar dengan prop `ring`) — di light, offset hitam jadi
-   "blok hitam" di sekeliling avatar. Samakan dengan latar light supaya halus. */
-.light-mode .ring-offset-dark { --tw-ring-offset-color: #F0EFE9 !important; }
+/* ── 10. Ring offsets (Avatar dengan ring) ─────────────────────────────
+   Tanpa ini, ring-offset hitam jadi "blok hitam" di sekeliling avatar di light. */
+.light-mode .ring-offset-dark         { --tw-ring-offset-color: #F4F4FA !important; }
 .light-mode .ring-offset-dark-surface { --tw-ring-offset-color: #FFFFFF !important; }
-.light-mode .border-dark-surface { border-color: #FFFFFF !important; }
-
-/* Floating hint backdrop di light */
-.light-mode .bg-dark-card\/90 { background-color: rgba(245, 244, 239, 0.95) !important; }
-.light-mode .bg-dark-card\/80 { background-color: rgba(245, 244, 239, 0.90) !important; }
-
-/* FAB / button states yang pakai bg-gold tetap konsisten di light */
-.light-mode .bg-gold\/15 { background-color: rgba(201, 168, 76, 0.25) !important; }
-.light-mode .bg-gold\/25 { background-color: rgba(201, 168, 76, 0.35) !important; }
-.light-mode .bg-gold\/40 { background-color: rgba(201, 168, 76, 0.45) !important; }
 
 /* ── Accessibility & Keyboard Navigation ──────────────────────────────────── */
 
-/* Skip to main content */
+/* Skip to main content — Phase A: dipindah ke brand indigo */
 .skip-link {
   position: absolute;
   top: -50px;
   left: 8px;
   z-index: 99999;
-  background: #C9A84C;
-  color: #0A0A0A;
+  background: #6366F1;
+  color: #FFFFFF;
   font-weight: 700;
   font-size: 0.875rem;
   padding: 10px 20px;
@@ -350,13 +344,13 @@
 }
 .skip-link:focus {
   top: 0;
-  outline: 3px solid #E8C875;
+  outline: 3px solid #A5A2FF;
   outline-offset: 2px;
 }
 
-/* Visible focus ring for keyboard navigation */
+/* Visible focus ring for keyboard navigation — brand indigo */
 :focus-visible {
-  outline: 2px solid #C9A84C;
+  outline: 2px solid #6366F1;
   outline-offset: 2px;
   border-radius: 6px;
 }
@@ -374,7 +368,7 @@ select:focus-visible,
 textarea:focus-visible,
 [role="option"]:focus-visible,
 [role="button"]:focus-visible {
-  outline: 2px solid #C9A84C;
+  outline: 2px solid #6366F1;
   outline-offset: 2px;
 }
 
