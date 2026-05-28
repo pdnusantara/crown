@@ -1,13 +1,11 @@
 import React, { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Bell, Search, Menu, Scissors } from 'lucide-react'
+import { Bell, Search, Menu, Scissors, ChevronDown } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
-import { useTenantStore } from '../../store/tenantStore.js'
 import { useNotificationStore } from '../../store/notificationStore.js'
 import { useBroadcasts } from '../../hooks/useBroadcasts.js'
 import { NotificationDrawer } from '../ui/NotificationDrawer.jsx'
-import Avatar from '../ui/Avatar.jsx'
 
 const pageTitleKeys = {
   '/super-admin/dashboard': 'nav.dashboard',
@@ -40,9 +38,15 @@ const pageTitleKeys = {
   '/customer/loyalty':      'nav.loyalty',
 }
 
+// Inisial nama untuk avatar — 1-2 huruf kapital, fallback "?" kalau kosong.
+function initialsOf(name) {
+  if (!name) return '?'
+  const parts = String(name).trim().split(/\s+/).slice(0, 2)
+  return parts.map(p => p[0]?.toUpperCase() || '').join('') || '?'
+}
+
 export const TopBar = ({ onMenuClick, onSearchClick }) => {
   const { user } = useAuthStore()
-  const { getTenantById } = useTenantStore()
   const { getUnreadCount } = useNotificationStore()
   const { t } = useTranslation()
   const location = useLocation()
@@ -51,8 +55,6 @@ export const TopBar = ({ onMenuClick, onSearchClick }) => {
 
   const profilePath = user?.role === 'super_admin' ? '/super-admin/profile'
     : user?.role === 'tenant_admin' ? '/admin/settings'
-    : user?.role === 'kasir' ? null
-    : user?.role === 'barber' ? null
     : null
 
   const { data: broadcasts = [] } = useBroadcasts(user?.tenantId)
@@ -69,54 +71,128 @@ export const TopBar = ({ onMenuClick, onSearchClick }) => {
     return 'SembaPOS'
   }
 
+  const firstName = user?.name?.split(/\s+/)[0] || 'Pengguna'
+
   return (
     <>
-      <header className="h-14 bg-dark-surface border-b border-dark-border flex items-center justify-between px-4 gap-3 sticky top-0 z-30">
-        <div className="flex items-center gap-3">
+      <header
+        className="
+          h-14 flex items-center justify-between px-4 gap-3 sticky top-0 z-30
+          bg-dark-surface border-b border-dark-border
+          relative
+        "
+      >
+        {/* Aksen brand 2px di bawah header (modern SaaS) — selalu ada,
+            tanpa mengganggu border bawah utama. */}
+        <span
+          aria-hidden="true"
+          className="absolute left-0 bottom-[-1px] h-[2px] w-24 bg-brand rounded-r-full"
+        />
+
+        {/* ── Kiri: menu (mobile) + breadcrumb/title ──────────────────── */}
+        <div className="flex items-center gap-2 min-w-0">
           {onMenuClick && (
             <button
+              type="button"
               onClick={onMenuClick}
-              className="p-2 rounded-lg text-muted hover:text-off-white hover:bg-dark-card transition-colors"
+              className="p-2 -ml-1 rounded-lg text-muted hover:text-off-white hover:bg-dark-card transition-colors flex-shrink-0"
+              aria-label="Buka menu"
             >
               <Menu className="w-5 h-5" />
             </button>
           )}
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-gold flex items-center justify-center">
-              <Scissors className="w-3.5 h-3.5 text-dark" />
+          {/* Breadcrumb compact + brand mark */}
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-6 h-6 rounded-md bg-brand-gradient flex items-center justify-center flex-shrink-0 shadow-brand">
+              <Scissors className="w-3.5 h-3.5 text-white" />
             </div>
-            <h1 className="font-display font-semibold text-off-white">{getPageTitle()}</h1>
+            <span className="hidden sm:inline text-xs text-muted">Beranda</span>
+            <ChevronDown className="hidden sm:inline w-3 h-3 text-muted/60 -rotate-90" aria-hidden="true" />
+            <h1 className="font-display font-semibold text-off-white truncate">
+              {getPageTitle()}
+            </h1>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* ── Kanan: search · bell · user ───────────────────────────── */}
+        <div className="flex items-center gap-1">
           {onSearchClick && (
             <button
+              type="button"
               onClick={onSearchClick}
-              className="p-2 rounded-lg text-muted hover:text-off-white hover:bg-dark-card transition-colors"
+              className="
+                hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg
+                bg-dark-card border border-dark-border
+                text-xs text-muted hover:text-off-white hover:border-brand/40
+                transition-all min-w-[200px]
+              "
               title={`${t('common.search')} (Ctrl+K)`}
+            >
+              <Search className="w-3.5 h-3.5" />
+              <span className="flex-1 text-left">Cari di mana saja…</span>
+              <kbd className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-dark-surface border border-dark-border text-muted">⌘K</kbd>
+            </button>
+          )}
+          {/* Search ikon-only di sempit (mobile) */}
+          {onSearchClick && (
+            <button
+              type="button"
+              onClick={onSearchClick}
+              className="md:hidden p-2 rounded-lg text-muted hover:text-off-white hover:bg-dark-card transition-colors"
+              title={`${t('common.search')} (Ctrl+K)`}
+              aria-label="Cari"
             >
               <Search className="w-5 h-5" />
             </button>
           )}
+
+          {/* Notifikasi */}
           <button
+            type="button"
             onClick={() => setNotifOpen(true)}
             className="p-2 rounded-lg text-muted hover:text-off-white hover:bg-dark-card transition-colors relative"
             aria-label="Notifikasi"
           >
             <Bell className="w-5 h-5" />
             {totalUnread > 0 && (
-              <span className="absolute top-1 right-1 min-w-[16px] h-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white px-0.5">
+              <span
+                className="absolute top-1 right-1 min-w-[16px] h-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white px-0.5"
+                style={{ boxShadow: '0 0 0 2px var(--tw-bg-opacity, transparent)' }}
+              >
                 {totalUnread > 9 ? '9+' : totalUnread}
               </span>
             )}
           </button>
+
+          {/* User button — avatar + nama + chevron (terlihat seperti dropdown
+              trigger; click → profile bila profilePath ada, kalau tidak ya
+              no-op visual). Di mobile ikon-only. */}
           <button
+            type="button"
             onClick={profilePath ? () => navigate(profilePath) : undefined}
-            className={`rounded-full transition-opacity ${profilePath ? 'hover:opacity-75 cursor-pointer' : 'cursor-default'}`}
-            title={profilePath ? 'Profil & Pengaturan' : undefined}
+            className={`
+              flex items-center gap-2 pl-1 pr-2 py-1 rounded-full
+              border border-transparent
+              ${profilePath
+                ? 'hover:border-brand/40 hover:bg-dark-card cursor-pointer'
+                : 'cursor-default'}
+              transition-all
+            `}
+            title={profilePath ? 'Profil & Pengaturan' : user?.name}
+            aria-label="Akun pengguna"
           >
-            <Avatar name={user?.name} size="sm" />
+            <div
+              className="w-8 h-8 rounded-full bg-brand-gradient flex items-center justify-center flex-shrink-0 shadow-brand text-white font-bold text-xs"
+              aria-hidden="true"
+            >
+              {initialsOf(user?.name)}
+            </div>
+            <span className="hidden sm:inline text-sm font-semibold text-off-white truncate max-w-[120px]">
+              {firstName}
+            </span>
+            {profilePath && (
+              <ChevronDown className="hidden sm:inline w-3.5 h-3.5 text-muted flex-shrink-0" aria-hidden="true" />
+            )}
           </button>
         </div>
       </header>

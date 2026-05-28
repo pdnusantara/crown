@@ -52,13 +52,12 @@ const navConfig = {
 const ROLES_WITH_MORE = ['super_admin', 'tenant_admin', 'kasir']
 
 // Kerangka satu tab — dipakai NavLink (rute) maupun tombol "Lainnya".
+// Modernisasi Fase B: aksen aktif pakai brand indigo (bukan gold), strip kecil
+// di ATAS tab sebagai indicator (visual lebih modern dari dot di bawah).
 function TabIcon({ icon: Icon, active, badge }) {
   return (
-    <div className={`relative p-1.5 rounded-xl transition-all ${active ? 'bg-gold/15' : ''}`}>
+    <div className={`relative p-1.5 rounded-xl transition-all ${active ? 'bg-brand/15' : ''}`}>
       <Icon className="w-5 h-5" />
-      {active && (
-        <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-gold rounded-full" />
-      )}
       {badge > 0 && (
         <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
           {badge > 99 ? '99+' : badge}
@@ -94,8 +93,8 @@ export const BottomNav = ({ onMoreClick }) => {
   const inMore = showMore && !navItems.some(i => location.pathname.startsWith(i.path))
 
   const tabClass = (active) => `
-    flex-1 min-w-0 flex flex-col items-center gap-0.5 py-2 px-1 rounded-xl transition-all
-    ${active ? 'text-gold' : 'text-muted hover:text-off-white'}
+    relative flex-1 min-w-0 flex flex-col items-center gap-0.5 py-2 px-1 transition-all
+    ${active ? 'text-brand-strong dark:text-brand-light font-semibold' : 'text-muted hover:text-off-white'}
   `
 
   return (
@@ -109,6 +108,14 @@ export const BottomNav = ({ onMoreClick }) => {
           >
             {({ isActive }) => (
               <>
+                {/* Strip aksen 2px di atas tab saat aktif (modern Linear-style),
+                    menggantikan dot di bawah. */}
+                {isActive && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2px] bg-brand rounded-b-full"
+                  />
+                )}
                 <TabIcon icon={item.icon} active={isActive} badge={badgeFor(item)} />
                 <span className="text-[11px] font-medium truncate max-w-full">
                   {t(item.labelKey)}
@@ -125,6 +132,12 @@ export const BottomNav = ({ onMoreClick }) => {
             aria-label={t('common.more')}
             className={tabClass(inMore)}
           >
+            {inMore && (
+              <span
+                aria-hidden="true"
+                className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2px] bg-brand rounded-b-full"
+              />
+            )}
             <TabIcon icon={Menu} active={inMore} badge={0} />
             <span className="text-[11px] font-medium truncate max-w-full">
               {t('common.more')}
