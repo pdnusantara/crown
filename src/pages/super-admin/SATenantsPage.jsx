@@ -30,7 +30,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const PACKAGE_COLORS = {
   Basic:      'text-blue-400 bg-blue-400/10 border-blue-400/20',
-  Pro:        'text-gold bg-gold/10 border-gold/20',
+  Pro:        'text-brand bg-brand/10 border-brand/20',
   Enterprise: 'text-purple-400 bg-purple-400/10 border-purple-400/20',
 }
 
@@ -134,7 +134,7 @@ function TimezoneSelect({ value, onChange, label = 'Zona Waktu' }) {
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/50"
+        className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/50"
       >
         {FALLBACK_TIMEZONES.map(tz => (
           <option key={tz.value} value={tz.value}>{tz.label}</option>
@@ -188,14 +188,14 @@ function OnboardingWizard({ onClose, onComplete, submitting, packageList = [] })
       <div className="flex items-center gap-2">
         {WIZARD_STEPS.map((label, i) => (
           <React.Fragment key={i}>
-            <div className={`flex items-center gap-2 ${i <= step ? 'text-gold' : 'text-muted'}`}>
-              <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all ${i < step ? 'border-gold bg-gold text-dark' : i === step ? 'border-gold text-gold' : 'border-dark-border text-muted'}`}>
+            <div className={`flex items-center gap-2 ${i <= step ? 'text-brand' : 'text-muted'}`}>
+              <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all ${i < step ? 'border-brand bg-brand text-dark' : i === step ? 'border-brand text-brand' : 'border-dark-border text-muted'}`}>
                 {i < step ? <Check size={12} /> : i + 1}
               </div>
               <span className="text-xs font-medium hidden sm:block">{label}</span>
             </div>
             {i < WIZARD_STEPS.length - 1 && (
-              <div className={`flex-1 h-px ${i < step ? 'bg-gold/50' : 'bg-dark-border'}`} />
+              <div className={`flex-1 h-px ${i < step ? 'bg-brand/50' : 'bg-dark-border'}`} />
             )}
           </React.Fragment>
         ))}
@@ -229,14 +229,14 @@ function OnboardingWizard({ onClose, onComplete, submitting, packageList = [] })
             <button
               key={pkg.name}
               onClick={() => setForm(f => ({ ...f, package: pkg.name }))}
-              className={`w-full p-4 rounded-2xl border text-left transition-all ${form.package === pkg.name ? 'border-gold bg-gold/5' : 'border-dark-border hover:border-gold/30'}`}
+              className={`w-full p-4 rounded-2xl border text-left transition-all ${form.package === pkg.name ? 'border-brand bg-brand/5' : 'border-dark-border hover:border-brand/30'}`}
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${PACKAGE_COLORS[pkg.name] || 'text-muted border-dark-border'}`}>{pkg.name}</span>
-                  {form.package === pkg.name && <Check size={14} className="text-gold" />}
+                  {form.package === pkg.name && <Check size={14} className="text-brand" />}
                 </div>
-                <span className="text-gold font-semibold text-sm">{formatRupiah(pkg.price)}<span className="text-xs text-muted font-normal">/bln</span></span>
+                <span className="text-brand font-semibold text-sm">{formatRupiah(pkg.price)}<span className="text-xs text-muted font-normal">/bln</span></span>
               </div>
               <div className="flex gap-4 text-xs text-muted flex-wrap">
                 <span>• Maks {pkg.maxBranches} cabang</span>
@@ -638,7 +638,7 @@ export default function SATenantsPage() {
                 onClick={() => setStatusFilter(kpi.filterKey)}
                 className="w-full text-left"
               >
-                <Card className={`p-4 transition-all hover:border-gold/30 ${statusFilter === kpi.filterKey ? 'border-gold/40 bg-gold/5' : ''}`}>
+                <Card className={`p-4 transition-all hover:border-brand/30 ${statusFilter === kpi.filterKey ? 'border-brand/40 bg-brand/5' : ''}`}>
                   <div className="flex items-center justify-between mb-1">
                     <p className="text-xs text-muted truncate">{kpi.label}</p>
                     <kpi.icon size={14} className={`${kpi.color} flex-shrink-0`} />
@@ -655,7 +655,7 @@ export default function SATenantsPage() {
       {!isLoading && tenants.length > 0 && (
         <div className="grid grid-cols-3 gap-3">
           {[
-            { icon: Building2,   label: 'Total Cabang', value: stats.totalBranches, color: 'text-gold' },
+            { icon: Building2,   label: 'Total Cabang', value: stats.totalBranches, color: 'text-brand' },
             { icon: Users,       label: 'Total Staf',   value: stats.totalStaff,    color: 'text-blue-400' },
             { icon: TrendingUp,  label: 'Revenue MTD',  value: formatRupiahShort(stats.totalRevenue), color: 'text-green-400' },
           ].map(s => (
@@ -702,13 +702,13 @@ export default function SATenantsPage() {
                 placeholder="Cari nama, slug, atau email..."
                 value={searchText}
                 onChange={e => setSearchText(e.target.value)}
-                className="w-full bg-dark-surface border border-dark-border rounded-xl pl-9 pr-4 py-2 text-sm text-off-white placeholder-muted focus:outline-none focus:border-gold/50"
+                className="w-full bg-dark-surface border border-dark-border rounded-xl pl-9 pr-4 py-2 text-sm text-off-white placeholder-muted focus:outline-none focus:border-brand/50"
               />
             </div>
             <select
               value={pkgFilter}
               onChange={e => setPkgFilter(e.target.value)}
-              className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-gold/50"
+              className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-brand/50"
               aria-label="Filter paket"
             >
               <option value="all">Semua Paket</option>
@@ -719,7 +719,7 @@ export default function SATenantsPage() {
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value)}
-              className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-gold/50"
+              className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-brand/50"
               aria-label="Urutkan"
             >
               {SORT_OPTIONS.map(s => (
@@ -739,12 +739,12 @@ export default function SATenantsPage() {
                   onClick={() => setStatusFilter(pill.key)}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
                     active
-                      ? 'bg-gold/15 text-gold border-gold/40'
+                      ? 'bg-brand/15 text-brand border-brand/40'
                       : 'text-muted border-dark-border hover:text-off-white hover:border-dark-border/80'
                   }`}
                 >
                   {pill.label}
-                  <span className={`ml-1.5 ${active ? 'text-gold/70' : 'text-muted/60'}`}>{count}</span>
+                  <span className={`ml-1.5 ${active ? 'text-brand/70' : 'text-muted/60'}`}>{count}</span>
                 </button>
               )
             })}
@@ -767,7 +767,7 @@ export default function SATenantsPage() {
                     type="checkbox"
                     checked={allFilteredSelected}
                     onChange={selectAllFiltered}
-                    className="w-4 h-4 rounded border-dark-border bg-dark-surface accent-gold"
+                    className="w-4 h-4 rounded border-dark-border bg-dark-surface accent-brand"
                   />
                   <span className="text-xs text-muted">
                     {selectedIds.size > 0
@@ -853,7 +853,7 @@ export default function SATenantsPage() {
                 transition={{ delay: Math.min(i * 0.03, 0.25) }}
                 className={tenant.isSuspended ? 'opacity-65' : ''}
               >
-                <Card className={`p-5 card-hover ${cardAccent(tenant)} ${checked ? 'ring-1 ring-gold/40' : ''}`}>
+                <Card className={`p-5 card-hover ${cardAccent(tenant)} ${checked ? 'ring-1 ring-brand/40' : ''}`}>
                   {/* Card header */}
                   <div className="flex items-start justify-between mb-3 gap-3">
                     <div className="flex items-start gap-3 min-w-0 flex-1">
@@ -862,13 +862,13 @@ export default function SATenantsPage() {
                         checked={checked}
                         onChange={() => toggleSelect(tenant.id)}
                         onClick={e => e.stopPropagation()}
-                        className="mt-1 w-4 h-4 rounded border-dark-border bg-dark-surface accent-gold flex-shrink-0"
+                        className="mt-1 w-4 h-4 rounded border-dark-border bg-dark-surface accent-brand flex-shrink-0"
                         aria-label={`Pilih ${tenant.name}`}
                       />
-                      <div className={`w-11 h-11 flex-shrink-0 rounded-2xl flex items-center justify-center border ${tenant.isSuspended ? 'bg-red-500/10 border-red-500/20' : 'bg-gold/10 border-gold/20'}`}>
+                      <div className={`w-11 h-11 flex-shrink-0 rounded-2xl flex items-center justify-center border ${tenant.isSuspended ? 'bg-red-500/10 border-red-500/20' : 'bg-brand/10 border-brand/20'}`}>
                         {tenant.logo
                           ? <img src={tenant.logo} alt={tenant.name} className="w-full h-full object-cover rounded-2xl" />
-                          : <span className={`font-display text-lg font-bold ${tenant.isSuspended ? 'text-red-400' : 'text-gold'}`}>{(tenant.name || '?')[0]}</span>
+                          : <span className={`font-display text-lg font-bold ${tenant.isSuspended ? 'text-red-400' : 'text-brand'}`}>{(tenant.name || '?')[0]}</span>
                         }
                       </div>
                       <div className="min-w-0 flex-1">
@@ -909,7 +909,7 @@ export default function SATenantsPage() {
                     </div>
                     <div className="bg-dark-surface rounded-xl p-2 text-center">
                       <TrendingUp className="w-3.5 h-3.5 text-muted mx-auto mb-1" />
-                      <p className="text-base font-bold text-gold truncate">
+                      <p className="text-base font-bold text-brand truncate">
                         {tenant.monthlyRevenue > 0 ? formatRupiahShort(tenant.monthlyRevenue).replace('Rp', '') : '—'}
                       </p>
                       <p className="text-[10px] text-muted">MTD</p>
@@ -932,7 +932,7 @@ export default function SATenantsPage() {
                         href={tenantLoginUrl(tenant.slug)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="p-1.5 rounded-lg text-muted hover:text-gold hover:bg-gold/10 transition-colors"
+                        className="p-1.5 rounded-lg text-muted hover:text-brand hover:bg-brand/10 transition-colors"
                         title="Buka login tenant"
                         aria-label={`Buka ${tenant.name} di tab baru`}
                       >
@@ -940,7 +940,7 @@ export default function SATenantsPage() {
                       </a>
                       <button
                         onClick={() => handleImpersonate(tenant)}
-                        className="p-1.5 rounded-lg text-muted hover:text-gold hover:bg-gold/10 transition-colors"
+                        className="p-1.5 rounded-lg text-muted hover:text-brand hover:bg-brand/10 transition-colors"
                         title="Login sebagai tenant"
                         aria-label={`Impersonate ${tenant.name}`}
                       >
@@ -1096,7 +1096,7 @@ export default function SATenantsPage() {
                   </button>
                   <button
                     onClick={() => { navigator.clipboard.writeText(pwdResult.password); toast.success('Password disalin') }}
-                    className="p-1 rounded text-muted hover:text-gold transition-colors flex-shrink-0"
+                    className="p-1 rounded text-muted hover:text-brand transition-colors flex-shrink-0"
                     title="Salin"
                   >
                     <Copy size={15} />
@@ -1122,7 +1122,7 @@ export default function SATenantsPage() {
               </div>
               <div>
                 <label className="block text-xs text-muted mb-1.5">Password Baru <span className="text-muted/50">(kosongkan untuk generate otomatis)</span></label>
-                <div className="flex items-center gap-2 p-3 bg-dark-surface border border-dark-border rounded-xl focus-within:border-gold/50 transition-colors">
+                <div className="flex items-center gap-2 p-3 bg-dark-surface border border-dark-border rounded-xl focus-within:border-brand/50 transition-colors">
                   <input
                     type={pwdVisible ? 'text' : 'password'}
                     value={pwdInput}

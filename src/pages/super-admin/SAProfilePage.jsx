@@ -77,7 +77,7 @@ export default function SAProfilePage() {
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h1 className="text-2xl font-display font-bold gold-text">{t('superAdmin.profile.pageTitle')}</h1>
+        <h1 className="text-2xl font-display font-bold brand-text">{t('superAdmin.profile.pageTitle')}</h1>
         <p className="text-muted text-sm mt-1">{t('superAdmin.profile.pageSubtitle')}</p>
       </div>
 
@@ -86,7 +86,7 @@ export default function SAProfilePage() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <User size={15} className="text-gold" />
+              <User size={15} className="text-brand" />
               <h3 className="font-semibold text-off-white">{t('superAdmin.profile.profileInfo')}</h3>
             </div>
           </CardHeader>
@@ -96,7 +96,7 @@ export default function SAProfilePage() {
               <div>
                 <p className="text-off-white font-semibold">{user?.name}</p>
                 <p className="text-xs text-muted capitalize">{user?.role?.replace('_', ' ')}</p>
-                <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full bg-gold/10 border border-gold/30 text-gold font-semibold">
+                <span className="inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full bg-brand/10 border border-brand/30 text-brand font-semibold">
                   {t('superAdmin.profile.roleBadge')}
                 </span>
               </div>
@@ -113,7 +113,7 @@ export default function SAProfilePage() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Lock size={15} className="text-gold" />
+              <Lock size={15} className="text-brand" />
               <h3 className="font-semibold text-off-white">{t('superAdmin.profile.changePassword')}</h3>
             </div>
           </CardHeader>
@@ -181,7 +181,7 @@ export default function SAProfilePage() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Shield size={15} className="text-gold" />
+              <Shield size={15} className="text-brand" />
               <h3 className="font-semibold text-off-white">{t('superAdmin.profile.twoFATitle')}</h3>
             </div>
           </CardHeader>
@@ -215,13 +215,13 @@ export default function SAProfilePage() {
                     ))}
                   </div>
                 </div>
-                <p className="text-xs text-muted text-center">{t('superAdmin.profile.manualCode')} <span className="font-mono text-gold">BARB-EROS-SA01</span></p>
+                <p className="text-xs text-muted text-center">{t('superAdmin.profile.manualCode')} <span className="font-mono text-brand">BARB-EROS-SA01</span></p>
                 <div className="flex gap-2">
                   <input
                     value={otpCode}
                     onChange={e => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                     placeholder={t('superAdmin.profile.otpPlaceholder')}
-                    className="flex-1 bg-dark-surface border border-dark-border rounded-xl px-3 py-2 text-sm text-off-white placeholder-muted focus:outline-none focus:border-gold/50"
+                    className="flex-1 bg-dark-surface border border-dark-border rounded-xl px-3 py-2 text-sm text-off-white placeholder-muted focus:outline-none focus:border-brand/50"
                     maxLength={6}
                   />
                   <Button size="sm" onClick={handleVerify2FA}>{t('superAdmin.profile.verifyBtn')}</Button>
@@ -237,13 +237,13 @@ export default function SAProfilePage() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <LogOut size={15} className="text-gold" />
+              <LogOut size={15} className="text-brand" />
               <h3 className="font-semibold text-off-white">{t('superAdmin.profile.activeSessions')}</h3>
             </div>
           </CardHeader>
           <CardBody className="space-y-3">
             {sessions.map(s => (
-              <div key={s.id} className={`flex items-center justify-between p-3 rounded-xl border ${s.current ? 'border-gold/30 bg-gold/5' : 'border-dark-border'}`}>
+              <div key={s.id} className={`flex items-center justify-between p-3 rounded-xl border ${s.current ? 'border-brand/30 bg-brand/5' : 'border-dark-border'}`}>
                 <div>
                   <p className="text-sm font-medium text-off-white">{s.device}</p>
                   <p className="text-xs text-muted mt-0.5">{s.ip} · {s.location} · {t(`superAdmin.profile.${s.timeKey}`)}</p>

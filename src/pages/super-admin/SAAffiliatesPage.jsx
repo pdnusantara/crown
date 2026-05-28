@@ -127,7 +127,7 @@ export default function SAAffiliatesPage() {
 
       {/* KPI */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard label="Total Mitra"      value={stats?.total ?? '—'}   color="text-gold"      icon={Users}     loading={statsLoading} delay={0} />
+        <KpiCard label="Total Mitra"      value={stats?.total ?? '—'}   color="text-brand"      icon={Users}     loading={statsLoading} delay={0} />
         <KpiCard label="Mitra Aktif"      value={stats?.active ?? '—'}  color="text-green-400" icon={ShieldCheck} loading={statsLoading} delay={0.05} />
         <KpiCard label="Menunggu Persetujuan" value={stats?.pending ?? '—'} color="text-amber-400" icon={Clock} loading={statsLoading} delay={0.10} />
         <KpiCard label="Tenant Rujukan"   value={stats?.totalReferrals ?? '—'} color="text-blue-400" icon={UserPlus} loading={statsLoading} delay={0.15} />
@@ -143,7 +143,7 @@ export default function SAAffiliatesPage() {
         <div className="flex flex-wrap items-center gap-2">
           <Filter size={13} className="text-muted flex-shrink-0" />
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-gold/40">
+            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-brand/40">
             {STATUS_OPTS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
           </select>
           <div className="relative flex-1 min-w-[180px]">
@@ -153,7 +153,7 @@ export default function SAAffiliatesPage() {
               onChange={e => setSearch(e.target.value)}
               placeholder="Cari kode, nama, email…"
               aria-label="Cari affiliate"
-              className="w-full bg-dark-surface border border-dark-border rounded-xl pl-8 pr-3 py-1.5 text-xs text-off-white placeholder:text-muted focus:outline-none focus:border-gold/40"
+              className="w-full bg-dark-surface border border-dark-border rounded-xl pl-8 pr-3 py-1.5 text-xs text-off-white placeholder:text-muted focus:outline-none focus:border-brand/40"
             />
           </div>
           {(filterStatus !== 'all' || debounced) && (
@@ -177,11 +177,11 @@ export default function SAAffiliatesPage() {
       ) : (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid md:grid-cols-2 gap-4">
           {items.map(a => (
-            <Card key={a.id} className="p-4 hover:border-gold/30 transition-colors">
+            <Card key={a.id} className="p-4 hover:border-brand/30 transition-colors">
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <p className="font-mono text-base font-bold text-gold">{a.referralCode}</p>
+                    <p className="font-mono text-base font-bold text-brand">{a.referralCode}</p>
                     {statusBadge(a.status)}
                     <span className="text-[10px] text-muted">{Math.round(a.commissionRate * 100)}% komisi</span>
                   </div>
@@ -233,7 +233,7 @@ export default function SAAffiliatesPage() {
                   </Button>
                 )}
                 <Link to={`/super-admin/affiliates/${a.id}`}
-                  className="text-xs px-2.5 py-1 rounded-md border border-dark-border text-muted hover:text-off-white hover:border-gold/30 ml-auto">
+                  className="text-xs px-2.5 py-1 rounded-md border border-dark-border text-muted hover:text-off-white hover:border-brand/30 ml-auto">
                   Detail →
                 </Link>
               </div>
@@ -260,7 +260,7 @@ export default function SAAffiliatesPage() {
             <label className="text-xs text-muted block mb-1.5">Bio singkat (opsional)</label>
             <textarea value={form.bio} onChange={e => setForm(f => ({ ...f, bio: e.target.value }))}
               rows={2} maxLength={500}
-              className="w-full bg-dark-surface border border-dark-border rounded-xl p-3 text-sm text-off-white placeholder:text-muted focus:outline-none focus:border-gold/40" />
+              className="w-full bg-dark-surface border border-dark-border rounded-xl p-3 text-sm text-off-white placeholder:text-muted focus:outline-none focus:border-brand/40" />
           </div>
           <div className="border-t border-dark-border pt-3">
             <p className="text-xs text-muted mb-2">Metode pencairan (boleh kosong, affiliate isi sendiri)</p>
@@ -281,7 +281,7 @@ export default function SAAffiliatesPage() {
             <label className="text-xs text-muted block mb-1.5">Catatan internal (tidak ditampilkan ke affiliate)</label>
             <textarea value={form.internalNotes} onChange={e => setForm(f => ({ ...f, internalNotes: e.target.value }))}
               rows={2} maxLength={2000}
-              className="w-full bg-dark-surface border border-dark-border rounded-xl p-3 text-sm text-off-white placeholder:text-muted focus:outline-none focus:border-gold/40" />
+              className="w-full bg-dark-surface border border-dark-border rounded-xl p-3 text-sm text-off-white placeholder:text-muted focus:outline-none focus:border-brand/40" />
           </div>
           <div className="flex gap-2 pt-2">
             <Button variant="outline" fullWidth onClick={() => setShowNew(false)}>Batal</Button>

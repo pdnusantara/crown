@@ -36,7 +36,7 @@ const PRIORITY_KEYS = {
 const CATEGORY_COLORS = {
   Bug:               'text-red-400',
   'Feature Request': 'text-purple-400',
-  Billing:           'text-gold',
+  Billing:           'text-brand',
   General:           'text-blue-400',
 }
 
@@ -173,7 +173,7 @@ export default function SATicketsPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-display font-bold gold-text">{t('tickets.saPageTitle')}</h1>
+          <h1 className="text-2xl font-display font-bold brand-text">{t('tickets.saPageTitle')}</h1>
         </div>
         <Card className="p-8 flex flex-col items-center text-center">
           <AlertTriangle size={32} className="text-amber-400 mb-3" />
@@ -191,7 +191,7 @@ export default function SATicketsPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-display font-bold gold-text">{t('tickets.saPageTitle')}</h1>
+          <h1 className="text-2xl font-display font-bold brand-text">{t('tickets.saPageTitle')}</h1>
           <p className="text-muted text-sm mt-1">{t('tickets.saPageSubtitle')}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -209,7 +209,7 @@ export default function SATicketsPage() {
         <KpiCard label={t('tickets.kpiOpen')}       value={stats?.open ?? '—'}        color="text-red-400"   icon={AlertCircle} delay={0}    />
         <KpiCard label={t('tickets.kpiInProgress')} value={stats?.in_progress ?? '—'} color="text-amber-400" icon={Clock}        delay={0.05} />
         <KpiCard label={t('tickets.kpiResolved')}   value={stats?.resolved ?? '—'}    color="text-green-400" icon={CheckCircle}  delay={0.1}  />
-        <KpiCard label={t('tickets.kpiTotal')}      value={stats?.total ?? '—'}       color="text-gold"      icon={MessageSquare} delay={0.15} />
+        <KpiCard label={t('tickets.kpiTotal')}      value={stats?.total ?? '—'}       color="text-brand"      icon={MessageSquare} delay={0.15} />
       </div>
 
       {/* Filter row */}
@@ -218,7 +218,7 @@ export default function SATicketsPage() {
           <Filter size={13} className="text-muted flex-shrink-0" />
 
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-gold/40">
+            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-brand/40">
             <option value="">{t('tickets.filterAllStatus')}</option>
             {Object.keys(STATUS_KEYS).map(k => (
               <option key={k} value={k}>{t(`tickets.${STATUS_KEYS[k].i18n}`)}</option>
@@ -226,7 +226,7 @@ export default function SATicketsPage() {
           </select>
 
           <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)}
-            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-gold/40">
+            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-brand/40">
             <option value="">{t('tickets.filterAllPriority')}</option>
             {Object.keys(PRIORITY_KEYS).map(k => (
               <option key={k} value={k}>{t(`tickets.${PRIORITY_KEYS[k].i18n}`)}</option>
@@ -234,7 +234,7 @@ export default function SATicketsPage() {
           </select>
 
           <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)}
-            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-gold/40">
+            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-brand/40">
             <option value="">{t('tickets.filterAllCategory')}</option>
             <option value="Bug">{t('tickets.categoryBug')}</option>
             <option value="Feature Request">{t('tickets.categoryFeature')}</option>
@@ -243,7 +243,7 @@ export default function SATicketsPage() {
           </select>
 
           <select value={filterTenant} onChange={e => setFilterTenant(e.target.value)}
-            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-gold/40 max-w-[180px]">
+            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-brand/40 max-w-[180px]">
             <option value="">{t('errorLog.filterAllTenants', { defaultValue: 'All Tenants' })}</option>
             {tenantsList.map(tt => (
               <option key={tt.id} value={tt.id}>{tt.name}</option>
@@ -253,7 +253,7 @@ export default function SATicketsPage() {
           <div className="relative flex-1 min-w-[180px]">
             <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('tickets.searchPlaceholder')}
-              className="w-full bg-dark-surface border border-dark-border rounded-xl pl-8 pr-3 py-1.5 text-xs text-off-white placeholder:text-muted focus:outline-none focus:border-gold/40" />
+              className="w-full bg-dark-surface border border-dark-border rounded-xl pl-8 pr-3 py-1.5 text-xs text-off-white placeholder:text-muted focus:outline-none focus:border-brand/40" />
           </div>
 
           {hasFilter && (
@@ -281,7 +281,7 @@ export default function SATicketsPage() {
               <MessageSquare size={32} className="mx-auto mb-2 opacity-30" />
               <p className="text-sm">{t('tickets.noResults')}</p>
               {hasFilter && (
-                <button onClick={handleResetFilters} className="text-xs text-gold hover:underline mt-2">
+                <button onClick={handleResetFilters} className="text-xs text-brand hover:underline mt-2">
                   {t('tickets.clearFilter')}
                 </button>
               )}
@@ -299,7 +299,7 @@ export default function SATicketsPage() {
                   <motion.div key={ticket.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: Math.min(i * 0.03, 0.3) }}>
                     <button
                       onClick={() => setSelectedId(ticket.id)}
-                      className={`w-full text-left p-4 rounded-2xl border transition-all ${isSelected ? 'border-gold bg-gold/5' : 'border-dark-border bg-dark-surface hover:border-gold/30'}`}
+                      className={`w-full text-left p-4 rounded-2xl border transition-all ${isSelected ? 'border-brand bg-brand/5' : 'border-dark-border bg-dark-surface hover:border-brand/30'}`}
                     >
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <p className="text-sm font-medium text-off-white line-clamp-2">{ticket.subject}</p>
@@ -378,12 +378,12 @@ export default function SATicketsPage() {
 
                     {/* Replies */}
                     {(selectedTicket.replies || []).map((reply, i) => (
-                      <div key={reply.id || i} className={`p-3 rounded-xl border ${reply.isAdmin ? 'border-gold/20 bg-gold/5 sm:ml-4' : 'border-dark-border bg-dark-card'}`}>
+                      <div key={reply.id || i} className={`p-3 rounded-xl border ${reply.isAdmin ? 'border-brand/20 bg-brand/5 sm:ml-4' : 'border-dark-border bg-dark-card'}`}>
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
                           {reply.isAdmin
-                            ? <ShieldCheck size={14} className="text-gold" />
+                            ? <ShieldCheck size={14} className="text-brand" />
                             : <User size={14} className="text-muted" />}
-                          <span className={`text-xs font-medium ${reply.isAdmin ? 'text-gold' : 'text-off-white'}`}>{reply.author?.name || reply.author?.email || '—'}</span>
+                          <span className={`text-xs font-medium ${reply.isAdmin ? 'text-brand' : 'text-off-white'}`}>{reply.author?.name || reply.author?.email || '—'}</span>
                           <span className="text-xs text-muted">·</span>
                           <span className="text-xs text-muted">{relativeFromTz(reply.createdAt, tz)}</span>
                         </div>
@@ -400,7 +400,7 @@ export default function SATicketsPage() {
                           <button
                             key={key}
                             onClick={() => handleStatusChange(selectedTicket.id, key)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${selectedTicket.status === key ? 'border-gold bg-gold/10 text-gold' : 'border-dark-border text-muted hover:border-gold/30'}`}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${selectedTicket.status === key ? 'border-brand bg-brand/10 text-brand' : 'border-dark-border text-muted hover:border-brand/30'}`}
                           >
                             <Icn size={12} className={cfg.color} />
                             {t(`tickets.${cfg.i18n}`)}
@@ -417,7 +417,7 @@ export default function SATicketsPage() {
                           onChange={e => setReplyText(e.target.value)}
                           rows={3}
                           placeholder={t('tickets.writeReplyAdmin')}
-                          className="w-full bg-dark-card border border-dark-border rounded-xl px-3 py-2.5 text-sm text-off-white placeholder-muted resize-none focus:outline-none focus:border-gold/50 transition-colors"
+                          className="w-full bg-dark-card border border-dark-border rounded-xl px-3 py-2.5 text-sm text-off-white placeholder-muted resize-none focus:outline-none focus:border-brand/50 transition-colors"
                         />
                         <AttachmentPicker value={replyAttachments} onChange={setReplyAttachments} disabled={sending} />
                         <Button icon={Send} size="sm" onClick={handleReply} disabled={sending || (!replyText.trim() && replyAttachments.length === 0)} loading={sending}>

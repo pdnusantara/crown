@@ -72,7 +72,7 @@ export default function SALandingPage() {
           href="/"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-dark-card border border-dark-border text-sm hover:border-gold/40 transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-dark-card border border-dark-border text-sm hover:border-brand/40 transition-colors"
         >
           <ExternalLink size={13} /> Lihat halaman
         </a>
@@ -83,7 +83,7 @@ export default function SALandingPage() {
           <button
             key={t.id}
             onClick={() => changeTab(t.id)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all inline-flex items-center gap-2 ${tab === t.id ? 'bg-gold text-dark' : 'text-muted hover:text-off-white'}`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all inline-flex items-center gap-2 ${tab === t.id ? 'bg-brand text-dark' : 'text-muted hover:text-off-white'}`}
           >
             <t.icon size={14} /> {t.label}
           </button>
@@ -193,7 +193,7 @@ function SeoEditor() {
             <label className="text-xs text-muted block mb-1.5">Deskripsi (meta description)</label>
             <textarea
               rows={3}
-              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/60"
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60"
               placeholder="Ringkasan menarik 1–2 kalimat yang muncul di hasil pencarian Google."
               value={form.seoDescription}
               onChange={e => setForm(f => ({ ...f, seoDescription: e.target.value }))}
@@ -212,7 +212,7 @@ function SeoEditor() {
           <div>
             <label className="text-xs text-muted block mb-1.5">Gambar share (Open Graph — 1200×630 px)</label>
             <div className="flex items-center gap-2">
-              <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-dark-surface border border-dark-border text-sm cursor-pointer hover:border-gold/40 transition-colors">
+              <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-dark-surface border border-dark-border text-sm cursor-pointer hover:border-brand/40 transition-colors">
                 <Upload size={13} /> {uploading ? 'Mengunggah…' : 'Unggah gambar'}
                 <input
                   type="file"
@@ -348,7 +348,7 @@ function TrackingEditor() {
             href="https://www.facebook.com/events_manager2"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-sm text-gold hover:underline"
+            className="inline-flex items-center gap-1.5 text-sm text-brand hover:underline"
           >
             <ExternalLink size={13} /> Buka Meta Events Manager
           </a>
@@ -370,7 +370,7 @@ function TrackingEditor() {
             { ev: 'CompleteRegistration', desc: 'Pendaftaran tenant berhasil — konversi utama untuk iklan.' },
           ].map(item => (
             <div key={item.ev} className="p-3 bg-dark-surface rounded-xl border border-dark-border">
-              <code className="text-xs font-semibold text-gold">{item.ev}</code>
+              <code className="text-xs font-semibold text-brand">{item.ev}</code>
               <p className="text-xs text-muted mt-1">{item.desc}</p>
             </div>
           ))}
@@ -421,7 +421,7 @@ function ImageUploadField({ label, hint, value, accept = 'image/png,image/jpeg,i
             ? <img src={value} alt="" className="w-full h-full object-contain" />
             : <ImageIcon size={18} className="text-muted" />}
         </div>
-        <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-dark-surface border border-dark-border text-sm cursor-pointer hover:border-gold/40 transition-colors">
+        <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-dark-surface border border-dark-border text-sm cursor-pointer hover:border-brand/40 transition-colors">
           <Upload size={13} /> {uploading ? 'Mengunggah…' : 'Unggah'}
           <input type="file" accept={accept} className="hidden" onChange={handleUpload} disabled={uploading} />
         </label>
@@ -503,7 +503,7 @@ function FeaturePresetModal({ open, onClose, existingTitles, onAdd }) {
       <div className="space-y-5 max-h-[58vh] overflow-y-auto pr-1">
         {FEATURE_PRESETS.map(group => (
           <div key={group.category}>
-            <p className="text-[11px] font-bold text-gold uppercase tracking-[0.12em] mb-2">{group.category}</p>
+            <p className="text-[11px] font-bold text-brand uppercase tracking-[0.12em] mb-2">{group.category}</p>
             <div className="grid sm:grid-cols-2 gap-2">
               {group.items.map(item => {
                 const added = existingTitles.includes(item.title.trim().toLowerCase())
@@ -519,18 +519,18 @@ function FeaturePresetModal({ open, onClose, existingTitles, onAdd }) {
                       added
                         ? 'opacity-40 cursor-not-allowed border-dark-border bg-dark-surface'
                         : sel
-                          ? 'border-gold bg-gold/10'
-                          : 'border-dark-border bg-dark-surface hover:border-gold/40'
+                          ? 'border-brand bg-brand/10'
+                          : 'border-dark-border bg-dark-surface hover:border-brand/40'
                     }`}
                   >
-                    <div className="w-9 h-9 rounded-lg bg-gold/15 border border-gold/20 flex items-center justify-center flex-shrink-0">
-                      <Icon size={17} className="text-gold" />
+                    <div className="w-9 h-9 rounded-lg bg-brand/15 border border-brand/20 flex items-center justify-center flex-shrink-0">
+                      <Icon size={17} className="text-brand" />
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-off-white flex items-center gap-1.5">
                         {item.title}
                         {added && <span className="text-[10px] text-muted">(sudah ada)</span>}
-                        {sel && !added && <Check size={13} className="text-gold flex-shrink-0" />}
+                        {sel && !added && <Check size={13} className="text-brand flex-shrink-0" />}
                       </p>
                       <p className="text-xs text-muted line-clamp-2 mt-0.5">{item.desc}</p>
                     </div>
@@ -630,7 +630,7 @@ function HeroEditor() {
               onChange={e => setForm(f => ({ ...f, siteName: e.target.value }))}
               maxLength={60}
               placeholder="SembaPOS"
-              className="w-full appearance-none rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-sm text-off-white placeholder-muted focus:outline-none focus:border-gold/50"
+              className="w-full appearance-none rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-sm text-off-white placeholder-muted focus:outline-none focus:border-brand/50"
             />
             <p className="text-[11px] text-muted mt-1">
               Teks brand di pojok kiri header, footer, judul tab browser, & SEO. Dipakai saat logo gambar kosong. Kosongkan untuk default "SembaPOS".
@@ -671,10 +671,10 @@ function HeroEditor() {
             onChange={e => setForm(f => ({ ...f, brandTagline: e.target.value }))}
           />
           <div>
-            <label className="text-xs text-muted block mb-1.5">Judul utama (2 kata terakhir akan ditandai gold)</label>
+            <label className="text-xs text-muted block mb-1.5">Judul utama (2 kata terakhir akan diberi aksen warna brand)</label>
             <textarea
               rows={2}
-              className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/60 transition-colors"
+              className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60 transition-colors"
               value={form.heroTitle}
               onChange={e => setForm(f => ({ ...f, heroTitle: e.target.value }))}
             />
@@ -683,7 +683,7 @@ function HeroEditor() {
             <label className="text-xs text-muted block mb-1.5">Subjudul</label>
             <textarea
               rows={3}
-              className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/60 transition-colors"
+              className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60 transition-colors"
               value={form.heroSubtitle}
               onChange={e => setForm(f => ({ ...f, heroSubtitle: e.target.value }))}
             />
@@ -717,7 +717,7 @@ function HeroEditor() {
                 <button
                   type="button"
                   onClick={() => setTrustItems(arr => [...arr, ''])}
-                  className="text-xs text-gold hover:underline inline-flex items-center gap-1"
+                  className="text-xs text-brand hover:underline inline-flex items-center gap-1"
                 >
                   <Plus size={11} /> Tambah
                 </button>
@@ -730,7 +730,7 @@ function HeroEditor() {
               {trustItems.map((item, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <input
-                    className="flex-1 bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60"
+                    className="flex-1 bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/60"
                     placeholder="Gratis 14 hari"
                     value={item}
                     onChange={e => setTrustItems(arr => arr.map((v, idx) => idx === i ? e.target.value : v))}
@@ -752,7 +752,7 @@ function HeroEditor() {
               type="checkbox"
               checked={form.showStats}
               onChange={e => setForm(f => ({ ...f, showStats: e.target.checked }))}
-              className="accent-gold"
+              className="accent-brand"
             />
             <div className="text-sm">
               <p className="text-off-white font-medium">Tampilkan statistik real-time</p>
@@ -802,7 +802,7 @@ function HeroEditor() {
                 <label className="text-xs text-muted block mb-1.5">Deskripsi</label>
                 <textarea
                   rows={2}
-                  className="w-full bg-dark-card border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-gold/60"
+                  className="w-full bg-dark-card border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-brand/60"
                   value={f.desc}
                   onChange={e => updateFeature(i, 'desc', e.target.value)}
                 />
@@ -817,7 +817,7 @@ function HeroEditor() {
             </div>
           ))}
           <p className="text-xs text-muted">
-            Pakai <span className="text-off-white">Dari Katalog</span> untuk menyusun cepat dari fitur on-brand, atau <span className="text-off-white">Kosong</span> untuk fitur custom. Nama icon dari <a className="text-gold hover:underline" href="https://lucide.dev/icons" target="_blank" rel="noopener noreferrer">lucide.dev</a> (case-sensitive). Contoh: Scissors, Building2, BarChart3.
+            Pakai <span className="text-off-white">Dari Katalog</span> untuk menyusun cepat dari fitur on-brand, atau <span className="text-off-white">Kosong</span> untuk fitur custom. Nama icon dari <a className="text-brand hover:underline" href="https://lucide.dev/icons" target="_blank" rel="noopener noreferrer">lucide.dev</a> (case-sensitive). Contoh: Scissors, Building2, BarChart3.
           </p>
           <Button onClick={handleSave} loading={updateHero.isPending} icon={Save} fullWidth variant="secondary">
             Simpan Fitur
@@ -898,7 +898,7 @@ function TestimonialsEditor() {
           {list.map(t => (
             <Card key={t.id} className={`p-4 ${!t.isActive ? 'opacity-50' : ''}`}>
               <div className="flex items-start justify-between mb-2">
-                <div className="flex items-center gap-1 text-gold">
+                <div className="flex items-center gap-1 text-brand">
                   {Array.from({ length: t.rating || 5 }).map((_, i) => <Star key={i} size={12} fill="currentColor" />)}
                 </div>
                 <div className="flex gap-1">
@@ -931,7 +931,7 @@ function TestimonialsEditor() {
             <label className="text-xs text-muted block mb-1.5">Pesan</label>
             <textarea
               rows={4}
-              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-gold/60"
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-brand/60"
               value={form.message}
               onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
             />
@@ -942,7 +942,7 @@ function TestimonialsEditor() {
           </div>
           <Input label="URL foto (opsional)" placeholder="https://..." value={form.photoUrl} onChange={e => setForm(f => ({ ...f, photoUrl: e.target.value }))} />
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={form.isActive} onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))} className="accent-gold" />
+            <input type="checkbox" checked={form.isActive} onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))} className="accent-brand" />
             <span>Tampilkan di landing</span>
           </label>
           <div className="flex gap-2">
@@ -1036,14 +1036,14 @@ function FAQEditor() {
             <label className="text-xs text-muted block mb-1.5">Jawaban</label>
             <textarea
               rows={5}
-              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-gold/60"
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-brand/60"
               value={form.answer}
               onChange={e => setForm(f => ({ ...f, answer: e.target.value }))}
             />
           </div>
           <Input label="Urutan tampil" type="number" value={form.displayOrder} onChange={e => setForm(f => ({ ...f, displayOrder: Number(e.target.value) }))} />
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={form.isActive} onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))} className="accent-gold" />
+            <input type="checkbox" checked={form.isActive} onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))} className="accent-brand" />
             <span>Tampilkan di landing</span>
           </label>
           <div className="flex gap-2">
@@ -1139,7 +1139,7 @@ function ContentEditor() {
         <CardBody className="space-y-4">
           {Object.entries(SECTION_LABELS).map(([key, label]) => (
             <div key={key} className="p-3 bg-dark-surface rounded-xl border border-dark-border space-y-2">
-              <p className="text-xs font-semibold text-gold">{label}</p>
+              <p className="text-xs font-semibold text-brand">{label}</p>
               <div className="grid sm:grid-cols-2 gap-2">
                 <Input label="Kicker (label kecil)" value={sections[key].kicker} onChange={e => setSection(key, 'kicker', e.target.value)} />
                 <Input label="Judul" value={sections[key].title} onChange={e => setSection(key, 'title', e.target.value)} />
@@ -1148,7 +1148,7 @@ function ContentEditor() {
                 <label className="text-xs text-muted block mb-1.5">Subjudul</label>
                 <textarea
                   rows={2}
-                  className="w-full bg-dark-card border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-gold/60"
+                  className="w-full bg-dark-card border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-brand/60"
                   value={sections[key].subtitle}
                   onChange={e => setSection(key, 'subtitle', e.target.value)}
                 />
@@ -1172,7 +1172,7 @@ function ContentEditor() {
           {steps.map((s, i) => (
             <div key={i} className="p-3 bg-dark-surface rounded-xl border border-dark-border space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-gold">Langkah {i + 1}</span>
+                <span className="text-xs font-semibold text-brand">Langkah {i + 1}</span>
                 <button onClick={() => setSteps(a => a.filter((_, idx) => idx !== i))} className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20">
                   <Trash2 size={13} />
                 </button>
@@ -1182,7 +1182,7 @@ function ContentEditor() {
                 <label className="text-xs text-muted block mb-1.5">Deskripsi</label>
                 <textarea
                   rows={2}
-                  className="w-full bg-dark-card border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-gold/60"
+                  className="w-full bg-dark-card border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-brand/60"
                   value={s.desc}
                   onChange={e => setStep(i, 'desc', e.target.value)}
                 />
@@ -1200,7 +1200,7 @@ function ContentEditor() {
             <label className="text-xs text-muted block mb-1.5">Subjudul</label>
             <textarea
               rows={2}
-              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-gold/60"
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-brand/60"
               value={closing.subtitle}
               onChange={e => setClosing(c => ({ ...c, subtitle: e.target.value }))}
             />
@@ -1215,7 +1215,7 @@ function ContentEditor() {
           <label className="text-xs text-muted block mb-1.5">Deskripsi singkat di footer</label>
           <textarea
             rows={3}
-            className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/60"
+            className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60"
             value={footerText}
             onChange={e => setFooterText(e.target.value)}
           />
@@ -1246,7 +1246,7 @@ function ContentEditor() {
             <label className="text-xs text-muted block mb-1.5">Alamat</label>
             <textarea
               rows={3}
-              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/60"
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60"
               placeholder="Jl. Contoh No. 1, Kota, Indonesia"
               value={contact.contactAddress}
               onChange={e => setContact(c => ({ ...c, contactAddress: e.target.value }))}

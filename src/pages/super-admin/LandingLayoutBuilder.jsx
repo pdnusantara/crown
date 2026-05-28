@@ -149,7 +149,7 @@ function Field({ label, value, onChange, rows, placeholder }) {
         <textarea
           rows={rows}
           placeholder={placeholder}
-          className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl px-3 py-2 text-sm outline-none focus:border-gold/60"
+          className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl px-3 py-2 text-sm outline-none focus:border-brand/60"
           value={value || ''}
           onChange={e => onChange(e.target.value)}
         />
@@ -173,8 +173,8 @@ function BlockConfigFields({ type, config, setConfig }) {
         <Field label="Judul (opsional)" value={c.title} onChange={v => set('title', v)} />
         <Field label="Subjudul (opsional)" value={c.subtitle} onChange={v => set('subtitle', v)} rows={2} />
         <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold text-gold">Gambar ({items.length})</p>
-          <button type="button" onClick={() => setList('items', [...items, { url: '', caption: '' }])} className="text-xs text-gold hover:underline inline-flex items-center gap-1">
+          <p className="text-xs font-semibold text-brand">Gambar ({items.length})</p>
+          <button type="button" onClick={() => setList('items', [...items, { url: '', caption: '' }])} className="text-xs text-brand hover:underline inline-flex items-center gap-1">
             <Plus size={11} /> Tambah gambar
           </button>
         </div>
@@ -211,8 +211,8 @@ function BlockConfigFields({ type, config, setConfig }) {
       <div className="space-y-3">
         <Field label="Judul strip (opsional)" value={c.title} onChange={v => set('title', v)} placeholder="Dipercaya oleh" />
         <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold text-gold">Logo ({logos.length})</p>
-          <button type="button" onClick={() => setList('logos', [...logos, { url: '', name: '' }])} className="text-xs text-gold hover:underline inline-flex items-center gap-1">
+          <p className="text-xs font-semibold text-brand">Logo ({logos.length})</p>
+          <button type="button" onClick={() => setList('logos', [...logos, { url: '', name: '' }])} className="text-xs text-brand hover:underline inline-flex items-center gap-1">
             <Plus size={11} /> Tambah logo
           </button>
         </div>
@@ -285,7 +285,7 @@ function SortableBlockRow({ block, onToggle, onEdit, onDuplicate, onDelete }) {
         <GripVertical size={16} />
       </button>
 
-      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${meta.core ? 'bg-gold/15 text-gold' : 'bg-blue-500/15 text-blue-300'}`}>
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${meta.core ? 'bg-brand/15 text-brand' : 'bg-blue-500/15 text-blue-300'}`}>
         <Icon size={15} />
       </div>
 
@@ -321,7 +321,7 @@ function LockedRow({ icon: Icon, label, position }) {
   return (
     <div className="flex items-center gap-3 p-3 rounded-xl border border-dashed border-dark-border bg-dark-surface/50">
       <Lock size={15} className="text-muted" />
-      <div className="w-8 h-8 rounded-lg bg-gold/15 text-gold flex items-center justify-center flex-shrink-0">
+      <div className="w-8 h-8 rounded-lg bg-brand/15 text-brand flex items-center justify-center flex-shrink-0">
         <Icon size={15} />
       </div>
       <div className="flex-1 min-w-0">
@@ -518,14 +518,14 @@ export default function LandingLayoutBuilder({ onEditCore, onDirtyChange }) {
               <button
                 type="button" onClick={() => setPreviewMode('desktop')}
                 title="Tampilan desktop"
-                className={`p-1.5 rounded-lg ${previewMode === 'desktop' ? 'bg-gold text-dark' : 'text-muted hover:text-off-white'}`}
+                className={`p-1.5 rounded-lg ${previewMode === 'desktop' ? 'bg-brand text-dark' : 'text-muted hover:text-off-white'}`}
               >
                 <Monitor size={15} />
               </button>
               <button
                 type="button" onClick={() => setPreviewMode('mobile')}
                 title="Tampilan mobile"
-                className={`p-1.5 rounded-lg ${previewMode === 'mobile' ? 'bg-gold text-dark' : 'text-muted hover:text-off-white'}`}
+                className={`p-1.5 rounded-lg ${previewMode === 'mobile' ? 'bg-brand text-dark' : 'text-muted hover:text-off-white'}`}
               >
                 <Smartphone size={15} />
               </button>
@@ -578,7 +578,7 @@ export default function LandingLayoutBuilder({ onEditCore, onDirtyChange }) {
               <button
                 key={type}
                 onClick={() => addFreeBlock(type)}
-                className="flex items-center gap-2.5 p-3 rounded-xl bg-dark-surface border border-dark-border hover:border-gold/40 transition-colors text-left"
+                className="flex items-center gap-2.5 p-3 rounded-xl bg-dark-surface border border-dark-border hover:border-brand/40 transition-colors text-left"
               >
                 <div className="w-8 h-8 rounded-lg bg-blue-500/15 text-blue-300 flex items-center justify-center flex-shrink-0">
                   <Icon size={15} />

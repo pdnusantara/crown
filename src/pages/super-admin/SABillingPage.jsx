@@ -37,7 +37,7 @@ const STATUS_VARIANTS = {
 
 const PACKAGE_COLORS = {
   Basic:      'text-blue-400 bg-blue-400/10 border-blue-400/20',
-  Pro:        'text-gold bg-gold/10 border-gold/20',
+  Pro:        'text-brand bg-brand/10 border-brand/20',
   Enterprise: 'text-purple-400 bg-purple-400/10 border-purple-400/20',
 }
 
@@ -368,7 +368,7 @@ export default function SABillingPage() {
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-2xl font-display font-bold gold-text">{t('superAdmin.billing.pageTitle')}</h1>
+            <h1 className="text-2xl font-display font-bold brand-text">{t('superAdmin.billing.pageTitle')}</h1>
             <LiveBadge />
           </div>
           <p className="text-muted text-sm mt-1">{t('superAdmin.billing.pageSubtitle')}</p>
@@ -453,7 +453,7 @@ export default function SABillingPage() {
           {/* KPI Row — 7 cards (incl. paused & expired) */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
             {[
-              { label: t('superAdmin.billing.kpiMrr'),     value: formatRupiah(mrr),  icon: TrendingUp,    color: 'text-gold',        sub: t('superAdmin.billing.kpiMrrSub') },
+              { label: t('superAdmin.billing.kpiMrr'),     value: formatRupiah(mrr),  icon: TrendingUp,    color: 'text-brand',        sub: t('superAdmin.billing.kpiMrrSub') },
               { label: t('superAdmin.billing.kpiArr'),     value: formatRupiah(arr),  icon: TrendingUp,    color: 'text-green-400',   sub: t('superAdmin.billing.kpiArrSub') },
               { label: t('superAdmin.billing.kpiActive'),  value: activeCount,        icon: CheckCircle,   color: 'text-green-400',   sub: t('superAdmin.billing.kpiActiveSub') },
               { label: 'Trial',                            value: trialCount,         icon: Clock,         color: 'text-amber-400',   sub: 'Masa percobaan' },
@@ -514,7 +514,7 @@ export default function SABillingPage() {
                       placeholder="Cari tenant..."
                       value={searchText}
                       onChange={e => setSearchText(e.target.value)}
-                      className="bg-dark-card border border-dark-border rounded-lg pl-8 pr-3 py-1.5 text-xs text-off-white placeholder-muted focus:outline-none focus:border-gold/50 w-44"
+                      className="bg-dark-card border border-dark-border rounded-lg pl-8 pr-3 py-1.5 text-xs text-off-white placeholder-muted focus:outline-none focus:border-brand/50 w-44"
                     />
                   </div>
                 </div>
@@ -528,7 +528,7 @@ export default function SABillingPage() {
                         onClick={() => setStatusFilter(s)}
                         className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
                           statusFilter === s
-                            ? 'bg-gold/15 text-gold border border-gold/30'
+                            ? 'bg-brand/15 text-brand border border-brand/30'
                             : 'text-muted hover:text-off-white border border-transparent'
                         }`}
                       >
@@ -544,7 +544,7 @@ export default function SABillingPage() {
                   <select
                     value={pkgFilter}
                     onChange={e => setPkgFilter(e.target.value)}
-                    className="bg-dark-card border border-dark-border rounded-lg px-2 py-1 text-xs text-muted focus:outline-none focus:border-gold/50"
+                    className="bg-dark-card border border-dark-border rounded-lg px-2 py-1 text-xs text-muted focus:outline-none focus:border-brand/50"
                   >
                     <option value="all">Semua Paket</option>
                     {packageList.map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
@@ -595,7 +595,7 @@ export default function SABillingPage() {
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-gold font-semibold">{formatRupiah(sub.price)}</td>
+                        <td className="px-4 py-3 text-brand font-semibold">{formatRupiah(sub.price)}</td>
                         <td className="px-4 py-3">
                           <button
                             onClick={() => handleToggleAuto(sub)}
@@ -685,7 +685,7 @@ export default function SABillingPage() {
                       </div>
                       <div>
                         <p className="text-[10px] text-muted uppercase">{t('superAdmin.billing.colPrice')}</p>
-                        <p className="text-gold font-semibold text-sm mt-0.5">{formatRupiah(sub.price)}</p>
+                        <p className="text-brand font-semibold text-sm mt-0.5">{formatRupiah(sub.price)}</p>
                       </div>
                     </div>
                     <div className="flex gap-2 flex-wrap mt-3">
@@ -733,14 +733,14 @@ export default function SABillingPage() {
               <button
                 key={pkg.name}
                 onClick={() => setSelectedPkg(pkg.name)}
-                className={`p-4 rounded-xl border text-left transition-all ${selectedPkg === pkg.name ? 'border-gold bg-gold/10' : 'border-dark-border hover:border-gold/30'}`}
+                className={`p-4 rounded-xl border text-left transition-all ${selectedPkg === pkg.name ? 'border-brand bg-brand/10' : 'border-dark-border hover:border-brand/30'}`}
               >
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="font-semibold text-off-white">{pkg.name}</p>
                     <p className="text-xs text-muted mt-0.5">{t('superAdmin.billing.branchesStaffLine', { branches: pkg.maxBranches, staff: pkg.maxStaff })}</p>
                   </div>
-                  <p className="text-gold font-bold">{formatRupiah(pkg.price)}<span className="text-xs text-muted font-normal">{t('superAdmin.billing.perMonth')}</span></p>
+                  <p className="text-brand font-bold">{formatRupiah(pkg.price)}<span className="text-xs text-muted font-normal">{t('superAdmin.billing.perMonth')}</span></p>
                 </div>
               </button>
             ))}
@@ -781,7 +781,7 @@ export default function SABillingPage() {
                   <p className="text-xs text-muted">{formatDate(inv.createdAt || inv.paidAt, invoiceModal?.tenant?.timezone || tenantTz(invoiceModal?.tenantId))}</p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className="text-gold font-semibold text-sm">{formatRupiah(inv.amount)}</span>
+                  <span className="text-brand font-semibold text-sm">{formatRupiah(inv.amount)}</span>
                   <Badge variant={inv.status === 'paid' ? 'success' : inv.status === 'overdue' ? 'danger' : 'warning'}>
                     {inv.status === 'paid' ? t('superAdmin.billing.invoicePaid') : inv.status === 'overdue' ? t('superAdmin.billing.invoiceOverdue') : t('superAdmin.billing.invoicePending')}
                   </Badge>
@@ -829,7 +829,7 @@ export default function SABillingPage() {
             <select
               value={createForm.tenantId}
               onChange={e => handleCreateFormChange('tenantId', e.target.value)}
-              className="w-full bg-dark-surface border border-dark-border rounded-xl px-3 py-2.5 text-sm text-off-white focus:outline-none focus:border-gold/50"
+              className="w-full bg-dark-surface border border-dark-border rounded-xl px-3 py-2.5 text-sm text-off-white focus:outline-none focus:border-brand/50"
             >
               <option value="">— Pilih tenant —</option>
               {tenantsWithoutSub.map(t => (
@@ -849,11 +849,11 @@ export default function SABillingPage() {
                 <button
                   key={pkg.name}
                   onClick={() => handleCreateFormChange('package', pkg.name)}
-                  className={`p-3 rounded-xl border text-left transition-all ${createForm.package === pkg.name ? 'border-gold bg-gold/10' : 'border-dark-border hover:border-gold/30'}`}
+                  className={`p-3 rounded-xl border text-left transition-all ${createForm.package === pkg.name ? 'border-brand bg-brand/10' : 'border-dark-border hover:border-brand/30'}`}
                 >
                   <div className="flex justify-between items-center">
                     <p className="font-semibold text-off-white text-sm">{pkg.name}</p>
-                    <p className="text-gold font-bold text-sm">{formatRupiah(pkg.price)}<span className="text-xs text-muted font-normal">/bln</span></p>
+                    <p className="text-brand font-bold text-sm">{formatRupiah(pkg.price)}<span className="text-xs text-muted font-normal">/bln</span></p>
                   </div>
                 </button>
               ))}
@@ -868,7 +868,7 @@ export default function SABillingPage() {
                 <button
                   key={opt.days}
                   onClick={() => handleCreateFormChange('days', opt.days)}
-                  className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-all ${createForm.days === opt.days ? 'border-gold bg-gold/10 text-gold' : 'border-dark-border text-muted hover:text-off-white'}`}
+                  className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-all ${createForm.days === opt.days ? 'border-brand bg-brand/10 text-brand' : 'border-dark-border text-muted hover:text-off-white'}`}
                 >
                   {opt.label}
                 </button>
@@ -885,7 +885,7 @@ export default function SABillingPage() {
                   <button
                     key={s}
                     onClick={() => handleCreateFormChange('status', s)}
-                    className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-all ${createForm.status === s ? 'border-gold bg-gold/10 text-gold' : 'border-dark-border text-muted hover:text-off-white'}`}
+                    className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-all ${createForm.status === s ? 'border-brand bg-brand/10 text-brand' : 'border-dark-border text-muted hover:text-off-white'}`}
                   >
                     {s === 'active' ? 'Aktif' : 'Trial'}
                   </button>
@@ -899,7 +899,7 @@ export default function SABillingPage() {
                 min={0}
                 value={createForm.price}
                 onChange={e => handleCreateFormChange('price', parseInt(e.target.value) || 0)}
-                className="w-full bg-dark-surface border border-dark-border rounded-xl px-3 py-2 text-sm text-off-white focus:outline-none focus:border-gold/50"
+                className="w-full bg-dark-surface border border-dark-border rounded-xl px-3 py-2 text-sm text-off-white focus:outline-none focus:border-brand/50"
               />
             </div>
           </div>
@@ -963,7 +963,7 @@ export default function SABillingPage() {
               onChange={e => setPauseReason(e.target.value.slice(0, 500))}
               rows={2}
               placeholder="Mis. tenant minta jeda renovasi cabang..."
-              className="w-full bg-dark-surface border border-dark-border rounded-xl px-3 py-2 text-sm text-off-white placeholder-muted focus:outline-none focus:border-gold/50 resize-y"
+              className="w-full bg-dark-surface border border-dark-border rounded-xl px-3 py-2 text-sm text-off-white placeholder-muted focus:outline-none focus:border-brand/50 resize-y"
             />
             <p className="text-[10px] text-muted/60 mt-0.5 text-right">{pauseReason.length}/500</p>
           </div>

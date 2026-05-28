@@ -211,7 +211,7 @@ export default function SAPromotionsPage() {
 
       {/* KPI */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard label={t('superAdmin.promotions.kpiTotal')}       value={stats.total}       color="text-gold"        icon={Tag} delay={0} />
+        <KpiCard label={t('superAdmin.promotions.kpiTotal')}       value={stats.total}       color="text-brand"        icon={Tag} delay={0} />
         <KpiCard label={t('superAdmin.promotions.kpiActive')}      value={stats.active}      color="text-green-400"   icon={CheckCircle} delay={0.05} />
         <KpiCard label={t('superAdmin.promotions.kpiRedemptions')} value={stats.redemptions} color="text-blue-400"    icon={Eye} delay={0.1} />
         <KpiCard label={t('superAdmin.promotions.kpiExpiring')}    value={stats.expiring}    color="text-amber-400"   icon={Calendar} delay={0.15} />
@@ -222,13 +222,13 @@ export default function SAPromotionsPage() {
         <div className="flex flex-wrap items-center gap-2">
           <Filter size={13} className="text-muted flex-shrink-0" />
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-gold/40">
+            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-brand/40">
             <option value="">{t('superAdmin.promotions.filterAllStatus')}</option>
             <option value="active">{t('superAdmin.promotions.filterActive')}</option>
             <option value="inactive">{t('superAdmin.promotions.filterInactive')}</option>
           </select>
           <select value={filterApplies} onChange={e => setFilterApplies(e.target.value)}
-            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-gold/40">
+            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-brand/40">
             <option value="">{t('superAdmin.promotions.filterAllAppliesTo')}</option>
             {APPLIES_OPTIONS.map(opt => (
               <option key={opt.id} value={opt.id}>{t(`superAdmin.promotions.${opt.i18nKey}`)}</option>
@@ -237,7 +237,7 @@ export default function SAPromotionsPage() {
           <div className="relative flex-1 min-w-[180px]">
             <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('superAdmin.promotions.searchPlaceholder')}
-              className="w-full bg-dark-surface border border-dark-border rounded-xl pl-8 pr-3 py-1.5 text-xs text-off-white placeholder:text-muted focus:outline-none focus:border-gold/40" />
+              className="w-full bg-dark-surface border border-dark-border rounded-xl pl-8 pr-3 py-1.5 text-xs text-off-white placeholder:text-muted focus:outline-none focus:border-brand/40" />
           </div>
           {hasFilter && (
             <button onClick={handleResetFilters} className="flex items-center gap-1 text-xs text-muted hover:text-off-white">
@@ -260,7 +260,7 @@ export default function SAPromotionsPage() {
             <Tag size={32} className="mx-auto mb-3 opacity-30" />
             <p>{hasFilter ? t('superAdmin.promotions.noResults') : t('superAdmin.promotions.empty')}</p>
             {hasFilter && (
-              <button onClick={handleResetFilters} className="text-xs text-gold hover:underline mt-2">
+              <button onClick={handleResetFilters} className="text-xs text-brand hover:underline mt-2">
                 {t('superAdmin.promotions.resetFilter')}
               </button>
             )}
@@ -272,11 +272,11 @@ export default function SAPromotionsPage() {
             const usagePct = p.maxUses ? Math.min(100, Math.round((p.usedCount / p.maxUses) * 100)) : null
             const quotaLabel = p.maxUses ? ` / ${p.maxUses}` : t('superAdmin.promotions.unlimited')
             return (
-              <Card key={p.id} className={`p-4 border ${p.isActive ? 'border-gold/30' : 'border-dark-border opacity-60'}`}>
+              <Card key={p.id} className={`p-4 border ${p.isActive ? 'border-brand/30' : 'border-dark-border opacity-60'}`}>
                 <div className="flex items-start justify-between mb-3 gap-2">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-mono text-base font-bold text-gold">{p.code}</p>
+                      <p className="font-mono text-base font-bold text-brand">{p.code}</p>
                       <Badge variant={p.isActive ? 'success' : 'muted'}>
                         {p.isActive ? t('superAdmin.promotions.badgeActive') : t('superAdmin.promotions.badgeInactive')}
                       </Badge>
@@ -318,7 +318,7 @@ export default function SAPromotionsPage() {
                   <p>{t('superAdmin.promotions.usageInfo', { used: p.usedCount, quotaLabel })}</p>
                   {usagePct != null && (
                     <div className="h-1 bg-dark-surface rounded-full overflow-hidden mt-1">
-                      <div className="h-full bg-gold transition-all" style={{ width: `${usagePct}%` }} />
+                      <div className="h-full bg-brand transition-all" style={{ width: `${usagePct}%` }} />
                     </div>
                   )}
                 </div>
@@ -385,7 +385,7 @@ export default function SAPromotionsPage() {
                   key={opt.id}
                   onClick={() => setForm(f => ({ ...f, discountType: opt.id }))}
                   className={`p-2 rounded-lg border text-sm transition-colors ${
-                    form.discountType === opt.id ? 'border-gold/60 bg-gold/10 text-gold' : 'border-dark-border bg-dark-card text-off-white'
+                    form.discountType === opt.id ? 'border-brand/60 bg-brand/10 text-brand' : 'border-dark-border bg-dark-card text-off-white'
                   }`}
                 >{t(`superAdmin.promotions.${opt.i18n}`)}</button>
               ))}
@@ -475,7 +475,7 @@ function ScopeSelector({ label, options, selected, onToggle, t }) {
               key={id}
               onClick={() => onToggle(id)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                isOn ? 'border-gold/60 bg-gold/10 text-gold' : 'border-dark-border bg-dark-card text-muted hover:text-off-white'
+                isOn ? 'border-brand/60 bg-brand/10 text-brand' : 'border-dark-border bg-dark-card text-muted hover:text-off-white'
               }`}
             >{lbl}</button>
           )

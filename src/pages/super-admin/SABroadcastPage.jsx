@@ -167,7 +167,7 @@ export default function SABroadcastPage() {
   if (isError) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-display font-bold gold-text">{t('superAdmin.broadcast.pageTitle')}</h1>
+        <h1 className="text-2xl font-display font-bold brand-text">{t('superAdmin.broadcast.pageTitle')}</h1>
         <Card className="p-8 flex flex-col items-center text-center">
           <AlertTriangle size={32} className="text-amber-400 mb-3" />
           <h3 className="font-semibold text-off-white mb-1">{t('superAdmin.broadcast.errorLoading')}</h3>
@@ -184,7 +184,7 @@ export default function SABroadcastPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-display font-bold gold-text">{t('superAdmin.broadcast.pageTitle')}</h1>
+          <h1 className="text-2xl font-display font-bold brand-text">{t('superAdmin.broadcast.pageTitle')}</h1>
           <p className="text-muted text-sm mt-1">{t('superAdmin.broadcast.pageSubtitle')}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -201,7 +201,7 @@ export default function SABroadcastPage() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: t('superAdmin.broadcast.totalBroadcast'), value: stats.total,    color: 'text-gold' },
+          { label: t('superAdmin.broadcast.totalBroadcast'), value: stats.total,    color: 'text-brand' },
           { label: t('superAdmin.broadcast.activeCount'),   value: stats.active,   color: 'text-green-400' },
           { label: t('superAdmin.broadcast.inactiveCount'), value: stats.inactive, color: 'text-muted' },
         ].map((s, i) => (
@@ -219,13 +219,13 @@ export default function SABroadcastPage() {
         <div className="flex flex-wrap items-center gap-2">
           <Filter size={13} className="text-muted flex-shrink-0" />
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-gold/40">
+            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-brand/40">
             <option value="">{t('superAdmin.broadcast.filterAllStatus')}</option>
             <option value="active">{t('superAdmin.broadcast.filterActive')}</option>
             <option value="inactive">{t('superAdmin.broadcast.filterInactive')}</option>
           </select>
           <select value={filterType} onChange={e => setFilterType(e.target.value)}
-            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-gold/40">
+            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-brand/40">
             <option value="">{t('superAdmin.broadcast.filterAllType')}</option>
             {Object.keys(TYPE_KEYS).map(k => (
               <option key={k} value={k}>{t(`superAdmin.broadcast.${TYPE_KEYS[k].i18n}`)}</option>
@@ -234,7 +234,7 @@ export default function SABroadcastPage() {
           <div className="relative flex-1 min-w-[180px]">
             <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('superAdmin.broadcast.searchPlaceholder')}
-              className="w-full bg-dark-surface border border-dark-border rounded-xl pl-8 pr-3 py-1.5 text-xs text-off-white placeholder:text-muted focus:outline-none focus:border-gold/40" />
+              className="w-full bg-dark-surface border border-dark-border rounded-xl pl-8 pr-3 py-1.5 text-xs text-off-white placeholder:text-muted focus:outline-none focus:border-brand/40" />
           </div>
           {hasFilter && (
             <button onClick={handleResetFilters} className="flex items-center gap-1 text-xs text-muted hover:text-off-white">
@@ -258,7 +258,7 @@ export default function SABroadcastPage() {
             <Megaphone size={40} className="mx-auto mb-3 opacity-30" />
             <p>{hasFilter ? t('superAdmin.broadcast.noResults') : t('superAdmin.broadcast.empty')}</p>
             {hasFilter && (
-              <button onClick={handleResetFilters} className="text-xs text-gold hover:underline mt-2">
+              <button onClick={handleResetFilters} className="text-xs text-brand hover:underline mt-2">
                 {t('superAdmin.broadcast.resetFilter')}
               </button>
             )}
@@ -351,7 +351,7 @@ export default function SABroadcastPage() {
               onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
               rows={4}
               placeholder={t('superAdmin.broadcast.messagePlaceholder')}
-              className="w-full bg-dark-card border border-dark-border rounded-xl px-3 py-2.5 text-sm text-off-white placeholder-muted resize-none focus:outline-none focus:border-gold/50 transition-colors"
+              className="w-full bg-dark-card border border-dark-border rounded-xl px-3 py-2.5 text-sm text-off-white placeholder-muted resize-none focus:outline-none focus:border-brand/50 transition-colors"
             />
           </div>
           <div>
@@ -361,7 +361,7 @@ export default function SABroadcastPage() {
                 const Icn = cfg.icon
                 return (
                   <button key={key} onClick={() => setForm(f => ({ ...f, type: key }))}
-                    className={`flex items-center gap-2 p-2.5 rounded-xl border text-sm transition-all ${form.type === key ? 'border-gold bg-gold/10 text-off-white' : 'border-dark-border text-muted hover:border-gold/30'}`}>
+                    className={`flex items-center gap-2 p-2.5 rounded-xl border text-sm transition-all ${form.type === key ? 'border-brand bg-brand/10 text-off-white' : 'border-dark-border text-muted hover:border-brand/30'}`}>
                     <Icn size={14} className={cfg.color} />
                     {t(`superAdmin.broadcast.${cfg.i18n}`)}
                   </button>
@@ -373,19 +373,19 @@ export default function SABroadcastPage() {
             <label className="block text-xs text-muted mb-1.5">{t('superAdmin.broadcast.targetLabel')}</label>
             <div className="flex gap-2 mb-2">
               <button onClick={() => setForm(f => ({ ...f, mode: 'all' }))}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl border text-sm transition-all ${form.mode === 'all' ? 'border-gold bg-gold/10 text-gold' : 'border-dark-border text-muted'}`}>
+                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl border text-sm transition-all ${form.mode === 'all' ? 'border-brand bg-brand/10 text-brand' : 'border-dark-border text-muted'}`}>
                 <Users size={14} />{t('superAdmin.broadcast.targetAll')}
               </button>
               <button onClick={() => setForm(f => ({ ...f, mode: 'specific' }))}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl border text-sm transition-all ${form.mode === 'specific' ? 'border-gold bg-gold/10 text-gold' : 'border-dark-border text-muted'}`}>
+                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl border text-sm transition-all ${form.mode === 'specific' ? 'border-brand bg-brand/10 text-brand' : 'border-dark-border text-muted'}`}>
                 <User size={14} />{t('superAdmin.broadcast.targetSpecific')}
               </button>
             </div>
             {form.mode === 'specific' && (
               <div className="space-y-2 max-h-72 overflow-y-auto">
                 {tenants.map(tt => (
-                  <label key={tt.id} className={`flex items-center gap-3 p-2.5 rounded-xl border cursor-pointer transition-all ${selectedTenantIds.includes(tt.id) ? 'border-gold bg-gold/5' : 'border-dark-border hover:border-gold/30'}`}>
-                    <input type="checkbox" checked={selectedTenantIds.includes(tt.id)} onChange={() => toggleTenant(tt.id)} className="accent-gold" />
+                  <label key={tt.id} className={`flex items-center gap-3 p-2.5 rounded-xl border cursor-pointer transition-all ${selectedTenantIds.includes(tt.id) ? 'border-brand bg-brand/5' : 'border-dark-border hover:border-brand/30'}`}>
+                    <input type="checkbox" checked={selectedTenantIds.includes(tt.id)} onChange={() => toggleTenant(tt.id)} className="accent-brand" />
                     <span className="text-sm text-off-white flex-1 truncate">{tt.name}</span>
                     {tt.package && (
                       <Badge variant={tt.status === 'active' ? 'success' : 'danger'} className="ml-auto">{tt.package}</Badge>

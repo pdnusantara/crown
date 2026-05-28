@@ -76,8 +76,22 @@
     background-size: 200% auto;
   }
 
+  /* Equivalent of .gold-text untuk rebrand Electric Indigo + Mint.
+     Per-page migrasi (Fase C+) menggantikan gold-text → brand-text. */
+  .brand-text {
+    background: linear-gradient(135deg, #6366F1 0%, #A5A2FF 50%, #6366F1 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-size: 200% auto;
+  }
+
   .gold-border {
     border: 1px solid rgba(201, 168, 76, 0.3);
+  }
+
+  .brand-border {
+    border: 1px solid rgba(99, 102, 241, 0.3);
   }
 
   .card-hover {

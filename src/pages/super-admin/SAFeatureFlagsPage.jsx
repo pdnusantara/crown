@@ -24,13 +24,13 @@ const CATEGORY_COLORS = {
   Core:        'text-blue-400',
   Analytics:   'text-purple-400',
   Operations:  'text-green-400',
-  UX:          'text-gold',
+  UX:          'text-brand',
   Enterprise:  'text-pink-400',
 }
 
 const PACKAGE_COLORS = {
   Basic:      'text-blue-400 border-blue-400/30 bg-blue-400/10',
-  Pro:        'text-gold border-gold/30 bg-gold/10',
+  Pro:        'text-brand border-brand/30 bg-brand/10',
   Enterprise: 'text-purple-400 border-purple-400/30 bg-purple-400/10',
 }
 
@@ -55,7 +55,7 @@ function CopyFromMenu({ tenants, currentTenantId, onPick, t }) {
     <div className="relative">
       <button
         onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-dark-border text-xs text-muted hover:border-gold/30 hover:text-off-white transition-all"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-dark-border text-xs text-muted hover:border-brand/30 hover:text-off-white transition-all"
       >
         <Copy size={12} />
         {t('superAdmin.featureFlags.copyFromMenu')}
@@ -289,7 +289,7 @@ export default function SAFeatureFlagsPage() {
   if (tenants.length === 0) {
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-display font-bold gold-text">{t('superAdmin.featureFlags.pageTitle')}</h1>
+        <h1 className="text-2xl font-display font-bold brand-text">{t('superAdmin.featureFlags.pageTitle')}</h1>
         <Card className="p-10 text-center">
           <Flag size={32} className="mx-auto text-muted mb-3" />
           <p className="text-muted text-sm">{t('superAdmin.featureFlags.noTenantsHint')}</p>
@@ -303,7 +303,7 @@ export default function SAFeatureFlagsPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-display font-bold gold-text">{t('superAdmin.featureFlags.pageTitle')}</h1>
+          <h1 className="text-2xl font-display font-bold brand-text">{t('superAdmin.featureFlags.pageTitle')}</h1>
           <p className="text-muted text-sm mt-1">{t('superAdmin.featureFlags.pageSubtitle')}</p>
         </div>
         <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-400/10 border border-green-400/20 text-[10px] text-green-400 font-medium">
@@ -314,7 +314,7 @@ export default function SAFeatureFlagsPage() {
       {/* KPI summary */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <KpiCard label={t('superAdmin.featureFlags.kpiTotalTenants')} value={platformKpi.tenantCount} color="text-blue-400" delay={0} />
-        <KpiCard label={t('superAdmin.featureFlags.kpiActiveFlags')}   value={`${flags.length}/${ALL_FEATURE_FLAGS.length}`} color="text-gold" delay={0.05} />
+        <KpiCard label={t('superAdmin.featureFlags.kpiActiveFlags')}   value={`${flags.length}/${ALL_FEATURE_FLAGS.length}`} color="text-brand" delay={0.05} />
         <KpiCard label={t('superAdmin.featureFlags.kpiCustomized')}    value={deviationStats.custom > 0 ? '1+' : '0'} color="text-emerald-400" delay={0.1} />
       </div>
 
@@ -366,7 +366,7 @@ export default function SAFeatureFlagsPage() {
             value={tenantQuery}
             onChange={e => setTenantQuery(e.target.value)}
             placeholder={t('superAdmin.featureFlags.tenantSearchPlaceholder')}
-            className="flex-1 bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white placeholder:text-muted focus:outline-none focus:border-gold/40"
+            className="flex-1 bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white placeholder:text-muted focus:outline-none focus:border-brand/40"
           />
         </div>
         <div className="flex flex-wrap gap-2">
@@ -377,7 +377,7 @@ export default function SAFeatureFlagsPage() {
               <button
                 key={tenant.id}
                 onClick={() => setSelectedTenantId(tenant.id)}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-sm transition-all ${isActive ? 'border-gold bg-gold/10 text-off-white' : 'border-dark-border text-muted hover:border-gold/30'}`}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-sm transition-all ${isActive ? 'border-brand bg-brand/10 text-off-white' : 'border-dark-border text-muted hover:border-brand/30'}`}
               >
                 <span className="font-medium">{tenant.name}</span>
                 {tenant.package && (
@@ -386,7 +386,7 @@ export default function SAFeatureFlagsPage() {
                   </span>
                 )}
                 {hint && (
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isActive ? 'bg-gold/20 text-gold' : 'bg-dark-surface text-muted'}`}>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isActive ? 'bg-brand/20 text-brand' : 'bg-dark-surface text-muted'}`}>
                     {hint}
                   </span>
                 )}
@@ -476,7 +476,7 @@ export default function SAFeatureFlagsPage() {
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
           placeholder={t('superAdmin.featureFlags.searchPlaceholder')}
-          className="w-full bg-dark-card border border-dark-border rounded-xl pl-9 pr-9 py-2.5 text-sm text-off-white placeholder:text-muted focus:outline-none focus:border-gold/40 transition-colors"
+          className="w-full bg-dark-card border border-dark-border rounded-xl pl-9 pr-9 py-2.5 text-sm text-off-white placeholder:text-muted focus:outline-none focus:border-brand/40 transition-colors"
         />
         {searchQuery && (
           <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-off-white">
@@ -516,7 +516,7 @@ export default function SAFeatureFlagsPage() {
                     <button
                       onClick={() => handleBulkCategory(category, categoryFlags, true)}
                       disabled={isSaving || allActive}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] text-muted border border-dark-border hover:border-gold/30 hover:text-off-white disabled:opacity-40 transition-all"
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] text-muted border border-dark-border hover:border-brand/30 hover:text-off-white disabled:opacity-40 transition-all"
                     >
                       <CheckSquare size={11} />
                       {t('superAdmin.featureFlags.bulkAll')}
@@ -542,7 +542,7 @@ export default function SAFeatureFlagsPage() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-sm font-medium text-off-white">{flag.label}</p>
                           {pkgDefaults?.includes(flag.id) && (
-                            <span className="text-[10px] text-gold border border-gold/30 rounded px-1.5 py-0.5">
+                            <span className="text-[10px] text-brand border border-brand/30 rounded px-1.5 py-0.5">
                               {t('superAdmin.featureFlags.defaultLabel')}
                             </span>
                           )}
@@ -565,7 +565,7 @@ export default function SAFeatureFlagsPage() {
                         onClick={() => !isSaving && handleToggle(flag.id, flag.label)}
                         disabled={isSaving || !effectiveTenantId}
                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0
-                          ${enabled ? 'bg-gold' : 'bg-dark-border'} disabled:opacity-50`}
+                          ${enabled ? 'bg-brand' : 'bg-dark-border'} disabled:opacity-50`}
                         role="switch"
                         aria-checked={enabled}
                       >
@@ -667,9 +667,9 @@ function AuditPanel({ audit, loading, onRefresh, onSyncOne, onSyncAll, onPickTen
                       <button
                         type="button"
                         onClick={() => onPickTenant(r.tenantId)}
-                        className="text-left flex items-center gap-2 min-w-0 hover:text-gold transition-colors"
+                        className="text-left flex items-center gap-2 min-w-0 hover:text-brand transition-colors"
                       >
-                        <PackageIcon className="w-3.5 h-3.5 text-gold shrink-0" />
+                        <PackageIcon className="w-3.5 h-3.5 text-brand shrink-0" />
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-off-white truncate">{r.name}</p>
                           <p className="text-[10px] text-muted truncate">

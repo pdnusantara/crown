@@ -76,7 +76,7 @@ export default function SAAffiliateDetailPage() {
       <Card className="p-8 text-center">
         <AlertCircle size={28} className="text-amber-400 mx-auto mb-2" />
         <p className="text-off-white">Affiliate tidak ditemukan</p>
-        <Link to="/super-admin/affiliates" className="text-gold text-sm mt-3 inline-block">← Kembali</Link>
+        <Link to="/super-admin/affiliates" className="text-brand text-sm mt-3 inline-block">← Kembali</Link>
       </Card>
     )
   }
@@ -105,7 +105,7 @@ export default function SAAffiliateDetailPage() {
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
             <div className="flex items-center gap-2 flex-wrap mb-2">
-              <p className="font-mono text-xl font-bold text-gold">{aff.referralCode}</p>
+              <p className="font-mono text-xl font-bold text-brand">{aff.referralCode}</p>
               {statusBadge(aff.status)}
               <Badge variant="info">Komisi {Math.round(aff.commissionRate * 100)}%</Badge>
             </div>
@@ -181,7 +181,7 @@ export default function SAAffiliateDetailPage() {
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`px-4 py-2 text-sm whitespace-nowrap border-b-2 transition-colors ${
-              tab === t.id ? 'border-gold text-gold' : 'border-transparent text-muted hover:text-off-white'
+              tab === t.id ? 'border-brand text-brand' : 'border-transparent text-muted hover:text-off-white'
             }`}>{t.label}</button>
         ))}
       </div>
@@ -197,8 +197,8 @@ export default function SAAffiliateDetailPage() {
       <Modal isOpen={!!passwordResetInfo} onClose={() => { setPasswordResetInfo(null); setShowPass(false) }} title="Password baru" size="sm">
         <div className="space-y-3">
           <p className="text-xs text-muted">Salin sekarang — password ini tidak akan ditampilkan kembali.</p>
-          <div className="flex items-center gap-2 bg-dark-surface border border-gold/30 rounded-xl p-3">
-            <code className="flex-1 font-mono text-base text-gold">
+          <div className="flex items-center gap-2 bg-dark-surface border border-brand/30 rounded-xl p-3">
+            <code className="flex-1 font-mono text-base text-brand">
               {showPass ? passwordResetInfo?.password : '•'.repeat(Math.max(8, (passwordResetInfo?.password || '').length))}
             </code>
             <button onClick={() => setShowPass(s => !s)} className="text-muted hover:text-off-white">
@@ -297,7 +297,7 @@ function ReferralsTab({ id }) {
                       {r.tenant?.subscription?.status || '—'}
                     </Badge>
                   </Td>
-                  <Td right><span className="text-gold tabular-nums">{formatRupiah(r.totalCommission)}</span></Td>
+                  <Td right><span className="text-brand tabular-nums">{formatRupiah(r.totalCommission)}</span></Td>
                   <Td className="text-xs text-muted">{new Date(r.createdAt).toLocaleDateString('id-ID')}</Td>
                   <Td right>
                     {r.status === 'pending' ? (
@@ -358,7 +358,7 @@ function CommissionsTab({ id }) {
         {['all', 'pending', 'approved', 'paid', 'void'].map(s => (
           <button key={s} onClick={() => setStatus(s)}
             className={`px-3 py-1 text-xs rounded-full border ${
-              status === s ? 'bg-gold/15 text-gold border-gold/40' : 'border-dark-border text-muted hover:text-off-white'
+              status === s ? 'bg-brand/15 text-brand border-brand/40' : 'border-dark-border text-muted hover:text-off-white'
             }`}>{s === 'all' ? 'Semua' : s}</button>
         ))}
       </div>
@@ -386,7 +386,7 @@ function CommissionsTab({ id }) {
                     <Td>{c.referral?.tenant?.name || '—'}</Td>
                     <Td className="text-xs">{c.period || '—'}</Td>
                     <Td right className="tabular-nums">{formatRupiah(c.baseAmount)}</Td>
-                    <Td right><span className="text-gold tabular-nums">{formatRupiah(c.amount)}</span></Td>
+                    <Td right><span className="text-brand tabular-nums">{formatRupiah(c.amount)}</span></Td>
                     <Td>{commStatusBadge(c.status)}</Td>
                     <Td right>
                       {c.status === 'pending' && (
@@ -464,7 +464,7 @@ function PayoutsTab({ id, onProcess }) {
             {data.map(p => (
               <tr key={p.id} className="border-t border-dark-border hover:bg-dark-surface/40">
                 <Td className="text-xs">{new Date(p.createdAt).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</Td>
-                <Td right><span className="text-gold tabular-nums">{formatRupiah(p.amount)}</span></Td>
+                <Td right><span className="text-brand tabular-nums">{formatRupiah(p.amount)}</span></Td>
                 <Td>
                   <p className="text-off-white text-xs">{PAYOUT_METHOD_LABEL[p.method] || p.method}</p>
                   <p className="text-muted text-[11px] font-mono">{p.account}</p>
@@ -514,7 +514,7 @@ function PayoutActionModal({ payout, onClose }) {
     <Modal isOpen={!!payout} onClose={onClose} title={isReject ? 'Tolak permintaan payout' : 'Tandai payout dibayar'} size="md">
       <div className="space-y-3">
         <div className="bg-dark-surface rounded-xl p-3 text-sm space-y-1">
-          <p className="text-off-white">Nominal: <span className="text-gold font-semibold">{formatRupiah(payout.amount)}</span></p>
+          <p className="text-off-white">Nominal: <span className="text-brand font-semibold">{formatRupiah(payout.amount)}</span></p>
           <p className="text-muted text-xs">Tujuan: {PAYOUT_METHOD_LABEL[payout.method] || payout.method} · {payout.account} {payout.holder ? `(${payout.holder})` : ''}</p>
         </div>
         {!isReject && (

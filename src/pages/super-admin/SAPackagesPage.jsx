@@ -20,7 +20,7 @@ import { formatRupiah } from '../../utils/format.js'
 
 const PACKAGE_STYLES = {
   Basic:      { border: 'border-blue-400/30',   bg: 'bg-blue-400/5',   badge: 'text-blue-400 bg-blue-400/10 border-blue-400/30',   accent: 'text-blue-400' },
-  Pro:        { border: 'border-gold/30',        bg: 'bg-gold/5',       badge: 'text-gold bg-gold/10 border-gold/30',               accent: 'text-gold' },
+  Pro:        { border: 'border-brand/30',        bg: 'bg-brand/5',       badge: 'text-brand bg-brand/10 border-brand/30',               accent: 'text-brand' },
   Enterprise: { border: 'border-purple-400/30',  bg: 'bg-purple-400/5', badge: 'text-purple-400 bg-purple-400/10 border-purple-400/30', accent: 'text-purple-400' },
 }
 
@@ -95,7 +95,7 @@ function RpInput({ label, value, onChange, hint, error, step = 1000 }) {
           type="number"
           value={value ?? 0}
           onChange={e => onChange(toNonNegativeInt(e.target.value))}
-          className={`w-full bg-dark-card border rounded-xl pl-9 pr-3 py-2.5 text-sm text-off-white focus:outline-none transition-colors ${error ? 'border-red-400/50 focus:border-red-400' : 'border-dark-border focus:border-gold/50'}`}
+          className={`w-full bg-dark-card border rounded-xl pl-9 pr-3 py-2.5 text-sm text-off-white focus:outline-none transition-colors ${error ? 'border-red-400/50 focus:border-red-400' : 'border-dark-border focus:border-brand/50'}`}
           min={0}
           step={step}
         />
@@ -166,10 +166,10 @@ function BranchSimulator({ basePrice, maxBranches, addonPrice, addonType }) {
             const { extra, addonMonthly, addonOnetime, monthlyTotal } = calcTotal(branches, basePrice, maxBranches, addonPrice, addonType)
             const isBase = branches === maxBranches
             return (
-              <tr key={branches} className={`border-b border-dark-border/40 ${isBase ? 'bg-gold/5' : i % 2 !== 0 ? 'bg-dark-surface/30' : ''}`}>
+              <tr key={branches} className={`border-b border-dark-border/40 ${isBase ? 'bg-brand/5' : i % 2 !== 0 ? 'bg-dark-surface/30' : ''}`}>
                 <td className="px-3 py-2">
-                  <span className={`font-medium ${isBase ? 'text-gold' : 'text-off-white'}`}>{branches} cabang</span>
-                  {isBase && <span className="ml-1.5 text-gold/60 text-[10px]">termasuk</span>}
+                  <span className={`font-medium ${isBase ? 'text-brand' : 'text-off-white'}`}>{branches} cabang</span>
+                  {isBase && <span className="ml-1.5 text-brand/60 text-[10px]">termasuk</span>}
                   {!isBase && <span className="ml-1.5 text-muted/60 text-[10px]">+{extra} extra</span>}
                 </td>
                 <td className="px-3 py-2 text-right">
@@ -180,7 +180,7 @@ function BranchSimulator({ basePrice, maxBranches, addonPrice, addonType }) {
                   }
                 </td>
                 <td className="px-3 py-2 text-right">
-                  <span className={`font-semibold ${isBase ? 'text-gold' : 'text-off-white'}`}>{formatRupiah(monthlyTotal)}</span>
+                  <span className={`font-semibold ${isBase ? 'text-brand' : 'text-off-white'}`}>{formatRupiah(monthlyTotal)}</span>
                 </td>
               </tr>
             )
@@ -210,12 +210,12 @@ function CardSimulator({ basePrice, maxBranches, addonPrice, addonType }) {
         <span className="text-xs text-muted flex items-center gap-1"><Calculator size={11} />Simulator</span>
         <div className="flex items-center gap-1.5">
           <button onClick={() => setBranchCount(c => Math.max(maxBranches, c - 1))} disabled={branchCount <= maxBranches}
-            className="w-5 h-5 rounded border border-dark-border text-muted hover:text-off-white hover:border-gold/30 transition-colors flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed">
+            className="w-5 h-5 rounded border border-dark-border text-muted hover:text-off-white hover:border-brand/30 transition-colors flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed">
             <Minus size={9} />
           </button>
           <span className="text-xs text-off-white font-semibold w-16 text-center">{branchCount} cabang</span>
           <button onClick={() => setBranchCount(c => c + 1)}
-            className="w-5 h-5 rounded border border-dark-border text-muted hover:text-off-white hover:border-gold/30 transition-colors flex items-center justify-center">
+            className="w-5 h-5 rounded border border-dark-border text-muted hover:text-off-white hover:border-brand/30 transition-colors flex items-center justify-center">
             <Plus size={9} />
           </button>
         </div>
@@ -235,7 +235,7 @@ function CardSimulator({ basePrice, maxBranches, addonPrice, addonType }) {
         )}
         <div className="flex justify-between pt-1 border-t border-dark-border/40 font-semibold">
           <span className="text-muted">Total per bulan</span>
-          <span className="text-gold">{formatRupiah(monthlyTotal)}</span>
+          <span className="text-brand">{formatRupiah(monthlyTotal)}</span>
         </div>
       </div>
     </div>
@@ -368,7 +368,7 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
               <ArrowRight size={14} className="text-muted flex-shrink-0 mb-2 hidden sm:block" />
               <div className="min-w-0">
                 <p className="text-xs text-muted mb-0.5">Per tahun (setelah diskon)</p>
-                <p className="font-bold text-gold">{formatRupiah(annualPrice(form.price, form.annualDiscountPercent))}</p>
+                <p className="font-bold text-brand">{formatRupiah(annualPrice(form.price, form.annualDiscountPercent))}</p>
                 {form.annualDiscountPercent > 0 && (
                   <p className="text-[10px] text-green-400">hemat {form.annualDiscountPercent}% vs Rp{(form.price * 12).toLocaleString('id-ID')}</p>
                 )}
@@ -384,7 +384,7 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs text-muted">Diskon Pembayaran Tahunan</label>
-                <span className="text-xs font-semibold text-gold">{form.annualDiscountPercent}%</span>
+                <span className="text-xs font-semibold text-brand">{form.annualDiscountPercent}%</span>
               </div>
               <input
                 type="range"
@@ -393,7 +393,7 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
                 step={1}
                 value={form.annualDiscountPercent}
                 onChange={e => set('annualDiscountPercent', toNonNegativeInt(e.target.value))}
-                className="w-full accent-gold"
+                className="w-full accent-brand"
               />
               <div className="flex justify-between text-[10px] text-muted/60 mt-1">
                 <span>0% (tanpa diskon)</span>
@@ -418,7 +418,7 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
                 value={form.description}
                 onChange={e => set('description', e.target.value.slice(0, 500))}
                 rows={2}
-                className="w-full bg-dark-card border border-dark-border rounded-xl px-3 py-2.5 text-sm text-off-white focus:outline-none focus:border-gold/50 transition-colors resize-y"
+                className="w-full bg-dark-card border border-dark-border rounded-xl px-3 py-2.5 text-sm text-off-white focus:outline-none focus:border-brand/50 transition-colors resize-y"
                 placeholder="Ringkasan singkat tentang paket ini..."
               />
               <p className="text-[10px] text-muted/60 mt-1 text-right">{form.description.length}/500</p>
@@ -430,7 +430,7 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
         {tab === 'addon' && (
           <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
             <div className="p-3.5 bg-dark-surface rounded-xl border border-dark-border text-xs text-muted flex gap-2.5">
-              <Info size={13} className="text-gold flex-shrink-0 mt-0.5" />
+              <Info size={13} className="text-brand flex-shrink-0 mt-0.5" />
               <span>
                 Setiap paket menyertakan <strong className="text-off-white">{form.maxBranches} cabang</strong> dalam harga pokok.
                 Cabang melebihi batas ini dikenakan biaya sesuai pengaturan di bawah.
@@ -454,11 +454,11 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
                   { key: 'onetime', icon: '💳', title: 'Sekali Bayar',     desc: 'Dibayar satu kali saat menambah cabang.' },
                 ].map(opt => (
                   <button key={opt.key} type="button" onClick={() => set('branchAddonType', opt.key)}
-                    className={`p-3.5 rounded-xl border text-left transition-all ${form.branchAddonType === opt.key ? 'border-gold bg-gold/10' : 'border-dark-border hover:border-gold/30'}`}>
+                    className={`p-3.5 rounded-xl border text-left transition-all ${form.branchAddonType === opt.key ? 'border-brand bg-brand/10' : 'border-dark-border hover:border-brand/30'}`}>
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className="text-base">{opt.icon}</span>
                       <span className="text-sm font-medium text-off-white">{opt.title}</span>
-                      {form.branchAddonType === opt.key && <Check size={12} className="text-gold ml-auto" />}
+                      {form.branchAddonType === opt.key && <Check size={12} className="text-brand ml-auto" />}
                     </div>
                     <p className="text-xs text-muted">{opt.desc}</p>
                   </button>
@@ -469,7 +469,7 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
             {form.branchAddonPrice > 0 ? (
               <div>
                 <p className="text-xs text-muted font-medium mb-2 flex items-center gap-1.5">
-                  <Calculator size={12} className="text-gold" />Simulator total tagihan
+                  <Calculator size={12} className="text-brand" />Simulator total tagihan
                 </p>
                 <BranchSimulator
                   basePrice={form.price}
@@ -525,7 +525,7 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
             <div className="flex items-center justify-between">
               <p className="text-xs text-muted">{form.features.length} dari {ALL_FEATURE_FLAGS.length} fitur aktif</p>
               <div className="flex gap-2">
-                <button onClick={() => setForm(f => ({ ...f, features: ALL_FEATURE_FLAGS.map(x => x.id) }))} className="text-xs text-gold hover:underline">Pilih semua</button>
+                <button onClick={() => setForm(f => ({ ...f, features: ALL_FEATURE_FLAGS.map(x => x.id) }))} className="text-xs text-brand hover:underline">Pilih semua</button>
                 <span className="text-muted/40">|</span>
                 <button onClick={() => setForm(f => ({ ...f, features: [] }))} className="text-xs text-muted hover:text-red-400">Hapus semua</button>
               </div>
@@ -533,14 +533,14 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
             <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
               {FLAG_CATEGORIES.map(cat => (
                 <div key={cat}>
-                  <p className="text-xs text-gold font-semibold mb-1.5 sticky top-0 bg-dark-surface py-1.5 -mx-1 px-1 z-10">{cat}</p>
+                  <p className="text-xs text-brand font-semibold mb-1.5 sticky top-0 bg-dark-surface py-1.5 -mx-1 px-1 z-10">{cat}</p>
                   <div className="grid grid-cols-2 gap-1.5">
                     {ALL_FEATURE_FLAGS.filter(f => f.category === cat).map(flag => {
                       const active = form.features.includes(flag.id)
                       return (
                         <button key={flag.id} type="button" onClick={() => toggleFeature(flag.id)}
-                          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-left transition-all text-xs ${active ? 'border-gold/40 bg-gold/10 text-off-white' : 'border-dark-border text-muted hover:border-dark-border/80'}`}>
-                          <div className={`w-3.5 h-3.5 rounded flex-shrink-0 border flex items-center justify-center transition-all ${active ? 'border-gold bg-gold' : 'border-muted'}`}>
+                          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-left transition-all text-xs ${active ? 'border-brand/40 bg-brand/10 text-off-white' : 'border-dark-border text-muted hover:border-dark-border/80'}`}>
+                          <div className={`w-3.5 h-3.5 rounded flex-shrink-0 border flex items-center justify-center transition-all ${active ? 'border-brand bg-brand' : 'border-muted'}`}>
                             {active && <Check size={9} className="text-dark" />}
                           </div>
                           <span className="truncate">{flag.label}</span>
@@ -584,7 +584,7 @@ function UpgradePath({ packageList }) {
   return (
     <div>
       <h3 className="text-sm font-semibold text-off-white mb-3 flex items-center gap-2">
-        <ChevronRight size={14} className="text-gold" />
+        <ChevronRight size={14} className="text-brand" />
         Upgrade Path
       </h3>
       <div className="grid md:grid-cols-2 gap-4">
@@ -709,7 +709,7 @@ export default function SAPackagesPage() {
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-2xl font-display font-bold gold-text">{t('superAdmin.packages.pageTitle')}</h1>
+            <h1 className="text-2xl font-display font-bold brand-text">{t('superAdmin.packages.pageTitle')}</h1>
             <LiveBadge />
           </div>
           <p className="text-muted text-sm mt-1">{t('superAdmin.packages.pageSubtitle')}</p>
@@ -717,15 +717,15 @@ export default function SAPackagesPage() {
         {!isLoading && totalMrr > 0 && (
           <div className="sm:text-right flex-shrink-0">
             <p className="text-xs text-muted">Total MRR dari paket</p>
-            <p className="text-lg font-bold text-gold break-all">{formatRupiah(totalMrr)}</p>
+            <p className="text-lg font-bold text-brand break-all">{formatRupiah(totalMrr)}</p>
             <p className="text-xs text-muted/60">{formatRupiah(totalMrr * 12)}/tahun</p>
           </div>
         )}
       </div>
 
       {/* Info banner */}
-      <div className="flex items-start gap-3 p-4 bg-gold/5 border border-gold/20 rounded-2xl">
-        <Info size={16} className="text-gold mt-0.5 flex-shrink-0" />
+      <div className="flex items-start gap-3 p-4 bg-brand/5 border border-brand/20 rounded-2xl">
+        <Info size={16} className="text-brand mt-0.5 flex-shrink-0" />
         <p className="text-sm text-muted">{t('superAdmin.packages.infoBanner')}</p>
       </div>
 
@@ -771,7 +771,7 @@ export default function SAPackagesPage() {
                       {pkg.description && <p className="text-xs text-muted mt-1.5 line-clamp-2">{pkg.description}</p>}
                     </div>
                     <button onClick={() => setEditing(name)}
-                      className="ml-2 p-2 rounded-xl border border-dark-border text-muted hover:text-gold hover:border-gold/30 transition-all flex-shrink-0"
+                      className="ml-2 p-2 rounded-xl border border-dark-border text-muted hover:text-brand hover:border-brand/30 transition-all flex-shrink-0"
                       title="Edit">
                       <Edit2 size={14} />
                     </button>
@@ -809,7 +809,7 @@ export default function SAPackagesPage() {
                       <div className="flex items-center gap-1.5 text-xs text-muted"><GitBranch size={12} />Cabang tambahan</div>
                       {hasAddon ? (
                         <div className="text-right">
-                          <span className="text-sm font-bold text-gold">{formatRupiah(pkg.branchAddonPrice)}</span>
+                          <span className="text-sm font-bold text-brand">{formatRupiah(pkg.branchAddonPrice)}</span>
                           <span className="text-xs text-muted ml-1">/cabang/{pkg.branchAddonType === 'monthly' ? 'bln' : 'beli'}</span>
                         </div>
                       ) : (
@@ -881,7 +881,7 @@ export default function SAPackagesPage() {
                   onClick={() => setDiffOnly(d => !d)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
                     diffOnly
-                      ? 'border-gold/40 bg-gold/10 text-gold'
+                      ? 'border-brand/40 bg-brand/10 text-brand'
                       : 'border-dark-border text-muted hover:text-off-white'
                   }`}
                 >

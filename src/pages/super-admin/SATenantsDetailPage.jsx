@@ -20,7 +20,7 @@ import { formatRupiah, formatRupiahShort } from '../../utils/format.js'
 
 const PACKAGE_COLORS = {
   Basic:      'text-blue-400 bg-blue-400/10 border-blue-400/20',
-  Pro:        'text-gold bg-gold/10 border-gold/20',
+  Pro:        'text-brand bg-brand/10 border-brand/20',
   Enterprise: 'text-purple-400 bg-purple-400/10 border-purple-400/20',
 }
 
@@ -105,7 +105,7 @@ export default function SATenantsDetailPage() {
     return (
       <div className="text-center py-20 text-muted">
         <p>{t('superAdmin.tenantDetail.notFound')}</p>
-        <button onClick={() => navigate('/super-admin/tenants')} className="mt-4 text-gold hover:underline text-sm">
+        <button onClick={() => navigate('/super-admin/tenants')} className="mt-4 text-brand hover:underline text-sm">
           {t('superAdmin.tenantDetail.backToList')}
         </button>
       </div>
@@ -144,7 +144,7 @@ export default function SATenantsDetailPage() {
       <div className="flex items-center gap-4">
         <button
           onClick={() => navigate('/super-admin/tenants')}
-          className="p-2 rounded-xl border border-dark-border text-muted hover:text-off-white hover:border-gold/30 transition-all"
+          className="p-2 rounded-xl border border-dark-border text-muted hover:text-off-white hover:border-brand/30 transition-all"
         >
           <ArrowLeft size={16} />
         </button>
@@ -162,7 +162,7 @@ export default function SATenantsDetailPage() {
         {[
           { label: t('superAdmin.tenantDetail.branches'),     value: tenant.totalBranches, icon: Building2, color: 'text-blue-400' },
           { label: t('superAdmin.tenantDetail.staff'),        value: tenant.totalStaff, icon: Users, color: 'text-purple-400' },
-          { label: t('superAdmin.tenantDetail.revenueMtd'),   value: formatRupiah(tenant.monthlyRevenue || 0), valueShort: formatRupiahShort(tenant.monthlyRevenue || 0), icon: TrendingUp, color: 'text-gold' },
+          { label: t('superAdmin.tenantDetail.revenueMtd'),   value: formatRupiah(tenant.monthlyRevenue || 0), valueShort: formatRupiahShort(tenant.monthlyRevenue || 0), icon: TrendingUp, color: 'text-brand' },
           { label: t('superAdmin.tenantDetail.openTickets'),  value: tickets.filter(tk => tk.status === 'open').length, icon: MessageSquare, color: 'text-amber-400' },
         ].map((item, i) => (
           <motion.div key={item.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
@@ -190,7 +190,7 @@ export default function SATenantsDetailPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
-                <ShieldCheck size={15} className="text-gold" />
+                <ShieldCheck size={15} className="text-brand" />
                 <h3 className="font-semibold text-off-white">{t('superAdmin.tenantDetail.subscription')}</h3>
               </div>
             </CardHeader>
@@ -219,7 +219,7 @@ export default function SATenantsDetailPage() {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted">{t('superAdmin.tenantDetail.pricePerMonth')}</span>
-                    <span className="text-sm font-semibold text-gold">{formatRupiah(sub.price)}</span>
+                    <span className="text-sm font-semibold text-brand">{formatRupiah(sub.price)}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted">{t('superAdmin.tenantDetail.autoRenew')}</span>
@@ -241,12 +241,12 @@ export default function SATenantsDetailPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <MessageSquare size={15} className="text-gold" />
+                  <MessageSquare size={15} className="text-brand" />
                   <h3 className="font-semibold text-off-white">{t('superAdmin.tenantDetail.supportTickets')}</h3>
                 </div>
                 <button
                   onClick={() => navigate('/super-admin/tickets')}
-                  className="text-xs text-gold hover:underline"
+                  className="text-xs text-brand hover:underline"
                 >
                   {t('superAdmin.tenantDetail.seeAll')}
                 </button>
@@ -257,7 +257,7 @@ export default function SATenantsDetailPage() {
                 <p className="text-sm text-muted py-4 text-center">{t('superAdmin.tenantDetail.noTickets')}</p>
               )}
               {tickets.slice(0, 4).map(ticket => (
-                <div key={ticket.id} className="flex items-start justify-between gap-2 p-2.5 rounded-xl border border-dark-border hover:border-gold/20 transition-colors">
+                <div key={ticket.id} className="flex items-start justify-between gap-2 p-2.5 rounded-xl border border-dark-border hover:border-brand/20 transition-colors">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-off-white truncate">{ticket.subject}</p>
                     <p className="text-xs text-muted mt-0.5" title={formatDateTime(ticket.createdAt)}>{timeAgo(ticket.createdAt)}</p>
@@ -278,7 +278,7 @@ export default function SATenantsDetailPage() {
           <CardHeader>
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
-                <GitBranch size={15} className="text-gold" />
+                <GitBranch size={15} className="text-brand" />
                 <h3 className="font-semibold text-off-white">Cabang &amp; Lisensi</h3>
               </div>
               <div className="flex items-center gap-2">
@@ -307,7 +307,7 @@ export default function SATenantsDetailPage() {
                 {[
                   { label: 'Kuota Paket', value: licSummary.maxBranches ?? '∞', color: 'text-blue-400' },
                   { label: 'Addon Dibayar', value: licSummary.paidAddonCount ?? 0, color: 'text-green-400' },
-                  { label: 'Total Berlisensi', value: (licSummary.maxBranches ?? 0) + (licSummary.paidAddonCount ?? 0), color: 'text-gold' },
+                  { label: 'Total Berlisensi', value: (licSummary.maxBranches ?? 0) + (licSummary.paidAddonCount ?? 0), color: 'text-brand' },
                   { label: 'Cabang Aktif', value: licSummary.totalBranches ?? branches.length, color: 'text-off-white' },
                 ].map(item => (
                   <div key={item.label} className="bg-dark-bg/60 rounded-xl p-3 border border-dark-border">
@@ -371,7 +371,7 @@ export default function SATenantsDetailPage() {
               ) : (
                 <div className="space-y-2">
                   {branches.map(branch => (
-                    <div key={branch.id} className="flex items-center justify-between gap-3 p-3 rounded-xl border border-dark-border hover:border-gold/20 transition-colors">
+                    <div key={branch.id} className="flex items-center justify-between gap-3 p-3 rounded-xl border border-dark-border hover:border-brand/20 transition-colors">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-off-white truncate">{branch.name}</p>
                         {branch.address && <p className="text-xs text-muted truncate mt-0.5">{branch.address}</p>}
@@ -407,12 +407,12 @@ export default function SATenantsDetailPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Flag size={15} className="text-gold" />
+                <Flag size={15} className="text-brand" />
                 <h3 className="font-semibold text-off-white">{t('superAdmin.tenantDetail.featureFlags')}</h3>
               </div>
               <button
                 onClick={() => navigate('/super-admin/feature-flags')}
-                className="text-xs text-gold hover:underline"
+                className="text-xs text-brand hover:underline"
               >
                 {t('superAdmin.tenantDetail.manage')}
               </button>
@@ -430,7 +430,7 @@ export default function SATenantsDetailPage() {
                     {catFlags.map(f => (
                       <span
                         key={f.id}
-                        className={`text-xs px-2.5 py-1 rounded-full border font-medium ${f.enabled ? 'border-gold/30 bg-gold/10 text-gold' : 'border-dark-border text-muted opacity-50'}`}
+                        className={`text-xs px-2.5 py-1 rounded-full border font-medium ${f.enabled ? 'border-brand/30 bg-brand/10 text-brand' : 'border-dark-border text-muted opacity-50'}`}
                       >
                         {f.label}
                       </span>
@@ -471,7 +471,7 @@ export default function SATenantsDetailPage() {
                 value={grantNote}
                 onChange={e => setGrantNote(e.target.value)}
                 placeholder="Contoh: Program promosi Mei 2026"
-                className="w-full bg-dark-bg border border-dark-border rounded-xl px-3 py-2 text-sm text-off-white placeholder-muted focus:outline-none focus:border-gold/50"
+                className="w-full bg-dark-bg border border-dark-border rounded-xl px-3 py-2 text-sm text-off-white placeholder-muted focus:outline-none focus:border-brand/50"
               />
             </div>
             <div className="flex gap-3">
@@ -520,9 +520,9 @@ export default function SATenantsDetailPage() {
                   className={`py-2.5 rounded-xl border text-sm font-semibold transition-all ${
                     upgradeTarget === pkg
                       ? pkg === 'Basic' ? 'border-blue-400/60 bg-blue-400/10 text-blue-400'
-                        : pkg === 'Pro' ? 'border-gold/60 bg-gold/10 text-gold'
+                        : pkg === 'Pro' ? 'border-brand/60 bg-brand/10 text-brand'
                         : 'border-purple-400/60 bg-purple-400/10 text-purple-400'
-                      : 'border-dark-border text-muted hover:border-gold/20'
+                      : 'border-dark-border text-muted hover:border-brand/20'
                   }`}
                 >
                   {pkg}

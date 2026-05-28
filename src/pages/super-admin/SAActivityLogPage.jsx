@@ -270,7 +270,7 @@ export default function SAActivityLogPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-display font-bold gold-text">{t('superAdmin.activityLog.pageTitle')}</h1>
+          <h1 className="text-2xl font-display font-bold brand-text">{t('superAdmin.activityLog.pageTitle')}</h1>
         </div>
         <Card className="p-8 flex flex-col items-center text-center">
           <AlertTriangle size={32} className="text-amber-400 mb-3" />
@@ -288,7 +288,7 @@ export default function SAActivityLogPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-display font-bold gold-text">{t('superAdmin.activityLog.pageTitle')}</h1>
+          <h1 className="text-2xl font-display font-bold brand-text">{t('superAdmin.activityLog.pageTitle')}</h1>
           <p className="text-muted text-sm mt-1">{t('superAdmin.activityLog.pageSubtitle')}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -307,7 +307,7 @@ export default function SAActivityLogPage() {
 
       {/* KPI / Severity chips */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiCard label={t('superAdmin.activityLog.kpiTotal', { days })} value={stats?.total ?? '—'} icon={Activity} color="text-gold" delay={0} />
+        <KpiCard label={t('superAdmin.activityLog.kpiTotal', { days })} value={stats?.total ?? '—'} icon={Activity} color="text-brand" delay={0} />
         <KpiCard label={t('superAdmin.activityLog.kpiToday')} value={stats?.todayCount ?? '—'} icon={Activity} color="text-blue-400" delay={0.05} />
         <KpiCard label={t('superAdmin.activityLog.kpiWarning')} value={stats?.bySeverity?.warning ?? 0} icon={AlertTriangle} color="text-amber-400" delay={0.1} />
         <KpiCard label={t('superAdmin.activityLog.kpiError')} value={stats?.bySeverity?.error ?? 0} icon={XCircle} color="text-red-400" delay={0.15} />
@@ -324,7 +324,7 @@ export default function SAActivityLogPage() {
             <button
               key={key}
               onClick={() => setSeverity(active ? '' : key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${active ? `${cfg.bg} ${cfg.border} ${cfg.color}` : 'border-dark-border text-muted hover:border-gold/30'}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all ${active ? `${cfg.bg} ${cfg.border} ${cfg.color}` : 'border-dark-border text-muted hover:border-brand/30'}`}
             >
               <Icn size={12} />
               {t('superAdmin.activityLog.chipCount', {
@@ -339,7 +339,7 @@ export default function SAActivityLogPage() {
             <button
               key={d}
               onClick={() => setDays(d)}
-              className={`px-2.5 py-1 text-[11px] rounded-lg transition-colors ${days === d ? 'bg-gold/15 text-gold' : 'text-muted hover:text-off-white'}`}
+              className={`px-2.5 py-1 text-[11px] rounded-lg transition-colors ${days === d ? 'bg-brand/15 text-brand' : 'text-muted hover:text-off-white'}`}
             >
               {t(`superAdmin.activityLog.filterRange${d}`)}
             </button>
@@ -353,7 +353,7 @@ export default function SAActivityLogPage() {
           <Filter size={13} className="text-muted flex-shrink-0" />
 
           <select value={action} onChange={e => setAction(e.target.value)}
-            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-gold/40 max-w-[180px]">
+            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-brand/40 max-w-[180px]">
             <option value="">{t('superAdmin.activityLog.filterAllAction')}</option>
             {actionCodes.map(code => (
               <option key={code} value={code}>{code}</option>
@@ -364,24 +364,24 @@ export default function SAActivityLogPage() {
             value={actor}
             onChange={e => setActor(e.target.value)}
             placeholder={t('superAdmin.activityLog.filterActorPlaceholder')}
-            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white placeholder:text-muted focus:outline-none focus:border-gold/40 max-w-[180px]"
+            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white placeholder:text-muted focus:outline-none focus:border-brand/40 max-w-[180px]"
           />
           <input
             value={target}
             onChange={e => setTarget(e.target.value)}
             placeholder={t('superAdmin.activityLog.filterTargetPlaceholder')}
-            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white placeholder:text-muted focus:outline-none focus:border-gold/40 max-w-[200px]"
+            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white placeholder:text-muted focus:outline-none focus:border-brand/40 max-w-[200px]"
           />
 
           <input type="date" value={from} onChange={e => setFrom(e.target.value)}
-            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-gold/40" />
+            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-brand/40" />
           <input type="date" value={to} onChange={e => setTo(e.target.value)}
-            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-gold/40" />
+            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-brand/40" />
 
           <div className="relative flex-1 min-w-[160px]">
             <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('superAdmin.activityLog.filterDetailPlaceholder')}
-              className="w-full bg-dark-surface border border-dark-border rounded-xl pl-8 pr-3 py-1.5 text-xs text-off-white placeholder:text-muted focus:outline-none focus:border-gold/40" />
+              className="w-full bg-dark-surface border border-dark-border rounded-xl pl-8 pr-3 py-1.5 text-xs text-off-white placeholder:text-muted focus:outline-none focus:border-brand/40" />
           </div>
 
           {hasFilter && (
@@ -397,7 +397,7 @@ export default function SAActivityLogPage() {
         <CardHeader>
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
-              <Activity size={15} className="text-gold" />
+              <Activity size={15} className="text-brand" />
               <h3 className="font-semibold text-off-white text-sm">{t('superAdmin.activityLog.logTitle')}</h3>
             </div>
             <span className="text-xs text-muted">
@@ -426,7 +426,7 @@ export default function SAActivityLogPage() {
             <p className="text-muted text-sm">{t('superAdmin.activityLog.noLogs')}</p>
             <p className="text-[11px] text-muted">{t('superAdmin.activityLog.noLogsHint')}</p>
             {hasFilter && (
-              <button onClick={handleResetFilters} className="text-xs text-gold hover:underline mt-2">
+              <button onClick={handleResetFilters} className="text-xs text-brand hover:underline mt-2">
                 {t('superAdmin.activityLog.resetFilter')}
               </button>
             )}

@@ -41,7 +41,7 @@ const ChartTooltip = ({ active, payload, label, t, tz, mode }) => {
   return (
     <div className="glass rounded-xl px-3 py-2 text-xs shadow-lg">
       <p className="text-muted mb-1">{formatBucketLabel(label, tz)}</p>
-      <p className="text-gold font-semibold">{t(`superAdmin.usage.${labelKey}`, { count: value })}</p>
+      <p className="text-brand font-semibold">{t(`superAdmin.usage.${labelKey}`, { count: value })}</p>
     </div>
   )
 }
@@ -163,7 +163,7 @@ export default function SAUsagePage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-display font-bold gold-text">{t('superAdmin.usage.pageTitle')}</h1>
+          <h1 className="text-2xl font-display font-bold brand-text">{t('superAdmin.usage.pageTitle')}</h1>
           <p className="text-muted text-sm mt-1">{t('superAdmin.usage.pageSubtitle')}</p>
         </div>
         <Card className="p-10 text-center">
@@ -186,7 +186,7 @@ export default function SAUsagePage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-display font-bold gold-text">{t('superAdmin.usage.pageTitle')}</h1>
+          <h1 className="text-2xl font-display font-bold brand-text">{t('superAdmin.usage.pageTitle')}</h1>
           <p className="text-muted text-sm mt-1">{t('superAdmin.usage.pageSubtitle')}</p>
           {meta?.generatedAt && (
             <p className="text-[11px] text-muted mt-1">
@@ -200,7 +200,7 @@ export default function SAUsagePage() {
               <button
                 key={d}
                 onClick={() => setDays(d)}
-                className={`px-3 py-1.5 text-xs rounded-lg transition-all ${days === d ? 'bg-gold/15 text-gold border border-gold/40' : 'text-muted hover:text-off-white'}`}
+                className={`px-3 py-1.5 text-xs rounded-lg transition-all ${days === d ? 'bg-brand/15 text-brand border border-brand/40' : 'text-muted hover:text-off-white'}`}
               >
                 {t('superAdmin.usage.windowDays', { count: d, defaultValue: `${d}d` })}
               </button>
@@ -229,7 +229,7 @@ export default function SAUsagePage() {
           label={t('superAdmin.usage.kpiDau')}
           value={kpi.dauToday}
           icon={Activity}
-          color="text-gold"
+          color="text-brand"
           delay={0.05}
         />
         <KpiCard
@@ -265,7 +265,7 @@ export default function SAUsagePage() {
                 <button
                   key={tt.id}
                   onClick={() => setSelectedTenantId(tt.id)}
-                  className={`px-3 py-1.5 rounded-xl border text-xs sm:text-sm transition-all ${selectedTenant?.id === tt.id ? 'border-gold bg-gold/10 text-off-white' : 'border-dark-border text-muted hover:border-gold/30'}`}
+                  className={`px-3 py-1.5 rounded-xl border text-xs sm:text-sm transition-all ${selectedTenant?.id === tt.id ? 'border-brand bg-brand/10 text-off-white' : 'border-dark-border text-muted hover:border-brand/30'}`}
                 >
                   <span>{tt.name}</span>
                   {tt.suspended && <span className="ml-1.5 text-[10px] text-amber-400">●</span>}
@@ -283,7 +283,7 @@ export default function SAUsagePage() {
             <CardHeader>
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
-                  <TrendingUp size={15} className="text-gold" />
+                  <TrendingUp size={15} className="text-brand" />
                   <h3 className="font-semibold text-off-white">
                     {chartMode === 'tx' ? t('superAdmin.usage.txTitle') : t('superAdmin.usage.dauTitle')}
                   </h3>
@@ -291,13 +291,13 @@ export default function SAUsagePage() {
                 <div className="flex items-center gap-1 bg-dark-surface border border-dark-border rounded-lg p-0.5">
                   <button
                     onClick={() => setChartMode('dau')}
-                    className={`px-2.5 py-1 text-[11px] rounded-md transition-colors ${chartMode === 'dau' ? 'bg-gold/15 text-gold' : 'text-muted hover:text-off-white'}`}
+                    className={`px-2.5 py-1 text-[11px] rounded-md transition-colors ${chartMode === 'dau' ? 'bg-brand/15 text-brand' : 'text-muted hover:text-off-white'}`}
                   >
                     {t('superAdmin.usage.kpiDau')}
                   </button>
                   <button
                     onClick={() => setChartMode('tx')}
-                    className={`px-2.5 py-1 text-[11px] rounded-md transition-colors ${chartMode === 'tx' ? 'bg-gold/15 text-gold' : 'text-muted hover:text-off-white'}`}
+                    className={`px-2.5 py-1 text-[11px] rounded-md transition-colors ${chartMode === 'tx' ? 'bg-brand/15 text-brand' : 'text-muted hover:text-off-white'}`}
                   >
                     {t('superAdmin.usage.kpiTransactions')}
                   </button>
@@ -362,7 +362,7 @@ export default function SAUsagePage() {
               <h3 className="font-semibold text-off-white">{t('superAdmin.usage.tenantFeatures')}</h3>
             </CardHeader>
             <CardBody>
-              <p className="text-3xl font-bold text-gold mb-1">{selectedTenant.activeFeatureCount}</p>
+              <p className="text-3xl font-bold text-brand mb-1">{selectedTenant.activeFeatureCount}</p>
               <p className="text-xs text-muted mb-4">{t('superAdmin.usage.ofAvailable', { total: kpi.featuresTotal })}</p>
               {selectedTenant.topFeatures?.length ? (
                 <div className="space-y-2">
@@ -377,7 +377,7 @@ export default function SAUsagePage() {
                             initial={{ width: 0 }}
                             animate={{ width: `${100 - i * 12}%` }}
                             transition={{ delay: i * 0.08, duration: 0.5 }}
-                            className="h-full bg-gold rounded-full"
+                            className="h-full bg-brand rounded-full"
                           />
                         </div>
                         <span className="text-xs text-off-white w-28 truncate" title={label}>{label}</span>
@@ -397,7 +397,7 @@ export default function SAUsagePage() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Users size={15} className="text-gold" />
+            <Users size={15} className="text-brand" />
             <h3 className="font-semibold text-off-white">{t('superAdmin.usage.perTenantTitle')}</h3>
           </div>
         </CardHeader>
@@ -421,7 +421,7 @@ export default function SAUsagePage() {
                   <tr
                     key={tt.id}
                     onClick={() => setSelectedTenantId(tt.id)}
-                    className={`border-b border-dark-border/40 cursor-pointer transition-colors ${isSel ? 'bg-gold/5' : 'hover:bg-dark-surface/40'}`}
+                    className={`border-b border-dark-border/40 cursor-pointer transition-colors ${isSel ? 'bg-brand/5' : 'hover:bg-dark-surface/40'}`}
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -439,7 +439,7 @@ export default function SAUsagePage() {
                     <td className="px-4 py-3 text-right text-off-white">{tt.sessions}</td>
                     <td className="px-4 py-3 text-right text-off-white">{tt.transactions}</td>
                     <td className="px-4 py-3 text-right text-off-white">{tt.bookings}</td>
-                    <td className="px-4 py-3 text-right text-gold font-semibold">{tt.activeFeatureCount}</td>
+                    <td className="px-4 py-3 text-right text-brand font-semibold">{tt.activeFeatureCount}</td>
                   </tr>
                 )
               })}
@@ -456,7 +456,7 @@ export default function SAUsagePage() {
                 key={tt.id}
                 type="button"
                 onClick={() => setSelectedTenantId(tt.id)}
-                className={`w-full text-left rounded-xl border p-3 transition-colors ${isSel ? 'border-gold/40 bg-gold/5' : 'border-dark-border bg-dark-surface/40 hover:border-gold/20'}`}
+                className={`w-full text-left rounded-xl border p-3 transition-colors ${isSel ? 'border-brand/40 bg-brand/5' : 'border-dark-border bg-dark-surface/40 hover:border-brand/20'}`}
               >
                 <div className="flex items-center gap-2">
                   <span className="text-off-white font-medium">{tt.name}</span>
@@ -487,7 +487,7 @@ export default function SAUsagePage() {
                   </div>
                   <div>
                     <div className="text-[10px] text-muted uppercase">Fitur</div>
-                    <div className="text-sm text-gold font-semibold">{tt.activeFeatureCount}</div>
+                    <div className="text-sm text-brand font-semibold">{tt.activeFeatureCount}</div>
                   </div>
                 </div>
               </button>
@@ -501,13 +501,13 @@ export default function SAUsagePage() {
         <CardHeader>
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
-              <Zap size={15} className="text-gold" />
+              <Zap size={15} className="text-brand" />
               <h3 className="font-semibold text-off-white">{t('superAdmin.usage.adoptionTitle')}</h3>
             </div>
             <select
               value={flagCategory}
               onChange={(e) => setFlagCategory(e.target.value)}
-              className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-1.5 text-xs outline-none focus:border-gold/50"
+              className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-1.5 text-xs outline-none focus:border-brand/50"
             >
               <option value="">{t('superAdmin.usage.categoryAll')}</option>
               {FLAG_CATEGORIES.map(c => (
@@ -530,7 +530,7 @@ export default function SAUsagePage() {
                         initial={{ width: 0 }}
                         animate={{ width: `${f.percent}%` }}
                         transition={{ delay: i * 0.03, duration: 0.5 }}
-                        className={`h-full rounded-full ${f.percent >= 75 ? 'bg-green-400' : f.percent >= 50 ? 'bg-gold' : f.percent >= 30 ? 'bg-amber-400' : 'bg-dark-border'}`}
+                        className={`h-full rounded-full ${f.percent >= 75 ? 'bg-green-400' : f.percent >= 50 ? 'bg-brand' : f.percent >= 30 ? 'bg-amber-400' : 'bg-dark-border'}`}
                       />
                     </div>
                     <span className="text-xs text-muted w-20 text-right">

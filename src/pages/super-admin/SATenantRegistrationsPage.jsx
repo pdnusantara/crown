@@ -154,7 +154,7 @@ export default function SATenantRegistrationsPage() {
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div className="min-w-0">
           <h1 className="font-display text-2xl font-bold text-off-white flex items-center gap-2">
-            <UserPlus size={22} className="text-gold" /> Laporan Pendaftaran Tenant
+            <UserPlus size={22} className="text-brand" /> Laporan Pendaftaran Tenant
           </h1>
           <p className="text-muted text-sm mt-1">Pantau siapa yang mendaftar, kapan, dan dari sumber mana</p>
         </div>
@@ -178,7 +178,7 @@ export default function SATenantRegistrationsPage() {
 
       {/* KPI */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <KpiTile label="Hari ini"    value={stats?.today}      icon={UserPlus}     color="text-gold"         delay={0} />
+        <KpiTile label="Hari ini"    value={stats?.today}      icon={UserPlus}     color="text-brand"         delay={0} />
         <KpiTile label="Kemarin"     value={stats?.yesterday}  icon={CalendarDays} color="text-blue-400"     delay={0.04} />
         <KpiTile label="Minggu ini"  value={stats?.thisWeek}   icon={TrendingUp}   color="text-emerald-400"  delay={0.08} />
         <KpiTile label="Bulan ini"   value={stats?.thisMonth}  icon={CalendarDays} color="text-amber-400"    delay={0.12} />
@@ -208,7 +208,7 @@ export default function SATenantRegistrationsPage() {
                 key={key}
                 onClick={() => applyPreset(key)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
-                  preset === key ? 'bg-gold/15 text-gold border-gold/30' : 'text-muted border-dark-border hover:text-off-white hover:border-gold/20'
+                  preset === key ? 'bg-brand/15 text-brand border-brand/30' : 'text-muted border-dark-border hover:text-off-white hover:border-brand/20'
                 }`}
               >
                 {label}
@@ -219,18 +219,18 @@ export default function SATenantRegistrationsPage() {
             <input
               type="date" value={from} max={to || undefined}
               onChange={e => { setFrom(e.target.value); setPreset('custom') }}
-              className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-gold/40"
+              className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-brand/40"
             />
             <span className="text-muted text-xs">s/d</span>
             <input
               type="date" value={to} min={from || undefined}
               onChange={e => { setTo(e.target.value); setPreset('custom') }}
-              className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-gold/40"
+              className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-brand/40"
             />
             <select
               value={channel}
               onChange={e => { setChannel(e.target.value); setLimit(25) }}
-              className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-gold/40"
+              className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-brand/40"
             >
               <option value="">Semua sumber</option>
               <option value="affiliate">Affiliate</option>
@@ -246,7 +246,7 @@ export default function SATenantRegistrationsPage() {
               <input
                 type="text" inputMode="search" placeholder="Cari nama / subdomain / email…"
                 value={searchInput} onChange={e => setSearchInput(e.target.value)}
-                className="w-full bg-dark-surface border border-dark-border rounded-xl pl-8 pr-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-gold/40"
+                className="w-full bg-dark-surface border border-dark-border rounded-xl pl-8 pr-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-brand/40"
               />
             </div>
           </div>
@@ -263,7 +263,7 @@ export default function SATenantRegistrationsPage() {
 
         {isError ? (
           <div className="p-8 text-center text-sm text-red-400">
-            Gagal memuat data. <button onClick={() => refetch()} className="text-gold underline">Coba lagi</button>
+            Gagal memuat data. <button onClick={() => refetch()} className="text-brand underline">Coba lagi</button>
           </div>
         ) : isLoading ? (
           <div className="p-5 space-y-2">
@@ -293,7 +293,7 @@ export default function SATenantRegistrationsPage() {
                         <div className="font-medium text-off-white">{r.name}</div>
                         {r.slug && (
                           <a href={`https://${tenantHostname(r.slug)}`} target="_blank" rel="noopener noreferrer"
-                            className="text-xs text-muted hover:text-gold inline-flex items-center gap-1">
+                            className="text-xs text-muted hover:text-brand inline-flex items-center gap-1">
                             {r.slug} <ExternalLink size={11} />
                           </a>
                         )}

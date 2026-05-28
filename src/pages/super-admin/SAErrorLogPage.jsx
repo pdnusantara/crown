@@ -93,7 +93,7 @@ function CopyBtn({ text, className = '' }) {
   return (
     <button
       onClick={handleCopy}
-      className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] border transition-all ${copied ? 'border-green-400/40 text-green-400 bg-green-400/10' : 'border-dark-border text-muted hover:border-gold/30 hover:text-off-white'} ${className}`}
+      className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] border transition-all ${copied ? 'border-green-400/40 text-green-400 bg-green-400/10' : 'border-dark-border text-muted hover:border-brand/30 hover:text-off-white'} ${className}`}
     >
       {copied ? <Check size={10} /> : <Copy size={10} />}
       {copied ? t('superAdmin.errorLog.copied') : t('superAdmin.errorLog.copy')}
@@ -150,7 +150,7 @@ function ErrorRow({ log, selected, onSelect, onResolve, t, dateLocale, tz }) {
     <div className={`border-b border-dark-border/40 transition-colors ${log.resolved ? 'opacity-50' : ''}`}>
       <div className="flex items-start gap-3 px-4 py-3 hover:bg-dark-surface/40 cursor-pointer" onClick={() => setExpanded(v => !v)}>
         <div className="mt-0.5 flex-shrink-0" onClick={e => { e.stopPropagation(); onSelect(log.id) }}>
-          <div className={`w-4 h-4 rounded border transition-colors flex items-center justify-center ${selected ? 'bg-gold border-gold' : 'border-dark-border hover:border-gold/50'}`}>
+          <div className={`w-4 h-4 rounded border transition-colors flex items-center justify-center ${selected ? 'bg-brand border-brand' : 'border-dark-border hover:border-brand/50'}`}>
             {selected && <Check size={10} className="text-dark" strokeWidth={3} />}
           </div>
         </div>
@@ -265,7 +265,7 @@ function GroupedRow({ group, selected, onSelectGroup, onResolve, t, dateLocale, 
     <div className={`border-b border-dark-border/40 ${allResolved ? 'opacity-50' : ''}`}>
       <div className="flex items-start gap-3 px-4 py-3 hover:bg-dark-surface/40 cursor-pointer" onClick={() => setExpanded(v => !v)}>
         <div className="mt-0.5 flex-shrink-0" onClick={e => { e.stopPropagation(); onSelectGroup(group.entries.map(e => e.id)) }}>
-          <div className={`w-4 h-4 rounded border transition-colors flex items-center justify-center ${selected ? 'bg-gold border-gold' : 'border-dark-border hover:border-gold/50'}`}>
+          <div className={`w-4 h-4 rounded border transition-colors flex items-center justify-center ${selected ? 'bg-brand border-brand' : 'border-dark-border hover:border-brand/50'}`}>
             {selected && <Check size={10} className="text-dark" strokeWidth={3} />}
           </div>
         </div>
@@ -467,7 +467,7 @@ export default function SAErrorLogPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-display font-bold gold-text">{t('superAdmin.errorLog.pageTitle')}</h1>
+          <h1 className="text-2xl font-display font-bold brand-text">{t('superAdmin.errorLog.pageTitle')}</h1>
           <p className="text-muted text-sm mt-1">{t('superAdmin.errorLog.pageSubtitle')}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -544,7 +544,7 @@ export default function SAErrorLogPage() {
             <CardHeader>
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
-                  <TrendingUp size={14} className="text-gold" />
+                  <TrendingUp size={14} className="text-brand" />
                   <h3 className="font-semibold text-off-white">{t('superAdmin.errorLog.trendTitle')}</h3>
                 </div>
                 <span className="text-xs text-muted">{t('superAdmin.errorLog.trendDays', { count: 7 })}</span>
@@ -583,7 +583,7 @@ export default function SAErrorLogPage() {
           <Filter size={13} className="text-muted flex-shrink-0" />
 
           <select value={level} onChange={e => setLevel(e.target.value)}
-            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-gold/40">
+            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-brand/40">
             <option value="">{t('superAdmin.errorLog.filterAllLevel')}</option>
             <option value="error">{t('superAdmin.errorLog.levelError')}</option>
             <option value="warning">{t('superAdmin.errorLog.levelWarning')}</option>
@@ -591,7 +591,7 @@ export default function SAErrorLogPage() {
           </select>
 
           <select value={type} onChange={e => setType(e.target.value)}
-            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-gold/40">
+            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-brand/40">
             <option value="">{t('superAdmin.errorLog.filterAllType')}</option>
             {Object.entries(TYPE_CFG).map(([k, v]) => (
               <option key={k} value={k}>{t(`superAdmin.errorLog.${v.i18nKey}`)}</option>
@@ -599,14 +599,14 @@ export default function SAErrorLogPage() {
           </select>
 
           <select value={resolved} onChange={e => setResolved(e.target.value)}
-            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-gold/40">
+            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-brand/40">
             <option value="">{t('superAdmin.errorLog.filterAllStatus')}</option>
             <option value="false">{t('superAdmin.errorLog.filterUnresolved')}</option>
             <option value="true">{t('superAdmin.errorLog.filterResolved')}</option>
           </select>
 
           <select value={tenantId} onChange={e => setTenantId(e.target.value)}
-            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-gold/40 max-w-[160px]">
+            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-brand/40 max-w-[160px]">
             <option value="">{t('superAdmin.errorLog.filterAllTenants')}</option>
             {tenants.map(tt => (
               <option key={tt.id} value={tt.id}>{tt.name}</option>
@@ -616,18 +616,18 @@ export default function SAErrorLogPage() {
           <input
             type="date" value={from} onChange={e => setFrom(e.target.value)}
             placeholder={t('superAdmin.errorLog.filterDateFrom')}
-            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-gold/40"
+            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-brand/40"
           />
           <input
             type="date" value={to} onChange={e => setTo(e.target.value)}
             placeholder={t('superAdmin.errorLog.filterDateTo')}
-            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-gold/40"
+            className="bg-dark-surface border border-dark-border rounded-xl px-3 py-1.5 text-xs text-off-white focus:outline-none focus:border-brand/40"
           />
 
           <div className="relative flex-1 min-w-[160px]">
             <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder={t('superAdmin.errorLog.searchPlaceholder')}
-              className="w-full bg-dark-surface border border-dark-border rounded-xl pl-8 pr-3 py-1.5 text-xs text-off-white placeholder:text-muted focus:outline-none focus:border-gold/40" />
+              className="w-full bg-dark-surface border border-dark-border rounded-xl pl-8 pr-3 py-1.5 text-xs text-off-white placeholder:text-muted focus:outline-none focus:border-brand/40" />
           </div>
           {hasFilter && (
             <button onClick={clearFilters} className="flex items-center gap-1 text-xs text-muted hover:text-off-white">
@@ -641,8 +641,8 @@ export default function SAErrorLogPage() {
       <AnimatePresence>
         {selected.size > 0 && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-            <div className="flex items-center gap-3 px-4 py-2.5 bg-gold/10 border border-gold/20 rounded-2xl">
-              <span className="text-sm text-gold font-medium">{t('superAdmin.errorLog.bulkSelected', { count: selected.size })}</span>
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-brand/10 border border-brand/20 rounded-2xl">
+              <span className="text-sm text-brand font-medium">{t('superAdmin.errorLog.bulkSelected', { count: selected.size })}</span>
               <Button size="sm" variant="secondary" icon={CheckCircle} onClick={() => handleResolveMany([...selected])} disabled={bulkResolve.isPending}>
                 {t('superAdmin.errorLog.bulkResolveAll')}
               </Button>
@@ -657,9 +657,9 @@ export default function SAErrorLogPage() {
         <CardHeader>
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-3">
-              <div className={`w-4 h-4 rounded border flex items-center justify-center cursor-pointer transition-colors ${allSelected && allIds.length > 0 ? 'bg-gold border-gold' : 'border-dark-border hover:border-gold/50'}`} onClick={toggleAll}>
+              <div className={`w-4 h-4 rounded border flex items-center justify-center cursor-pointer transition-colors ${allSelected && allIds.length > 0 ? 'bg-brand border-brand' : 'border-dark-border hover:border-brand/50'}`} onClick={toggleAll}>
                 {allSelected && allIds.length > 0 && <Check size={10} className="text-dark" strokeWidth={3} />}
-                {selected.size > 0 && !allSelected && <div className="w-2 h-0.5 bg-gold rounded" />}
+                {selected.size > 0 && !allSelected && <div className="w-2 h-0.5 bg-brand rounded" />}
               </div>
               <h3 className="font-semibold text-off-white text-sm">
                 {isLoading
@@ -703,7 +703,7 @@ export default function SAErrorLogPage() {
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <CheckCircle size={32} className="text-green-400/50" />
             <p className="text-muted text-sm">{t('superAdmin.errorLog.noErrors')}</p>
-            {hasFilter && <button onClick={clearFilters} className="text-xs text-gold hover:underline">{t('superAdmin.errorLog.clearFilter')}</button>}
+            {hasFilter && <button onClick={clearFilters} className="text-xs text-brand hover:underline">{t('superAdmin.errorLog.clearFilter')}</button>}
           </div>
         ) : grouped ? (
           groups.map((group, i) => (

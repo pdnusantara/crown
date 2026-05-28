@@ -85,10 +85,10 @@ function ChartTooltip({ active, payload, label, formatter }) {
 }
 
 // ── KPI Card ──────────────────────────────────────────────────────────────────
-function KpiCard({ label, value, valueShort, sub, icon: Icon, iconColor = 'text-gold', delta, delay = 0, onClick }) {
+function KpiCard({ label, value, valueShort, sub, icon: Icon, iconColor = 'text-brand', delta, delay = 0, onClick }) {
   return (
     <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}>
-      <Card className={`p-3.5 sm:p-4 h-full ${onClick ? 'cursor-pointer hover:border-gold/30 transition-colors' : ''}`} onClick={onClick}>
+      <Card className={`p-3.5 sm:p-4 h-full ${onClick ? 'cursor-pointer hover:border-brand/30 transition-colors' : ''}`} onClick={onClick}>
         <div className="flex items-start justify-between gap-1.5 mb-1.5 sm:mb-2">
           <p className="text-[11px] sm:text-xs text-muted leading-tight">{label}</p>
           <Icon size={15} className={`${iconColor} flex-shrink-0`} />
@@ -118,16 +118,16 @@ function QuickAction({ icon: Icon, label, sub, color, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-3 p-3.5 bg-dark-card border border-dark-border rounded-2xl hover:border-gold/30 hover:bg-dark-surface transition-all text-left group w-full"
+      className="flex items-center gap-3 p-3.5 bg-dark-card border border-dark-border rounded-2xl hover:border-brand/30 hover:bg-dark-surface transition-all text-left group w-full"
     >
       <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${color}`}>
         <Icon size={16} className="text-off-white" />
       </div>
       <div className="min-w-0">
-        <p className="text-sm font-medium text-off-white group-hover:text-gold transition-colors">{label}</p>
+        <p className="text-sm font-medium text-off-white group-hover:text-brand transition-colors">{label}</p>
         {sub && <p className="text-xs text-muted truncate">{sub}</p>}
       </div>
-      <ChevronRight size={14} className="text-muted ml-auto flex-shrink-0 group-hover:text-gold transition-colors" />
+      <ChevronRight size={14} className="text-muted ml-auto flex-shrink-0 group-hover:text-brand transition-colors" />
     </button>
   )
 }
@@ -334,7 +334,7 @@ export default function SADashboard() {
       <div>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2.5 sm:gap-3">
           <KpiCard label="Total Tenant"   value={metrics.total}        icon={Building2}    iconColor="text-off-white" delta={metrics.newThisMonth} delay={0}    onClick={() => navigate('/super-admin/tenants')} />
-          <KpiCard label="MRR"            value={formatRupiah(metrics.mrr)}  valueShort={formatRupiahShort(metrics.mrr)} icon={DollarSign}   iconColor="text-gold"    sub={`${formatRupiahShort(metrics.arr)}/tahun`} delay={0.04} />
+          <KpiCard label="MRR"            value={formatRupiah(metrics.mrr)}  valueShort={formatRupiahShort(metrics.mrr)} icon={DollarSign}   iconColor="text-brand"    sub={`${formatRupiahShort(metrics.arr)}/tahun`} delay={0.04} />
           <KpiCard label="Sub Aktif"      value={metrics.activeCount}   icon={CheckCircle}  iconColor="text-green-400" delay={0.08} onClick={() => navigate('/super-admin/billing')} />
           <KpiCard label="Trial"          value={metrics.trialCount}    icon={Clock}        iconColor="text-blue-400"  delay={0.12} onClick={() => navigate('/super-admin/billing')} />
           <KpiCard label="Overdue"        value={metrics.overdueCount}  icon={AlertTriangle} iconColor="text-amber-400" delay={0.16} onClick={() => navigate('/super-admin/billing')} />
@@ -372,7 +372,7 @@ export default function SADashboard() {
                     {churnRisk.length}
                   </span>
                 </div>
-                <button onClick={() => navigate('/super-admin/billing')} className="text-xs text-gold hover:underline flex items-center gap-1">
+                <button onClick={() => navigate('/super-admin/billing')} className="text-xs text-brand hover:underline flex items-center gap-1">
                   Kelola Billing <ChevronRight size={12} />
                 </button>
               </div>
@@ -406,7 +406,7 @@ export default function SADashboard() {
                           </span>
                         )}
                         <button onClick={() => navigate(`/super-admin/tenants/${tenant.id}`)}
-                          className="text-xs text-gold hover:underline">{t('superAdmin.dashboard.detailArrow')}</button>
+                          className="text-xs text-brand hover:underline">{t('superAdmin.dashboard.detailArrow')}</button>
                       </div>
                     </div>
                   )
@@ -432,7 +432,7 @@ export default function SADashboard() {
                   <p className="text-xs text-muted mt-0.5">6 bulan terakhir</p>
                 </div>
                 <div className="flex gap-3 text-xs text-muted">
-                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-gold inline-block" />Kumulatif</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-brand inline-block" />Kumulatif</span>
                   <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />Baru</span>
                 </div>
               </div>
@@ -539,7 +539,7 @@ export default function SADashboard() {
               })}
               {metrics.total > 0 && (
                 <p className="text-xs text-muted pt-1 border-t border-dark-border/40">
-                  Total MRR: <span className="text-gold font-semibold">{formatRupiah(metrics.mrr)}</span>
+                  Total MRR: <span className="text-brand font-semibold">{formatRupiah(metrics.mrr)}</span>
                   <span className="ml-2 text-muted/60">({formatRupiah(metrics.arr)}/tahun)</span>
                 </p>
               )}
@@ -607,7 +607,7 @@ export default function SADashboard() {
           <Card className="h-full">
             <CardHeader>
               <div className="flex items-center gap-2">
-                <Heart size={14} className="text-gold" />
+                <Heart size={14} className="text-brand" />
                 <h3 className="font-semibold text-off-white">{t('superAdmin.dashboard.healthScoreTitle')}</h3>
               </div>
               <p className="text-xs text-muted mt-0.5">Tenant dengan skor terendah lebih dulu</p>
@@ -618,7 +618,7 @@ export default function SADashboard() {
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-6 h-6 rounded-lg bg-dark-surface flex items-center justify-center flex-shrink-0">
-                        <span className="text-gold font-bold text-[10px]">{tenant.name[0]}</span>
+                        <span className="text-brand font-bold text-[10px]">{tenant.name[0]}</span>
                       </div>
                       <span className="text-xs text-off-white truncate">{tenant.name}</span>
                     </div>
@@ -642,7 +642,7 @@ export default function SADashboard() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold text-off-white">{t('superAdmin.dashboard.comparisonTitle')}</h3>
-                <button onClick={() => navigate('/super-admin/tenants')} className="text-xs text-gold hover:underline flex items-center gap-1">
+                <button onClick={() => navigate('/super-admin/tenants')} className="text-xs text-brand hover:underline flex items-center gap-1">
                   Semua <ChevronRight size={12} />
                 </button>
               </div>
@@ -666,8 +666,8 @@ export default function SADashboard() {
                     <tr key={tenant.id} className="border-b border-dark-border/40 hover:bg-dark-surface/40 transition-colors">
                       <td className="px-3 py-2.5">
                         <div className="flex items-center gap-2">
-                          <div className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${tenant.isSuspended ? 'bg-red-500/10' : 'bg-gold/10'}`}>
-                            <span className={`font-bold text-[10px] ${tenant.isSuspended ? 'text-red-400' : 'text-gold'}`}>{tenant.name[0]}</span>
+                          <div className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${tenant.isSuspended ? 'bg-red-500/10' : 'bg-brand/10'}`}>
+                            <span className={`font-bold text-[10px] ${tenant.isSuspended ? 'text-red-400' : 'text-brand'}`}>{tenant.name[0]}</span>
                           </div>
                           <span className="text-xs font-medium text-off-white truncate max-w-[90px]">{tenant.name}</span>
                         </div>
@@ -692,7 +692,7 @@ export default function SADashboard() {
                           {tenant.subscriptionStatus || 'no sub'}
                         </Badge>
                       </td>
-                      <td className="px-3 py-2.5 text-right text-xs font-semibold text-gold tabular-nums">
+                      <td className="px-3 py-2.5 text-right text-xs font-semibold text-brand tabular-nums">
                         {tenant.monthlyRevenue > 0 ? `${(tenant.monthlyRevenue / 1_000_000).toFixed(1)}M` : '—'}
                       </td>
                       <td className="px-3 py-2.5">
@@ -702,7 +702,7 @@ export default function SADashboard() {
                             <Eye size={12} />
                           </button>
                           <button onClick={() => handleImpersonate(tenant)}
-                            className="p-1 rounded text-muted hover:text-gold transition-colors" title="Login sebagai tenant">
+                            className="p-1 rounded text-muted hover:text-brand transition-colors" title="Login sebagai tenant">
                             <ExternalLink size={12} />
                           </button>
                         </div>
@@ -722,12 +722,12 @@ export default function SADashboard() {
                 <div key={tenant.id} className="px-4 py-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
-                      <div className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${tenant.isSuspended ? 'bg-red-500/10' : 'bg-gold/10'}`}>
-                        <span className={`font-bold text-[10px] ${tenant.isSuspended ? 'text-red-400' : 'text-gold'}`}>{tenant.name[0]}</span>
+                      <div className={`w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 ${tenant.isSuspended ? 'bg-red-500/10' : 'bg-brand/10'}`}>
+                        <span className={`font-bold text-[10px] ${tenant.isSuspended ? 'text-red-400' : 'text-brand'}`}>{tenant.name[0]}</span>
                       </div>
                       <span className="text-sm font-medium text-off-white truncate">{tenant.name}</span>
                     </div>
-                    <span className="text-sm font-semibold text-gold tabular-nums flex-shrink-0">
+                    <span className="text-sm font-semibold text-brand tabular-nums flex-shrink-0">
                       {tenant.monthlyRevenue > 0 ? `${(tenant.monthlyRevenue / 1_000_000).toFixed(1)}M` : '—'}
                     </span>
                   </div>
@@ -784,8 +784,8 @@ export default function SADashboard() {
                 const daysAgo = tenant.createdAt ? differenceInDays(new Date(), new Date(tenant.createdAt)) : null
                 return (
                   <div key={tenant.id} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-dark-surface transition-colors">
-                    <div className="w-8 h-8 rounded-xl bg-gold/10 border border-gold/20 flex items-center justify-center flex-shrink-0">
-                      <span className="text-gold font-bold text-xs">{tenant.name[0]}</span>
+                    <div className="w-8 h-8 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center flex-shrink-0">
+                      <span className="text-brand font-bold text-xs">{tenant.name[0]}</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-off-white truncate">{tenant.name}</p>
@@ -812,7 +812,7 @@ export default function SADashboard() {
             </CardHeader>
             <CardBody className="space-y-2">
               {[
-                { icon: Plus,        label: 'Tambah Tenant Baru',    sub: 'Onboard barbershop baru',           color: 'bg-gold/20',        path: '/super-admin/tenants' },
+                { icon: Plus,        label: 'Tambah Tenant Baru',    sub: 'Onboard barbershop baru',           color: 'bg-brand/20',        path: '/super-admin/tenants' },
                 { icon: CreditCard,  label: 'Kelola Billing',        sub: `${metrics.overdueCount} overdue menunggu`, color: 'bg-amber-500/20', path: '/super-admin/billing' },
                 { icon: TrendingUp,  label: 'Atur Paket & Harga',    sub: `${packageList.length} paket aktif`, color: 'bg-green-500/20',    path: '/super-admin/packages' },
                 { icon: MessageSquare, label: 'Broadcast Pesan',     sub: 'Kirim notifikasi ke semua tenant',  color: 'bg-blue-500/20',     path: '/super-admin/broadcast' },

@@ -101,14 +101,14 @@ export default function SAWhatsAppSettingsPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <MessageSquare size={18} className="text-gold" />
+            <MessageSquare size={18} className="text-brand" />
             <span className="font-semibold text-off-white">Kredensial Gateway</span>
           </div>
           <a
             href="https://wagat.web.id/docs"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-muted hover:text-gold flex items-center gap-1 transition-colors"
+            className="text-xs text-muted hover:text-brand flex items-center gap-1 transition-colors"
           >
             Dokumentasi wagat <ExternalLink size={12} />
           </a>
@@ -121,7 +121,7 @@ export default function SAWhatsAppSettingsPage() {
               <p className="text-sm font-medium text-off-white">Aktifkan Integrasi WhatsApp</p>
               <p className="text-xs text-muted mt-0.5">Saklar utama — mematikan ini menonaktifkan WhatsApp untuk semua tenant</p>
             </div>
-            <button onClick={() => set('enabled', !form.enabled)} className="text-gold transition-opacity hover:opacity-80">
+            <button onClick={() => set('enabled', !form.enabled)} className="text-brand transition-opacity hover:opacity-80">
               {form.enabled ? <ToggleRight size={28} /> : <ToggleLeft size={28} className="text-muted" />}
             </button>
           </div>
@@ -217,7 +217,7 @@ export default function SAWhatsAppSettingsPage() {
               <p className="text-off-white font-mono text-xs mt-0.5 break-all">{webhookUrl}</p>
             </div>
             <button
-              className="text-muted hover:text-gold shrink-0 text-xs transition-colors"
+              className="text-muted hover:text-brand shrink-0 text-xs transition-colors"
               onClick={() => { navigator.clipboard.writeText(webhookUrl); showToast('Disalin!', 'success') }}
             >
               Salin
