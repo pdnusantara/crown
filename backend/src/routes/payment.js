@@ -137,7 +137,7 @@ async function logBilling(actorId, actorName, action, target, detail, severity =
 // POST /api/payment/promotions/validate — preview diskon sebelum bayar
 const validatePromoSchema = z.object({
   code:          z.string().min(1).max(40),
-  type:          z.enum(['subscription', 'upgrade', 'branch_addon']),
+  type:          z.enum(['subscription', 'upgrade', 'branch_addon', 'staff_addon']),
   targetPackage: z.enum(['Basic', 'Pro', 'Enterprise']).nullish(),
   billingCycle:  z.enum(['monthly', 'annual']).nullish(),
 });
@@ -157,6 +157,8 @@ router.post('/promotions/validate', authenticate, async (req, res, next) => {
     let baseAmount;
     if (body.type === 'branch_addon') {
       baseAmount = pkg.branchAddonPrice;
+    } else if (body.type === 'staff_addon') {
+      baseAmount = pkg.staffAddonPrice;
     } else {
       baseAmount = computeCyclePrice(pkg.price, body.billingCycle || 'monthly', pkg.annualDiscountPercent);
     }
@@ -193,7 +195,7 @@ router.post('/promotions/validate', authenticate, async (req, res, next) => {
 const createOrderSchema = z.object({
   subscriptionId: z.string().min(1),
   invoiceId:      z.string().min(1).nullish(),
-  type:           z.enum(['subscription', 'branch_addon', 'upgrade']),
+  type:           z.enum(['subscription', 'branch_addon', 'staff_addon', 'upgrade']),
   targetPackage:  z.enum(['Basic', 'Pro', 'Enterprise']).nullish(),
   billingCycle:   z.enum(['monthly', 'annual']).nullish(),
   promotionCode:  z.string().min(1).max(40).nullish(),
@@ -240,6 +242,12 @@ router.post('/create', authenticate, async (req, res, next) => {
       const pkg = await prisma.package.findUnique({ where: { name: subscription.package } });
       amount = pkg?.branchAddonPrice || 0;
       productDetails = `Tambah Cabang — ${subscription.tenant.name}`;
+      baseBeforePromo = amount;
+
+    } else if (type === 'staff_addon') {
+      const pkg = await prisma.package.findUnique({ where: { name: subscription.package } });
+      amount = pkg?.staffAddonPrice || 0;
+      productDetails = `Tambah Staf — ${subscription.tenant.name}`;
       baseBeforePromo = amount;
 
     } else if (type === 'upgrade') {
@@ -527,6 +535,50 @@ router.post('/callback', async (req, res) => {
               discountAmount: order.discountAmount,
               promotionCode:  order.promotionCode,
               type:   'branch_addon',
+              status: 'paid',
+              paidAt: now,
+            },
+          });
+        }
+
+      } else if (order.type === 'staff_addon') {
+        // Mirror branch_addon flow: lunasi invoice staff_addon pending yang
+        // sudah dibuat saat staf ditambahkan. Jangan buat duplikat. Fallback:
+        // buat baru kalau order tidak match invoice yang ada (mis. pembelian
+        // di muka via UI billing).
+        let target = null;
+        if (order.invoiceId) {
+          target = await prisma.invoice.findUnique({ where: { id: order.invoiceId } });
+          if (target && (target.type !== 'staff_addon' || target.status === 'paid')) target = null;
+        }
+        if (!target) {
+          target = await prisma.invoice.findFirst({
+            where: { subscriptionId: order.subscriptionId, type: 'staff_addon', status: { not: 'paid' } },
+            orderBy: { createdAt: 'asc' },
+          });
+        }
+        if (target) {
+          await prisma.invoice.update({
+            where: { id: target.id },
+            data: {
+              amount:         order.amount,
+              originalAmount: order.amount + order.discountAmount,
+              discountAmount: order.discountAmount,
+              promotionCode:  order.promotionCode,
+              status: 'paid',
+              paidAt: now,
+            },
+          });
+        } else {
+          await prisma.invoice.create({
+            data: {
+              subscriptionId: order.subscriptionId,
+              period: `Tambah Staf — ${now.toLocaleString('id-ID', { month: 'long', year: 'numeric' })}`,
+              amount: order.amount,
+              originalAmount: order.amount + order.discountAmount,
+              discountAmount: order.discountAmount,
+              promotionCode:  order.promotionCode,
+              type:   'staff_addon',
               status: 'paid',
               paidAt: now,
             },

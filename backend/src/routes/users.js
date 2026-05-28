@@ -141,6 +141,13 @@ router.get('/:id', authenticate, requireRole('super_admin', 'tenant_admin'), asy
 });
 
 // POST /api/users
+//
+// Auto-generate staff_addon invoice saat tenant tambah staf di atas effective
+// quota (mirror pola branch_addon di POST /branches). Effective quota:
+//   maxStaff + (paidBranchAddonCount × staffPerExtraBranch)
+// Kalau staffAddonPrice = 0 → tidak ada invoice (gratis tanpa batas).
+// User tetap dibuat walaupun over kuota — invoice generated supaya tenant
+// bisa bayar terpisah (sama dengan branch flow).
 router.post('/', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
   try {
     const body = createUserSchema.parse(req.body);
@@ -159,21 +166,68 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin'), async
     const generated = !body.password;
     const hashedPassword = await bcrypt.hash(plaintextPassword, 10);
 
-    const user = await prisma.user.create({
-      data: { ...body, password: hashedPassword },
-      select: userSelect,
+    const { user, addonInvoice } = await prisma.$transaction(async (tx) => {
+      // Existing user count BEFORE create (soft-deleted excluded)
+      const existingCount = body.tenantId
+        ? await tx.user.count({ where: { tenantId: body.tenantId, deletedAt: null } })
+        : 0;
+
+      const createdUser = await tx.user.create({
+        data: { ...body, password: hashedPassword },
+        select: userSelect,
+      });
+
+      // Cek effective quota (paket + bonus dari cabang add-on paid)
+      let invoice = null;
+      if (body.tenantId) {
+        const subscription = await tx.subscription.findUnique({
+          where: { tenantId: body.tenantId },
+          select: { id: true, package: true },
+        });
+        if (subscription) {
+          const pkg = await tx.package.findUnique({
+            where: { name: subscription.package },
+            select: { maxStaff: true, staffPerExtraBranch: true, staffAddonPrice: true, staffAddonType: true },
+          });
+          if (pkg && pkg.staffAddonPrice > 0) {
+            const paidBranchAddons = await tx.invoice.count({
+              where: { subscriptionId: subscription.id, type: 'branch_addon', status: 'paid' },
+            });
+            const effectiveMaxStaff = (pkg.maxStaff || 0) + (paidBranchAddons * (pkg.staffPerExtraBranch || 0));
+            // existingCount + 1 = total setelah create. Kalau melebihi quota → addon.
+            if ((existingCount + 1) > effectiveMaxStaff) {
+              const now = new Date();
+              const period = pkg.staffAddonType === 'onetime'
+                ? `Staf: ${createdUser.name} (one-time)`
+                : `Staf: ${createdUser.name} — ${now.toLocaleString('en-US', { month: 'short', year: 'numeric' })}`;
+              invoice = await tx.invoice.create({
+                data: {
+                  subscriptionId: subscription.id,
+                  period,
+                  amount: pkg.staffAddonPrice,
+                  type: 'staff_addon',
+                  status: 'pending',
+                },
+              });
+            }
+          }
+        }
+      }
+
+      return { user: createdUser, addonInvoice: invoice };
     });
 
     await recordAudit(req, {
       action: 'user.create',
       target: `user:${user.id}`,
-      detail: `Staf baru: ${user.name} (${user.role}, ${user.email})`,
+      detail: `Staf baru: ${user.name} (${user.role}, ${user.email})${addonInvoice ? ` — staff_addon Rp ${addonInvoice.amount.toLocaleString('id-ID')} pending` : ''}`,
       severity: 'info',
       tenantId: user.tenantId,
     });
     res.status(201).json({
       success: true,
       data: { ...user, tempPassword: plaintextPassword, passwordGenerated: generated },
+      meta: addonInvoice ? { addonInvoice } : undefined,
     });
   } catch (err) {
     next(err);
