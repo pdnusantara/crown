@@ -692,7 +692,7 @@ export default function TASettingsPage() {
               <div>
                 <Input label={t('tenantAdmin.settings.tenantName')} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
                 <p className="mt-1 text-[11px] text-muted leading-snug">
-                  Nama bisnis yang tampil di <b className="text-off-white/80">struk POS</b>, halaman <b className="text-off-white/80">booking publik</b> /book, dan email transaksi. Beda dari "Nama Akun" (sapaan dashboard owner) di bawah.
+                  Nama bisnis yang tampil di <b className="text-off-white">struk POS</b>, halaman <b className="text-off-white">booking publik</b> /book, dan email transaksi. Beda dari "Nama Akun" (sapaan dashboard owner) di bawah.
                 </p>
               </div>
               <Input label="Telepon kontak" type="tel" placeholder="08xxxxxxxxxx" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />

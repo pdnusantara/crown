@@ -187,7 +187,7 @@ function ErrorRow({ log, selected, onSelect, onResolve, t, dateLocale, tz }) {
             {log.tenantId && (
               <button
                 onClick={e => { e.stopPropagation(); navigate(`/super-admin/tenants/${log.tenantId}`) }}
-                className="flex items-center gap-1 text-xs text-blue-400/80 hover:text-blue-400 transition-colors"
+                className="flex items-center gap-1 text-xs text-blue-400 opacity-80 hover:opacity-100 transition-opacity"
               >
                 <ExternalLink size={10} />
                 {log.tenantName || `${log.tenantId.slice(0, 8)}…`}
@@ -223,7 +223,10 @@ function ErrorRow({ log, selected, onSelect, onResolve, t, dateLocale, tz }) {
                     <p className="text-[10px] text-muted uppercase font-semibold">{t('superAdmin.errorLog.stackTrace')}</p>
                     <CopyBtn text={log.stack} />
                   </div>
-                  <pre className="text-[11px] text-red-300/80 bg-dark-surface border border-dark-border rounded-xl p-3 overflow-x-auto whitespace-pre-wrap leading-relaxed font-mono max-h-56 overflow-y-auto">
+                  {/* text-red-400 (bukan /80) — varian opacity escape dari
+                      .light-mode override → tak terbaca di white card. Class
+                      polos ke-override jadi #B91C1C dark di light, #F87171 di dark. */}
+                  <pre className="text-[11px] text-red-400 bg-dark-surface border border-dark-border rounded-xl p-3 overflow-x-auto whitespace-pre-wrap leading-relaxed font-mono max-h-56 overflow-y-auto">
                     {log.stack}
                   </pre>
                 </div>
@@ -234,13 +237,17 @@ function ErrorRow({ log, selected, onSelect, onResolve, t, dateLocale, tz }) {
                     <p className="text-[10px] text-muted uppercase font-semibold">{t('superAdmin.errorLog.metadata')}</p>
                     <CopyBtn text={JSON.stringify(log.metadata, null, 2)} />
                   </div>
-                  <pre className="text-[11px] text-off-white/70 bg-dark-surface border border-dark-border rounded-xl p-3 overflow-x-auto whitespace-pre-wrap font-mono max-h-36 overflow-y-auto">
+                  {/* text-off-white/70 sebelumnya escape .light-mode override
+                      → JSON metadata invisible di white card light mode.
+                      Pakai text-off-white polos (ke-override #1E1B2E dark di
+                      light, tetap #F5F5F0 di dark). */}
+                  <pre className="text-[11px] text-off-white bg-dark-surface border border-dark-border rounded-xl p-3 overflow-x-auto whitespace-pre-wrap font-mono max-h-36 overflow-y-auto">
                     {JSON.stringify(log.metadata, null, 2)}
                   </pre>
                 </div>
               )}
               {log.resolved && log.resolvedAt && (
-                <p className="text-xs text-green-400/70">
+                <p className="text-xs text-green-400">
                   {t('superAdmin.errorLog.resolvedAt', { time: formatDateTimeInTz(log.resolvedAt, tz) })}
                   {log.resolvedBy ? t('superAdmin.errorLog.resolvedBy', { name: log.resolvedBy }) : ''}
                 </p>
@@ -328,7 +335,7 @@ function GroupedRow({ group, selected, onSelectGroup, onResolve, t, dateLocale, 
                       {formatDateTimeInTz(log.createdAt, tz)}
                     </span>
                     {log.tenantName && (
-                      <span className="text-xs text-blue-400/70 truncate max-w-[140px]">{log.tenantName}</span>
+                      <span className="text-xs text-blue-400 opacity-80 truncate max-w-[140px]">{log.tenantName}</span>
                     )}
                     {log.path && <span className="text-xs text-muted font-mono truncate max-w-[200px]">{log.method} {log.path}</span>}
                     {log.resolved && <CheckCircle size={12} className="text-green-400 flex-shrink-0" />}
@@ -701,7 +708,7 @@ export default function SAErrorLogPage() {
           </div>
         ) : logs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <CheckCircle size={32} className="text-green-400/50" />
+            <CheckCircle size={32} className="text-green-400 opacity-60" />
             <p className="text-muted text-sm">{t('superAdmin.errorLog.noErrors')}</p>
             {hasFilter && <button onClick={clearFilters} className="text-xs text-brand hover:underline">{t('superAdmin.errorLog.clearFilter')}</button>}
           </div>
