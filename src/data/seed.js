@@ -10,7 +10,7 @@ export const tenants = [
     status: 'active',
     ownerEmail: 'owner@barberking.id',
     logo: null,
-    primaryColor: '#C9A84C',
+    primaryColor: '#6366F1',
     createdAt: '2023-01-15',
     monthlyRevenue: 48500000,
     totalStaff: 21,

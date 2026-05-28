@@ -239,7 +239,7 @@ export default function TASettingsPage() {
     showLogo: true, showHero: true, showGallery: true,
     showAddress: true, showHours: true, showSocial: true,
     mode: 'dark',
-    primaryColor: '#C9A84C',
+    primaryColor: '#6366F1',
     gallery: [],
     instagram: '', tiktok: '', facebook: '',
     whatsapp: '', googleMapsUrl: '',
@@ -319,7 +319,7 @@ export default function TASettingsPage() {
         showHours:     !!bookingForm.showHours,
         showSocial:    !!bookingForm.showSocial,
         mode:          bookingForm.mode === 'light' ? 'light' : 'dark',
-        primaryColor:  clean(bookingForm.primaryColor) || '#C9A84C',
+        primaryColor:  clean(bookingForm.primaryColor) || '#6366F1',
         gallery:       bookingForm.gallery,
         instagram:     clean(bookingForm.instagram),
         tiktok:        clean(bookingForm.tiktok),
@@ -1793,14 +1793,14 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
               <div className="flex items-center gap-2">
                 <input
                   type="color"
-                  value={form.primaryColor || '#C9A84C'}
+                  value={form.primaryColor || '#6366F1'}
                   onChange={e => set({ primaryColor: e.target.value })}
                   className="w-12 h-10 rounded-lg bg-dark-surface border border-dark-border cursor-pointer"
                 />
                 <Input
                   value={form.primaryColor || ''}
                   onChange={e => set({ primaryColor: e.target.value })}
-                  placeholder="#C9A84C"
+                  placeholder="#6366F1"
                   className="flex-1"
                 />
               </div>
@@ -1993,15 +1993,15 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
                     </div>
                   ) : (
-                    <div className="h-20" style={{ background: isLight ? `linear-gradient(135deg, ${form.primaryColor || '#C9A84C'}22, transparent), ${previewBg}` : `linear-gradient(135deg, ${form.primaryColor || '#C9A84C'}33, transparent), ${previewSurface}` }} />
+                    <div className="h-20" style={{ background: isLight ? `linear-gradient(135deg, ${form.primaryColor || '#6366F1'}22, transparent), ${previewBg}` : `linear-gradient(135deg, ${form.primaryColor || '#6366F1'}33, transparent), ${previewSurface}` }} />
                   )}
                   <div className="p-3 -mt-8 relative">
                     {form.showLogo && tenantLogo && (
                       <img src={tenantLogo} alt="logo" className="w-12 h-12 rounded-xl border-2 object-cover mb-2"
-                        style={{ borderColor: form.primaryColor || '#C9A84C', background: previewBg }} />
+                        style={{ borderColor: form.primaryColor || '#6366F1', background: previewBg }} />
                     )}
                     <p className="font-bold text-sm" style={{ color: previewText }}>Nama bisnis</p>
-                    {form.tagline && <p className="text-[11px]" style={{ color: form.primaryColor || '#C9A84C' }}>{form.tagline}</p>}
+                    {form.tagline && <p className="text-[11px]" style={{ color: form.primaryColor || '#6366F1' }}>{form.tagline}</p>}
                     {form.description && <p className="text-[10px] mt-1 line-clamp-3" style={{ color: previewMuted }}>{form.description}</p>}
                     {form.showGallery && form.gallery.length > 0 && (
                       <div className="grid grid-cols-3 gap-1 mt-2">

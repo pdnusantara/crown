@@ -112,7 +112,7 @@ function PublicBookingPageInner() {
   // tenant); fallback ke Nama Bisnis bila owner/akun tak tersedia.
   const tenantName = ownerName || businessName
   const bp = bookingPage || {}
-  const accent = bp.primaryColor || '#C9A84C'
+  const accent = bp.primaryColor || '#6366F1'
 
   // step: 0 (pick), 1 (date), 2 (confirm), 3 (success)
   const [step, setStep] = useState(0)
@@ -555,7 +555,7 @@ function LookupModal({ accent, phone, setPhone, loading, list, error, onClose, o
 // SHELL — design tokens + sticky bottom CTA
 // ═══════════════════════════════════════════════════════════════════════════
 
-function BookShell({ accent = '#C9A84C', tenantName, tenantLogo, bp = {}, sticky, children, onOpenLookup }) {
+function BookShell({ accent = '#6366F1', tenantName, tenantLogo, bp = {}, sticky, children, onOpenLookup }) {
   const showLogo = bp.showLogo !== false
   const isLight  = bp.mode === 'light'
 

@@ -59,14 +59,14 @@ export class ErrorBoundary extends Component {
             <div className="flex gap-3 justify-center">
               <button
                 onClick={() => this.setState({ hasError: false, error: null, errorInfo: null })}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#C9A84C] text-[#0A0A0A] text-sm font-semibold hover:bg-[#E8C875] transition-colors"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#6366F1] text-[#0A0A0A] text-sm font-semibold hover:bg-[#A5A2FF] transition-colors"
               >
                 <RefreshCw size={14} />
                 Coba Lagi
               </button>
               <button
                 onClick={() => { window.location.href = '/' }}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#2A2A2A] text-[#F5F5F0] text-sm hover:border-[#C9A84C]/40 transition-colors"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#2A2A2A] text-[#F5F5F0] text-sm hover:border-[#6366F1]/40 transition-colors"
               >
                 <Home size={14} />
                 Kembali ke Login

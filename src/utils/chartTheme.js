@@ -10,14 +10,16 @@ import { useThemeStore } from '../store/themeStore.js'
 export function useChartTheme() {
   const theme = useThemeStore(s => s.theme)
   const isLight = theme === 'light'
+  // Palet Phase A (rebrand Electric Indigo + Mint): light surfaces lavender +
+  // pure white card; dark surfaces indigo-tinted (#1A1A2E surface, #2A2A40 border).
   return {
     isLight,
-    grid:        isLight ? '#E5E2D8' : '#2A2A2A',
-    axisTick:    isLight ? '#555555' : '#6B7280',
-    tooltipBg:   isLight ? '#FFFFFF' : '#1A1A1A',
-    tooltipBorder: isLight ? '#DDDBD0' : '#2A2A2A',
-    tooltipLabel:  isLight ? '#111111' : '#F5F5F0',
-    legendText:    isLight ? '#555555' : '#6B7280',
+    grid:          isLight ? '#D5D8E8' : '#2A2A40',
+    axisTick:      isLight ? '#56548A' : '#9B98C8',
+    tooltipBg:     isLight ? '#FFFFFF' : '#1A1A2E',
+    tooltipBorder: isLight ? '#D5D8E8' : '#2A2A40',
+    tooltipLabel:  isLight ? '#1E1B2E' : '#F5F5F0',
+    legendText:    isLight ? '#56548A' : '#9B98C8',
   }
 }
 

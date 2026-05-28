@@ -24,7 +24,7 @@ export function HeatmapChart({ data }) {
                   key={`${hour}-${day}`}
                   title={`${day} ${hour} — ${val} transaksi`}
                   className="w-8 h-8 rounded-md cursor-default transition-all hover:ring-1 hover:ring-brand"
-                  style={{ backgroundColor: `rgba(201, 168, 76, ${opacity * 0.9 + 0.05})` }}
+                  style={{ backgroundColor: `rgba(99, 102, 241, ${opacity * 0.9 + 0.05})` }}
                 />
               )
             })}

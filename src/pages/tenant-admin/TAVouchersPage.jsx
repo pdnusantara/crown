@@ -533,7 +533,7 @@ function TAVouchersInner() {
                                   className="h-full rounded-full transition-all"
                                   style={{
                                     width: `${ratio * 100}%`,
-                                    backgroundColor: ratio > 0.8 ? '#ef4444' : '#C9A84C',
+                                    backgroundColor: ratio > 0.8 ? '#ef4444' : '#6366F1',
                                   }}
                                 />
                               </div>
@@ -636,7 +636,7 @@ function TAVouchersInner() {
                       </div>
                       {v.maxUses != null && (
                         <div className="w-full h-1 bg-dark-border rounded-full mt-1 overflow-hidden">
-                          <div className="h-full rounded-full" style={{ width: `${ratio * 100}%`, backgroundColor: ratio > 0.8 ? '#ef4444' : '#C9A84C' }} />
+                          <div className="h-full rounded-full" style={{ width: `${ratio * 100}%`, backgroundColor: ratio > 0.8 ? '#ef4444' : '#6366F1' }} />
                         </div>
                       )}
                     </div>

@@ -28,7 +28,7 @@ import LiveBadge from '../../components/ui/LiveBadge.jsx'
 import { formatRupiah, formatRupiahShort, formatDate } from '../../utils/format.js'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const PKG_COLOR  = { Basic: '#3B82F6', Pro: '#C9A84C', Enterprise: '#8B5CF6' }
+const PKG_COLOR  = { Basic: '#3B82F6', Pro: '#6366F1', Enterprise: '#8B5CF6' }
 const SUB_COLORS = { active: '#4ADE80', trial: '#60A5FA', overdue: '#F59E0B', expired: '#6B7280' }
 
 // ── Health score ──────────────────────────────────────────────────────────────
@@ -442,8 +442,8 @@ export default function SADashboard() {
                 <AreaChart data={growthData} margin={{ top: 4, right: 8, bottom: 0, left: -16 }}>
                   <defs>
                     <linearGradient id="gradTotal" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#C9A84C" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#C9A84C" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#6366F1" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="gradNew" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#60A5FA" stopOpacity={0.25} />
@@ -454,7 +454,7 @@ export default function SADashboard() {
                   <XAxis dataKey="month" tick={{ fill: '#6B7280', fontSize: 11 }} tickLine={false} />
                   <YAxis tick={{ fill: '#6B7280', fontSize: 11 }} tickLine={false} allowDecimals={false} />
                   <Tooltip content={<ChartTooltip />} />
-                  <Area type="monotone" dataKey="total" name="Kumulatif" stroke="#C9A84C" strokeWidth={2} fill="url(#gradTotal)" dot={false} />
+                  <Area type="monotone" dataKey="total" name="Kumulatif" stroke="#6366F1" strokeWidth={2} fill="url(#gradTotal)" dot={false} />
                   <Area type="monotone" dataKey="baru"  name="Baru"      stroke="#60A5FA" strokeWidth={2} fill="url(#gradNew)"  dot={{ fill: '#60A5FA', r: 3 }} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -484,7 +484,7 @@ export default function SADashboard() {
                     <Tooltip content={<ChartTooltip formatter={formatRupiah} />} />
                     <Bar dataKey="revenue" name="Revenue" radius={[0, 4, 4, 0]}>
                       {revenueChartData.map((entry, i) => (
-                        <Cell key={i} fill={PKG_COLOR[entry.pkg] || '#C9A84C'} />
+                        <Cell key={i} fill={PKG_COLOR[entry.pkg] || '#6366F1'} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -509,7 +509,7 @@ export default function SADashboard() {
                 const count   = pkg.tenantCount || 0
                 const pct     = metrics.total > 0 ? (count / metrics.total) * 100 : 0
                 const pkgMrr  = pkg.price * count
-                const color   = PKG_COLOR[pkg.name] || '#C9A84C'
+                const color   = PKG_COLOR[pkg.name] || '#6366F1'
                 return (
                   <div key={pkg.name}>
                     <div className="flex items-center justify-between text-sm mb-1.5">

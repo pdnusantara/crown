@@ -436,7 +436,7 @@ export default function TADashboard() {
                     <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
                     <Bar dataKey="revenue" radius={[6, 6, 0, 0]}>
                       {chartData.map((entry, i) => (
-                        <Cell key={i} fill={entry.isToday ? '#E5C87E' : '#C9A84C'} />
+                        <Cell key={i} fill={entry.isToday ? '#A5A2FF' : '#6366F1'} />
                       ))}
                     </Bar>
                   </BarChart>

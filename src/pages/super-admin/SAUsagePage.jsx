@@ -339,7 +339,7 @@ export default function SAUsagePage() {
                       <Tooltip content={<ChartTooltip t={t} tz={tenantTz} mode="dau" />} />
                       <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                         {chartData.map((_, index) => (
-                          <Cell key={index} fill={index === chartData.length - 1 ? '#C9A84C' : '#C9A84C66'} />
+                          <Cell key={index} fill={index === chartData.length - 1 ? '#6366F1' : '#6366F166'} />
                         ))}
                       </Bar>
                     </BarChart>

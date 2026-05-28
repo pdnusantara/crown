@@ -35,7 +35,10 @@ function linearRegression(data) {
   return { slope, intercept }
 }
 
-const PIE_COLORS = ['#C9A84C', '#E8C875', '#A8893A', '#D4AF68', '#B89640', '#9A7A2E']
+// Palet 6-slice pie chart Reports — mix indigo (brand) + mint (fresh) +
+// amber, supaya tiap slice distinguishable visually. Indigo lead menjaga
+// kesan on-brand (rebrand Electric Indigo + Mint).
+const PIE_COLORS = ['#6366F1', '#A5A2FF', '#10B981', '#818CF8', '#F59E0B', '#34D399']
 
 const PERIODS = [
   { id: 'today', days: 1 },
@@ -341,7 +344,7 @@ export default function TAReportsPage() {
                   <XAxis dataKey="date" tick={{ fill: chart.axisTick, fontSize: 11 }} tickLine={false} interval={Math.max(0, Math.floor(revenueTrend.length / 8))} />
                   <YAxis tick={{ fill: chart.axisTick, fontSize: 11 }} tickLine={false} tickFormatter={v => `${(v/1000000).toFixed(1)}M`} />
                   <Tooltip contentStyle={tooltipStyle(chart)} labelStyle={{ color: chart.tooltipLabel }} formatter={v => [formatRupiah(v), t('common.revenue')]} />
-                  <Line type="monotone" dataKey="revenue" stroke="#C9A84C" strokeWidth={2.5} dot={false} />
+                  <Line type="monotone" dataKey="revenue" stroke="#6366F1" strokeWidth={2.5} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             )}
@@ -377,8 +380,8 @@ export default function TAReportsPage() {
                     <XAxis dataKey="date" tick={{ fill: chart.axisTick, fontSize: 10 }} tickLine={false} interval={2} />
                     <YAxis tick={{ fill: chart.axisTick, fontSize: 10 }} tickLine={false} tickFormatter={v => `${(v/1000000).toFixed(1)}M`} width={45} />
                     <Tooltip contentStyle={tooltipStyle(chart)} labelStyle={{ color: chart.tooltipLabel }} formatter={v => [formatRupiah(v), '']} />
-                    <Line type="monotone" dataKey="actual"   stroke="#C9A84C" strokeWidth={2} dot={false} name={t('tenantAdmin.reports.actual')}     connectNulls={false} />
-                    <Line type="monotone" dataKey="forecast" stroke="#C9A84C" strokeWidth={2} dot={false} strokeDasharray="5 5" name={t('tenantAdmin.reports.prediction')} connectNulls={false} />
+                    <Line type="monotone" dataKey="actual"   stroke="#6366F1" strokeWidth={2} dot={false} name={t('tenantAdmin.reports.actual')}     connectNulls={false} />
+                    <Line type="monotone" dataKey="forecast" stroke="#6366F1" strokeWidth={2} dot={false} strokeDasharray="5 5" name={t('tenantAdmin.reports.prediction')} connectNulls={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -421,7 +424,7 @@ export default function TAReportsPage() {
                     <XAxis dataKey="date" tick={{ fill: chart.axisTick, fontSize: 11 }} tickLine={false} />
                     <YAxis tick={{ fill: chart.axisTick, fontSize: 11 }} tickLine={false} />
                     <Tooltip contentStyle={tooltipStyle(chart)} labelStyle={{ color: chart.tooltipLabel }} />
-                    <Bar dataKey="transactions" fill="#C9A84C" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="transactions" fill="#6366F1" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}

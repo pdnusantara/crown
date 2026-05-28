@@ -150,7 +150,7 @@ export function CommandPalette({ open, onClose }) {
           >
             {/* Search Input */}
             <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[#2A2A2A]">
-              <Search size={18} className="text-[#C9A84C] flex-shrink-0" aria-hidden="true" />
+              <Search size={18} className="text-[#6366F1] flex-shrink-0" aria-hidden="true" />
               <input
                 ref={inputRef}
                 role="combobox"
@@ -187,8 +187,8 @@ export function CommandPalette({ open, onClose }) {
                       onClick={() => go(r.action, r.label)}
                       className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors group ${activeIndex === i ? 'bg-[#222222]' : 'hover:bg-[#1E1E1E]'}`}
                     >
-                      <div className="w-8 h-8 rounded-lg bg-[#C9A84C]/10 flex items-center justify-center flex-shrink-0">
-                        <r.icon size={15} className="text-[#C9A84C]" aria-hidden="true" />
+                      <div className="w-8 h-8 rounded-lg bg-[#6366F1]/10 flex items-center justify-center flex-shrink-0">
+                        <r.icon size={15} className="text-[#6366F1]" aria-hidden="true" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm text-[#F5F5F0] truncate">{r.label}</div>
@@ -196,7 +196,7 @@ export function CommandPalette({ open, onClose }) {
                       </div>
                       <div className={`flex items-center gap-2 transition-opacity ${activeIndex === i ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                         <span className="text-xs text-[#6B7280] bg-[#0A0A0A] border border-[#2A2A2A] rounded px-1.5 py-0.5 capitalize">{r.type}</span>
-                        <ArrowRight size={13} className="text-[#C9A84C]" aria-hidden="true" />
+                        <ArrowRight size={13} className="text-[#6366F1]" aria-hidden="true" />
                       </div>
                     </button>
                   )) : (
@@ -247,8 +247,8 @@ export function CommandPalette({ open, onClose }) {
                           onClick={() => go(item.action)}
                           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors group ${activeIndex === i ? 'bg-[#222222]' : 'hover:bg-[#1E1E1E]'}`}
                         >
-                          <div className="w-7 h-7 rounded-lg bg-[#C9A84C]/10 flex items-center justify-center flex-shrink-0">
-                            <item.icon size={14} className="text-[#C9A84C]" aria-hidden="true" />
+                          <div className="w-7 h-7 rounded-lg bg-[#6366F1]/10 flex items-center justify-center flex-shrink-0">
+                            <item.icon size={14} className="text-[#6366F1]" aria-hidden="true" />
                           </div>
                           <span className="text-sm text-[#F5F5F0] flex-1">{item.label}</span>
                           <ArrowRight size={13} className={`text-[#6B7280] transition-opacity ${activeIndex === i ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} aria-hidden="true" />
