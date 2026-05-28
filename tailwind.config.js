@@ -97,12 +97,14 @@ export default {
         'gold':    '0 0 20px rgba(201, 168, 76, 0.15)',
         'gold-lg': '0 0 40px rgba(201, 168, 76, 0.25)',
         'card':    '0 4px 24px rgba(0, 0, 0, 0.4)',
-        // NEW (soft elevation, bukan neon glow — 2026-05-28 user feedback:
-        // halo terlalu 'rame' di white card. Bentuknya jadi drop shadow lembut
-        // dengan brand tint, bukan box-shadow simetris 0 0 X 0.X).
-        'brand':    '0 4px 14px rgba(99, 102, 241, 0.10)',
-        'brand-lg': '0 8px 24px rgba(99, 102, 241, 0.14)',
-        'fresh':    '0 4px 14px rgba(16, 185, 129, 0.10)',
+        // NEW (2026-05-28 user feedback v2: 'glow masih kebanyakan, hilangkan
+        // saja'). Drop shadow netral abu-abu untuk elevasi natural — tanpa
+        // warna brand sama sekali. Element tetap punya 'kedalaman' tapi tidak
+        // nge-glow. Pakai sangat lembut untuk avatar/logo kecil; lebih dalam
+        // untuk kartu besar.
+        'brand':    '0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04)',
+        'brand-lg': '0 4px 12px rgba(0, 0, 0, 0.10), 0 1px 3px rgba(0, 0, 0, 0.06)',
+        'fresh':    '0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04)',
       },
 
       animation: {

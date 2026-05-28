@@ -219,14 +219,11 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
         ${collapsed ? 'w-16' : 'w-[240px]'}
       `}
       style={{
-        // Border kanan halus + soft brand glow di pojok kiri-atas (kedalaman,
-        // tidak datar). Direpresentasikan inline supaya tak ikut dipindah
-        // .light-mode override (sidebar tetap dark di kedua mode — by design).
-        // 2026-05-28: opacity 0.28 → 0.14, spread 38% → 28% (user feedback:
-        // glow terlalu rame; sekarang lebih halus, sekadar petunjuk kedalaman).
+        // Border kanan halus saja — tanpa background gradient.
+        // 2026-05-28 user feedback: 'glow masih kebanyakan, hilangkan saja'.
+        // Sidebar pakai flat indigo-900 + border tipis (Linear/Vercel-style
+        // minimalis). Kedalaman datang dari kontras vs content area, bukan glow.
         borderRight: '1px solid rgba(255,255,255,0.06)',
-        backgroundImage:
-          'radial-gradient(circle at 0% 0%, rgba(99,102,241,0.14), transparent 28%)',
       }}
     >
       {/* ── Brand row ────────────────────────────────────────────────── */}
