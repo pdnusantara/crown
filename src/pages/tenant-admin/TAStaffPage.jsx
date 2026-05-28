@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { Plus, Edit2, Trash2, Star, Search, Mail, KeyRound, Copy, Check, AlertTriangle, Camera, X, Eye, EyeOff, RefreshCw, Users } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useResetUserPassword } from '../../hooks/useUsers.js'
-import { useBranches } from '../../hooks/useBranches.js'
+import { useBranches, useBranchLicenseSummary } from '../../hooks/useBranches.js'
 import { useSubscription } from '../../hooks/useSubscription.js'
 import { usePackages } from '../../hooks/usePackages.js'
 import { formatRupiah } from '../../utils/format.js'
@@ -54,6 +54,7 @@ export default function TAStaffPage() {
 
   const { data: allStaff = [], isLoading: isLoadingStaff } = useUsers({ tenantId: user?.tenantId })
   const { data: branches = [] } = useBranches(user?.tenantId)
+  const { data: licenseSummary } = useBranchLicenseSummary(user?.tenantId)
   const { data: subscription } = useSubscription(user?.tenantId)
   const { data: packages = [] } = usePackages()
   const createUser = useCreateUser()
@@ -63,12 +64,21 @@ export default function TAStaffPage() {
 
   const isLoading = isLoadingStaff
 
-  // Kuota staf dari paket tenant (rebrand 2026-05-28: maxStaff = total termasuk
-  // owner/admin). Lebih dari ini akan kena add-on per staf (kalau super-admin
-  // sudah set staffAddonPrice > 0).
-  const tenantPackage = packages.find(p => p.name === subscription?.package)
-  const staffQuota    = tenantPackage?.maxStaff ?? null
-  const staffUsed     = allStaff.length
+  // Kuota staf efektif dihitung dari:
+  //   maxStaff (paket dasar, termasuk owner)
+  // + (paidBranchAddonCount × staffPerExtraBranch)  ← bonus tiap cabang add-on
+  // Lebih dari ini → kena addonStaf per orang (kalau super-admin set > 0).
+  // Contoh Basic (maxStaff=4, bonus=+3/cabang):
+  //   1 cabang utama   = 4 staf
+  //   2 cabang (1 paid) = 4 + 3 = 7 staf
+  //   3 cabang (2 paid) = 4 + 6 = 10 staf
+  const tenantPackage  = packages.find(p => p.name === subscription?.package)
+  const baseMaxStaff   = tenantPackage?.maxStaff ?? null
+  const bonusPerBranch = tenantPackage?.staffPerExtraBranch ?? 0
+  const paidAddons     = licenseSummary?.paidAddonCount ?? 0
+  const bonusStaff     = paidAddons * bonusPerBranch
+  const staffQuota     = baseMaxStaff !== null ? baseMaxStaff + bonusStaff : null
+  const staffUsed      = allStaff.length
   const staffAddonPrice = tenantPackage?.staffAddonPrice ?? 0
   const staffAddonType  = tenantPackage?.staffAddonType  ?? 'monthly'
   const quotaPct      = staffQuota ? Math.round((staffUsed / staffQuota) * 100) : 0
@@ -225,19 +235,27 @@ export default function TAStaffPage() {
               </span>
             )}
           </div>
+          {/* Breakdown bonus — info kuota tenant kalau ada bonus cabang aktif */}
+          {bonusStaff > 0 && (
+            <p className="text-[11px] text-muted mt-1 leading-snug">
+              Kuota = <b className="text-off-white">{baseMaxStaff}</b> (paket {subscription?.package})
+              {' + '}<b className="text-brand">{bonusStaff}</b> bonus ({paidAddons} cabang add-on × {bonusPerBranch}/cabang)
+            </p>
+          )}
           {/* Warning kalau over atau mendekati. Add-on info muncul kalau super-
               admin sudah set staffAddonPrice > 0; kalau 0 (soft launch) cuma
               info "naik paket" tanpa angka. */}
           {overQuota && (
             <p className="text-xs text-red-300 mt-2 max-w-md">
               {staffAddonPrice > 0
-                ? <>Anda kena tambahan biaya <b className="text-off-white">{formatRupiah(staffAddonPrice)}/{staffAddonType === 'monthly' ? 'bln' : 'staf'}</b> untuk {staffUsed - staffQuota} staf di atas kuota paket {subscription?.package}. Upgrade paket untuk kuota lebih besar.</>
+                ? <>Anda kena tambahan biaya <b className="text-off-white">{formatRupiah(staffAddonPrice)}/{staffAddonType === 'monthly' ? 'bln' : 'staf'}</b> untuk {staffUsed - staffQuota} staf di atas kuota paket {subscription?.package}{bonusStaff > 0 && ' (sudah termasuk bonus cabang)'}. Tambah cabang lagi untuk dapat {bonusPerBranch > 0 ? `+${bonusPerBranch} staf bonus` : 'kuota lebih'}, atau upgrade paket.</>
                 : <>Anda melebihi kuota paket <b className="text-off-white">{subscription?.package}</b> ({staffUsed}/{staffQuota}). Pertimbangkan upgrade ke paket lebih besar.</>}
             </p>
           )}
           {nearQuota && !overQuota && staffAddonPrice > 0 && (
             <p className="text-xs text-amber-300 mt-2 max-w-md">
               Kuota staf hampir habis. Staf ke-{staffQuota + 1} dst akan kena <b className="text-off-white">{formatRupiah(staffAddonPrice)}/{staffAddonType === 'monthly' ? 'bln' : 'staf'}</b>.
+              {bonusPerBranch > 0 && <> Atau tambah cabang untuk dapat +{bonusPerBranch} staf bonus.</>}
             </p>
           )}
         </div>

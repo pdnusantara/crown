@@ -291,6 +291,7 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
     price:                 pkg.price ?? 0,
     maxBranches:           pkg.maxBranches ?? 1,
     maxStaff:              pkg.maxStaff ?? 4,
+    staffPerExtraBranch:   pkg.staffPerExtraBranch ?? 0,
     staffAddonPrice:       pkg.staffAddonPrice ?? 0,
     staffAddonType:        pkg.staffAddonType ?? 'monthly',
     branchAddonPrice:      pkg.branchAddonPrice ?? 0,
@@ -313,6 +314,7 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
     if (form.price < 0 || !Number.isFinite(form.price)) err.price = 'Harga tidak valid'
     if (form.maxBranches < 1) err.maxBranches = 'Min 1'
     if (form.maxStaff < 1) err.maxStaff = 'Min 1'
+    if (form.staffPerExtraBranch < 0) err.staffPerExtraBranch = 'Tidak boleh negatif'
     if (form.branchAddonPrice < 0) err.branchAddonPrice = 'Tidak boleh negatif'
     if (form.staffAddonPrice < 0) err.staffAddonPrice = 'Tidak boleh negatif'
     if (form.annualDiscountPercent < 0 || form.annualDiscountPercent > 100) err.annualDiscountPercent = '0-100%'
@@ -324,6 +326,7 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
     if (!validate()) return
     onSave({
       price: form.price, maxBranches: form.maxBranches, maxStaff: form.maxStaff,
+      staffPerExtraBranch: form.staffPerExtraBranch,
       branchAddonPrice: form.branchAddonPrice, branchAddonType: form.branchAddonType,
       staffAddonPrice:  form.staffAddonPrice,  staffAddonType:  form.staffAddonType,
       annualDiscountPercent: form.annualDiscountPercent,
@@ -444,6 +447,9 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
                 <span>
                   Paket sudah termasuk <strong className="text-off-white">{form.maxBranches} cabang</strong>.
                   Cabang ke-{form.maxBranches + 1} dst dikenakan tarif berikut.
+                  {form.staffPerExtraBranch > 0 && (
+                    <> Tiap cabang add-on paid juga otomatis dapat <strong className="text-brand">+{form.staffPerExtraBranch} staf bonus</strong> gratis (atur di tab Batas).</>
+                  )}
                 </span>
               </div>
               <RpInput
@@ -561,19 +567,27 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
               min={1} max={9999} error={errors.maxBranches}
             />
             <NumberInput
-              label="Staf Termasuk dalam Paket"
+              label="Staf Termasuk dalam Paket (cabang utama)"
               value={form.maxStaff}
               onChange={v => set('maxStaff', v)}
-              hint="Total staf (TERMASUK owner/admin) yang sudah include di harga pokok. Lebih dari ini kena add-on per staf — atur tarif di tab Add-on."
+              hint="Total staf (TERMASUK owner/admin) di cabang utama. Tambahan cabang dapat bonus staf lihat di bawah."
               min={1} max={9999} error={errors.maxStaff}
+            />
+            <NumberInput
+              label="Bonus Staf per Cabang Add-on"
+              value={form.staffPerExtraBranch}
+              onChange={v => set('staffPerExtraBranch', v)}
+              hint={`Setiap cabang add-on yang sudah paid → tenant dapat tambahan staf gratis sebanyak ini. Contoh: maxStaff ${form.maxStaff} + bonus ${form.staffPerExtraBranch}/cabang → 2 cabang = ${form.maxStaff + form.staffPerExtraBranch} staf, 3 cabang = ${form.maxStaff + (2 * form.staffPerExtraBranch)} staf. Lebih dari ini baru kena addonStaf per orang.`}
+              min={0} max={9999} error={errors.staffPerExtraBranch}
             />
             <div className="p-4 bg-dark-surface rounded-xl border border-dark-border space-y-2.5">
               <p className="text-xs text-muted font-medium uppercase">Ringkasan Batas</p>
               {[
-                { icon: Building2, label: 'Cabang termasuk',    value: `${form.maxBranches} cabang`, color: 'text-blue-400' },
-                { icon: Users,     label: 'Staf termasuk',      value: `${form.maxStaff} orang (termasuk owner)`, color: 'text-green-400' },
-                { icon: GitBranch, label: 'Biaya extra cabang', value: form.branchAddonPrice > 0 ? `${formatRupiah(form.branchAddonPrice)}/${form.branchAddonType === 'monthly' ? 'bln' : 'cabang'}` : 'Gratis', color: form.branchAddonPrice > 0 ? 'text-amber-400' : 'text-green-400' },
-                { icon: Users,     label: 'Biaya extra staf',   value: form.staffAddonPrice  > 0 ? `${formatRupiah(form.staffAddonPrice)}/${form.staffAddonType === 'monthly' ? 'bln' : 'staf'}`     : 'Gratis', color: form.staffAddonPrice  > 0 ? 'text-amber-400' : 'text-green-400' },
+                { icon: Building2, label: 'Cabang termasuk',           value: `${form.maxBranches} cabang`, color: 'text-blue-400' },
+                { icon: Users,     label: 'Staf termasuk',             value: `${form.maxStaff} orang (termasuk owner)`, color: 'text-green-400' },
+                { icon: Users,     label: 'Bonus staf / cabang add-on', value: form.staffPerExtraBranch > 0 ? `+${form.staffPerExtraBranch} staf` : 'Tidak ada bonus', color: form.staffPerExtraBranch > 0 ? 'text-brand' : 'text-muted' },
+                { icon: GitBranch, label: 'Biaya extra cabang',        value: form.branchAddonPrice > 0 ? `${formatRupiah(form.branchAddonPrice)}/${form.branchAddonType === 'monthly' ? 'bln' : 'cabang'}` : 'Gratis', color: form.branchAddonPrice > 0 ? 'text-amber-400' : 'text-green-400' },
+                { icon: Users,     label: 'Biaya extra staf (di atas kuota)', value: form.staffAddonPrice > 0 ? `${formatRupiah(form.staffAddonPrice)}/${form.staffAddonType === 'monthly' ? 'bln' : 'staf'}` : 'Gratis', color: form.staffAddonPrice > 0 ? 'text-amber-400' : 'text-green-400' },
               ].map(row => (
                 <div key={row.label} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2 text-muted"><row.icon size={13} className={row.color} />{row.label}</div>

@@ -498,6 +498,11 @@ model Package {
   // onetime). 2026-05-28 default 5→4 (Basic 4, Pro 15, Enterprise 999 set via
   // UPDATE saat rollout). Reuse enum BranchAddonType untuk konsistensi.
   maxStaff              Int                 @default(4)
+  // Bonus staf otomatis untuk SETIAP cabang add-on yang sudah paid.
+  // effectiveMaxStaff = maxStaff + (paidBranchAddonCount × staffPerExtraBranch)
+  // Mis. Basic +3 → 1 cabang = 4 staf, 2 cabang = 7 staf, 3 cabang = 10 staf.
+  // Pro +5 → 1 cabang = 15, 2 cabang = 20, dst.
+  staffPerExtraBranch   Int                 @default(0)
   staffAddonPrice       Int                 @default(0)
   staffAddonType        BranchAddonType     @default(monthly)
   branchAddonPrice      Int                 @default(0)
