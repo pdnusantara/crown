@@ -16,7 +16,7 @@ import { formatRupiah } from '../utils/format.js'
 // ── Catatan tema ────────────────────────────────────────────────────────────
 // Landing publik SELALU terang — memakai warna eksplisit (bukan class tema
 // `bg-dark`/`text-off-white`) supaya tidak ikut berubah oleh theme store app.
-// Palet: ivory #FBFAF6 · krem #F5EFE3 · tinta #1C1A17 · emas #C9A84C / #A8893A.
+// Palet: ivory #F4F4FA · krem #EEEEF5 · tinta #1E1B2E · brand #6366F1 / #4F46E5.
 //
 // Urutan & visibilitas section dikendalikan array `layout` dari /api/landing
 // (block builder super-admin). Hero & Footer terkunci di posisinya; section di
@@ -119,17 +119,17 @@ function upsertMeta(selector, content) {
 const FALLBACK_LAYOUT = ['stats', 'features', 'steps', 'pricing', 'testimonials', 'faq', 'closingCta']
   .map(t => ({ id: t, type: t, visible: true }))
 
-// Render judul hero — 2 kata terakhir ditonjolkan emas-italic (memenuhi
-// kontrak label editor super-admin). Judul ≤2 kata seluruhnya jadi emas.
+// Render judul hero — 2 kata terakhir ditonjolkan brand-italic (memenuhi
+// kontrak label editor super-admin). Judul ≤2 kata seluruhnya jadi brand.
 function renderHeroTitle(title) {
   const words = String(title || '').trim().split(/\s+/).filter(Boolean)
   if (words.length === 0) return null
   if (words.length <= 2) {
-    return <span className="italic text-[#A8893A]">{words.join(' ')}</span>
+    return <span className="italic text-[#4F46E5]">{words.join(' ')}</span>
   }
   const head = words.slice(0, -2).join(' ')
   const tail = words.slice(-2).join(' ')
-  return <>{head}<br /><span className="italic text-[#A8893A]">{tail}</span></>
+  return <>{head}<br /><span className="italic text-[#4F46E5]">{tail}</span></>
 }
 
 // Ubah URL YouTube/Vimeo umum → URL embed untuk <iframe>.
@@ -252,7 +252,7 @@ export default function LandingPage() {
     const meta = document.querySelector('meta[name="theme-color"]')
     const prevThemeColor = meta?.content
     html.classList.add('is-landing')
-    if (meta) meta.content = '#FBFAF6'
+    if (meta) meta.content = '#F4F4FA'
 
     return () => {
       document.title = original
@@ -404,7 +404,7 @@ export default function LandingPage() {
   const ctx = { hero, features, steps, sections, packages, testimonials, faqs, stats, isLoading, closing, waHref }
 
   return (
-    <div className="min-h-screen bg-[#FBFAF6] text-[#57534E] font-body overflow-x-hidden antialiased">
+    <div className="min-h-screen bg-[#F4F4FA] text-[#3F3D5C] font-body overflow-x-hidden antialiased">
       <Nav isAuthed={isAuthenticated} userRole={user?.role} logo={hero.siteLogo} siteName={siteName} />
 
       <HeroSection
@@ -456,13 +456,13 @@ export default function LandingPage() {
 
       {/* Utility class lokal — landing selalu terang, lepas dari tema app */}
       <style>{`
-        .btn-gold{display:inline-flex;align-items:center;gap:.5rem;padding:.95rem 1.6rem;border-radius:.85rem;
-          background:#C9A84C;color:#1C1A17;font-weight:700;font-size:.95rem;
-          box-shadow:0 14px 30px -10px rgba(201,168,76,.7);transition:all .2s}
-        .btn-gold:hover{background:#E8C875;box-shadow:0 16px 36px -10px rgba(201,168,76,.85)}
+        .btn-brand{display:inline-flex;align-items:center;gap:.5rem;padding:.95rem 1.6rem;border-radius:.85rem;
+          background:#6366F1;color:#FFFFFF;font-weight:700;font-size:.95rem;
+          box-shadow:0 8px 20px -8px rgba(99,102,241,.45);transition:all .2s}
+        .btn-brand:hover{background:#4F46E5;box-shadow:0 12px 26px -10px rgba(99,102,241,.55)}
         .btn-ghost{display:inline-flex;align-items:center;gap:.45rem;padding:.95rem 1.5rem;border-radius:.85rem;
-          background:#fff;border:1px solid #E4DCC8;color:#1C1A17;font-weight:600;font-size:.95rem;transition:all .2s}
-        .btn-ghost:hover{border-color:#C9A84C;background:#FDFBF4}
+          background:#fff;border:1px solid #C7CBE0;color:#1E1B2E;font-weight:600;font-size:.95rem;transition:all .2s}
+        .btn-ghost:hover{border-color:#6366F1;background:#FAFAFD;color:#4F46E5}
       `}</style>
     </div>
   )
@@ -482,14 +482,14 @@ function HeroSection({ hero, stats, trustItems, isAuthenticated, homePath }) {
 
   return (
     <section className="relative pt-32 pb-16 lg:pt-40 lg:pb-24">
-      {/* Latar dekoratif — glow emas lembut + tekstur titik halus */}
+      {/* Latar dekoratif — glow brand lembut + tekstur titik halus */}
       <div className="absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[820px] h-[420px] rounded-full bg-[#C9A84C]/12 blur-[120px]" />
-        <div className="absolute top-48 -right-20 w-72 h-72 rounded-full bg-[#E8C875]/20 blur-[100px]" />
+        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[820px] h-[420px] rounded-full bg-[#6366F1]/12 blur-[120px]" />
+        <div className="absolute top-48 -right-20 w-72 h-72 rounded-full bg-[#A5A2FF]/20 blur-[100px]" />
         <div
           className="absolute inset-0 opacity-[0.5]"
           style={{
-            backgroundImage: 'radial-gradient(#C9A84C26 1px, transparent 1px)',
+            backgroundImage: 'radial-gradient(#6366F126 1px, transparent 1px)',
             backgroundSize: '26px 26px',
             maskImage: 'linear-gradient(to bottom, black, transparent 70%)',
             WebkitMaskImage: 'linear-gradient(to bottom, black, transparent 70%)',
@@ -502,9 +502,9 @@ function HeroSection({ hero, stats, trustItems, isAuthenticated, homePath }) {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="inline-flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full bg-white border border-[#EAE0C6] text-[#A8893A] text-xs font-semibold shadow-[0_4px_16px_-8px_rgba(201,168,76,0.5)]"
+          className="inline-flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full bg-white border border-[#C7CBE0] text-[#4F46E5] text-xs font-semibold shadow-[0_4px_16px_-8px_rgba(99,102,241,0.5)]"
         >
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#C9A84C] text-[#1C1A17]">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#6366F1] text-[#1E1B2E]">
             <Lucide.Sparkles size={11} /> {heroBadge}
           </span>
           {hero.brandTagline || 'Dipercaya barbershop di seluruh Indonesia'}
@@ -514,7 +514,7 @@ function HeroSection({ hero, stats, trustItems, isAuthenticated, homePath }) {
           initial={{ opacity: 0, y: 22 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.06 }}
-          className="font-display text-4xl leading-[1.12] sm:text-6xl sm:leading-[1.08] lg:text-7xl font-bold text-[#1C1A17] tracking-tight mt-7"
+          className="font-display text-4xl leading-[1.12] sm:text-6xl sm:leading-[1.08] lg:text-7xl font-bold text-[#1E1B2E] tracking-tight mt-7"
         >
           {renderHeroTitle(hero.heroTitle || 'Kelola barbershop, tanpa ribet.')}
         </motion.h1>
@@ -523,7 +523,7 @@ function HeroSection({ hero, stats, trustItems, isAuthenticated, homePath }) {
           initial={{ opacity: 0, y: 22 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.14 }}
-          className="text-base sm:text-lg text-[#6B6459] max-w-xl mx-auto mt-6"
+          className="text-base sm:text-lg text-[#56548A] max-w-xl mx-auto mt-6"
         >
           {hero.heroSubtitle || 'Kasir, antrian, booking online, sampai laporan pemilik — semua jadi satu aplikasi. Tinggal pakai, langsung jalan hari ini juga.'}
         </motion.p>
@@ -537,13 +537,13 @@ function HeroSection({ hero, stats, trustItems, isAuthenticated, homePath }) {
           <Link
             to={isAuthenticated ? homePath : '/register'}
             onClick={() => { if (!isAuthenticated) trackPixel('Lead') }}
-            className="btn-gold group"
+            className="btn-brand group"
           >
             {isAuthenticated ? 'Buka Dashboard' : (hero.heroCtaLabel || 'Coba Gratis 14 Hari')}
             <Lucide.ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
           </Link>
           <a href="#fitur" className="btn-ghost">
-            <Lucide.Play size={13} className="text-[#A8893A]" /> Lihat Fitur
+            <Lucide.Play size={13} className="text-[#4F46E5]" /> Lihat Fitur
           </a>
         </motion.div>
 
@@ -551,13 +551,13 @@ function HeroSection({ hero, stats, trustItems, isAuthenticated, homePath }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
-          className="text-[13px] text-[#9A9189] mt-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-1"
+          className="text-[13px] text-[#7C7AA8] mt-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-1"
         >
           {trustItems.map((item, i) => (
             <React.Fragment key={i}>
-              {i > 0 && <span className="text-[#D8D0BE]">·</span>}
+              {i > 0 && <span className="text-[#D5D8E8]">·</span>}
               <span className="inline-flex items-center gap-1">
-                <Lucide.Check size={13} className="text-[#C9A84C]" /> {item}
+                <Lucide.Check size={13} className="text-[#6366F1]" /> {item}
               </span>
             </React.Fragment>
           ))}
@@ -574,22 +574,22 @@ function HeroSection({ hero, stats, trustItems, isAuthenticated, homePath }) {
             {['A', 'R', 'B', 'S'].map((c) => (
               <div
                 key={c}
-                className="w-8 h-8 rounded-full border-2 border-[#FBFAF6] flex items-center justify-center text-[11px] font-bold text-[#1C1A17] bg-gradient-to-br from-[#E8C875] to-[#A8893A]"
+                className="w-8 h-8 rounded-full border-2 border-[#F4F4FA] flex items-center justify-center text-[11px] font-bold text-[#1E1B2E] bg-gradient-to-br from-[#A5A2FF] to-[#4F46E5]"
               >
                 {c}
               </div>
             ))}
-            <div className="w-8 h-8 rounded-full border-2 border-[#FBFAF6] flex items-center justify-center text-[11px] font-bold text-[#A8893A] bg-[#FBF4E1]">
+            <div className="w-8 h-8 rounded-full border-2 border-[#F4F4FA] flex items-center justify-center text-[11px] font-bold text-[#4F46E5] bg-[#E8EAF5]">
               +
             </div>
           </div>
           <div className="text-left">
-            <div className="flex items-center gap-0.5 text-[#C9A84C]">
+            <div className="flex items-center gap-0.5 text-[#6366F1]">
               {[0, 1, 2, 3, 4].map(i => <Lucide.Star key={i} size={12} fill="currentColor" />)}
             </div>
-            <p className="text-[12.5px] text-[#6B6459] leading-tight mt-0.5">
+            <p className="text-[12.5px] text-[#56548A] leading-tight mt-0.5">
               {showRealCount
-                ? <>Dipercaya <strong className="font-semibold text-[#1C1A17]">{tenantCount.toLocaleString('id-ID')}+</strong> barbershop di Indonesia</>
+                ? <>Dipercaya <strong className="font-semibold text-[#1E1B2E]">{tenantCount.toLocaleString('id-ID')}+</strong> barbershop di Indonesia</>
                 : 'Dibuat khusus untuk barbershop Indonesia'}
             </p>
           </div>
@@ -604,8 +604,8 @@ function HeroSection({ hero, stats, trustItems, isAuthenticated, homePath }) {
         className="max-w-5xl mx-auto px-6 mt-16"
       >
         <div className="relative">
-          <div className="absolute -inset-4 bg-gradient-to-tr from-[#C9A84C]/25 via-transparent to-[#E8C875]/30 rounded-[2.5rem] blur-2xl" />
-          <div className="relative rounded-2xl border border-[#EAE3D3] bg-white shadow-[0_30px_70px_-30px_rgba(28,26,23,0.35)] overflow-hidden">
+          <div className="absolute -inset-4 bg-gradient-to-tr from-[#6366F1]/25 via-transparent to-[#A5A2FF]/30 rounded-[2.5rem] blur-2xl" />
+          <div className="relative rounded-2xl border border-[#D5D8E8] bg-white shadow-[0_30px_70px_-30px_rgba(28,26,23,0.35)] overflow-hidden">
             <DashboardMock />
           </div>
         </div>
@@ -618,7 +618,7 @@ function StatsSection({ ctx }) {
   const { stats } = ctx
   if (!stats) return null
   return (
-    <section className="border-y border-[#EAE3D3] bg-white">
+    <section className="border-y border-[#D5D8E8] bg-white">
       <div className="max-w-5xl mx-auto px-6 py-12 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
         {[
           { label: 'Tenant aktif',        value: stats.tenantCount,      suffix: '+', icon: 'Building2' },
@@ -629,11 +629,11 @@ function StatsSection({ ctx }) {
           const Icon = getIcon(s.icon)
           return (
             <motion.div key={s.label} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-              <Icon size={18} className="text-[#C9A84C] mx-auto mb-2" />
-              <p className="font-display text-3xl md:text-4xl font-bold text-[#1C1A17]">
+              <Icon size={18} className="text-[#6366F1] mx-auto mb-2" />
+              <p className="font-display text-3xl md:text-4xl font-bold text-[#1E1B2E]">
                 <CountUp to={s.value} suffix={s.suffix} />
               </p>
-              <p className="text-xs text-[#9A9189] mt-1">{s.label}</p>
+              <p className="text-xs text-[#7C7AA8] mt-1">{s.label}</p>
             </motion.div>
           )
         })}
@@ -646,13 +646,13 @@ function StatsSection({ ctx }) {
 // (object-contain) supaya seluruh tampilan aplikasi terlihat utuh & terbaca.
 function BrowserFrame({ src, alt }) {
   return (
-    <div className="rounded-2xl border border-[#EAE3D3] bg-white shadow-[0_24px_60px_-28px_rgba(28,26,23,0.4)] overflow-hidden">
-      <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-[#F0EAD9] bg-[#FBFAF6]">
+    <div className="rounded-2xl border border-[#D5D8E8] bg-white shadow-[0_24px_60px_-28px_rgba(28,26,23,0.4)] overflow-hidden">
+      <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-[#E8EAF5] bg-[#F4F4FA]">
         <span className="w-2.5 h-2.5 rounded-full bg-[#E0573E]/70" />
-        <span className="w-2.5 h-2.5 rounded-full bg-[#E8B84B]/70" />
+        <span className="w-2.5 h-2.5 rounded-full bg-[#A5A2FF]/70" />
         <span className="w-2.5 h-2.5 rounded-full bg-[#3FB950]/60" />
       </div>
-      <div className="aspect-[16/10] bg-[#F5EFE3]">
+      <div className="aspect-[16/10] bg-[#EEEEF5]">
         <img src={src} alt={alt} loading="lazy" className="w-full h-full object-contain" />
       </div>
     </div>
@@ -686,15 +686,15 @@ function FeaturesSection({ ctx }) {
                 >
                   <div className={imageRight ? 'lg:order-1' : 'lg:order-2'}>
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="w-11 h-11 rounded-xl bg-[#FBF4E1] border border-[#EAE0C6] flex items-center justify-center">
-                        <Icon size={19} className="text-[#A8893A]" />
+                      <div className="w-11 h-11 rounded-xl bg-[#E8EAF5] border border-[#C7CBE0] flex items-center justify-center">
+                        <Icon size={19} className="text-[#4F46E5]" />
                       </div>
-                      <span className="font-display text-sm font-semibold text-[#C9A84C]">
+                      <span className="font-display text-sm font-semibold text-[#6366F1]">
                         {String(i + 1).padStart(2, '0')}
                       </span>
                     </div>
-                    <h3 className="font-display text-2xl sm:text-3xl font-semibold text-[#1C1A17] mb-3 leading-tight">{f.title}</h3>
-                    <p className="text-[#6B6459] leading-relaxed sm:text-lg">{f.desc}</p>
+                    <h3 className="font-display text-2xl sm:text-3xl font-semibold text-[#1E1B2E] mb-3 leading-tight">{f.title}</h3>
+                    <p className="text-[#56548A] leading-relaxed sm:text-lg">{f.desc}</p>
                   </div>
                   <div className={imageRight ? 'lg:order-2' : 'lg:order-1'}>
                     <BrowserFrame src={f.image} alt={f.title} />
@@ -707,7 +707,7 @@ function FeaturesSection({ ctx }) {
 
         {/* Fitur tanpa gambar → grid ikon bernomor (tampilan lama yang bersih) */}
         {compact.length > 0 && (
-          <div className={`grid sm:grid-cols-2 lg:grid-cols-3 gap-px rounded-2xl overflow-hidden border border-[#EAE3D3] bg-[#EAE3D3] ${showcase.length > 0 ? 'mt-16' : 'mt-14'}`}>
+          <div className={`grid sm:grid-cols-2 lg:grid-cols-3 gap-px rounded-2xl overflow-hidden border border-[#D5D8E8] bg-[#D5D8E8] ${showcase.length > 0 ? 'mt-16' : 'mt-14'}`}>
             {compact.map(({ f, i }) => {
               const Icon = getIcon(f.icon)
               return (
@@ -717,16 +717,16 @@ function FeaturesSection({ ctx }) {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: '-60px' }}
                   transition={{ delay: 0.05 }}
-                  className="group relative bg-white p-7 hover:bg-[#FDFBF4] transition-colors"
+                  className="group relative bg-white p-7 hover:bg-[#FAFAFD] transition-colors"
                 >
-                  <span className="font-display text-sm font-semibold text-[#C9A84C]">
+                  <span className="font-display text-sm font-semibold text-[#6366F1]">
                     {String(i + 1).padStart(2, '0')}
                   </span>
-                  <div className="w-11 h-11 rounded-xl bg-[#FBF4E1] border border-[#EAE0C6] flex items-center justify-center mt-3 mb-4 group-hover:bg-[#C9A84C] transition-colors">
-                    <Icon size={19} className="text-[#A8893A] group-hover:text-[#1C1A17] transition-colors" />
+                  <div className="w-11 h-11 rounded-xl bg-[#E8EAF5] border border-[#C7CBE0] flex items-center justify-center mt-3 mb-4 group-hover:bg-[#6366F1] transition-colors">
+                    <Icon size={19} className="text-[#4F46E5] group-hover:text-[#1E1B2E] transition-colors" />
                   </div>
-                  <h3 className="font-display text-xl font-semibold text-[#1C1A17] mb-1.5">{f.title}</h3>
-                  <p className="text-sm text-[#6B6459] leading-relaxed">{f.desc}</p>
+                  <h3 className="font-display text-xl font-semibold text-[#1E1B2E] mb-1.5">{f.title}</h3>
+                  <p className="text-sm text-[#56548A] leading-relaxed">{f.desc}</p>
                 </motion.div>
               )
             })}
@@ -740,7 +740,7 @@ function FeaturesSection({ ctx }) {
 function StepsSection({ ctx }) {
   const { steps, sections } = ctx
   return (
-    <section className="py-24 px-6 bg-[#F5EFE3]">
+    <section className="py-24 px-6 bg-[#EEEEF5]">
       <div className="max-w-5xl mx-auto">
         <SectionHeading {...sections.steps} />
         <div className={`grid gap-5 mt-14 ${steps.length === 2 ? 'md:grid-cols-2' : steps.length >= 4 ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-3'}`}>
@@ -751,13 +751,13 @@ function StepsSection({ ctx }) {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
-              className="relative bg-white rounded-2xl border border-[#EAE3D3] p-7"
+              className="relative bg-white rounded-2xl border border-[#D5D8E8] p-7"
             >
-              <span className="font-display text-5xl font-bold text-[#EAE0C6]">{i + 1}</span>
-              <h3 className="font-display text-lg font-semibold text-[#1C1A17] mt-2 mb-1.5">{s.title}</h3>
-              <p className="text-sm text-[#6B6459] leading-relaxed">{s.desc}</p>
+              <span className="font-display text-5xl font-bold text-[#C7CBE0]">{i + 1}</span>
+              <h3 className="font-display text-lg font-semibold text-[#1E1B2E] mt-2 mb-1.5">{s.title}</h3>
+              <p className="text-sm text-[#56548A] leading-relaxed">{s.desc}</p>
               {i < steps.length - 1 && (
-                <Lucide.ArrowRight size={18} className="hidden md:block absolute top-1/2 -right-4 -translate-y-1/2 text-[#C9A84C] z-10" />
+                <Lucide.ArrowRight size={18} className="hidden md:block absolute top-1/2 -right-4 -translate-y-1/2 text-[#6366F1] z-10" />
               )}
             </motion.div>
           ))}
@@ -776,7 +776,7 @@ function PricingSection({ ctx }) {
 
         {isLoading ? (
           <div className="grid md:grid-cols-3 gap-6 mt-14">
-            {[1, 2, 3].map(i => <div key={i} className="h-[480px] bg-white border border-[#EAE3D3] rounded-2xl animate-pulse" />)}
+            {[1, 2, 3].map(i => <div key={i} className="h-[480px] bg-white border border-[#D5D8E8] rounded-2xl animate-pulse" />)}
           </div>
         ) : (
           <div className="grid md:grid-cols-3 gap-6 mt-14 items-start">
@@ -794,37 +794,37 @@ function PricingSection({ ctx }) {
                   transition={{ delay: i * 0.08 }}
                   className={`relative rounded-2xl p-7 flex flex-col ${
                     featured
-                      ? 'bg-[#1C1A17] text-[#E7E2D6] shadow-[0_30px_60px_-25px_rgba(28,26,23,0.6)] md:-mt-4 md:mb-4'
-                      : 'bg-white border border-[#EAE3D3]'
+                      ? 'bg-[#1E1B2E] text-[#D5D8E8] shadow-[0_30px_60px_-25px_rgba(28,26,23,0.6)] md:-mt-4 md:mb-4'
+                      : 'bg-white border border-[#D5D8E8]'
                   }`}
                 >
                   {featured && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#C9A84C] text-[#1C1A17] text-[11px] font-bold whitespace-nowrap">
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#6366F1] text-[#1E1B2E] text-[11px] font-bold whitespace-nowrap">
                       <Lucide.Star size={11} fill="currentColor" /> Paling Banyak Dipilih
                     </div>
                   )}
 
-                  <h3 className={`font-display text-2xl font-bold ${featured ? 'text-white' : 'text-[#1C1A17]'}`}>
+                  <h3 className={`font-display text-2xl font-bold ${featured ? 'text-white' : 'text-[#1E1B2E]'}`}>
                     {p.name}
                   </h3>
-                  <p className={`text-sm mt-1 min-h-[40px] ${featured ? 'text-[#A8A29A]' : 'text-[#6B6459]'}`}>
+                  <p className={`text-sm mt-1 min-h-[40px] ${featured ? 'text-[#A5A2C8]' : 'text-[#56548A]'}`}>
                     {p.description || PKG_TAGLINE[p.name] || 'Paket fleksibel buat barbershop kamu.'}
                   </p>
 
                   <div className="mt-5 mb-1 flex items-end gap-1.5">
-                    <span className={`font-display text-4xl font-bold ${featured ? 'text-white' : 'text-[#1C1A17]'}`}>
+                    <span className={`font-display text-4xl font-bold ${featured ? 'text-white' : 'text-[#1E1B2E]'}`}>
                       {formatRupiah(p.price)}
                     </span>
-                    <span className={`text-sm pb-1 ${featured ? 'text-[#A8A29A]' : 'text-[#9A9189]'}`}>/bulan</span>
+                    <span className={`text-sm pb-1 ${featured ? 'text-[#A5A2C8]' : 'text-[#7C7AA8]'}`}>/bulan</span>
                   </div>
-                  <p className="text-xs text-[#A8893A] font-medium">
+                  <p className="text-xs text-[#4F46E5] font-medium">
                     Bayar tahunan {formatRupiah(annual)} — hemat {p.annualDiscountPercent ?? 17}%
                   </p>
 
-                  <div className={`h-px my-6 ${featured ? 'bg-white/10' : 'bg-[#EAE3D3]'}`} />
+                  <div className={`h-px my-6 ${featured ? 'bg-white/10' : 'bg-[#D5D8E8]'}`} />
 
                   {inheritFrom && (
-                    <p className={`text-xs font-semibold mb-3 ${featured ? 'text-[#E8C875]' : 'text-[#A8893A]'}`}>
+                    <p className={`text-xs font-semibold mb-3 ${featured ? 'text-[#A5A2FF]' : 'text-[#4F46E5]'}`}>
                       Semua di paket {inheritFrom}, plus:
                     </p>
                   )}
@@ -832,11 +832,11 @@ function PricingSection({ ctx }) {
                     {lines.map((line, li) => (
                       <li key={li} className="flex items-start gap-2.5">
                         <span className={`mt-0.5 w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          featured ? 'bg-[#C9A84C]' : 'bg-[#FBF4E1] border border-[#EAE0C6]'
+                          featured ? 'bg-[#6366F1]' : 'bg-[#E8EAF5] border border-[#C7CBE0]'
                         }`}>
-                          <Lucide.Check size={11} className={featured ? 'text-[#1C1A17]' : 'text-[#A8893A]'} strokeWidth={3} />
+                          <Lucide.Check size={11} className={featured ? 'text-[#1E1B2E]' : 'text-[#4F46E5]'} strokeWidth={3} />
                         </span>
-                        <span className={`text-sm ${featured ? 'text-[#E7E2D6]' : 'text-[#57534E]'}`}>{line}</span>
+                        <span className={`text-sm ${featured ? 'text-[#D5D8E8]' : 'text-[#3F3D5C]'}`}>{line}</span>
                       </li>
                     ))}
                   </ul>
@@ -846,8 +846,8 @@ function PricingSection({ ctx }) {
                     state={{ packageName: p.name }}
                     className={`flex items-center justify-center gap-1.5 w-full py-3 rounded-xl font-semibold text-sm transition-all ${
                       featured
-                        ? 'bg-[#C9A84C] text-[#1C1A17] hover:bg-[#E8C875]'
-                        : 'bg-[#1C1A17] text-[#FBFAF6] hover:bg-[#2E2A24]'
+                        ? 'bg-[#6366F1] text-[#1E1B2E] hover:bg-[#A5A2FF]'
+                        : 'bg-[#1E1B2E] text-[#F4F4FA] hover:bg-[#1E1B4B]'
                     }`}
                   >
                     Pilih {p.name} <Lucide.ArrowRight size={14} />
@@ -858,8 +858,8 @@ function PricingSection({ ctx }) {
           </div>
         )}
 
-        <p className="text-center text-[13px] text-[#9A9189] mt-9 inline-flex w-full items-center justify-center gap-2 flex-wrap">
-          <Lucide.ShieldCheck size={14} className="text-[#C9A84C]" />
+        <p className="text-center text-[13px] text-[#7C7AA8] mt-9 inline-flex w-full items-center justify-center gap-2 flex-wrap">
+          <Lucide.ShieldCheck size={14} className="text-[#6366F1]" />
           Semua paket sudah termasuk SSL, keamanan data, update gratis & dukungan tim kami.
         </p>
       </div>
@@ -873,13 +873,13 @@ function TestimonialsSection({ ctx }) {
   // saat loading tampilkan skeleton supaya tidak ada layout shift.
   if (!isLoading && testimonials.length === 0) return null
   return (
-    <section className="py-24 px-6 bg-[#F5EFE3]">
+    <section className="py-24 px-6 bg-[#EEEEF5]">
       <div className="max-w-6xl mx-auto">
         <SectionHeading {...sections.testimonials} />
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 mt-14">
           {isLoading
             ? [1, 2, 3].map(i => (
-                <div key={i} className="h-56 bg-white border border-[#EAE3D3] rounded-2xl animate-pulse" />
+                <div key={i} className="h-56 bg-white border border-[#D5D8E8] rounded-2xl animate-pulse" />
               ))
             : testimonials.map((t, i) => (
               <motion.div
@@ -888,25 +888,25 @@ function TestimonialsSection({ ctx }) {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: (i % 3) * 0.08 }}
-                className="bg-white rounded-2xl border border-[#EAE3D3] p-6 flex flex-col"
+                className="bg-white rounded-2xl border border-[#D5D8E8] p-6 flex flex-col"
               >
-                <div className="flex items-center gap-0.5 mb-3 text-[#C9A84C]">
+                <div className="flex items-center gap-0.5 mb-3 text-[#6366F1]">
                   {Array.from({ length: t.rating || 5 }).map((_, idx) => (
                     <Lucide.Star key={idx} size={14} fill="currentColor" />
                   ))}
                 </div>
-                <p className="text-[15px] text-[#3F3A33] leading-relaxed flex-1">"{t.message}"</p>
-                <div className="flex items-center gap-3 pt-4 mt-4 border-t border-[#EAE3D3]">
+                <p className="text-[15px] text-[#3F3D5C] leading-relaxed flex-1">"{t.message}"</p>
+                <div className="flex items-center gap-3 pt-4 mt-4 border-t border-[#D5D8E8]">
                   {t.photoUrl ? (
                     <img src={t.photoUrl} alt={t.name} className="w-10 h-10 rounded-full object-cover" />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#E8C875] to-[#A8893A] flex items-center justify-center text-[#1C1A17] font-bold text-sm">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#A5A2FF] to-[#4F46E5] flex items-center justify-center text-[#1E1B2E] font-bold text-sm">
                       {t.name?.[0]?.toUpperCase() || '?'}
                     </div>
                   )}
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-[#1C1A17] truncate">{t.name}</p>
-                    <p className="text-xs text-[#9A9189] truncate">
+                    <p className="text-sm font-semibold text-[#1E1B2E] truncate">{t.name}</p>
+                    <p className="text-xs text-[#7C7AA8] truncate">
                       {[t.role, t.businessName].filter(Boolean).join(' · ')}
                     </p>
                   </div>
@@ -929,7 +929,7 @@ function FaqSection({ ctx }) {
         <div className="space-y-3 mt-12">
           {isLoading
             ? [1, 2, 3, 4].map(i => (
-                <div key={i} className="h-14 bg-white border border-[#EAE3D3] rounded-xl animate-pulse" />
+                <div key={i} className="h-14 bg-white border border-[#D5D8E8] rounded-xl animate-pulse" />
               ))
             : faqs.map((f, i) => <FAQItem key={f.id} item={f} delay={i * 0.04} />)}
         </div>
@@ -946,28 +946,28 @@ function ClosingCtaSection({ ctx }) {
         initial={{ opacity: 0, scale: 0.97 }}
         whileInView={{ opacity: 1, scale: 1 }}
         viewport={{ once: true }}
-        className="max-w-4xl mx-auto text-center rounded-3xl bg-[#1C1A17] px-8 py-14 lg:py-16 relative overflow-hidden"
+        className="max-w-4xl mx-auto text-center rounded-3xl bg-[#1E1B2E] px-8 py-14 lg:py-16 relative overflow-hidden"
       >
         <div className="absolute inset-0 -z-0 opacity-60" style={{
-          backgroundImage: 'radial-gradient(circle at 18% 30%, rgba(201,168,76,0.35), transparent 45%), radial-gradient(circle at 85% 80%, rgba(232,200,117,0.22), transparent 45%)',
+          backgroundImage: 'radial-gradient(circle at 18% 30%, rgba(99,102,241,0.35), transparent 45%), radial-gradient(circle at 85% 80%, rgba(232,200,117,0.22), transparent 45%)',
         }} />
         <div className="relative">
-          <Lucide.Scissors className="text-[#C9A84C] mx-auto mb-4" size={30} />
+          <Lucide.Scissors className="text-[#6366F1] mx-auto mb-4" size={30} />
           <h2 className="font-display text-3xl lg:text-[2.6rem] font-bold text-white leading-tight">
             {closing.title}
           </h2>
-          <p className="text-[#A8A29A] max-w-lg mx-auto mt-4 mb-8">
+          <p className="text-[#A5A2C8] max-w-lg mx-auto mt-4 mb-8">
             {closing.subtitle}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <Link to="/register" onClick={() => trackPixel('Lead')} className="btn-gold group">
+            <Link to="/register" onClick={() => trackPixel('Lead')} className="btn-brand group">
               {closing.ctaLabel}
               <Lucide.ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </Link>
             {waHref && (
               <a
                 href={waHref} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white/10 border border-white/15 text-[#E7E2D6] font-medium hover:bg-white/15 transition-colors"
+                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white/10 border border-white/15 text-[#D5D8E8] font-medium hover:bg-white/15 transition-colors"
               >
                 <Lucide.MessageCircle size={16} className="text-[#5DD27A]" /> Tanya via WhatsApp
               </a>
@@ -987,14 +987,14 @@ function BlockHeading({ kicker, title, subtitle }) {
   return (
     <div className="text-center max-w-2xl mx-auto">
       {kicker && (
-        <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#A8893A]">
-          <span className="w-5 h-px bg-[#C9A84C]" /> {kicker} <span className="w-5 h-px bg-[#C9A84C]" />
+        <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#4F46E5]">
+          <span className="w-5 h-px bg-[#6366F1]" /> {kicker} <span className="w-5 h-px bg-[#6366F1]" />
         </p>
       )}
       {title && (
-        <h2 className="font-display text-3xl lg:text-[2.4rem] font-bold text-[#1C1A17] mt-3 leading-tight">{title}</h2>
+        <h2 className="font-display text-3xl lg:text-[2.4rem] font-bold text-[#1E1B2E] mt-3 leading-tight">{title}</h2>
       )}
-      {subtitle && <p className="text-[#6B6459] mt-3">{subtitle}</p>}
+      {subtitle && <p className="text-[#56548A] mt-3">{subtitle}</p>}
     </div>
   )
 }
@@ -1015,10 +1015,10 @@ function GallerySection({ block }) {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: (i % 3) * 0.07 }}
-              className="rounded-2xl overflow-hidden border border-[#EAE3D3] bg-white"
+              className="rounded-2xl overflow-hidden border border-[#D5D8E8] bg-white"
             >
               <img src={it.url} alt={it.caption || ''} loading="lazy" className="w-full h-56 object-cover" />
-              {it.caption && <figcaption className="px-4 py-3 text-sm text-[#6B6459]">{it.caption}</figcaption>}
+              {it.caption && <figcaption className="px-4 py-3 text-sm text-[#56548A]">{it.caption}</figcaption>}
             </motion.figure>
           ))}
         </div>
@@ -1032,10 +1032,10 @@ function VideoSection({ block }) {
   const embed = toEmbedUrl(cfg.url)
   if (!embed) return null
   return (
-    <section className="py-24 px-6 bg-[#F5EFE3]">
+    <section className="py-24 px-6 bg-[#EEEEF5]">
       <div className="max-w-4xl mx-auto">
         <BlockHeading kicker={cfg.kicker} title={cfg.title} subtitle={cfg.subtitle} />
-        <div className={`relative aspect-video rounded-2xl overflow-hidden border border-[#EAE3D3] bg-black ${(cfg.title || cfg.kicker) ? 'mt-12' : ''}`}>
+        <div className={`relative aspect-video rounded-2xl overflow-hidden border border-[#D5D8E8] bg-black ${(cfg.title || cfg.kicker) ? 'mt-12' : ''}`}>
           <iframe
             src={embed}
             title={cfg.title || 'Video'}
@@ -1054,10 +1054,10 @@ function LogoStripSection({ block }) {
   const logos = Array.isArray(cfg.logos) ? cfg.logos.filter(l => l && l.url) : []
   if (logos.length === 0) return null
   return (
-    <section className="py-16 px-6 border-y border-[#EAE3D3] bg-white">
+    <section className="py-16 px-6 border-y border-[#D5D8E8] bg-white">
       <div className="max-w-6xl mx-auto">
         {cfg.title && (
-          <p className="text-center text-xs font-bold uppercase tracking-[0.18em] text-[#A8893A] mb-8">{cfg.title}</p>
+          <p className="text-center text-xs font-bold uppercase tracking-[0.18em] text-[#4F46E5] mb-8">{cfg.title}</p>
         )}
         <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-6">
           {logos.map((l, i) => (
@@ -1081,7 +1081,7 @@ function BannerSection({ block }) {
   if (!cfg.heading && !cfg.image) return null
   return (
     <section className="py-20 px-6">
-      <div className="max-w-5xl mx-auto relative rounded-3xl overflow-hidden border border-[#EAE3D3] bg-[#1C1A17]">
+      <div className="max-w-5xl mx-auto relative rounded-3xl overflow-hidden border border-[#D5D8E8] bg-[#1E1B2E]">
         {cfg.image && (
           <img src={cfg.image} alt="" className="absolute inset-0 w-full h-full object-cover opacity-35" />
         )}
@@ -1089,9 +1089,9 @@ function BannerSection({ block }) {
           {cfg.heading && (
             <h2 className="font-display text-3xl lg:text-[2.4rem] font-bold text-white leading-tight">{cfg.heading}</h2>
           )}
-          {cfg.text && <p className="text-[#D9D3C7] max-w-xl mx-auto mt-4">{cfg.text}</p>}
+          {cfg.text && <p className="text-[#D5D8E8] max-w-xl mx-auto mt-4">{cfg.text}</p>}
           {cfg.ctaLabel && cfg.ctaUrl && (
-            <a href={cfg.ctaUrl} className="btn-gold group mt-7">
+            <a href={cfg.ctaUrl} className="btn-brand group mt-7">
               {cfg.ctaLabel}
               <Lucide.ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </a>
@@ -1109,18 +1109,18 @@ function RichTextSection({ block }) {
     <section className="py-24 px-6">
       <div className="max-w-3xl mx-auto text-center">
         {cfg.kicker && (
-          <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#A8893A]">
-            <span className="w-5 h-px bg-[#C9A84C]" /> {cfg.kicker} <span className="w-5 h-px bg-[#C9A84C]" />
+          <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#4F46E5]">
+            <span className="w-5 h-px bg-[#6366F1]" /> {cfg.kicker} <span className="w-5 h-px bg-[#6366F1]" />
           </p>
         )}
         {cfg.heading && (
-          <h2 className="font-display text-3xl lg:text-[2.4rem] font-bold text-[#1C1A17] mt-3 leading-tight">{cfg.heading}</h2>
+          <h2 className="font-display text-3xl lg:text-[2.4rem] font-bold text-[#1E1B2E] mt-3 leading-tight">{cfg.heading}</h2>
         )}
         {cfg.body && (
-          <p className="text-[#6B6459] mt-4 leading-relaxed whitespace-pre-line">{cfg.body}</p>
+          <p className="text-[#56548A] mt-4 leading-relaxed whitespace-pre-line">{cfg.body}</p>
         )}
         {cfg.ctaLabel && cfg.ctaUrl && (
-          <a href={cfg.ctaUrl} className="btn-gold group mt-7">
+          <a href={cfg.ctaUrl} className="btn-brand group mt-7">
             {cfg.ctaLabel}
             <Lucide.ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
           </a>
@@ -1162,7 +1162,7 @@ function Nav({ isAuthed, userRole, logo, siteName = 'SembaPOS' }) {
 
   return (
     <header className={`fixed top-0 inset-x-0 z-50 transition-all ${
-      scrolled ? 'bg-[#FBFAF6]/90 backdrop-blur-md border-b border-[#EAE3D3]' : 'bg-transparent'
+      scrolled ? 'bg-[#F4F4FA]/90 backdrop-blur-md border-b border-[#D5D8E8]' : 'bg-transparent'
     }`}>
       <div className="max-w-6xl mx-auto px-6 py-3.5 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2.5">
@@ -1170,26 +1170,26 @@ function Nav({ isAuthed, userRole, logo, siteName = 'SembaPOS' }) {
             <img src={logo} alt={siteName} className="h-9 w-auto max-w-[180px] object-contain" />
           ) : (
             <>
-              <div className="w-9 h-9 rounded-xl bg-[#1C1A17] flex items-center justify-center">
-                <Lucide.Scissors size={17} className="text-[#C9A84C]" />
+              <div className="w-9 h-9 rounded-xl bg-[#1E1B2E] flex items-center justify-center">
+                <Lucide.Scissors size={17} className="text-[#6366F1]" />
               </div>
-              <span className="font-display text-xl font-bold tracking-tight text-[#1C1A17]">{siteName}</span>
+              <span className="font-display text-xl font-bold tracking-tight text-[#1E1B2E]">{siteName}</span>
             </>
           )}
         </Link>
 
         <nav className="hidden md:flex items-center gap-7 text-sm font-medium">
-          <a href="#fitur" className="text-[#6B6459] hover:text-[#1C1A17] transition-colors">Fitur</a>
-          <a href="#harga" className="text-[#6B6459] hover:text-[#1C1A17] transition-colors">Harga</a>
+          <a href="#fitur" className="text-[#56548A] hover:text-[#1E1B2E] transition-colors">Fitur</a>
+          <a href="#harga" className="text-[#56548A] hover:text-[#1E1B2E] transition-colors">Harga</a>
         </nav>
 
         <div className="flex items-center gap-2">
           {isAuthed ? (
-            <Link to={homePath} className="px-4 py-2 rounded-lg bg-[#C9A84C] text-[#1C1A17] text-sm font-semibold hover:bg-[#E8C875] transition-colors">
+            <Link to={homePath} className="px-4 py-2 rounded-lg bg-[#6366F1] text-[#1E1B2E] text-sm font-semibold hover:bg-[#A5A2FF] transition-colors">
               Buka Dashboard
             </Link>
           ) : (
-            <Link to="/register" onClick={() => trackPixel('Lead')} className="px-4 py-2 rounded-lg bg-[#C9A84C] text-[#1C1A17] text-sm font-semibold hover:bg-[#E8C875] transition-colors">
+            <Link to="/register" onClick={() => trackPixel('Lead')} className="px-4 py-2 rounded-lg bg-[#6366F1] text-[#1E1B2E] text-sm font-semibold hover:bg-[#A5A2FF] transition-colors">
               Daftar Gratis
             </Link>
           )}
@@ -1204,13 +1204,13 @@ function SectionHeading({ kicker, title, subtitle }) {
     <div className="text-center max-w-2xl mx-auto">
       <motion.p
         initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
-        className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#A8893A]"
+        className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#4F46E5]"
       >
-        <span className="w-5 h-px bg-[#C9A84C]" /> {kicker} <span className="w-5 h-px bg-[#C9A84C]" />
+        <span className="w-5 h-px bg-[#6366F1]" /> {kicker} <span className="w-5 h-px bg-[#6366F1]" />
       </motion.p>
       <motion.h2
         initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-        className="font-display text-3xl lg:text-[2.6rem] font-bold text-[#1C1A17] mt-3 leading-tight"
+        className="font-display text-3xl lg:text-[2.6rem] font-bold text-[#1E1B2E] mt-3 leading-tight"
       >
         {title}
       </motion.h2>
@@ -1218,7 +1218,7 @@ function SectionHeading({ kicker, title, subtitle }) {
         <motion.p
           initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
           transition={{ delay: 0.08 }}
-          className="text-[#6B6459] mt-3"
+          className="text-[#56548A] mt-3"
         >
           {subtitle}
         </motion.p>
@@ -1233,15 +1233,15 @@ function FAQItem({ item, delay }) {
     <motion.div
       initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
       transition={{ delay }}
-      className="rounded-xl bg-white border border-[#EAE3D3] overflow-hidden"
+      className="rounded-xl bg-white border border-[#D5D8E8] overflow-hidden"
     >
       <button
         onClick={() => setOpen(o => !o)}
         aria-expanded={open}
-        className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-[#FDFBF4] transition-colors"
+        className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-[#FAFAFD] transition-colors"
       >
-        <span className="font-semibold text-[#1C1A17] pr-4">{item.question}</span>
-        <Lucide.ChevronDown size={17} className={`text-[#A8893A] flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <span className="font-semibold text-[#1E1B2E] pr-4">{item.question}</span>
+        <Lucide.ChevronDown size={17} className={`text-[#4F46E5] flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       <AnimatePresence initial={false}>
         {open && (
@@ -1250,7 +1250,7 @@ function FAQItem({ item, delay }) {
             exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }}
             className="overflow-hidden"
           >
-            <p className="px-5 pb-5 text-sm text-[#6B6459] leading-relaxed whitespace-pre-line">{item.answer}</p>
+            <p className="px-5 pb-5 text-sm text-[#56548A] leading-relaxed whitespace-pre-line">{item.answer}</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1270,20 +1270,20 @@ function StickyCtaBar({ show, authed, label, to, note, onCta }) {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 110, opacity: 0 }}
           transition={{ type: 'spring', stiffness: 280, damping: 30 }}
-          className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[#FBFAF6]/95 backdrop-blur-md border-t border-[#EAE3D3] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-10px_30px_-12px_rgba(28,26,23,0.3)]"
+          className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[#F4F4FA]/95 backdrop-blur-md border-t border-[#D5D8E8] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-10px_30px_-12px_rgba(28,26,23,0.3)]"
         >
           <div className="max-w-md mx-auto">
             <Link
               to={to}
               onClick={onCta}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#C9A84C] text-[#1C1A17] font-bold text-sm shadow-[0_10px_24px_-10px_rgba(201,168,76,0.9)]"
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#6366F1] text-[#1E1B2E] font-bold text-sm shadow-[0_10px_24px_-10px_rgba(99,102,241,0.9)]"
             >
               {label}
               <Lucide.ArrowRight size={16} />
             </Link>
             {note && (
-              <p className="text-center text-[11px] text-[#9A9189] mt-1.5 truncate">
-                {authed ? note : <><Lucide.ShieldCheck size={11} className="inline -mt-0.5 mr-1 text-[#C9A84C]" />{note}</>}
+              <p className="text-center text-[11px] text-[#7C7AA8] mt-1.5 truncate">
+                {authed ? note : <><Lucide.ShieldCheck size={11} className="inline -mt-0.5 mr-1 text-[#6366F1]" />{note}</>}
               </p>
             )}
           </div>
@@ -1299,7 +1299,7 @@ function Footer({ text, logo, contact = {}, siteName = 'SembaPOS' }) {
   const address = (contact.address || '').trim()
   const waPhone = normalizeWa(phone)
   return (
-    <footer className="bg-[#1C1A17] text-[#A8A29A] px-6 pt-14 pb-8">
+    <footer className="bg-[#1E1B2E] text-[#A5A2C8] px-6 pt-14 pb-8">
       <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-sm">
         <div className="col-span-2">
           <div className="flex items-center gap-2.5 mb-3">
@@ -1307,10 +1307,10 @@ function Footer({ text, logo, contact = {}, siteName = 'SembaPOS' }) {
               <img src={logo} alt={siteName} className="h-9 w-auto max-w-[180px] object-contain" />
             ) : (
               <>
-                <div className="w-9 h-9 rounded-xl bg-[#C9A84C] flex items-center justify-center">
-                  <Lucide.Scissors size={17} className="text-[#1C1A17]" />
+                <div className="w-9 h-9 rounded-xl bg-[#6366F1] flex items-center justify-center">
+                  <Lucide.Scissors size={17} className="text-[#1E1B2E]" />
                 </div>
-                <span className="font-display text-xl font-bold text-[#FBFAF6]">{siteName}</span>
+                <span className="font-display text-xl font-bold text-[#F4F4FA]">{siteName}</span>
               </>
             )}
           </div>
@@ -1319,15 +1319,15 @@ function Footer({ text, logo, contact = {}, siteName = 'SembaPOS' }) {
           </p>
         </div>
         <div>
-          <h4 className="font-semibold text-[#FBFAF6] mb-3">Produk</h4>
+          <h4 className="font-semibold text-[#F4F4FA] mb-3">Produk</h4>
           <ul className="space-y-2 text-[13px]">
-            <li><a href="#fitur" className="hover:text-[#C9A84C] transition-colors">Fitur</a></li>
-            <li><a href="#harga" className="hover:text-[#C9A84C] transition-colors">Harga</a></li>
-            <li><Link to="/register" className="hover:text-[#C9A84C] transition-colors">Daftar Gratis</Link></li>
+            <li><a href="#fitur" className="hover:text-[#6366F1] transition-colors">Fitur</a></li>
+            <li><a href="#harga" className="hover:text-[#6366F1] transition-colors">Harga</a></li>
+            <li><Link to="/register" className="hover:text-[#6366F1] transition-colors">Daftar Gratis</Link></li>
           </ul>
         </div>
         <div>
-          <h4 className="font-semibold text-[#FBFAF6] mb-3">Kontak</h4>
+          <h4 className="font-semibold text-[#F4F4FA] mb-3">Kontak</h4>
           <ul className="space-y-2.5 text-[13px]">
             {phone && (
               <li>
@@ -1335,9 +1335,9 @@ function Footer({ text, logo, contact = {}, siteName = 'SembaPOS' }) {
                   href={waPhone ? `https://wa.me/${waPhone}` : `tel:${phone.replace(/[^\d+]/g, '')}`}
                   target={waPhone ? '_blank' : undefined}
                   rel={waPhone ? 'noopener noreferrer' : undefined}
-                  className="inline-flex items-start gap-2 hover:text-[#C9A84C] transition-colors"
+                  className="inline-flex items-start gap-2 hover:text-[#6366F1] transition-colors"
                 >
-                  <Lucide.Phone size={14} className="text-[#C9A84C] flex-shrink-0 mt-0.5" />
+                  <Lucide.Phone size={14} className="text-[#6366F1] flex-shrink-0 mt-0.5" />
                   <span>{phone}</span>
                 </a>
               </li>
@@ -1346,16 +1346,16 @@ function Footer({ text, logo, contact = {}, siteName = 'SembaPOS' }) {
               <li>
                 <a
                   href={`mailto:${email}`}
-                  className="inline-flex items-start gap-2 hover:text-[#C9A84C] transition-colors break-all"
+                  className="inline-flex items-start gap-2 hover:text-[#6366F1] transition-colors break-all"
                 >
-                  <Lucide.Mail size={14} className="text-[#C9A84C] flex-shrink-0 mt-0.5" />
+                  <Lucide.Mail size={14} className="text-[#6366F1] flex-shrink-0 mt-0.5" />
                   <span>{email}</span>
                 </a>
               </li>
             )}
             {address && (
               <li className="inline-flex items-start gap-2">
-                <Lucide.MapPin size={14} className="text-[#C9A84C] flex-shrink-0 mt-0.5" />
+                <Lucide.MapPin size={14} className="text-[#6366F1] flex-shrink-0 mt-0.5" />
                 <span className="whitespace-pre-line">{address}</span>
               </li>
             )}
@@ -1368,7 +1368,7 @@ function Footer({ text, logo, contact = {}, siteName = 'SembaPOS' }) {
           </ul>
         </div>
       </div>
-      <div className="max-w-6xl mx-auto mt-10 pt-6 border-t border-white/10 text-[12px] text-[#7C766C]">
+      <div className="max-w-6xl mx-auto mt-10 pt-6 border-t border-white/10 text-[12px] text-[#7C7AA8]">
         © {new Date().getFullYear()} {siteName}. Dibuat untuk barbershop Indonesia.
       </div>
     </footer>
@@ -1384,7 +1384,7 @@ function Sparkline({ data, w = 46, h = 16 }) {
     .join(' ')
   return (
     <svg width={w} height={h} className="overflow-visible">
-      <polyline points={pts} fill="none" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <polyline points={pts} fill="none" stroke="#6366F1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
@@ -1428,33 +1428,33 @@ function DashboardMock() {
     { label: 'Pelanggan baru', value: '12', up: '8%', spark: [40, 38, 52, 48, 60, 58, 75] },
   ]
   const barbers = [
-    { name: 'Andi', rating: '4.9', value: 'Rp 1,4jt', tone: '#C9A84C' },
+    { name: 'Andi', rating: '4.9', value: 'Rp 1,4jt', tone: '#6366F1' },
     { name: 'Budi', rating: '4.8', value: 'Rp 1,1jt', tone: '#7BAEC9' },
     { name: 'Citra', rating: '4.7', value: 'Rp 0,9jt', tone: '#C97B9B' },
   ]
 
   return (
-    <div className="aspect-[16/10] bg-[#FBFAF6] flex flex-col overflow-hidden">
+    <div className="aspect-[16/10] bg-[#F4F4FA] flex flex-col overflow-hidden">
       {/* Browser chrome */}
-      <div className="flex items-center justify-between px-4 sm:px-5 py-2.5 bg-white border-b border-[#EAE3D3]">
+      <div className="flex items-center justify-between px-4 sm:px-5 py-2.5 bg-white border-b border-[#D5D8E8]">
         <div className="flex items-center gap-2 min-w-0">
           <div className="flex items-center gap-1.5 shrink-0">
             <div className="w-2.5 h-2.5 rounded-full bg-[#E5786E]" />
-            <div className="w-2.5 h-2.5 rounded-full bg-[#E8C268]" />
-            <div className="w-2.5 h-2.5 rounded-full bg-[#7BC98A]" />
+            <div className="w-2.5 h-2.5 rounded-full bg-[#818CF8]" />
+            <div className="w-2.5 h-2.5 rounded-full bg-[#34D399]" />
           </div>
-          <span className="ml-1.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#F0EADC] text-[10px] text-[#9A9189] truncate">
+          <span className="ml-1.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#E8EAF5] text-[10px] text-[#7C7AA8] truncate">
             <Lucide.Lock size={9} /> sembapos.com/admin/dashboard
           </span>
         </div>
-        <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-semibold text-[#3E9E57] shrink-0">
+        <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-semibold text-[#059669] shrink-0">
           <span className="relative flex h-1.5 w-1.5">
             <motion.span
-              className="absolute inline-flex h-full w-full rounded-full bg-[#7BC98A]"
+              className="absolute inline-flex h-full w-full rounded-full bg-[#34D399]"
               animate={{ scale: [1, 2.4, 1], opacity: [0.7, 0, 0.7] }}
               transition={{ duration: 1.8, repeat: Infinity }}
             />
-            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#3E9E57]" />
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#059669]" />
           </span>
           Live
         </span>
@@ -1463,14 +1463,14 @@ function DashboardMock() {
       {/* Body */}
       <div className="flex-1 grid grid-cols-12 min-h-0">
         {/* Sidebar */}
-        <aside className="col-span-3 hidden sm:flex flex-col p-3 gap-3 border-r border-[#EAE3D3] bg-white/50">
+        <aside className="col-span-3 hidden sm:flex flex-col p-3 gap-3 border-r border-[#D5D8E8] bg-white/50">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#E8C875] to-[#C9A84C] flex items-center justify-center shadow-sm shrink-0">
-              <Lucide.Scissors size={14} className="text-[#1C1A17]" />
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#A5A2FF] to-[#6366F1] flex items-center justify-center shadow-sm shrink-0">
+              <Lucide.Scissors size={14} className="text-[#1E1B2E]" />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-bold text-[#1C1A17] font-display leading-none">BarberOS</p>
-              <p className="text-[8px] text-[#9A9189] mt-1 truncate">Barber Kingdom</p>
+              <p className="text-[11px] font-bold text-[#1E1B2E] font-display leading-none">BarberOS</p>
+              <p className="text-[8px] text-[#7C7AA8] mt-1 truncate">Barber Kingdom</p>
             </div>
           </div>
           <div className="space-y-0.5">
@@ -1480,7 +1480,7 @@ function DashboardMock() {
                 <div
                   key={n.label}
                   className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] font-medium ${
-                    n.active ? 'bg-[#C9A84C] text-[#1C1A17] shadow-sm' : 'text-[#9A9189]'
+                    n.active ? 'bg-[#6366F1] text-[#1E1B2E] shadow-sm' : 'text-[#7C7AA8]'
                   }`}
                 >
                   <Icon size={12} className="shrink-0" /> <span className="truncate">{n.label}</span>
@@ -1488,9 +1488,9 @@ function DashboardMock() {
               )
             })}
           </div>
-          <div className="mt-auto rounded-lg border border-[#EAE0C6] bg-[#FBF4E1] p-2">
-            <p className="text-[9px] font-semibold text-[#A8893A]">Paket Pro aktif</p>
-            <p className="text-[8px] text-[#9A9189] mt-0.5 leading-tight">3 cabang • 12 staf</p>
+          <div className="mt-auto rounded-lg border border-[#C7CBE0] bg-[#E8EAF5] p-2">
+            <p className="text-[9px] font-semibold text-[#4F46E5]">Paket Pro aktif</p>
+            <p className="text-[8px] text-[#7C7AA8] mt-0.5 leading-tight">3 cabang • 12 staf</p>
           </div>
         </aside>
 
@@ -1499,14 +1499,14 @@ function DashboardMock() {
           {/* header */}
           <div className="flex items-center justify-between">
             <div className="min-w-0">
-              <p className="text-[11px] sm:text-xs font-bold text-[#1C1A17] font-display truncate">Selamat pagi, Barber Kingdom 👋</p>
-              <p className="text-[9px] text-[#9A9189]">Ringkasan performa hari ini</p>
+              <p className="text-[11px] sm:text-xs font-bold text-[#1E1B2E] font-display truncate">Selamat pagi, Barber Kingdom 👋</p>
+              <p className="text-[9px] text-[#7C7AA8]">Ringkasan performa hari ini</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-md border border-[#EAE3D3] bg-white text-[9px] text-[#57534E]">
+              <span className="hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-md border border-[#D5D8E8] bg-white text-[9px] text-[#3F3D5C]">
                 <Lucide.Calendar size={9} /> Hari ini <Lucide.ChevronDown size={9} />
               </span>
-              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#1C1A17] to-[#3A352D] flex items-center justify-center text-[8px] font-bold text-[#E8C875]">BK</div>
+              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#1E1B2E] to-[#2D2870] flex items-center justify-center text-[8px] font-bold text-[#A5A2FF]">BK</div>
             </div>
           </div>
 
@@ -1519,15 +1519,15 @@ function DashboardMock() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: 0.1 + i * 0.08 }}
-                className="p-2.5 rounded-xl bg-white border border-[#EAE3D3] shadow-[0_6px_18px_-10px_rgba(28,26,23,0.3)]"
+                className="p-2.5 rounded-xl bg-white border border-[#D5D8E8] shadow-[0_6px_18px_-10px_rgba(28,26,23,0.3)]"
               >
                 <div className="flex items-start justify-between gap-1">
-                  <p className="text-[8px] sm:text-[9px] text-[#9A9189] truncate">{k.label}</p>
+                  <p className="text-[8px] sm:text-[9px] text-[#7C7AA8] truncate">{k.label}</p>
                   <Sparkline data={k.spark} />
                 </div>
                 <div className="flex items-end justify-between mt-1 gap-1">
-                  <p className="text-sm sm:text-base font-bold text-[#1C1A17] font-display leading-none">{k.value}</p>
-                  <span className="inline-flex items-center gap-0.5 text-[8px] font-semibold text-[#3E9E57]">
+                  <p className="text-sm sm:text-base font-bold text-[#1E1B2E] font-display leading-none">{k.value}</p>
+                  <span className="inline-flex items-center gap-0.5 text-[8px] font-semibold text-[#059669]">
                     <Lucide.TrendingUp size={9} />{k.up}
                   </span>
                 </div>
@@ -1538,10 +1538,10 @@ function DashboardMock() {
           {/* chart + barber leaderboard */}
           <div className="grid grid-cols-3 gap-2 flex-1 min-h-0">
             {/* Revenue chart */}
-            <div className="col-span-3 sm:col-span-2 p-2.5 rounded-xl bg-white border border-[#EAE3D3] shadow-[0_6px_18px_-10px_rgba(28,26,23,0.3)] flex flex-col min-h-0">
+            <div className="col-span-3 sm:col-span-2 p-2.5 rounded-xl bg-white border border-[#D5D8E8] shadow-[0_6px_18px_-10px_rgba(28,26,23,0.3)] flex flex-col min-h-0">
               <div className="flex items-center justify-between">
-                <p className="text-[9px] sm:text-[10px] font-medium text-[#57534E]">Pendapatan 7 hari</p>
-                <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-[#A8893A]">
+                <p className="text-[9px] sm:text-[10px] font-medium text-[#3F3D5C]">Pendapatan 7 hari</p>
+                <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-[#4F46E5]">
                   <Lucide.ArrowUpRight size={10} /> 24%
                 </span>
               </div>
@@ -1549,35 +1549,35 @@ function DashboardMock() {
                 <svg viewBox={`0 0 ${W} ${H + 14}`} className="w-full h-full">
                   <defs>
                     <linearGradient id="mockArea" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#C9A84C" stopOpacity="0.32" />
-                      <stop offset="100%" stopColor="#C9A84C" stopOpacity="0" />
+                      <stop offset="0%" stopColor="#6366F1" stopOpacity="0.32" />
+                      <stop offset="100%" stopColor="#6366F1" stopOpacity="0" />
                     </linearGradient>
                   </defs>
                   {[0.25, 0.5, 0.75].map((g) => (
-                    <line key={g} x1={pad} x2={W - pad} y1={pad + (H - pad * 2) * g} y2={pad + (H - pad * 2) * g} stroke="#F0EADC" strokeWidth="1" />
+                    <line key={g} x1={pad} x2={W - pad} y1={pad + (H - pad * 2) * g} y2={pad + (H - pad * 2) * g} stroke="#E8EAF5" strokeWidth="1" />
                   ))}
                   <motion.path
                     d={areaPath} fill="url(#mockArea)"
                     initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.5 }}
                   />
                   <motion.path
-                    d={linePath} fill="none" stroke="#C9A84C" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
+                    d={linePath} fill="none" stroke="#6366F1" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
                     initial={{ pathLength: 0 }} whileInView={{ pathLength: 1 }} viewport={{ once: true }} transition={{ duration: 1.2, ease: 'easeInOut' }}
                   />
                   <motion.circle
-                    cx={last[0]} cy={last[1]} r="3.4" fill="#C9A84C" stroke="#fff" strokeWidth="1.6"
+                    cx={last[0]} cy={last[1]} r="3.4" fill="#6366F1" stroke="#fff" strokeWidth="1.6"
                     initial={{ scale: 0 }} whileInView={{ scale: 1 }} viewport={{ once: true }} transition={{ delay: 1.2, type: 'spring', stiffness: 300 }}
                   />
                   {days.map((d, i) => (
-                    <text key={d} x={pts[i][0]} y={H + 9} textAnchor="middle" fontSize="6.5" fill="#B8B0A4">{d}</text>
+                    <text key={d} x={pts[i][0]} y={H + 9} textAnchor="middle" fontSize="6.5" fill="#A5A2C8">{d}</text>
                   ))}
                 </svg>
               </div>
             </div>
 
             {/* Barber leaderboard */}
-            <div className="hidden sm:flex flex-col col-span-1 p-2.5 rounded-xl bg-white border border-[#EAE3D3] shadow-[0_6px_18px_-10px_rgba(28,26,23,0.3)]">
-              <p className="text-[9px] sm:text-[10px] font-medium text-[#57534E] mb-1.5">Barber terbaik</p>
+            <div className="hidden sm:flex flex-col col-span-1 p-2.5 rounded-xl bg-white border border-[#D5D8E8] shadow-[0_6px_18px_-10px_rgba(28,26,23,0.3)]">
+              <p className="text-[9px] sm:text-[10px] font-medium text-[#3F3D5C] mb-1.5">Barber terbaik</p>
               <div className="space-y-1.5">
                 {barbers.map((b, i) => (
                   <motion.div
@@ -1587,12 +1587,12 @@ function DashboardMock() {
                   >
                     <div className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white shrink-0" style={{ backgroundColor: b.tone }}>{b.name[0]}</div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-[9px] font-medium text-[#1C1A17] truncate leading-none">{b.name}</p>
-                      <p className="text-[8px] text-[#9A9189] flex items-center gap-0.5 mt-1">
-                        <Lucide.Star size={7} className="fill-[#E8C268] text-[#E8C268]" /> {b.rating}
+                      <p className="text-[9px] font-medium text-[#1E1B2E] truncate leading-none">{b.name}</p>
+                      <p className="text-[8px] text-[#7C7AA8] flex items-center gap-0.5 mt-1">
+                        <Lucide.Star size={7} className="fill-[#818CF8] text-[#818CF8]" /> {b.rating}
                       </p>
                     </div>
-                    <span className="text-[8px] font-semibold text-[#57534E] shrink-0">{b.value}</span>
+                    <span className="text-[8px] font-semibold text-[#3F3D5C] shrink-0">{b.value}</span>
                   </motion.div>
                 ))}
               </div>

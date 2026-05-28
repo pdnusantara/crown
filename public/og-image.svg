@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" fill="none">
   <!-- Latar ivory + glow emas, selaras tema landing -->
-  <rect width="1200" height="630" fill="#FBFAF6"/>
-  <circle cx="600" cy="60" r="360" fill="#C9A84C" opacity="0.12"/>
-  <circle cx="1060" cy="560" r="280" fill="#E8C875" opacity="0.18"/>
+  <rect width="1200" height="630" fill="#F4F4FA"/>
+  <circle cx="600" cy="60" r="360" fill="#6366F1" opacity="0.12"/>
+  <circle cx="1060" cy="560" r="280" fill="#A5A2FF" opacity="0.18"/>
 
   <!-- Scissors watermark besar di kanan -->
-  <g transform="translate(720 120) scale(14)" stroke="#C9A84C" stroke-opacity="0.16"
+  <g transform="translate(720 120) scale(14)" stroke="#6366F1" stroke-opacity="0.16"
      stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" fill="none">
     <circle cx="6" cy="6" r="3"/>
     <circle cx="6" cy="18" r="3"/>
@@ -15,8 +15,8 @@
   </g>
 
   <!-- Logo: kotak gelap + scissors emas -->
-  <rect x="80" y="74" width="68" height="68" rx="17" fill="#1C1A17"/>
-  <g transform="translate(96 90) scale(1.5)" stroke="#C9A84C" stroke-width="2"
+  <rect x="80" y="74" width="68" height="68" rx="17" fill="#1E1B2E"/>
+  <g transform="translate(96 90) scale(1.5)" stroke="#6366F1" stroke-width="2"
      stroke-linecap="round" stroke-linejoin="round" fill="none">
     <circle cx="6" cy="6" r="3"/>
     <circle cx="6" cy="18" r="3"/>
@@ -25,20 +25,20 @@
     <line x1="8.12" x2="12" y1="8.12" y2="12"/>
   </g>
   <text x="166" y="120" font-family="Georgia, 'Playfair Display', serif"
-        font-size="40" font-weight="700" fill="#1C1A17">SembaPOS</text>
+        font-size="40" font-weight="700" fill="#1E1B2E">SembaPOS</text>
 
   <!-- Headline -->
   <text x="82" y="312" font-family="Georgia, 'Playfair Display', serif"
-        font-size="84" font-weight="700" fill="#1C1A17">Kelola barbershop,</text>
+        font-size="84" font-weight="700" fill="#1E1B2E">Kelola barbershop,</text>
   <text x="82" y="410" font-family="Georgia, 'Playfair Display', serif"
-        font-size="84" font-weight="700" font-style="italic" fill="#A8893A">tanpa ribet.</text>
+        font-size="84" font-weight="700" font-style="italic" fill="#4F46E5">tanpa ribet.</text>
 
   <!-- Subjudul -->
   <text x="84" y="470" font-family="Arial, 'Plus Jakarta Sans', sans-serif"
-        font-size="28" fill="#6B6459">Kasir &#183; Antrian &#183; Booking online &#183; Multi-cabang &#183; Laporan pintar</text>
+        font-size="28" fill="#56548A">Kasir &#183; Antrian &#183; Booking online &#183; Multi-cabang &#183; Laporan pintar</text>
 
   <!-- Pil CTA -->
-  <rect x="84" y="508" width="340" height="62" rx="31" fill="#C9A84C"/>
+  <rect x="84" y="508" width="340" height="62" rx="31" fill="#6366F1"/>
   <text x="254" y="548" text-anchor="middle" font-family="Arial, 'Plus Jakarta Sans', sans-serif"
-        font-size="25" font-weight="700" fill="#1C1A17">Coba gratis 14 hari &#8594;</text>
+        font-size="25" font-weight="700" fill="#1E1B2E">Coba gratis 14 hari &#8594;</text>
 </svg>

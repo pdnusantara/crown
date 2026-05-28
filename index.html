@@ -42,7 +42,7 @@
       /* Hindari flash putih sebelum React mount: latar gelap default. */
       html, body { background: #0a0a0a; color: #f5f5f5; }
       /* Landing (`/`) SELALU terang — matikan latar gelap di route landing. */
-      html.is-landing, html.is-landing body { background: #FBFAF6; color: #1C1A17; }
+      html.is-landing, html.is-landing body { background: #F4F4FA; color: #1E1B2E; }
       /* Sticky nav offset untuk anchor scroll. */
       html { scroll-behavior: smooth; }
       [id] { scroll-margin-top: 80px; }
@@ -50,10 +50,12 @@
     <script>
       // Landing tidak punya dark mode — set latar terang sebelum React mount
       // supaya tidak ada kedip gelap. Halaman app lain tetap gelap.
+      // 2026-05-28: landing migrated ke palet Electric Indigo + Mint, bg ivory
+      // #FBFAF6 → lavender #F4F4FA.
       if (location.pathname === '/') {
         document.documentElement.className += ' is-landing';
         var tc = document.querySelector('meta[name="theme-color"]');
-        if (tc) tc.content = '#FBFAF6';
+        if (tc) tc.content = '#F4F4FA';
       }
     </script>
   </head>
