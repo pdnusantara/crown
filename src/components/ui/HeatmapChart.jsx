@@ -23,7 +23,7 @@ export function HeatmapChart({ data }) {
                 <div
                   key={`${hour}-${day}`}
                   title={`${day} ${hour} — ${val} transaksi`}
-                  className="w-8 h-8 rounded-md cursor-default transition-all hover:ring-1 hover:ring-gold"
+                  className="w-8 h-8 rounded-md cursor-default transition-all hover:ring-1 hover:ring-brand"
                   style={{ backgroundColor: `rgba(201, 168, 76, ${opacity * 0.9 + 0.05})` }}
                 />
               )

@@ -363,7 +363,7 @@ export const AppLayout = () => {
             initial={{ y: -60, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -60, opacity: 0 }}
-            className="fixed top-0 left-0 right-0 z-[9999] flex items-center justify-between gap-3 px-4 py-2.5 bg-gold text-dark text-sm font-medium shadow-lg"
+            className="fixed top-0 left-0 right-0 z-[9999] flex items-center justify-between gap-3 px-4 py-2.5 bg-brand text-dark text-sm font-medium shadow-lg"
           >
             <div className="flex items-center gap-2">
               <Download size={15} />
@@ -372,7 +372,7 @@ export const AppLayout = () => {
             <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 onClick={handleInstallPwa}
-                className="px-3 py-1 bg-dark text-gold rounded-lg text-xs font-semibold hover:bg-dark-surface transition-colors"
+                className="px-3 py-1 bg-dark text-brand rounded-lg text-xs font-semibold hover:bg-dark-surface transition-colors"
               >
                 Pasang
               </button>

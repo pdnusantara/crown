@@ -15,7 +15,7 @@ export default function WilayahPicker({
   kabupatenId,
   value = {},
   onChange,
-  selectClassName = 'w-full appearance-none bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/60 disabled:opacity-40 transition-colors',
+  selectClassName = 'w-full appearance-none bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60 disabled:opacity-40 transition-colors',
   labelClassName = 'block text-xs font-medium text-muted mb-1.5',
   disabled = false,
 }) {

@@ -279,7 +279,7 @@ export default function TAStaffPage() {
                       <div className="flex items-center gap-3 mt-2">
                         {member.rating && (
                           <div className="flex items-center gap-1">
-                            <Star className="w-3.5 h-3.5 text-brand fill-premium" />
+                            <Star className="w-3.5 h-3.5 text-brand fill-brand" />
                             <span className="text-xs text-brand">{member.rating}</span>
                           </div>
                         )}

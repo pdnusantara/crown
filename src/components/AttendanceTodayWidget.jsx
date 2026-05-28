@@ -36,9 +36,9 @@ export default function AttendanceTodayWidget() {
         className="w-full flex items-center justify-between group mb-3"
       >
         <h3 className="flex items-center gap-2 font-semibold text-off-white">
-          <Fingerprint className="w-4 h-4 text-gold" /> Kehadiran Hari Ini
+          <Fingerprint className="w-4 h-4 text-brand" /> Kehadiran Hari Ini
         </h3>
-        <span className="flex items-center gap-1 text-xs text-muted group-hover:text-gold transition-colors">
+        <span className="flex items-center gap-1 text-xs text-muted group-hover:text-brand transition-colors">
           Detail <ArrowRight className="w-3.5 h-3.5" />
         </span>
       </button>

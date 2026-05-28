@@ -114,7 +114,7 @@ export const Table = ({
                   onClick={() => setPage(p)}
                   className={`w-8 h-8 rounded-lg text-xs font-medium transition-colors ${
                     p === page
-                      ? 'bg-gold text-dark'
+                      ? 'bg-brand text-dark'
                       : 'text-muted hover:text-off-white hover:bg-dark-card'
                   }`}
                 >

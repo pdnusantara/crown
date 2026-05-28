@@ -649,7 +649,7 @@ export default function BarberCommission() {
                   </p>
                 </div>
                 {i === 0 && (
-                  <Star className="w-3.5 h-3.5 text-brand fill-premium shrink-0" />
+                  <Star className="w-3.5 h-3.5 text-brand fill-brand shrink-0" />
                 )}
               </div>
             ))}

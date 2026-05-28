@@ -77,7 +77,7 @@ export function AttachmentGallery({ urls, className = '' }) {
           key={url}
           type="button"
           onClick={() => setLightboxIdx(i)}
-          className="group relative h-20 w-20 overflow-hidden rounded-xl border border-dark-border bg-dark-card focus:outline-none focus:ring-2 focus:ring-gold/50"
+          className="group relative h-20 w-20 overflow-hidden rounded-xl border border-dark-border bg-dark-card focus:outline-none focus:ring-2 focus:ring-brand/50"
         >
           <img src={url} alt={`Lampiran ${i + 1}`} loading="lazy" className="h-full w-full object-cover transition-transform group-hover:scale-105" />
         </button>
@@ -156,7 +156,7 @@ export function AttachmentPicker({ value = [], onChange, max = MAX_TICKET_ATTACH
           ))}
           {Array.from({ length: uploading }).map((_, i) => (
             <div key={`up-${i}`} className="grid h-16 w-16 place-items-center rounded-lg border border-dashed border-dark-border bg-dark-card">
-              <Loader2 size={18} className="animate-spin text-gold" />
+              <Loader2 size={18} className="animate-spin text-brand" />
             </div>
           ))}
         </div>
@@ -166,7 +166,7 @@ export function AttachmentPicker({ value = [], onChange, max = MAX_TICKET_ATTACH
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={busy || atLimit}
-        className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-dark-border px-3 py-1.5 text-xs text-muted transition-colors hover:border-gold/40 hover:text-off-white disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-dark-border px-3 py-1.5 text-xs text-muted transition-colors hover:border-brand/40 hover:text-off-white disabled:cursor-not-allowed disabled:opacity-50"
       >
         <ImagePlus size={14} />
         {atLimit ? t('tickets.attachMax', { max }) : t('tickets.attachAdd', { n: value.length, max })}

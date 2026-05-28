@@ -1203,7 +1203,7 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
           {ratings.length > 0 && (
             <div className="px-6 py-4 border-t border-dark-border bg-brand/[0.02]">
               <p className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-3 inline-flex items-center gap-2">
-                <Star className="w-3 h-3 text-brand fill-premium" /> Rating Barber
+                <Star className="w-3 h-3 text-brand fill-brand" /> Rating Barber
               </p>
               <div className="space-y-2">
                 {ratings.map(r => {

@@ -104,7 +104,7 @@ function CustomerHistorySnippet({ customer, transactionTotal = 0 }) {
         {/* Baris 1: label kartu + badge segmen */}
         <div className="relative flex items-center justify-between gap-2">
           <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-brand">
-            <Star size={10} className="fill-premium text-brand flex-shrink-0" />
+            <Star size={10} className="fill-brand text-brand flex-shrink-0" />
             {t('pos.loyaltyCardLabel')}
           </span>
           <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border font-semibold uppercase tracking-wide flex-shrink-0 ${segMeta.cls}`}>
@@ -1102,7 +1102,7 @@ function POSPageInner() {
         <div className="border-t border-dark-border pt-3">
           <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
             <span className="text-xs font-semibold text-off-white inline-flex items-center gap-1.5">
-              <Star size={12} className="text-brand fill-premium" />
+              <Star size={12} className="text-brand fill-brand" />
               {t('pos.redeemPointsTitle')}
             </span>
             <span className="text-[10px] text-muted tabular-nums">

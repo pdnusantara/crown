@@ -26,7 +26,7 @@ const COLORS = [
   'from-violet-500 to-purple-500',
   'from-green-500 to-emerald-500',
   'from-pink-500 to-rose-500',
-  'from-gold to-gold-light',
+  'from-brand to-brand-light',
 ]
 
 const getColor = (name = '') => {
@@ -43,7 +43,7 @@ export const Avatar = ({ src, name, size = 'md', className = '', ring = false })
     <div className={`
       relative flex-shrink-0 rounded-full overflow-hidden
       ${sizes[size] || sizes.md}
-      ${ring ? 'ring-2 ring-gold/50 ring-offset-2 ring-offset-dark' : ''}
+      ${ring ? 'ring-2 ring-brand/50 ring-offset-2 ring-offset-dark' : ''}
       ${className}
     `}>
       {src && !imgError ? (

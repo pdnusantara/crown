@@ -17,10 +17,10 @@ const VARIANT = {
     confirmBtn: 'bg-amber-500 hover:bg-amber-600 text-dark-bg',
   },
   primary: {
-    iconBg: 'bg-gold/15',
-    iconColor: 'text-gold',
-    ring: 'ring-gold/20',
-    confirmBtn: 'bg-gold hover:bg-gold/90 text-dark-bg',
+    iconBg: 'bg-brand/15',
+    iconColor: 'text-brand',
+    ring: 'ring-brand/20',
+    confirmBtn: 'bg-brand hover:bg-brand/90 text-dark-bg',
   },
 }
 

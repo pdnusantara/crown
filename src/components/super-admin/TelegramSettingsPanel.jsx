@@ -25,7 +25,7 @@ function ToggleRow({ icon: Icon, title, desc, checked, disabled, onChange }) {
   return (
     <div className={`flex items-center justify-between p-3 bg-dark-bg rounded-xl border border-dark-border ${disabled ? 'opacity-50' : ''}`}>
       <div className="flex items-start gap-2.5 min-w-0">
-        {Icon && <Icon size={16} className="text-gold mt-0.5 shrink-0" />}
+        {Icon && <Icon size={16} className="text-brand mt-0.5 shrink-0" />}
         <div className="min-w-0">
           <p className="text-sm font-medium text-off-white">{title}</p>
           {desc && <p className="text-xs text-muted mt-0.5">{desc}</p>}
@@ -35,7 +35,7 @@ function ToggleRow({ icon: Icon, title, desc, checked, disabled, onChange }) {
         type="button"
         disabled={disabled}
         onClick={() => !disabled && onChange(!checked)}
-        className="text-gold transition-opacity hover:opacity-80 disabled:cursor-not-allowed shrink-0"
+        className="text-brand transition-opacity hover:opacity-80 disabled:cursor-not-allowed shrink-0"
       >
         {checked ? <ToggleRight size={28} /> : <ToggleLeft size={28} className="text-muted" />}
       </button>
@@ -126,14 +126,14 @@ export default function TelegramSettingsPanel() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Send size={18} className="text-gold" />
+            <Send size={18} className="text-brand" />
             <span className="font-semibold text-off-white">Notifikasi Telegram — Kredensial Bot</span>
           </div>
           <a
             href="https://core.telegram.org/bots#how-do-i-create-a-bot"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-muted hover:text-gold flex items-center gap-1 transition-colors"
+            className="text-xs text-muted hover:text-brand flex items-center gap-1 transition-colors"
           >
             Cara buat bot <ExternalLink size={12} />
           </a>

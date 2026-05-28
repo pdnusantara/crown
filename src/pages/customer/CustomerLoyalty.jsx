@@ -149,7 +149,7 @@ export default function CustomerLoyalty() {
             <div key={i} className="flex justify-between items-center py-2 border-b border-dark-border last:border-0">
               <span className="text-muted">{item.action}</span>
               <div className="flex items-center gap-1">
-                <Star className="w-3.5 h-3.5 text-brand fill-premium" />
+                <Star className="w-3.5 h-3.5 text-brand fill-brand" />
                 <span className="text-brand font-medium">+{item.points}</span>
               </div>
             </div>

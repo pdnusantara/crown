@@ -10,7 +10,7 @@ function WilSelect({ label, options = [], value, onChange, disabled, loading, pl
           value={value}
           onChange={onChange}
           disabled={disabled || loading}
-          className="w-full appearance-none bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 pr-8 text-sm outline-none focus:border-gold/60 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          className="w-full appearance-none bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 pr-8 text-sm outline-none focus:border-brand/60 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
         >
           <option value="">{loading ? 'Memuat…' : placeholder}</option>
           {options.map(opt => (
@@ -121,7 +121,7 @@ export function WilayahSelect({ value = {}, onChange }) {
           placeholder="No. rumah, gang, RT/RW, patokan, dll."
           rows={2}
           maxLength={500}
-          className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl px-3 py-2 text-sm outline-none focus:border-gold/60 resize-none"
+          className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl px-3 py-2 text-sm outline-none focus:border-brand/60 resize-none"
         />
       </div>
     </div>

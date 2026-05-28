@@ -298,7 +298,7 @@ function TARatingsPageInner() {
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div className="min-w-0">
           <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white inline-flex items-center gap-2">
-            <Star className="w-5 h-5 sm:w-6 sm:h-6 text-brand fill-premium" />
+            <Star className="w-5 h-5 sm:w-6 sm:h-6 text-brand fill-brand" />
             Rating Barber
           </h1>
           <p className="text-muted text-xs sm:text-sm mt-1">

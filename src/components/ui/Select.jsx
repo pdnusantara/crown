@@ -16,7 +16,7 @@ export const Select = forwardRef(({ label, error, options = [], className = '', 
           transition-all duration-200 outline-none cursor-pointer
           ${error
             ? 'border-red-500/60 focus:border-red-500'
-            : 'border-dark-border focus:border-gold/60 focus:ring-2 focus:ring-gold/15'
+            : 'border-dark-border focus:border-brand/60 focus:ring-2 focus:ring-brand/15'
           }
           ${className}
         `}

@@ -201,7 +201,7 @@ function CustomerMobileCard({ customer, onOpen, onEdit, onDelete, selected, onTo
           <div className="flex flex-wrap items-center gap-1.5 mt-2">
             <Badge variant={getSegmentBadge(segment)}>{segLabel}</Badge>
             <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-md bg-brand/10 border border-brand/30 text-brand tabular-nums">
-              <Star className="w-2.5 h-2.5 fill-premium" /> {customer.loyaltyPoints || 0}
+              <Star className="w-2.5 h-2.5 fill-brand" /> {customer.loyaltyPoints || 0}
             </span>
             <span className="text-[11px] text-muted tabular-nums">
               {customer.visitCount || 0}× kunjungan
@@ -296,7 +296,7 @@ function CustomerTableRow({ customer, onOpen, onEdit, onDelete, selected, onTogg
         {customer.visitCount || 0}×
       </div>
       <div className="w-16 shrink-0 inline-flex items-center justify-center gap-1">
-        <Star className="w-3 h-3 text-brand fill-premium shrink-0" />
+        <Star className="w-3 h-3 text-brand fill-brand shrink-0" />
         <span className="text-brand text-sm font-semibold tabular-nums">{customer.loyaltyPoints || 0}</span>
       </div>
       <div className="hidden lg:block w-20 shrink-0 text-right text-xs text-muted whitespace-nowrap">
@@ -572,7 +572,7 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div className="min-w-0">
                 <p className="text-[11px] text-muted uppercase tracking-wide font-medium inline-flex items-center gap-1">
-                  <Star className="w-3 h-3 fill-premium text-brand" /> Poin Loyalty
+                  <Star className="w-3 h-3 fill-brand text-brand" /> Poin Loyalty
                 </p>
                 <p className="text-3xl font-display font-bold text-brand tabular-nums leading-none mt-1">
                   {(customer.loyaltyPoints || 0).toLocaleString('id-ID')}
@@ -730,7 +730,7 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
                             <>
                               <span className="opacity-50">·</span>
                               <span className="inline-flex items-center gap-0.5 text-brand whitespace-nowrap">
-                                <Star className="w-2.5 h-2.5 fill-premium" /> +{ptsEarned}
+                                <Star className="w-2.5 h-2.5 fill-brand" /> +{ptsEarned}
                               </span>
                             </>
                           )}

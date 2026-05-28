@@ -5,7 +5,11 @@ const variants = {
   warning: 'bg-amber-500/15 text-amber-400 border border-amber-500/20',
   danger: 'bg-red-500/15 text-red-400 border border-red-500/20',
   info: 'bg-blue-500/15 text-blue-400 border border-blue-500/20',
-  gold: 'bg-gold/15 text-gold border border-gold/20',
+  // Variant 'gold' dipertahankan namanya untuk backward compat (banyak caller
+  // pakai variant='gold'), tapi VISUAL-nya sekarang BRAND INDIGO setelah rebrand
+  // SembaPOS → Electric Indigo + Mint (Fase C, 2026-05-28). User minta NOL emas.
+  gold:  'bg-brand/15 text-brand border border-brand/20',
+  brand: 'bg-brand/15 text-brand border border-brand/20',
   muted: 'bg-dark-surface text-muted border border-dark-border',
   purple: 'bg-purple-500/15 text-purple-400 border border-purple-500/20',
 }
@@ -22,7 +26,8 @@ export const Badge = ({ children, variant = 'muted', className = '', dot = false
         variant === 'warning' ? 'bg-amber-400' :
         variant === 'danger' ? 'bg-red-400' :
         variant === 'info' ? 'bg-blue-400' :
-        variant === 'gold' ? 'bg-gold' : 'bg-muted'
+        variant === 'gold' ? 'bg-brand' :
+        variant === 'brand' ? 'bg-brand' : 'bg-muted'
       }`} />
     )}
     {children}

@@ -5,7 +5,7 @@ export const Card = ({ children, className = '', hover = false, gold = false, ..
     className={`
       bg-dark-card rounded-2xl border border-dark-border
       ${hover ? 'card-hover cursor-pointer' : ''}
-      ${gold ? 'border-gold/20 shadow-gold' : ''}
+      ${gold ? 'border-brand/20 shadow-brand' : ''}
       ${className}
     `}
     {...props}

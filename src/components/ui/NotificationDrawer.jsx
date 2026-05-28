@@ -9,7 +9,7 @@ const severityConfig = {
   warning: { icon: AlertTriangle, color: 'text-amber-400',  bg: 'bg-amber-400/10',  border: 'border-l-amber-400' },
   info:    { icon: Info,          color: 'text-blue-400',   bg: 'bg-blue-400/10',   border: 'border-l-blue-400'  },
   success: { icon: CheckCircle,   color: 'text-green-400',  bg: 'bg-green-400/10',  border: 'border-l-green-400' },
-  gold:    { icon: Star,          color: 'text-gold',       bg: 'bg-gold/10',       border: 'border-l-gold'      },
+  gold:    { icon: Star,          color: 'text-brand',       bg: 'bg-brand/10',       border: 'border-l-brand'      },
   error:   { icon: AlertCircle,   color: 'text-red-400',    bg: 'bg-red-400/10',    border: 'border-l-red-400'   },
 }
 
@@ -68,7 +68,7 @@ export function NotificationDrawer({ open, onClose, tenantId }) {
           <p className="text-xs text-muted mt-0.5 leading-snug">{n.message}</p>
           <p className="text-xs text-muted/60 mt-1">{timeAgo(n.createdAt)}</p>
         </div>
-        {!n.read && <div className="w-2 h-2 rounded-full bg-gold flex-shrink-0 mt-1" />}
+        {!n.read && <div className="w-2 h-2 rounded-full bg-brand flex-shrink-0 mt-1" />}
         <button
           onClick={e => { e.stopPropagation(); deleteNotification(n.id) }}
           className="absolute top-2 right-2 p-1 rounded-lg text-muted hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
@@ -100,7 +100,7 @@ export function NotificationDrawer({ open, onClose, tenantId }) {
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-4 border-b border-dark-border flex-shrink-0">
               <div className="flex items-center gap-2">
-                <Bell size={18} className="text-gold" />
+                <Bell size={18} className="text-brand" />
                 <h2 className="font-semibold text-off-white">Notifikasi</h2>
                 {(unreadBroadcasts.length + notifications.filter(n => !n.read).length) > 0 && (
                   <span className="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded-full font-bold">
@@ -112,7 +112,7 @@ export function NotificationDrawer({ open, onClose, tenantId }) {
                 {notifications.some(n => !n.read) && (
                   <button
                     onClick={() => markAllAsRead(tenantId)}
-                    className="text-xs text-gold hover:text-gold-light transition-colors"
+                    className="text-xs text-brand hover:text-brand-light transition-colors"
                   >
                     Tandai Semua Dibaca
                   </button>
@@ -171,7 +171,7 @@ export function NotificationDrawer({ open, onClose, tenantId }) {
                                     <X size={12} />
                                   </button>
                                 )}
-                                {!isRead && <div className="w-2 h-2 rounded-full bg-gold flex-shrink-0 mt-1" />}
+                                {!isRead && <div className="w-2 h-2 rounded-full bg-brand flex-shrink-0 mt-1" />}
                               </motion.div>
                             )
                           })}

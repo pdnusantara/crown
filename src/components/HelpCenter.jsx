@@ -52,11 +52,11 @@ export default function HelpCenter({ title, subtitle, categories = [], support, 
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-gold/15 via-amber-500/5 to-transparent border border-gold/30"
+        className="relative overflow-hidden p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-brand/15 via-amber-500/5 to-transparent border border-brand/30"
       >
         <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gold/20 border border-gold/30 flex items-center justify-center flex-shrink-0">
-            <LifeBuoy className="text-gold" size={22} />
+          <div className="w-12 h-12 rounded-xl bg-brand/20 border border-brand/30 flex items-center justify-center flex-shrink-0">
+            <LifeBuoy className="text-brand" size={22} />
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white">
@@ -77,7 +77,7 @@ export default function HelpCenter({ title, subtitle, categories = [], support, 
           onChange={e => setQuery(e.target.value)}
           placeholder="Cari topik bantuan…"
           aria-label="Cari topik bantuan"
-          className="w-full appearance-none rounded-xl bg-dark-card border border-dark-border pl-10 pr-10 py-2.5 text-sm text-off-white placeholder:text-muted focus:outline-none focus:border-gold/40 transition-colors"
+          className="w-full appearance-none rounded-xl bg-dark-card border border-dark-border pl-10 pr-10 py-2.5 text-sm text-off-white placeholder:text-muted focus:outline-none focus:border-brand/40 transition-colors"
         />
         {query && (
           <button
@@ -113,7 +113,7 @@ export default function HelpCenter({ title, subtitle, categories = [], support, 
             return (
               <section key={cat.id}>
                 <div className="flex items-center gap-2 mb-2 px-1">
-                  {CatIcon && <CatIcon size={15} className="text-gold flex-shrink-0" />}
+                  {CatIcon && <CatIcon size={15} className="text-brand flex-shrink-0" />}
                   <h2 className="text-sm font-bold text-off-white uppercase tracking-wide">
                     {cat.label}
                   </h2>
@@ -137,7 +137,7 @@ export default function HelpCenter({ title, subtitle, categories = [], support, 
                             {it.q}
                           </span>
                           {locked && (
-                            <span className="flex-shrink-0 inline-flex items-center px-1.5 py-0.5 rounded-md bg-gold/10 border border-gold/30 text-[10px] font-semibold text-gold uppercase tracking-wide">
+                            <span className="flex-shrink-0 inline-flex items-center px-1.5 py-0.5 rounded-md bg-brand/10 border border-brand/30 text-[10px] font-semibold text-brand uppercase tracking-wide">
                               Upgrade
                             </span>
                           )}
@@ -163,8 +163,8 @@ export default function HelpCenter({ title, subtitle, categories = [], support, 
                                 {locked ? (
                                   // Fitur tak aktif di paket tenant — sembunyikan langkah/tautan
                                   // (halaman terkunci), tampilkan ajakan upgrade.
-                                  <div className="flex items-start gap-2.5 p-3 rounded-lg bg-gold/5 border border-gold/30">
-                                    <Lock size={15} className="text-gold flex-shrink-0 mt-0.5" />
+                                  <div className="flex items-start gap-2.5 p-3 rounded-lg bg-brand/5 border border-brand/30">
+                                    <Lock size={15} className="text-brand flex-shrink-0 mt-0.5" />
                                     <div className="min-w-0 flex-1">
                                       <p className="text-sm font-medium text-off-white">Fitur ini belum aktif di paket Anda</p>
                                       <p className="text-xs text-muted mt-0.5">
@@ -173,7 +173,7 @@ export default function HelpCenter({ title, subtitle, categories = [], support, 
                                       {lockedAction && (
                                         <button
                                           onClick={lockedAction.onClick}
-                                          className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold text-dark text-xs font-semibold hover:bg-gold/90 transition-colors"
+                                          className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand text-dark text-xs font-semibold hover:bg-brand/90 transition-colors"
                                         >
                                           {lockedAction.label || 'Lihat Paket'} <ArrowRight size={12} />
                                         </button>
@@ -186,7 +186,7 @@ export default function HelpCenter({ title, subtitle, categories = [], support, 
                                       <ol className="space-y-1.5">
                                         {it.steps.map((s, i) => (
                                           <li key={i} className="flex gap-2.5 text-sm text-muted">
-                                            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-gold/15 text-gold text-xs font-bold flex items-center justify-center">
+                                            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-brand/15 text-brand text-xs font-bold flex items-center justify-center">
                                               {i + 1}
                                             </span>
                                             <span className="leading-relaxed pt-0.5">{s}</span>
@@ -197,7 +197,7 @@ export default function HelpCenter({ title, subtitle, categories = [], support, 
                                     {it.to && (
                                       <button
                                         onClick={() => navigate(it.to)}
-                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold text-dark text-xs font-semibold hover:bg-gold/90 transition-colors"
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand text-dark text-xs font-semibold hover:bg-brand/90 transition-colors"
                                       >
                                         {it.toLabel || 'Buka halaman'} <ArrowRight size={12} />
                                       </button>
@@ -221,8 +221,8 @@ export default function HelpCenter({ title, subtitle, categories = [], support, 
       {/* Footer bantuan */}
       {support && (
         <div className="rounded-2xl bg-dark-card border border-dark-border p-5 flex flex-col sm:flex-row sm:items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-gold/15 flex items-center justify-center flex-shrink-0">
-            <LifeBuoy size={18} className="text-gold" />
+          <div className="w-10 h-10 rounded-xl bg-brand/15 flex items-center justify-center flex-shrink-0">
+            <LifeBuoy size={18} className="text-brand" />
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="text-sm font-bold text-off-white">{support.title}</h3>
@@ -231,7 +231,7 @@ export default function HelpCenter({ title, subtitle, categories = [], support, 
           {support.action && (
             <button
               onClick={support.action.onClick}
-              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-gold text-dark text-sm font-semibold hover:bg-gold/90 transition-colors flex-shrink-0"
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-brand text-dark text-sm font-semibold hover:bg-brand/90 transition-colors flex-shrink-0"
             >
               {support.action.label} <ArrowRight size={13} />
             </button>

@@ -567,7 +567,7 @@ export default function TADashboard() {
             <Card className="p-4 sm:p-5 hover:border-brand/40 transition-colors">
               <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
                 <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-brand/10 border border-brand/30 flex items-center justify-center text-brand flex-shrink-0">
-                  <Star className="w-5 h-5 fill-premium" />
+                  <Star className="w-5 h-5 fill-brand" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-off-white inline-flex items-center gap-2 text-sm sm:text-base">

@@ -48,13 +48,13 @@ export default function BranchLicenseGate() {
           maupun booking.
         </p>
         <p className="text-muted text-sm mb-6">
-          Silakan hubungi <span className="text-gold font-medium">super admin</span> untuk
+          Silakan hubungi <span className="text-brand font-medium">super admin</span> untuk
           membeli lisensi cabang tambahan.
         </p>
         <button
           type="button"
           onClick={handleLogout}
-          className="inline-flex items-center gap-2 px-5 py-2.5 border border-dark-border rounded-xl text-muted hover:text-off-white hover:border-gold/30 transition-colors text-sm"
+          className="inline-flex items-center gap-2 px-5 py-2.5 border border-dark-border rounded-xl text-muted hover:text-off-white hover:border-brand/30 transition-colors text-sm"
         >
           <LogOut size={14} />
           Keluar

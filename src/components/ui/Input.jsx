@@ -35,7 +35,7 @@ export const Input = forwardRef(({
             ${IconRight ? 'pr-10' : ''}
             ${error
               ? 'border-red-500/60 focus:border-red-500 focus:ring-2 focus:ring-red-500/20'
-              : 'border-dark-border focus:border-gold/60 focus:ring-2 focus:ring-gold/15'
+              : 'border-dark-border focus:border-brand/60 focus:ring-2 focus:ring-brand/15'
             }
             ${className}
           `}
@@ -64,7 +64,7 @@ export const Textarea = forwardRef(({ label, error, className = '', ...props }, 
         w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted
         rounded-xl px-4 py-2.5 text-sm resize-none
         transition-all duration-200 outline-none
-        focus:border-gold/60 focus:ring-2 focus:ring-gold/15
+        focus:border-brand/60 focus:ring-2 focus:ring-brand/15
         ${error ? 'border-red-500/60' : ''}
         ${className}
       `}

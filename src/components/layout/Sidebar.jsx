@@ -395,14 +395,14 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
                 ? 'bg-red-500/10 border-red-500/30 text-red-300 hover:bg-red-500/15'
                 : subWarning
                 ? 'bg-amber-400/10 border-amber-400/30 text-amber-300 hover:bg-amber-400/15'
-                : 'bg-premium/10 border-premium/30 text-premium-light hover:bg-premium/15'
+                : 'bg-fresh/10 border-fresh/30 text-mint-300 hover:bg-fresh/15'
             }`}
           >
             <span className="flex items-center gap-2 min-w-0">
               <span className={`font-bold px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider flex-shrink-0 ${
                 subExpired ? 'bg-red-500/20'
                 : subWarning ? 'bg-amber-400/20'
-                : 'bg-premium/20'
+                : 'bg-fresh/20'
               }`}>
                 {subscription.package}
               </span>

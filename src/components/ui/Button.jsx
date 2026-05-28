@@ -2,12 +2,12 @@ import React from 'react'
 import { Loader2 } from 'lucide-react'
 
 const variants = {
-  primary: 'bg-gold text-dark font-semibold hover:bg-gold-light active:bg-gold-dark shadow-gold hover:shadow-gold-lg',
-  secondary: 'border border-gold/40 text-gold hover:bg-gold/10 hover:border-gold',
+  primary: 'bg-brand text-dark font-semibold hover:bg-brand-light active:bg-brand-dark shadow-brand hover:shadow-brand-lg',
+  secondary: 'border border-brand/40 text-brand hover:bg-brand/10 hover:border-brand',
   ghost: 'text-muted hover:text-off-white hover:bg-dark-card',
   danger: 'bg-red-600 text-white hover:bg-red-500 active:bg-red-700',
   success: 'bg-green-600 text-white hover:bg-green-500',
-  outline: 'border border-dark-border text-off-white hover:border-gold/40 hover:text-gold',
+  outline: 'border border-dark-border text-off-white hover:border-brand/40 hover:text-brand',
 }
 
 const sizes = {

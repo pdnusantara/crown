@@ -227,7 +227,7 @@ export default function CustomerBooking() {
                       <p className="font-semibold text-off-white">{barber.name}</p>
                       {barber.rating && (
                         <div className="flex items-center gap-1 mt-0.5">
-                          <Star className="w-3.5 h-3.5 text-brand fill-premium" />
+                          <Star className="w-3.5 h-3.5 text-brand fill-brand" />
                           <span className="text-xs text-brand">{barber.rating}</span>
                         </div>
                       )}
