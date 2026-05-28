@@ -689,7 +689,12 @@ export default function TASettingsPage() {
               </div>
             </CardHeader>
             <CardBody className="space-y-4">
-              <Input label={t('tenantAdmin.settings.tenantName')} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+              <div>
+                <Input label={t('tenantAdmin.settings.tenantName')} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+                <p className="mt-1 text-[11px] text-muted leading-snug">
+                  Nama bisnis yang tampil di <b className="text-off-white/80">struk POS</b>, halaman <b className="text-off-white/80">booking publik</b> /book, dan email transaksi. Beda dari "Nama Akun" (sapaan dashboard owner) di bawah.
+                </p>
+              </div>
               <Input label="Telepon kontak" type="tel" placeholder="08xxxxxxxxxx" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
               <Input label="Alamat" placeholder="Alamat usaha" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
               <div className="grid grid-cols-2 gap-3">
@@ -732,7 +737,7 @@ export default function TASettingsPage() {
                 onChange={e => setAccountName(e.target.value)}
               />
               <p className="text-xs text-muted">
-                Nama ini dipakai untuk sapaan di dashboard (&ldquo;Selamat Pagi, …&rdquo;) dan inisial avatar Anda — <span className="text-off-white">berbeda dari Nama Bisnis</span> di kartu sebelah. Email &amp; peran akun tidak bisa diubah dari sini.
+                Nama ini dipakai untuk sapaan di dashboard (&ldquo;Selamat Pagi, …&rdquo;) dan inisial avatar Anda. <span className="text-amber-300">TIDAK muncul di struk POS atau halaman booking publik</span> — itu pakai <span className="text-off-white">Nama Bisnis</span> di kartu di atas. Email &amp; peran akun tidak bisa diubah dari sini.
               </p>
               <Button variant="secondary" onClick={handleSaveAccount} fullWidth loading={savingAccount}>
                 Simpan Nama Akun

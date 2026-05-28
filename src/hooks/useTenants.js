@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../lib/api.js'
 import { getSocket } from '../lib/socket.js'
+import { usePublicTenantStore } from '../store/publicTenantStore.js'
 
 // Backend emit `tenant:updated` (CRUD super admin / patch tenant_admin) dan
 // `tenant:status-changed` (suspend/aktifkan) — listen di sini supaya tabel
@@ -78,11 +79,26 @@ export function useUpdateTenant() {
 
 // Tenant_admin updates own non-sensitive fields (name, contact, tax info).
 // Tidak bisa ubah package / suspend / slug.
+//
+// onSuccess WAJIB invalidate beberapa sumber sekaligus karena tenant.name +
+// tenant.logo direplikasi ke banyak tempat:
+//   - `['branches']` cache include nested `tenant` (POSPage receipt baca
+//     `currentBranch.tenant.name` untuk header struk → stale tanpa ini)
+//   - `usePublicTenantStore` (zustand singleton) jadi sumber nama di /book
+//     publik & fallback receipt → perlu re-resolve agar tampil baru
+//
+// Bug fix 2026-05-28: sebelumnya cuma invalidate ['tenants'], akibatnya
+// struk POS masih tampilkan nama lama meski tenant.name sudah di-update.
 export function useUpdateMyTenant() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data) => api.patch('/tenants/me', data).then(r => normalizeTenant(r.data.data)),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['tenants'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tenants'] })
+      qc.invalidateQueries({ queryKey: ['branches'] })
+      // Re-fetch publicTenantStore (best-effort; tidak block kalau gagal)
+      usePublicTenantStore.getState().resolve?.()
+    },
   })
 }
 
