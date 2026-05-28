@@ -671,7 +671,7 @@ export default function TASettingsPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium text-center transition-all w-full sm:w-auto ${lastOdd ? 'col-span-2 sm:col-span-1' : ''} ${activeTab === tab.id ? 'bg-gold text-dark' : 'text-muted hover:text-off-white'}`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium text-center transition-all w-full sm:w-auto ${lastOdd ? 'col-span-2 sm:col-span-1' : ''} ${activeTab === tab.id ? 'bg-brand text-dark' : 'text-muted hover:text-off-white'}`}
             >
               {tab.label}
             </button>
@@ -684,7 +684,7 @@ export default function TASettingsPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
-                <Settings className="w-5 h-5 text-gold" />
+                <Settings className="w-5 h-5 text-brand" />
                 <h3 className="font-semibold text-off-white">{t('tenantAdmin.settings.businessInfo')}</h3>
               </div>
             </CardHeader>
@@ -702,7 +702,7 @@ export default function TASettingsPage() {
                 <select
                   value={form.timezone}
                   onChange={e => setForm(f => ({ ...f, timezone: e.target.value }))}
-                  className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/50"
+                  className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/50"
                 >
                   {FALLBACK_TIMEZONES.map(tz => (
                     <option key={tz.value} value={tz.value}>{tz.label}</option>
@@ -720,7 +720,7 @@ export default function TASettingsPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-gold" />
+                <Shield className="w-5 h-5 text-brand" />
                 <h3 className="font-semibold text-off-white">Akun Saya</h3>
               </div>
             </CardHeader>
@@ -744,7 +744,7 @@ export default function TASettingsPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-gold" />
+                <FileText className="w-5 h-5 text-brand" />
                 <h3 className="font-semibold text-off-white">Data Faktur (Opsional)</h3>
               </div>
             </CardHeader>
@@ -779,7 +779,7 @@ export default function TASettingsPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
-                <Bell className="w-5 h-5 text-gold" />
+                <Bell className="w-5 h-5 text-brand" />
                 <h3 className="font-semibold text-off-white">{t('tenantAdmin.settings.notifications')}</h3>
               </div>
             </CardHeader>
@@ -796,7 +796,7 @@ export default function TASettingsPage() {
                   </div>
                   <button
                     onClick={() => setNotifications(prev => ({ ...prev, [n.key]: !prev[n.key] }))}
-                    className={`w-11 h-6 rounded-full transition-colors relative ${notifications[n.key] ? 'bg-gold' : 'bg-dark-border'}`}
+                    className={`w-11 h-6 rounded-full transition-colors relative ${notifications[n.key] ? 'bg-brand' : 'bg-dark-border'}`}
                   >
                     <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${notifications[n.key] ? 'translate-x-6' : 'translate-x-1'}`} />
                   </button>
@@ -808,7 +808,7 @@ export default function TASettingsPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-gold" />
+                <Shield className="w-5 h-5 text-brand" />
                 <h3 className="font-semibold text-off-white">{t('tenantAdmin.settings.security')}</h3>
               </div>
             </CardHeader>
@@ -823,7 +823,7 @@ export default function TASettingsPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
-                <Palette className="w-5 h-5 text-gold" />
+                <Palette className="w-5 h-5 text-brand" />
                 <h3 className="font-semibold text-off-white">{t('tenantAdmin.settings.subscriptionPlan')}</h3>
               </div>
             </CardHeader>
@@ -836,10 +836,10 @@ export default function TASettingsPage() {
                 const dayColor = daysLeft < 0 ? 'text-red-400' : daysLeft <= 7 ? 'text-amber-400' : 'text-green-400'
                 return (
                   <>
-                    <div className="p-4 bg-gold/10 border border-gold/20 rounded-xl mb-4">
+                    <div className="p-4 bg-brand/10 border border-brand/20 rounded-xl mb-4">
                       <div className="flex items-center justify-between gap-3 mb-3">
                         <div>
-                          <p className="font-semibold text-gold">Paket {sub.package}</p>
+                          <p className="font-semibold text-brand">Paket {sub.package}</p>
                           <p className="text-xs text-muted mt-0.5">
                             Aktif hingga {format(new Date(sub.endDate), 'dd MMM yyyy')}
                             <span className={`ml-1 ${dayColor}`}>· {dayLabel}</span>
@@ -912,15 +912,15 @@ export default function TASettingsPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
-                <MessageCircle className="w-5 h-5 text-gold" />
+                <MessageCircle className="w-5 h-5 text-brand" />
                 <h3 className="font-semibold text-off-white">Pesan Otomatis Setelah Transaksi</h3>
               </div>
             </CardHeader>
             <CardBody className="space-y-6">
               <p className="text-sm text-muted">
                 Sesuaikan teks pesan WhatsApp yang dikirim ke pelanggan setelah transaksi.
-                Gunakan <code className="text-gold bg-dark-surface px-1 py-0.5 rounded">{'{nama}'}</code> untuk
-                menyisipkan nama pelanggan dan <code className="text-gold bg-dark-surface px-1 py-0.5 rounded">{'{toko}'}</code> untuk
+                Gunakan <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{nama}'}</code> untuk
+                menyisipkan nama pelanggan dan <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{toko}'}</code> untuk
                 nama toko.
               </p>
 
@@ -935,7 +935,7 @@ export default function TASettingsPage() {
                   rows={3}
                   maxLength={500}
                   placeholder="Terima kasih sudah bertransaksi."
-                  className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60 resize-none"
+                  className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/60 resize-none"
                 />
                 <div className="flex justify-between gap-3">
                   <p className="text-[11px] text-muted">
@@ -958,7 +958,7 @@ export default function TASettingsPage() {
                   rows={3}
                   maxLength={500}
                   placeholder="Terima kasih sudah berkunjung! 🙏"
-                  className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60 resize-none"
+                  className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/60 resize-none"
                 />
                 <div className="flex justify-between gap-3">
                   <p className="text-[11px] text-muted">
@@ -988,7 +988,7 @@ export default function TASettingsPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
-                <Bell className="w-5 h-5 text-gold" />
+                <Bell className="w-5 h-5 text-brand" />
                 <h3 className="font-semibold text-off-white">Pengingat Kunjungan Otomatis</h3>
               </div>
             </CardHeader>
@@ -1000,12 +1000,12 @@ export default function TASettingsPage() {
               </p>
 
               {/* Aktifkan */}
-              <label className="flex items-start gap-2.5 p-3 bg-dark-surface rounded-xl border border-dark-border cursor-pointer hover:border-gold/30 transition-colors">
+              <label className="flex items-start gap-2.5 p-3 bg-dark-surface rounded-xl border border-dark-border cursor-pointer hover:border-brand/30 transition-colors">
                 <input
                   type="checkbox"
                   checked={reminderForm.enabled}
                   onChange={e => setReminderForm(f => ({ ...f, enabled: e.target.checked }))}
-                  className="mt-0.5 accent-gold"
+                  className="mt-0.5 accent-brand"
                 />
                 <div className="text-sm">
                   <p className="text-off-white font-medium">Aktifkan pengingat kunjungan</p>
@@ -1026,7 +1026,7 @@ export default function TASettingsPage() {
                       max={365}
                       value={reminderForm.inactiveDays}
                       onChange={e => setReminderForm(f => ({ ...f, inactiveDays: e.target.value }))}
-                      className="w-24 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60"
+                      className="w-24 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/60"
                     />
                     <span className="text-sm text-muted">hari</span>
                   </div>
@@ -1039,7 +1039,7 @@ export default function TASettingsPage() {
                   <select
                     value={reminderForm.sendHour}
                     onChange={e => setReminderForm(f => ({ ...f, sendHour: Number(e.target.value) }))}
-                    className="w-full bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60"
+                    className="w-full bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/60"
                   >
                     {Array.from({ length: 24 }, (_, h) => (
                       <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
@@ -1061,7 +1061,7 @@ export default function TASettingsPage() {
                       key={String(opt.val)}
                       type="button"
                       onClick={() => setReminderForm(f => ({ ...f, repeat: opt.val }))}
-                      className={`text-left p-3 rounded-xl border transition-colors ${reminderForm.repeat === opt.val ? 'border-gold bg-gold/10' : 'border-dark-border bg-dark-surface hover:border-gold/30'}`}
+                      className={`text-left p-3 rounded-xl border transition-colors ${reminderForm.repeat === opt.val ? 'border-brand bg-brand/10' : 'border-dark-border bg-dark-surface hover:border-brand/30'}`}
                     >
                       <p className="text-sm font-medium text-off-white">{opt.title}</p>
                       <p className="text-[11px] text-muted mt-0.5">{opt.desc}</p>
@@ -1080,7 +1080,7 @@ export default function TASettingsPage() {
                     max={600}
                     value={reminderForm.minDelaySec}
                     onChange={e => setReminderForm(f => ({ ...f, minDelaySec: e.target.value }))}
-                    className="w-24 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60"
+                    className="w-24 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/60"
                   />
                   <span className="text-sm text-muted">sampai</span>
                   <input
@@ -1089,7 +1089,7 @@ export default function TASettingsPage() {
                     max={600}
                     value={reminderForm.maxDelaySec}
                     onChange={e => setReminderForm(f => ({ ...f, maxDelaySec: e.target.value }))}
-                    className="w-24 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60"
+                    className="w-24 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/60"
                   />
                   <span className="text-sm text-muted">detik</span>
                 </div>
@@ -1109,13 +1109,13 @@ export default function TASettingsPage() {
                   rows={4}
                   maxLength={600}
                   placeholder="Halo {nama}! Sudah {hari} hari sejak kunjungan terakhir Anda di {toko}. Kami tunggu kunjungan Anda berikutnya 😊"
-                  className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60 resize-none"
+                  className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/60 resize-none"
                 />
                 <div className="flex justify-between gap-3">
                   <p className="text-[11px] text-muted">
-                    Placeholder: <code className="text-gold bg-dark-surface px-1 py-0.5 rounded">{'{nama}'}</code> nama
-                    pelanggan, <code className="text-gold bg-dark-surface px-1 py-0.5 rounded">{'{toko}'}</code> nama
-                    toko, <code className="text-gold bg-dark-surface px-1 py-0.5 rounded">{'{hari}'}</code> jumlah hari
+                    Placeholder: <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{nama}'}</code> nama
+                    pelanggan, <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{toko}'}</code> nama
+                    toko, <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{hari}'}</code> jumlah hari
                     sejak kunjungan terakhir. Dikosongkan = pakai teks bawaan.
                   </p>
                   <span className="text-[11px] text-muted flex-shrink-0 tabular-nums">{reminderForm.message.length}/600</span>
@@ -1132,7 +1132,7 @@ export default function TASettingsPage() {
 
               {/* Perkiraan jumlah penerima */}
               <div className="flex items-center gap-2 p-3 rounded-xl bg-dark-surface border border-dark-border text-sm">
-                <Bell className="w-4 h-4 text-gold flex-shrink-0" />
+                <Bell className="w-4 h-4 text-brand flex-shrink-0" />
                 <span className="text-muted">
                   {reminderPreviewLoading
                     ? 'Menghitung perkiraan penerima…'
@@ -1170,7 +1170,7 @@ export default function TASettingsPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
-                <Star className="w-5 h-5 text-gold" />
+                <Star className="w-5 h-5 text-brand" />
                 <h3 className="font-semibold text-off-white">Rating Otomatis via WhatsApp</h3>
               </div>
             </CardHeader>
@@ -1179,12 +1179,12 @@ export default function TASettingsPage() {
                 Aktifkan fitur ini supaya sistem otomatis mengirim link rating ke pelanggan
                 setelah transaksi selesai. Pelanggan akan diarahkan ke halaman publik untuk
                 memberi bintang & komentar — Anda bisa melihatnya di halaman <strong>Rating</strong>.
-                Gunakan placeholder <code className="text-gold bg-dark-surface px-1 py-0.5 rounded">{'{nama}'}</code>,{' '}
-                <code className="text-gold bg-dark-surface px-1 py-0.5 rounded">{'{toko}'}</code>, dan{' '}
-                <code className="text-gold bg-dark-surface px-1 py-0.5 rounded">{'{link}'}</code>.
+                Gunakan placeholder <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{nama}'}</code>,{' '}
+                <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{toko}'}</code>, dan{' '}
+                <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{link}'}</code>.
               </p>
-              <div className="rounded-lg border border-gold/20 bg-gold/5 px-3 py-2 text-[12px] text-off-white/90">
-                <strong className="text-gold">Catatan:</strong> hanya transaksi yang selesai{' '}
+              <div className="rounded-lg border border-brand/20 bg-brand/5 px-3 py-2 text-[12px] text-off-white/90">
+                <strong className="text-brand">Catatan:</strong> hanya transaksi yang selesai{' '}
                 <em>setelah</em> fitur diaktifkan yang akan menerima link. Transaksi lama tidak akan
                 dikirimi link supaya pelanggan tidak terganggu.
               </div>
@@ -1194,7 +1194,7 @@ export default function TASettingsPage() {
                   type="checkbox"
                   checked={ratingForm.enabled}
                   onChange={(e) => setRatingForm(f => ({ ...f, enabled: e.target.checked }))}
-                  className="mt-1 w-4 h-4 accent-gold"
+                  className="mt-1 w-4 h-4 accent-brand"
                 />
                 <span className="text-sm text-off-white">
                   Aktifkan kirim link rating otomatis ke pelanggan
@@ -1214,7 +1214,7 @@ export default function TASettingsPage() {
                   max={1440}
                   value={ratingForm.autoSendMinutes}
                   onChange={(e) => setRatingForm(f => ({ ...f, autoSendMinutes: e.target.value }))}
-                  className="w-32 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60"
+                  className="w-32 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/60"
                 />
                 <p className="text-[11px] text-muted">
                   Jeda antara transaksi selesai dan link dikirim. Default 15 menit — beri waktu
@@ -1232,14 +1232,14 @@ export default function TASettingsPage() {
                   rows={6}
                   maxLength={2000}
                   placeholder={DEFAULT_RATING_TEMPLATE}
-                  className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60 resize-none font-mono"
+                  className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/60 resize-none font-mono"
                 />
                 <div className="flex justify-between gap-3">
                   <p className="text-[11px] text-muted">
                     Kosongkan untuk pakai template default. Variabel:{' '}
-                    <code className="text-gold">{'{nama}'}</code>{' '}
-                    <code className="text-gold">{'{toko}'}</code>{' '}
-                    <code className="text-gold">{'{link}'}</code>
+                    <code className="text-brand">{'{nama}'}</code>{' '}
+                    <code className="text-brand">{'{toko}'}</code>{' '}
+                    <code className="text-brand">{'{link}'}</code>
                   </p>
                   <span className="text-[11px] text-muted flex-shrink-0 tabular-nums">
                     {ratingForm.messageTemplate.length}/2000
@@ -1265,7 +1265,7 @@ export default function TASettingsPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
-                <Download className="w-5 h-5 text-gold" />
+                <Download className="w-5 h-5 text-brand" />
                 <h3 className="font-semibold text-off-white">{t('tenantAdmin.settings.exportData')}</h3>
               </div>
             </CardHeader>
@@ -1294,7 +1294,7 @@ export default function TASettingsPage() {
                 value={auditSearchInput}
                 onChange={e => setAuditSearchInput(e.target.value)}
                 placeholder={t('tenantAdmin.settings.searchUserDetailPlaceholder')}
-                className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-4 pr-9 py-2.5 text-sm outline-none focus:border-gold/60"
+                className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-4 pr-9 py-2.5 text-sm outline-none focus:border-brand/60"
               />
               {auditSearchInput && (
                 <button
@@ -1310,7 +1310,7 @@ export default function TASettingsPage() {
               value={auditFilter.action}
               onChange={e => setAuditFilter(f => ({ ...f, action: e.target.value }))}
               aria-label="Filter aksi"
-              className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-gold/60 max-w-[170px]"
+              className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-brand/60 max-w-[170px]"
             >
               <option value="">{t('tenantAdmin.settings.allActions')}</option>
               {auditActions.map(a => <option key={a} value={a}>{a}</option>)}
@@ -1318,7 +1318,7 @@ export default function TASettingsPage() {
             <button
               onClick={() => refetchAudit()}
               disabled={auditFetching}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-sm text-muted hover:border-gold/30 hover:text-off-white transition-all disabled:opacity-40"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-sm text-muted hover:border-brand/30 hover:text-off-white transition-all disabled:opacity-40"
             >
               <RefreshCw size={14} className={auditFetching ? 'animate-spin' : ''} />
               <span className="hidden sm:inline">Refresh</span>
@@ -1427,7 +1427,7 @@ export default function TASettingsPage() {
                     onClick={() => setAuditPage(p => Math.max(1, p - 1))}
                     disabled={auditPage <= 1}
                     aria-label="Halaman sebelumnya"
-                    className="p-1.5 rounded-lg border border-dark-border text-muted hover:text-off-white hover:border-gold/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="p-1.5 rounded-lg border border-dark-border text-muted hover:text-off-white hover:border-brand/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <ChevronLeft size={15} />
                   </button>
@@ -1435,7 +1435,7 @@ export default function TASettingsPage() {
                     onClick={() => setAuditPage(p => Math.min(auditTotalPages, p + 1))}
                     disabled={auditPage >= auditTotalPages}
                     aria-label="Halaman berikutnya"
-                    className="p-1.5 rounded-lg border border-dark-border text-muted hover:text-off-white hover:border-gold/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="p-1.5 rounded-lg border border-dark-border text-muted hover:text-off-white hover:border-brand/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <ChevronRight size={15} />
                   </button>
@@ -1505,7 +1505,7 @@ function WhatsAppCard({ waState, setWaState, onConnect, onDisconnect, onSaveSett
       <CardHeader>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <MessageCircle className="w-5 h-5 text-gold" />
+            <MessageCircle className="w-5 h-5 text-brand" />
             <h3 className="font-semibold text-off-white">WhatsApp Notifikasi</h3>
           </div>
           <Badge variant="warning">Beta</Badge>
@@ -1562,7 +1562,7 @@ function WhatsAppCard({ waState, setWaState, onConnect, onDisconnect, onSaveSett
             <img src={waState.qrDataUrl} alt="WhatsApp QR" className="w-48 h-48 rounded-lg bg-white p-2 flex-shrink-0" />
             <div className="text-sm space-y-2 flex-1">
               <p className="text-off-white font-medium flex items-center gap-2">
-                <Smartphone className="w-4 h-4 text-gold" />
+                <Smartphone className="w-4 h-4 text-brand" />
                 Scan dari WhatsApp di HP
               </p>
               <ol className="text-xs text-muted space-y-1 list-decimal list-inside">
@@ -1596,24 +1596,24 @@ function WhatsAppCard({ waState, setWaState, onConnect, onDisconnect, onSaveSett
             }
           />
           <div className="space-y-3">
-            <label className="flex items-start gap-2.5 p-3 bg-dark-surface rounded-xl border border-dark-border cursor-pointer hover:border-gold/30 transition-colors">
+            <label className="flex items-start gap-2.5 p-3 bg-dark-surface rounded-xl border border-dark-border cursor-pointer hover:border-brand/30 transition-colors">
               <input
                 type="checkbox"
                 checked={waState.settings.enabled}
                 onChange={e => setSettings({ enabled: e.target.checked })}
-                className="mt-0.5 accent-gold"
+                className="mt-0.5 accent-brand"
               />
               <div className="text-sm">
                 <p className="text-off-white font-medium">Notifikasi transaksi otomatis</p>
                 <p className="text-xs text-muted mt-0.5">Setiap transaksi POS langsung dikirim ke nomor admin.</p>
               </div>
             </label>
-            <label className="flex items-start gap-2.5 p-3 bg-dark-surface rounded-xl border border-dark-border cursor-pointer hover:border-gold/30 transition-colors">
+            <label className="flex items-start gap-2.5 p-3 bg-dark-surface rounded-xl border border-dark-border cursor-pointer hover:border-brand/30 transition-colors">
               <input
                 type="checkbox"
                 checked={waState.settings.notifyCustomer}
                 onChange={e => setSettings({ notifyCustomer: e.target.checked })}
-                className="mt-0.5 accent-gold"
+                className="mt-0.5 accent-brand"
               />
               <div className="text-sm">
                 <p className="text-off-white font-medium">Kirim juga ke pelanggan</p>
@@ -1687,7 +1687,7 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Palette className="w-5 h-5 text-gold" />
+              <Palette className="w-5 h-5 text-brand" />
               <h3 className="font-semibold text-off-white">Tema Tampilan</h3>
             </div>
           </CardHeader>
@@ -1701,7 +1701,7 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
                 const active = (form.mode || 'dark') === opt.id
                 return (
                   <button key={opt.id} onClick={() => set({ mode: opt.id })}
-                    className={`relative p-3 rounded-xl border text-left transition-all ${active ? 'border-gold bg-gold/5' : 'border-dark-border hover:border-gold/30'}`}
+                    className={`relative p-3 rounded-xl border text-left transition-all ${active ? 'border-brand bg-brand/5' : 'border-dark-border hover:border-brand/30'}`}
                   >
                     <div className="rounded-lg overflow-hidden mb-3 border border-dark-border" style={{ background: opt.preview.bg }}>
                       <div className="h-3.5" style={{ background: opt.preview.bg, borderBottom: `1px solid ${opt.id === 'dark' ? '#252525' : '#E5E5E5'}` }} />
@@ -1714,7 +1714,7 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
                     <p className="text-sm font-semibold text-off-white">{opt.title}</p>
                     <p className="text-[11px] text-muted mt-0.5">{opt.subtitle}</p>
                     {active && (
-                      <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-gold flex items-center justify-center">
+                      <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-brand flex items-center justify-center">
                         <CheckCircle2 className="w-3 h-3 text-dark" />
                       </span>
                     )}
@@ -1729,7 +1729,7 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Palette className="w-5 h-5 text-gold" />
+              <Palette className="w-5 h-5 text-brand" />
               <h3 className="font-semibold text-off-white">Hero & Branding</h3>
             </div>
           </CardHeader>
@@ -1750,7 +1750,7 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
                 value={form.description || ''}
                 onChange={e => set({ description: e.target.value })}
                 placeholder="Ceritakan barbershop kamu dalam 1–2 paragraf…"
-                className="w-full bg-dark-surface border border-dark-border rounded-xl px-3 py-2.5 text-sm text-off-white placeholder-muted resize-none focus:outline-none focus:border-gold/50"
+                className="w-full bg-dark-surface border border-dark-border rounded-xl px-3 py-2.5 text-sm text-off-white placeholder-muted resize-none focus:outline-none focus:border-brand/50"
                 maxLength={2000}
               />
             </div>
@@ -1768,11 +1768,11 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
                 <button
                   onClick={() => heroInputRef.current?.click()}
                   disabled={heroUploading}
-                  className="w-full h-48 rounded-xl border-2 border-dashed border-dark-border hover:border-gold/40 flex flex-col items-center justify-center gap-2 text-muted hover:text-gold transition-colors disabled:opacity-60"
+                  className="w-full h-48 rounded-xl border-2 border-dashed border-dark-border hover:border-brand/40 flex flex-col items-center justify-center gap-2 text-muted hover:text-brand transition-colors disabled:opacity-60"
                 >
                   {heroUploading ? (
                     <>
-                      <Loader2 className="w-6 h-6 animate-spin text-gold" />
+                      <Loader2 className="w-6 h-6 animate-spin text-brand" />
                       <p className="text-sm">Mengunggah…</p>
                     </>
                   ) : (
@@ -1789,7 +1789,7 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
               />
             </div>
             <div>
-              <label className="text-xs text-muted block mb-1">Warna aksen (gold default)</label>
+              <label className="text-xs text-muted block mb-1">Warna aksen (brand default)</label>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
@@ -1813,7 +1813,7 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Settings className="w-5 h-5 text-gold" />
+                <Settings className="w-5 h-5 text-brand" />
                 <h3 className="font-semibold text-off-white">Galeri Foto</h3>
               </div>
               <span className="text-xs text-muted">{form.gallery.length}/12</span>
@@ -1834,11 +1834,11 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
                 <button
                   onClick={() => galleryInputRef.current?.click()}
                   disabled={galleryUploading}
-                  className="aspect-square rounded-lg border-2 border-dashed border-dark-border hover:border-gold/40 flex flex-col items-center justify-center gap-1 text-muted hover:text-gold transition-colors disabled:opacity-60"
+                  className="aspect-square rounded-lg border-2 border-dashed border-dark-border hover:border-brand/40 flex flex-col items-center justify-center gap-1 text-muted hover:text-brand transition-colors disabled:opacity-60"
                 >
                   {galleryUploading ? (
                     <>
-                      <Loader2 className="w-5 h-5 animate-spin text-gold" />
+                      <Loader2 className="w-5 h-5 animate-spin text-brand" />
                       <span className="text-[10px]">Mengunggah…</span>
                     </>
                   ) : (
@@ -1862,7 +1862,7 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Send className="w-5 h-5 text-gold" />
+              <Send className="w-5 h-5 text-brand" />
               <h3 className="font-semibold text-off-white">Sosial Media & Kontak</h3>
             </div>
           </CardHeader>
@@ -1887,7 +1887,7 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <MessageCircle className="w-5 h-5 text-gold" />
+                <MessageCircle className="w-5 h-5 text-brand" />
                 <h3 className="font-semibold text-off-white">Testimoni Pelanggan</h3>
               </div>
               <Button
@@ -1911,7 +1911,7 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
                   <select
                     value={t.rating || 5}
                     onChange={e => set({ testimonials: form.testimonials.map((x, i) => i === idx ? { ...x, rating: Number(e.target.value) } : x) })}
-                    className="bg-dark-card border border-dark-border rounded-xl px-3 py-2 text-sm text-off-white focus:outline-none focus:border-gold/40"
+                    className="bg-dark-card border border-dark-border rounded-xl px-3 py-2 text-sm text-off-white focus:outline-none focus:border-brand/40"
                   >
                     {[5,4,3,2,1].map(n => <option key={n} value={n}>{n}★</option>)}
                   </select>
@@ -1923,7 +1923,7 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
                 <textarea
                   rows={2} value={t.text} placeholder="Komentar pelanggan…"
                   onChange={e => set({ testimonials: form.testimonials.map((x, i) => i === idx ? { ...x, text: e.target.value } : x) })}
-                  className="w-full bg-dark-card border border-dark-border rounded-xl px-3 py-2 text-sm text-off-white placeholder-muted resize-none focus:outline-none focus:border-gold/40"
+                  className="w-full bg-dark-card border border-dark-border rounded-xl px-3 py-2 text-sm text-off-white placeholder-muted resize-none focus:outline-none focus:border-brand/40"
                   maxLength={500}
                 />
               </div>
@@ -1935,7 +1935,7 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Bell className="w-5 h-5 text-gold" />
+              <Bell className="w-5 h-5 text-brand" />
               <h3 className="font-semibold text-off-white">Tampilkan/Sembunyikan Section</h3>
             </div>
           </CardHeader>
@@ -1946,9 +1946,9 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
               ['showGallery', 'Galeri foto'],
               ['showSocial',  'Sosial media'],
             ].map(([k, label]) => (
-              <label key={k} className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl border border-dark-border hover:border-gold/30 cursor-pointer">
+              <label key={k} className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl border border-dark-border hover:border-brand/30 cursor-pointer">
                 <span className="text-sm text-off-white">{label}</span>
-                <input type="checkbox" checked={!!form[k]} onChange={e => set({ [k]: e.target.checked })} className="accent-gold" />
+                <input type="checkbox" checked={!!form[k]} onChange={e => set({ [k]: e.target.checked })} className="accent-brand" />
               </label>
             ))}
           </CardBody>
@@ -1961,7 +1961,7 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
           {subdomainUrl && (
             <a
               href={subdomainUrl} target="_blank" rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-dark-border text-muted hover:text-gold hover:border-gold/40 text-sm transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-dark-border text-muted hover:text-brand hover:border-brand/40 text-sm transition-colors"
             >
               Buka halaman booking <ArrowUpRight className="w-3.5 h-3.5" />
             </a>

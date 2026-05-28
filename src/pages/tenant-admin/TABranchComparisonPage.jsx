@@ -116,7 +116,7 @@ export default function TABranchComparisonPage() {
           <h1 className="font-display text-2xl font-bold text-off-white">{t('tenantAdmin.branchComparison.title')}</h1>
           <p className="text-muted text-sm mt-1">{t('tenantAdmin.branchComparison.subtitle')}</p>
         </div>
-        <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 bg-dark-card border border-dark-border text-muted hover:text-off-white hover:border-gold/30 rounded-xl text-sm transition-all">
+        <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 bg-dark-card border border-dark-border text-muted hover:text-off-white hover:border-brand/30 rounded-xl text-sm transition-all">
           <Download size={16} />
           {t('tenantAdmin.branchComparison.downloadComparison')}
         </button>
@@ -129,7 +129,7 @@ export default function TABranchComparisonPage() {
         ].map(({ id, set, branch, label }) => (
           <Card key={label} className="p-4">
             <label className="block text-xs text-muted mb-2">{label}</label>
-            <select value={id} onChange={e => set(e.target.value)} className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60">
+            <select value={id} onChange={e => set(e.target.value)} className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60">
               {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
             {branch?.address && <p className="text-xs text-muted mt-1">{branch.address}</p>}

@@ -55,7 +55,7 @@ const downloadCSV = (filename, header, rows) => {
 // ─── Stat tile ──────────────────────────────────────────────────────────────
 function StatTile({ icon: Icon, label, value, valueShort, accent = 'gold', hint, delay = 0 }) {
   const palette = {
-    gold:  { icon: 'text-gold',         bg: 'bg-gold/15 border-gold/30' },
+    gold:  { icon: 'text-brand',         bg: 'bg-brand/15 border-brand/30' },
     blue:  { icon: 'text-blue-300',     bg: 'bg-blue-500/15 border-blue-500/30' },
     green: { icon: 'text-emerald-300',  bg: 'bg-emerald-500/15 border-emerald-500/30' },
     amber: { icon: 'text-amber-300',    bg: 'bg-amber-500/15 border-amber-500/30' },
@@ -101,21 +101,21 @@ function ServiceCard({ svc, selected, onToggleSelect, onEdit, onDelete, onToggle
       transition={{ duration: 0.15 }}
       className="min-w-0"
     >
-      <Card className={`p-3 sm:p-4 card-hover transition-all ${inactive ? 'opacity-70' : ''} ${selected ? 'ring-2 ring-gold/50' : ''}`}>
+      <Card className={`p-3 sm:p-4 card-hover transition-all ${inactive ? 'opacity-70' : ''} ${selected ? 'ring-2 ring-brand/50' : ''}`}>
         <div className="flex items-start gap-3 min-w-0">
           {/* Select checkbox */}
           <button
             type="button"
             onClick={() => onToggleSelect(svc.id)}
-            className="shrink-0 mt-0.5 p-0.5 text-muted hover:text-gold transition-colors"
+            className="shrink-0 mt-0.5 p-0.5 text-muted hover:text-brand transition-colors"
             aria-label={selected ? 'Batal pilih' : 'Pilih'}
           >
             {selected
-              ? <CheckSquare className="w-4 h-4 text-gold" />
+              ? <CheckSquare className="w-4 h-4 text-brand" />
               : <Square className="w-4 h-4" />}
           </button>
           {/* Icon */}
-          <div className="shrink-0 w-10 h-10 rounded-xl bg-gold/10 border border-gold/30 flex items-center justify-center text-xl">
+          <div className="shrink-0 w-10 h-10 rounded-xl bg-brand/10 border border-brand/30 flex items-center justify-center text-xl">
             {svc.icon || '✂️'}
           </div>
           {/* Content */}
@@ -142,7 +142,7 @@ function ServiceCard({ svc, selected, onToggleSelect, onEdit, onDelete, onToggle
         {/* Footer row */}
         <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-dark-border/60 min-w-0">
           <div className="flex items-center gap-3 min-w-0">
-            <span className="text-gold font-semibold tabular-nums whitespace-nowrap text-sm sm:text-base">
+            <span className="text-brand font-semibold tabular-nums whitespace-nowrap text-sm sm:text-base">
               <span className="sm:hidden">{formatRupiahShort(svc.price)}</span>
               <span className="hidden sm:inline">{formatRupiah(svc.price)}</span>
             </span>
@@ -282,7 +282,7 @@ function ServiceFormModal({ open, onClose, editService, knownCategories, onSave,
                 onClick={() => setForm(f => ({ ...f, icon: emoji }))}
                 className={`aspect-square text-xl rounded-lg transition-all flex items-center justify-center ${
                   form.icon === emoji
-                    ? 'bg-gold/20 border border-gold/50'
+                    ? 'bg-brand/20 border border-brand/50'
                     : 'bg-dark-surface hover:bg-dark-card border border-dark-border'
                 }`}
               >
@@ -307,7 +307,7 @@ function ServiceFormModal({ open, onClose, editService, knownCategories, onSave,
             <button
               type="button"
               onClick={() => setCustomCategory(c => !c)}
-              className="text-xs text-gold hover:underline"
+              className="text-xs text-brand hover:underline"
             >
               {customCategory ? 'Pilih dari daftar' : '+ Kategori baru'}
             </button>
@@ -372,7 +372,7 @@ function ServiceFormModal({ open, onClose, editService, knownCategories, onSave,
         <label className="flex items-center justify-between gap-3 p-3 rounded-xl bg-dark-card/40 border border-dark-border/60 cursor-pointer">
           <div className="min-w-0">
             <p className="text-sm font-medium text-off-white inline-flex items-center gap-2">
-              <Power className="w-4 h-4 text-gold" /> Status Layanan
+              <Power className="w-4 h-4 text-brand" /> Status Layanan
             </p>
             <p className="text-[11px] text-muted mt-0.5">
               {form.isActive ? 'Aktif: muncul di POS, booking, dan halaman publik.' : 'Nonaktif: tersimpan tapi tidak bisa dipilih.'}
@@ -384,7 +384,7 @@ function ServiceFormModal({ open, onClose, editService, knownCategories, onSave,
             aria-checked={form.isActive}
             onClick={() => setForm(f => ({ ...f, isActive: !f.isActive }))}
             className={`shrink-0 relative w-10 h-6 rounded-full transition-colors ${
-              form.isActive ? 'bg-gold' : 'bg-dark-card border border-dark-border'
+              form.isActive ? 'bg-brand' : 'bg-dark-card border border-dark-border'
             }`}
           >
             <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
@@ -584,7 +584,7 @@ export default function TAServicesPage() {
     return (
       <div className="mx-auto w-full max-w-3xl">
         <Card className="p-8 text-center">
-          <Package className="w-10 h-10 text-gold/60 mx-auto mb-3" />
+          <Package className="w-10 h-10 text-brand/60 mx-auto mb-3" />
           <h2 className="font-display text-xl font-bold text-off-white">Tenant belum dikenali</h2>
           <p className="text-muted text-sm mt-2">Pastikan Anda login sebagai admin tenant.</p>
         </Card>
@@ -598,7 +598,7 @@ export default function TAServicesPage() {
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white inline-flex items-center gap-2">
-            <Package className="w-5 h-5 text-gold" /> Layanan
+            <Package className="w-5 h-5 text-brand" /> Layanan
           </h1>
           <p className="text-muted text-xs sm:text-sm mt-1">
             {totalItems} layanan
@@ -611,7 +611,7 @@ export default function TAServicesPage() {
             type="button"
             onClick={exportCSV}
             disabled={!items.length}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-dark-card/60 border border-dark-border text-muted text-xs font-medium hover:text-off-white hover:border-gold/40 disabled:opacity-50 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-dark-card/60 border border-dark-border text-muted text-xs font-medium hover:text-off-white hover:border-brand/40 disabled:opacity-50 transition-colors"
           >
             <Download className="w-4 h-4" />
             <span className="hidden sm:inline">Ekspor CSV</span>
@@ -653,7 +653,7 @@ export default function TAServicesPage() {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Cari nama layanan…"
-                className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-10 pr-9 py-2.5 text-sm outline-none focus:border-gold/60 focus:ring-2 focus:ring-gold/15"
+                className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-10 pr-9 py-2.5 text-sm outline-none focus:border-brand/60 focus:ring-2 focus:ring-brand/15"
               />
               {search && (
                 <button
@@ -669,7 +669,7 @@ export default function TAServicesPage() {
             <select
               value={sort}
               onChange={e => setSort(e.target.value)}
-              className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/60"
+              className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60"
             >
               {SORT_OPTIONS.map(o => (
                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -678,7 +678,7 @@ export default function TAServicesPage() {
             <select
               value={activeFilter}
               onChange={e => setActiveFilter(e.target.value)}
-              className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/60"
+              className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60"
             >
               <option value="">Semua Status</option>
               <option value="true">Aktif</option>
@@ -702,7 +702,7 @@ export default function TAServicesPage() {
               onClick={() => setCategory('')}
               className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
                 category === ''
-                  ? 'bg-gold text-dark'
+                  ? 'bg-brand text-dark'
                   : 'bg-dark-card/60 border border-dark-border text-muted hover:text-off-white'
               }`}
             >
@@ -715,7 +715,7 @@ export default function TAServicesPage() {
                 onClick={() => setCategory(c.category)}
                 className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors inline-flex items-center gap-1 ${
                   category === c.category
-                    ? 'bg-gold text-dark'
+                    ? 'bg-brand text-dark'
                     : 'bg-dark-card/60 border border-dark-border text-muted hover:text-off-white'
                 }`}
               >
@@ -736,10 +736,10 @@ export default function TAServicesPage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
           >
-            <Card className="p-3 border-gold/30 bg-gold/5">
+            <Card className="p-3 border-brand/30 bg-brand/5">
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-2 text-sm">
-                  <CheckSquare className="w-4 h-4 text-gold" />
+                  <CheckSquare className="w-4 h-4 text-brand" />
                   <span className="text-off-white font-medium">{selected.size} dipilih</span>
                   <button type="button" onClick={clearSelection} className="text-xs text-muted hover:text-off-white">
                     Batal
@@ -783,7 +783,7 @@ export default function TAServicesPage() {
             className="inline-flex items-center gap-2 text-xs text-muted hover:text-off-white"
           >
             {allOnPageSelected
-              ? <CheckSquare className="w-4 h-4 text-gold" />
+              ? <CheckSquare className="w-4 h-4 text-brand" />
               : <Square className="w-4 h-4" />}
             Pilih semua di halaman ini
           </button>

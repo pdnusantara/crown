@@ -232,7 +232,7 @@ export default function TAWhatsappLogsPage() {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="0812..."
-              className="w-full appearance-none rounded-lg border border-dark-border bg-dark-surface pl-9 pr-3 py-2 text-sm text-off-white placeholder-muted focus:outline-none focus:border-gold/50"
+              className="w-full appearance-none rounded-lg border border-dark-border bg-dark-surface pl-9 pr-3 py-2 text-sm text-off-white placeholder-muted focus:outline-none focus:border-brand/50"
             />
           </div>
           <div className="w-[150px]">
@@ -244,12 +244,12 @@ export default function TAWhatsappLogsPage() {
           <div>
             <label className="block text-sm font-medium text-muted mb-1.5">Dari</label>
             <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} max={to || undefined}
-              className="appearance-none rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-sm text-off-white focus:outline-none focus:border-gold/50" />
+              className="appearance-none rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-sm text-off-white focus:outline-none focus:border-brand/50" />
           </div>
           <div>
             <label className="block text-sm font-medium text-muted mb-1.5">Sampai</label>
             <input type="date" value={to} onChange={(e) => setTo(e.target.value)} min={from || undefined}
-              className="appearance-none rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-sm text-off-white focus:outline-none focus:border-gold/50" />
+              className="appearance-none rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-sm text-off-white focus:outline-none focus:border-brand/50" />
           </div>
           {hasFilter && (
             <button type="button" onClick={resetFilters} className="text-xs text-muted hover:text-off-white underline py-2">
@@ -310,7 +310,7 @@ export default function TAWhatsappLogsPage() {
                       <button
                         type="button"
                         onClick={() => openResend(m)}
-                        className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-lg border border-gold/30 text-gold hover:bg-gold/10 transition-colors"
+                        className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-lg border border-brand/30 text-brand hover:bg-brand/10 transition-colors"
                       >
                         <Send size={11} /> Kirim ulang
                       </button>
@@ -368,7 +368,7 @@ export default function TAWhatsappLogsPage() {
                 value={resendPhone}
                 onChange={(e) => setResendPhone(e.target.value)}
                 placeholder="08xxx / 62xxx"
-                className="w-full appearance-none rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-sm text-off-white placeholder-muted focus:outline-none focus:border-gold/50 font-mono"
+                className="w-full appearance-none rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-sm text-off-white placeholder-muted focus:outline-none focus:border-brand/50 font-mono"
               />
               <p className="text-[11px] text-muted mt-1">Bisa diubah bila nomor sebelumnya keliru.</p>
             </div>
@@ -379,7 +379,7 @@ export default function TAWhatsappLogsPage() {
                 onChange={(e) => setResendMsg(e.target.value)}
                 rows={6}
                 maxLength={4096}
-                className="w-full appearance-none rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-xs text-off-white placeholder-muted focus:outline-none focus:border-gold/50 whitespace-pre-wrap leading-relaxed resize-y"
+                className="w-full appearance-none rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-xs text-off-white placeholder-muted focus:outline-none focus:border-brand/50 whitespace-pre-wrap leading-relaxed resize-y"
               />
               {!resendTarget.body && (
                 <p className="text-[11px] text-amber-400 mt-1 flex items-start gap-1">

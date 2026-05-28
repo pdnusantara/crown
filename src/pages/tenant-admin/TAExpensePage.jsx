@@ -57,16 +57,16 @@ const fmtDate = (iso) => {
 function Paywall() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center p-8">
-      <div className="w-16 h-16 rounded-2xl bg-gold/10 border border-gold/20 flex items-center justify-center">
-        <Wallet className="w-7 h-7 text-gold" />
+      <div className="w-16 h-16 rounded-2xl bg-brand/10 border border-brand/20 flex items-center justify-center">
+        <Wallet className="w-7 h-7 text-brand" />
       </div>
       <h2 className="text-xl font-semibold text-off-white">Manajemen Pengeluaran</h2>
       <p className="text-muted max-w-sm text-sm">
-        Fitur ini tersedia di paket <strong className="text-gold">Pro</strong> dan{' '}
-        <strong className="text-gold">Enterprise</strong>. Upgrade paket untuk mencatat biaya
+        Fitur ini tersedia di paket <strong className="text-brand">Pro</strong> dan{' '}
+        <strong className="text-brand">Enterprise</strong>. Upgrade paket untuk mencatat biaya
         operasional dan melihat laba bersih bisnis Anda.
       </p>
-      <a href="/admin/billing" className="px-5 py-2.5 bg-gold text-dark rounded-xl font-semibold text-sm hover:bg-gold/90 transition-colors">
+      <a href="/admin/billing" className="px-5 py-2.5 bg-brand text-dark rounded-xl font-semibold text-sm hover:bg-brand/90 transition-colors">
         Lihat Paket
       </a>
     </div>
@@ -229,7 +229,7 @@ function ExpenseFormModal({ open, onClose, initial, branches, onSaved }) {
             type="date"
             value={form.date}
             onChange={e => set('date', e.target.value)}
-            className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/60"
+            className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60"
           />
         </div>
 
@@ -244,8 +244,8 @@ function ExpenseFormModal({ open, onClose, initial, branches, onSaved }) {
                 aria-pressed={form.category === c.id}
                 className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border text-xs transition-all ${
                   form.category === c.id
-                    ? 'border-gold/50 bg-gold/10 text-gold'
-                    : 'border-dark-border bg-dark-surface text-muted hover:border-gold/30'
+                    ? 'border-brand/50 bg-brand/10 text-brand'
+                    : 'border-dark-border bg-dark-surface text-muted hover:border-brand/30'
                 }`}
               >
                 <span className="text-lg">{c.icon}</span>
@@ -262,7 +262,7 @@ function ExpenseFormModal({ open, onClose, initial, branches, onSaved }) {
             onChange={e => set('description', e.target.value)}
             maxLength={200}
             placeholder="Contoh: Gaji barber bulan Mei"
-            className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/60"
+            className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60"
           />
         </div>
 
@@ -275,10 +275,10 @@ function ExpenseFormModal({ open, onClose, initial, branches, onSaved }) {
             value={form.amount}
             onChange={e => set('amount', e.target.value)}
             placeholder="500000"
-            className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/60"
+            className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60"
           />
           {form.amount && !isNaN(amountNum) && amountNum > 0 && (
-            <p className="text-xs text-gold mt-1">{formatRupiah(Math.round(amountNum))}</p>
+            <p className="text-xs text-brand mt-1">{formatRupiah(Math.round(amountNum))}</p>
           )}
         </div>
 
@@ -290,7 +290,7 @@ function ExpenseFormModal({ open, onClose, initial, branches, onSaved }) {
             <select
               value={form.branchId}
               onChange={e => set('branchId', e.target.value)}
-              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/60"
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60"
             >
               <option value="">Semua Cabang</option>
               {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -307,7 +307,7 @@ function ExpenseFormModal({ open, onClose, initial, branches, onSaved }) {
             onChange={e => set('note', e.target.value)}
             maxLength={500}
             placeholder="Catatan tambahan…"
-            className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/60"
+            className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60"
           />
         </div>
 
@@ -389,12 +389,12 @@ function CopyMonthModal({ open, onClose, fromMonth, toMonth }) {
       <div className="space-y-3">
         <p className="text-xs text-muted">
           Pilih pengeluaran dari <span className="text-off-white font-medium capitalize">{fromLabel}</span> untuk
-          disalin ke <span className="text-gold font-medium capitalize">{toLabel}</span>.
+          disalin ke <span className="text-brand font-medium capitalize">{toLabel}</span>.
         </p>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 size={22} className="animate-spin text-gold" />
+            <Loader2 size={22} className="animate-spin text-brand" />
           </div>
         ) : isError ? (
           <div className="flex flex-col items-center gap-2 py-10 text-center">
@@ -415,7 +415,7 @@ function CopyMonthModal({ open, onClose, fromMonth, toMonth }) {
               onClick={toggleAll}
               className="flex items-center gap-2 text-xs text-muted hover:text-off-white transition-colors"
             >
-              {allSelected ? <CheckSquare size={15} className="text-gold" /> : <Square size={15} />}
+              {allSelected ? <CheckSquare size={15} className="text-brand" /> : <Square size={15} />}
               {allSelected ? 'Batalkan semua' : 'Pilih semua'}
             </button>
 
@@ -431,7 +431,7 @@ function CopyMonthModal({ open, onClose, fromMonth, toMonth }) {
                     className="w-full flex items-center gap-3 px-1 py-2.5 text-left hover:bg-dark-surface/40 transition-colors"
                   >
                     {isSel
-                      ? <CheckSquare size={17} className="text-gold flex-shrink-0" />
+                      ? <CheckSquare size={17} className="text-brand flex-shrink-0" />
                       : <Square size={17} className="text-muted flex-shrink-0" />}
                     <span className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm ${cat.bg}`}>
                       {cat.icon}
@@ -491,9 +491,9 @@ function ExpenseItem({ expense, selected, onToggleSelect, onEdit, onDelete }) {
         type="button"
         onClick={() => onToggleSelect(expense.id)}
         aria-label={selected ? 'Batal pilih' : 'Pilih'}
-        className="flex-shrink-0 text-muted hover:text-gold transition-colors"
+        className="flex-shrink-0 text-muted hover:text-brand transition-colors"
       >
-        {selected ? <CheckSquare size={18} className="text-gold" /> : <Square size={18} />}
+        {selected ? <CheckSquare size={18} className="text-brand" /> : <Square size={18} />}
       </button>
 
       <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-base ${cat.bg}`}>
@@ -519,7 +519,7 @@ function ExpenseItem({ expense, selected, onToggleSelect, onEdit, onDelete }) {
           type="button"
           onClick={() => onEdit(expense)}
           aria-label="Edit pengeluaran"
-          className="p-1.5 rounded-lg text-muted hover:text-gold hover:bg-dark-surface transition-colors"
+          className="p-1.5 rounded-lg text-muted hover:text-brand hover:bg-dark-surface transition-colors"
         >
           <Pencil size={14} />
         </button>
@@ -600,13 +600,13 @@ function StaffPayrollModal({ open, onClose, monthLabel, startDate, endDate, onPi
       <div className="space-y-3">
         <p className="text-xs text-muted">
           Gaji tiap staf (barber &amp; kasir) untuk <span className="text-off-white font-medium capitalize">{monthLabel}</span> sesuai
-          skema masing-masing. Klik <span className="text-gold">Catat</span> untuk mengisi form pengeluaran
+          skema masing-masing. Klik <span className="text-brand">Catat</span> untuk mengisi form pengeluaran
           otomatis. Tanda <span className="text-green-400">✓ Dicatat</span> = sudah masuk pengeluaran bulan ini.
         </p>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 size={22} className="animate-spin text-gold" />
+            <Loader2 size={22} className="animate-spin text-brand" />
           </div>
         ) : isError ? (
           <div className="flex flex-col items-center gap-2 py-10 text-center">
@@ -882,7 +882,7 @@ function ExpensePageInner() {
   if (flagsLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 rounded-full border-2 border-gold/30 border-t-gold animate-spin" />
+        <div className="w-8 h-8 rounded-full border-2 border-brand/30 border-t-brand animate-spin" />
       </div>
     )
   }
@@ -927,7 +927,7 @@ function ExpensePageInner() {
 
           <button
             onClick={() => setCopyOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gold/30 text-xs text-gold hover:bg-gold/10 transition-all"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-brand/30 text-xs text-brand hover:bg-brand/10 transition-all"
           >
             <CopyPlus size={13} />
             <span className="hidden sm:inline">Salin Bulan Lalu</span>
@@ -935,7 +935,7 @@ function ExpensePageInner() {
           </button>
           <button
             onClick={() => setPayrollOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs text-muted hover:border-gold/30 hover:text-off-white transition-all"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs text-muted hover:border-brand/30 hover:text-off-white transition-all"
           >
             <Users size={13} />
             <span className="hidden sm:inline">Gaji Staf</span>
@@ -944,7 +944,7 @@ function ExpensePageInner() {
           <button
             onClick={handleRefresh}
             disabled={isFetching}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs text-muted hover:border-gold/30 hover:text-off-white transition-all disabled:opacity-40"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs text-muted hover:border-brand/30 hover:text-off-white transition-all disabled:opacity-40"
           >
             <RefreshCw size={13} className={isFetching ? 'animate-spin' : ''} />
             <span>Refresh</span>
@@ -952,7 +952,7 @@ function ExpensePageInner() {
           <button
             onClick={handleExport}
             disabled={exporting || total === 0}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs text-muted hover:border-gold/30 hover:text-off-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs text-muted hover:border-brand/30 hover:text-off-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {exporting ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
             <span className="hidden sm:inline">Ekspor CSV</span>
@@ -984,7 +984,7 @@ function ExpensePageInner() {
           value={netProfit == null ? '—' : formatRupiah(netProfit)}
           sub={netProfit == null ? 'Memuat…'
             : netProfit >= 0 ? 'Bisnis kamu profitable 🎉' : 'Pengeluaran melebihi pemasukan'}
-          accent={netProfit == null ? 'text-muted' : netProfit >= 0 ? 'text-gold' : 'text-red-400'}
+          accent={netProfit == null ? 'text-muted' : netProfit >= 0 ? 'text-brand' : 'text-red-400'}
           icon={Wallet}
           loading={netProfit == null}
         />
@@ -1009,7 +1009,7 @@ function ExpensePageInner() {
               value={searchInput}
               onChange={e => setSearchInput(e.target.value)}
               placeholder="Cari deskripsi…"
-              className="bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg pl-8 pr-7 py-1.5 text-xs outline-none focus:border-gold/50 w-36 sm:w-44"
+              className="bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg pl-8 pr-7 py-1.5 text-xs outline-none focus:border-brand/50 w-36 sm:w-44"
             />
             {searchInput && (
               <button
@@ -1025,7 +1025,7 @@ function ExpensePageInner() {
             value={catFilter}
             onChange={e => setCatFilter(e.target.value)}
             aria-label="Filter kategori"
-            className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold/50"
+            className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-brand/50"
           >
             <option value="all">Semua Kategori</option>
             {EXPENSE_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
@@ -1035,7 +1035,7 @@ function ExpensePageInner() {
               value={branchFilter}
               onChange={e => setBranchFilter(e.target.value)}
               aria-label="Filter cabang"
-              className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold/50"
+              className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-brand/50"
             >
               <option value="all">Semua Cabang</option>
               {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -1045,7 +1045,7 @@ function ExpensePageInner() {
             value={sortBy}
             onChange={e => setSortBy(e.target.value)}
             aria-label="Urutkan"
-            className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold/50"
+            className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-brand/50"
           >
             {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
@@ -1058,10 +1058,10 @@ function ExpensePageInner() {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden bg-gold/5 border-b border-gold/20"
+              className="overflow-hidden bg-brand/5 border-b border-brand/20"
             >
               <div className="flex items-center gap-3 px-3 sm:px-4 py-2.5">
-                <span className="text-xs text-gold font-medium">{selected.size} dipilih</span>
+                <span className="text-xs text-brand font-medium">{selected.size} dipilih</span>
                 <button
                   onClick={() => setSelected(new Set())}
                   className="text-xs text-muted hover:text-off-white"
@@ -1092,7 +1092,7 @@ function ExpensePageInner() {
               className="flex items-center gap-2 text-xs text-muted hover:text-off-white transition-colors"
             >
               {allOnPageSelected
-                ? <CheckSquare size={15} className="text-gold" />
+                ? <CheckSquare size={15} className="text-brand" />
                 : <Square size={15} />}
               Pilih semua di halaman ini
             </button>
@@ -1123,12 +1123,12 @@ function ExpensePageInner() {
             {hasFilter ? (
               <button
                 onClick={() => { setSearchInput(''); setCatFilter('all'); setBranchFilter('all') }}
-                className="text-xs text-gold hover:text-gold/80 transition-colors"
+                className="text-xs text-brand hover:text-brand/80 transition-colors"
               >
                 Reset filter
               </button>
             ) : (
-              <button onClick={openCreate} className="text-xs text-gold hover:text-gold/80 transition-colors">
+              <button onClick={openCreate} className="text-xs text-brand hover:text-brand/80 transition-colors">
                 + Tambah pengeluaran pertama
               </button>
             )}
@@ -1162,7 +1162,7 @@ function ExpensePageInner() {
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page <= 1}
                 aria-label="Halaman sebelumnya"
-                className="p-1.5 rounded-lg border border-dark-border text-muted hover:text-off-white hover:border-gold/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                className="p-1.5 rounded-lg border border-dark-border text-muted hover:text-off-white hover:border-brand/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <ChevronLeft size={15} />
               </button>
@@ -1170,7 +1170,7 @@ function ExpensePageInner() {
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
                 aria-label="Halaman berikutnya"
-                className="p-1.5 rounded-lg border border-dark-border text-muted hover:text-off-white hover:border-gold/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                className="p-1.5 rounded-lg border border-dark-border text-muted hover:text-off-white hover:border-brand/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <ChevronRight size={15} />
               </button>

@@ -50,7 +50,7 @@ function pctChange(cur, prev) {
 
 // Kelas badge peringkat — light-mode safe (hanya class ber-override).
 function rankBadgeClass(rank) {
-  if (rank === 1) return 'bg-gold/20 text-gold'
+  if (rank === 1) return 'bg-brand/20 text-brand'
   if (rank === 2 || rank === 3) return 'bg-dark-surface text-off-white'
   return 'bg-dark-surface text-muted'
 }
@@ -100,7 +100,7 @@ function SortHeader({ label, sortKey, sort, onSort, align = 'center' }) {
     <th className={`py-3 px-4 font-medium ${alignCls}`}>
       <button
         onClick={() => onSort(sortKey)}
-        className={`inline-flex items-center gap-1 w-full ${justify} ${active ? 'text-gold' : 'text-muted'} hover:text-off-white transition-colors`}
+        className={`inline-flex items-center gap-1 w-full ${justify} ${active ? 'text-brand' : 'text-muted'} hover:text-off-white transition-colors`}
       >
         {label}
         {active
@@ -115,7 +115,7 @@ function SortHeader({ label, sortKey, sort, onSort, align = 'center' }) {
 // `changeValue` = angka mentah untuk chip perubahan. WAJIB diisi terpisah saat
 // `value` sudah ter-format jadi string (mis. rupiah) — kalau tidak, chip salah
 // hitung (mengira nilai sekarang 0 → selalu -100%).
-function StatCard({ icon: Icon, label, value, prev, changeValue, color = 'text-gold', sub }) {
+function StatCard({ icon: Icon, label, value, prev, changeValue, color = 'text-brand', sub }) {
   const cur = typeof changeValue === 'number' ? changeValue
             : typeof value === 'number' ? value : null
   return (
@@ -169,10 +169,10 @@ function ConfigPanel({ initial, onSaved, onCancel }) {
   }
 
   return (
-    <Card className="p-6 border-gold/20">
+    <Card className="p-6 border-brand/20">
       <div className="flex items-center gap-3 mb-5">
-        <div className="w-10 h-10 rounded-xl bg-gold/10 flex items-center justify-center">
-          <MapPin size={18} className="text-gold" />
+        <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center">
+          <MapPin size={18} className="text-brand" />
         </div>
         <div>
           <h3 className="font-semibold text-off-white">
@@ -191,7 +191,7 @@ function ConfigPanel({ initial, onSaved, onCancel }) {
             <select
               value={provinsiId}
               onChange={handleProvinsi}
-              className="w-full appearance-none bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 pr-8 text-sm outline-none focus:border-gold/60 transition-all"
+              className="w-full appearance-none bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 pr-8 text-sm outline-none focus:border-brand/60 transition-all"
             >
               <option value="">Pilih Provinsi</option>
               {provinces.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -206,7 +206,7 @@ function ConfigPanel({ initial, onSaved, onCancel }) {
               value={kabupatenId}
               onChange={e => setKabupatenId(e.target.value)}
               disabled={!provinsiId}
-              className="w-full appearance-none bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 pr-8 text-sm outline-none focus:border-gold/60 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              className="w-full appearance-none bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 pr-8 text-sm outline-none focus:border-brand/60 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
               <option value="">{provinsiId ? 'Pilih Kabupaten/Kota' : 'Pilih provinsi dulu'}</option>
               {regencies.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
@@ -241,7 +241,7 @@ function CustomTooltip({ active, payload }) {
       <p className="font-semibold text-off-white mb-1">{d.kecamatan}</p>
       <p className="text-muted">Kunjungan: <span className="text-off-white font-medium">{d.visitCount}</span></p>
       <p className="text-muted">Pelanggan: <span className="text-off-white font-medium">{d.customerCount}</span></p>
-      <p className="text-muted">Pendapatan: <span className="text-gold font-medium">{formatRupiah(d.revenue)}</span></p>
+      <p className="text-muted">Pendapatan: <span className="text-brand font-medium">{formatRupiah(d.revenue)}</span></p>
     </div>
   )
 }
@@ -273,13 +273,13 @@ function KecamatanRow({ kec, rank, totalVisits, isExpanded, onToggle }) {
         <td className="py-3 px-4">
           <div className="flex items-center gap-2">
             <div className="flex-1 h-1.5 bg-dark-surface rounded-full overflow-hidden min-w-[60px]">
-              <div className="h-full bg-gold rounded-full" style={{ width: `${pct}%` }} />
+              <div className="h-full bg-brand rounded-full" style={{ width: `${pct}%` }} />
             </div>
             <span className="text-sm font-semibold text-off-white w-8 text-right">{kec.visitCount}</span>
             <ChangeChip cur={kec.visitCount} prev={kec.prevVisitCount} />
           </div>
         </td>
-        <td className="py-3 px-4 text-sm text-right text-gold font-medium">
+        <td className="py-3 px-4 text-sm text-right text-brand font-medium">
           {formatRupiah(kec.revenue)}
         </td>
         <td className="py-3 px-4 text-sm text-center text-muted">
@@ -321,13 +321,13 @@ function KecamatanRow({ kec, rank, totalVisits, isExpanded, onToggle }) {
                             <Home size={12} className="text-muted flex-shrink-0" />
                             <span className="text-sm text-off-white">{kel.kelurahan}</span>
                             {i === 0 && (
-                              <span className="text-[10px] px-1.5 py-0.5 bg-gold/10 text-gold border border-gold/20 rounded-full">Terbanyak</span>
+                              <span className="text-[10px] px-1.5 py-0.5 bg-brand/10 text-brand border border-brand/20 rounded-full">Terbanyak</span>
                             )}
                           </div>
                         </td>
                         <td className="py-2.5 px-4 text-sm text-center text-off-white">{kel.customerCount}</td>
                         <td className="py-2.5 px-4 text-sm text-center font-semibold text-off-white">{kel.visitCount}</td>
-                        <td className="py-2.5 px-4 text-sm text-right text-gold">{formatRupiah(kel.revenue)}</td>
+                        <td className="py-2.5 px-4 text-sm text-right text-brand">{formatRupiah(kel.revenue)}</td>
                         <td className="py-2.5 px-4 text-sm text-center text-muted">{kel.avgVisitPerCustomer}x</td>
                       </tr>
                     ))}
@@ -354,8 +354,8 @@ function InsightsPanel({ byKecamatan }) {
   const insights = [
     {
       icon: TrendingUp,
-      color: 'text-gold',
-      bg: 'bg-gold/10',
+      color: 'text-brand',
+      bg: 'bg-brand/10',
       title: 'Area Paling Aktif',
       value: top?.kecamatan,
       sub: `${top?.visitCount} kunjungan dari ${top?.customerCount} pelanggan`,
@@ -390,7 +390,7 @@ function InsightsPanel({ byKecamatan }) {
     <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
-          <Sparkles size={15} className="text-gold" />
+          <Sparkles size={15} className="text-brand" />
           <h3 className="font-semibold text-off-white">Insight Wilayah</h3>
         </div>
       </CardHeader>
@@ -435,10 +435,10 @@ function KecamatanMobileCard({ kec, rank, totalVisits, isExpanded, onToggle }) {
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-muted">
             <span><span className="text-off-white font-medium">{kec.visitCount}</span> kunjungan</span>
             <span><span className="text-off-white font-medium">{kec.customerCount}</span> pelanggan</span>
-            <span className="text-gold font-medium">{formatRupiahShort(kec.revenue)}</span>
+            <span className="text-brand font-medium">{formatRupiahShort(kec.revenue)}</span>
           </div>
           <div className="mt-2 h-1.5 bg-dark-surface rounded-full overflow-hidden">
-            <div className="h-full bg-gold rounded-full" style={{ width: `${pct}%` }} />
+            <div className="h-full bg-brand rounded-full" style={{ width: `${pct}%` }} />
           </div>
         </div>
         <motion.div animate={{ rotate: isExpanded ? 90 : 0 }} className="flex-shrink-0 mt-0.5">
@@ -461,11 +461,11 @@ function KecamatanMobileCard({ kec, rank, totalVisits, isExpanded, onToggle }) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm text-off-white truncate">{kel.kelurahan}</span>
-                      {i === 0 && <span className="text-[10px] px-1 py-0.5 bg-gold/10 text-gold border border-gold/20 rounded">Top</span>}
+                      {i === 0 && <span className="text-[10px] px-1 py-0.5 bg-brand/10 text-brand border border-brand/20 rounded">Top</span>}
                     </div>
                     <p className="text-xs text-muted">{kel.visitCount} kunjungan · {kel.customerCount} pelanggan</p>
                   </div>
-                  <span className="text-xs text-gold flex-shrink-0">{formatRupiahShort(kel.revenue)}</span>
+                  <span className="text-xs text-brand flex-shrink-0">{formatRupiahShort(kel.revenue)}</span>
                 </div>
               ))}
             </div>
@@ -594,7 +594,7 @@ export default function TAWilayahReportPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-display font-bold gold-text">Laporan Wilayah</h1>
+          <h1 className="text-2xl font-display font-bold brand-text">Laporan Wilayah</h1>
           <p className="text-muted text-sm mt-1">Analisis kunjungan pelanggan berdasarkan kecamatan dan desa</p>
         </div>
 
@@ -622,9 +622,9 @@ export default function TAWilayahReportPage() {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-display font-bold gold-text">Laporan Wilayah</h1>
+          <h1 className="text-2xl font-display font-bold brand-text">Laporan Wilayah</h1>
           <div className="flex items-center gap-2 mt-1">
-            <MapPin size={13} className="text-gold" />
+            <MapPin size={13} className="text-brand" />
             <p className="text-sm text-muted">
               <span className="text-off-white font-medium">{config.kabupaten}</span>
               {config.provinsi && <span>, {config.provinsi}</span>}
@@ -639,7 +639,7 @@ export default function TAWilayahReportPage() {
           )}
           <button
             onClick={() => setShowConfig(v => !v)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-dark-border text-xs text-muted hover:border-gold/30 hover:text-off-white transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-dark-border text-xs text-muted hover:border-brand/30 hover:text-off-white transition-all"
           >
             <Settings2 size={13} />
             Ganti Kabupaten
@@ -647,7 +647,7 @@ export default function TAWilayahReportPage() {
           <button
             onClick={handleExport}
             disabled={isLoading || byKecamatan.length === 0}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-dark-border text-xs text-muted hover:border-gold/30 hover:text-off-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-dark-border text-xs text-muted hover:border-brand/30 hover:text-off-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Download size={13} />
             Ekspor CSV
@@ -655,7 +655,7 @@ export default function TAWilayahReportPage() {
           <button
             onClick={() => refetch()}
             disabled={isLoading}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-dark-border text-xs text-muted hover:border-gold/30 hover:text-off-white transition-all disabled:opacity-40"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-dark-border text-xs text-muted hover:border-brand/30 hover:text-off-white transition-all disabled:opacity-40"
           >
             <RefreshCw size={13} className={isLoading ? 'animate-spin' : ''} />
             Refresh
@@ -684,7 +684,7 @@ export default function TAWilayahReportPage() {
             onClick={() => setPeriod(p.value)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
               period === p.value
-                ? 'bg-gold text-dark'
+                ? 'bg-brand text-dark'
                 : 'text-muted hover:text-off-white'
             }`}
           >
@@ -715,7 +715,7 @@ export default function TAWilayahReportPage() {
           value={isLoading ? '—' : (summary?.totalVisits ?? 0)}
           changeValue={summary?.totalVisits ?? 0}
           prev={PREV_LABELS[period] ? summary?.prevVisits : undefined}
-          color="text-gold"
+          color="text-brand"
           sub={PREV_LABELS[period]}
         />
         <StatCard
@@ -763,7 +763,7 @@ export default function TAWilayahReportPage() {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
-                <Building2 size={15} className="text-gold" />
+                <Building2 size={15} className="text-brand" />
                 <h3 className="font-semibold text-off-white">Kunjungan per Kecamatan</h3>
                 <span className="text-xs text-muted">(top {Math.min(chartData.length, 10)})</span>
               </div>
@@ -805,7 +805,7 @@ export default function TAWilayahReportPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <MapPin size={15} className="text-gold" />
+                  <MapPin size={15} className="text-brand" />
                   <h3 className="font-semibold text-off-white">Detail per Kecamatan</h3>
                 </div>
                 <p className="text-xs text-muted">{byKecamatan.length} kecamatan ditemukan · Klik untuk lihat desa</p>
@@ -847,7 +847,7 @@ export default function TAWilayahReportPage() {
                 <select
                   value={sort.key}
                   onChange={e => setSort({ key: e.target.value, dir: 'desc' })}
-                  className="appearance-none bg-dark-card border border-dark-border text-muted rounded-lg pl-2.5 pr-7 py-1.5 text-xs outline-none focus:border-gold/40"
+                  className="appearance-none bg-dark-card border border-dark-border text-muted rounded-lg pl-2.5 pr-7 py-1.5 text-xs outline-none focus:border-brand/40"
                   aria-label="Urutkan kecamatan"
                 >
                   <option value="visitCount">Urut: Kunjungan</option>

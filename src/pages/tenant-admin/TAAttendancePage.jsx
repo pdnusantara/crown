@@ -22,7 +22,7 @@ import {
   DAY_NAMES, DAY_NAMES_SHORT, ATT_STATUS, statusMeta, fmtDuration, fmtTime, fmtDateLong,
 } from '../../utils/attendance.js'
 
-const inputCls = 'w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-off-white focus:border-gold/40 focus:outline-none'
+const inputCls = 'w-full bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-off-white focus:border-brand/40 focus:outline-none'
 // Urutan tampilan jadwal: Senin → Minggu (dayOfWeek 1..6 lalu 0).
 const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0]
 const todayYmd = () => new Date().toLocaleDateString('en-CA')
@@ -63,8 +63,8 @@ export default function TAAttendancePage() {
   return (
     <div className="flex-1 p-4 sm:p-6 space-y-5">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gold/15 flex items-center justify-center">
-          <Fingerprint className="w-5 h-5 text-gold" />
+        <div className="w-10 h-10 rounded-xl bg-brand/15 flex items-center justify-center">
+          <Fingerprint className="w-5 h-5 text-brand" />
         </div>
         <div>
           <h1 className="text-xl font-display font-bold text-off-white">Absensi Digital</h1>
@@ -79,7 +79,7 @@ export default function TAAttendancePage() {
             key={tb.id}
             onClick={() => setTab(tb.id)}
             className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
-              tab === tb.id ? 'bg-gold text-dark' : 'text-muted hover:text-off-white bg-dark-card'
+              tab === tb.id ? 'bg-brand text-dark' : 'text-muted hover:text-off-white bg-dark-card'
             }`}
           >
             <tb.icon className="w-4 h-4" /> {tb.label}
@@ -111,7 +111,7 @@ function FeatureOff() {
 }
 
 function KpiTile({ label, value, variant = 'gold' }) {
-  const color = { gold: 'text-gold', green: 'text-green-400', amber: 'text-amber-400', red: 'text-red-400', blue: 'text-blue-400' }[variant]
+  const color = { gold: 'text-brand', green: 'text-green-400', amber: 'text-amber-400', red: 'text-red-400', blue: 'text-blue-400' }[variant]
   return (
     <Card>
       <CardBody className="py-3">
@@ -213,7 +213,7 @@ function RekapTab({ tenantId }) {
       <Card>
         <CardBody className="p-0">
           {isLoading ? (
-            <div className="py-12 flex justify-center"><Loader2 className="w-6 h-6 text-gold animate-spin" /></div>
+            <div className="py-12 flex justify-center"><Loader2 className="w-6 h-6 text-brand animate-spin" /></div>
           ) : rows.length === 0 ? (
             <p className="py-12 text-center text-sm text-muted">Tidak ada catatan absensi pada filter ini.</p>
           ) : (
@@ -254,7 +254,7 @@ function RekapTab({ tenantId }) {
                         <td className="px-4 py-2.5 text-muted">{fmtDuration(r.workedMinutes)}</td>
                         <td className="px-4 py-2.5"><Badge variant={statusMeta(r.status).variant}>{statusMeta(r.status).label}</Badge></td>
                         <td className="px-4 py-2.5 text-right">
-                          <button onClick={() => setEditRow(r)} className="text-muted hover:text-gold" aria-label="Koreksi">
+                          <button onClick={() => setEditRow(r)} className="text-muted hover:text-brand" aria-label="Koreksi">
                             <Pencil className="w-4 h-4" />
                           </button>
                         </td>
@@ -275,7 +275,7 @@ function RekapTab({ tenantId }) {
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <Badge variant={statusMeta(r.status).variant}>{statusMeta(r.status).label}</Badge>
-                        <button onClick={() => setEditRow(r)} className="text-muted hover:text-gold" aria-label="Koreksi">
+                        <button onClick={() => setEditRow(r)} className="text-muted hover:text-brand" aria-label="Koreksi">
                           <Pencil className="w-4 h-4" />
                         </button>
                       </div>
@@ -459,7 +459,7 @@ function LaporanTab({ tenantId }) {
       <Card>
         <CardBody className="p-0">
           {isLoading ? (
-            <div className="py-12 flex justify-center"><Loader2 className="w-6 h-6 text-gold animate-spin" /></div>
+            <div className="py-12 flex justify-center"><Loader2 className="w-6 h-6 text-brand animate-spin" /></div>
           ) : rows.length === 0 ? (
             <p className="py-12 text-center text-sm text-muted">Belum ada staf kasir/barber untuk dilaporkan.</p>
           ) : (
@@ -554,16 +554,16 @@ function JadwalTab() {
   }, [weekBs])
 
   if (error?.response?.status === 403) return <FeatureOff />
-  if (isLoading) return <div className="py-12 flex justify-center"><Loader2 className="w-6 h-6 text-gold animate-spin" /></div>
+  if (isLoading) return <div className="py-12 flex justify-center"><Loader2 className="w-6 h-6 text-brand animate-spin" /></div>
 
   return (
     <div className="space-y-3">
-      <div className="flex items-start gap-2 rounded-lg border border-gold/20 bg-gold/5 px-3 py-2 text-xs text-muted">
-        <Info className="w-4 h-4 text-gold/80 mt-0.5 shrink-0" />
+      <div className="flex items-start gap-2 rounded-lg border border-brand/20 bg-brand/5 px-3 py-2 text-xs text-muted">
+        <Info className="w-4 h-4 text-brand/80 mt-0.5 shrink-0" />
         <p>
           Jadwal mingguan di sini jadi <span className="text-off-white">dasar perhitungan terlambat</span>.
           Untuk shift barber tanggal-spesifik (Pagi/Sore/Full),
-          <Link to="/admin/schedule" className="ml-1 inline-flex items-center gap-1 text-gold hover:underline">
+          <Link to="/admin/schedule" className="ml-1 inline-flex items-center gap-1 text-brand hover:underline">
             buka halaman Jadwal Barber <ExternalLink className="w-3 h-3" />
           </Link>
           — bila barber punya shift di tanggal tertentu, jam itu yang dipakai (override jadwal mingguan).
@@ -595,7 +595,7 @@ function JadwalTab() {
                     const d = s.schedule.find((x) => x.dayOfWeek === dow)
                     return (
                       <span key={dow} className={`text-[10px] px-1.5 py-0.5 rounded ${
-                        d?.isDayOff ? 'bg-dark-surface text-muted' : 'bg-gold/10 text-gold'
+                        d?.isDayOff ? 'bg-dark-surface text-muted' : 'bg-brand/10 text-brand'
                       }`}>
                         {DAY_NAMES_SHORT[dow]}
                       </span>
@@ -649,7 +649,7 @@ function ScheduleEditorModal({ staff, onClose }) {
               <label className="flex items-center gap-1.5 text-xs text-muted flex-shrink-0">
                 <input type="checkbox" checked={d.isDayOff}
                   onChange={(e) => setDay(dow, { isDayOff: e.target.checked })}
-                  className="accent-gold" />
+                  className="accent-brand" />
                 Libur
               </label>
               <input type="time" value={d.startTime} disabled={d.isDayOff}
@@ -664,7 +664,7 @@ function ScheduleEditorModal({ staff, onClose }) {
         })}
       </div>
       <label className="flex items-center gap-2 text-xs text-muted mb-3">
-        <input type="checkbox" checked={applyAll} onChange={(e) => setApplyAll(e.target.checked)} className="accent-gold" />
+        <input type="checkbox" checked={applyAll} onChange={(e) => setApplyAll(e.target.checked)} className="accent-brand" />
         Terapkan jadwal ini ke <span className="text-off-white">semua staf</span> kasir &amp; barber
       </label>
       <div className="flex gap-2">
@@ -718,7 +718,7 @@ function PengaturanTab({ tenantId }) {
             <span className="text-sm text-off-white">Aktifkan absensi
               <span className="block text-xs text-muted">Bila dimatikan, staf tidak bisa check-in.</span>
             </span>
-            <input type="checkbox" checked={cfg.enabled} className="accent-gold w-4 h-4"
+            <input type="checkbox" checked={cfg.enabled} className="accent-brand w-4 h-4"
               onChange={(e) => setCfg((c) => ({ ...c, enabled: e.target.checked }))} />
           </label>
           <div className="flex items-center justify-between gap-3 border-t border-dark-border pt-4">
@@ -733,7 +733,7 @@ function PengaturanTab({ tenantId }) {
             <span className="text-sm text-off-white">Auto check-out
               <span className="block text-xs text-muted">Tutup otomatis absen yang lupa di-checkout di akhir hari.</span>
             </span>
-            <input type="checkbox" checked={cfg.autoCheckOut} className="accent-gold w-4 h-4"
+            <input type="checkbox" checked={cfg.autoCheckOut} className="accent-brand w-4 h-4"
               onChange={(e) => setCfg((c) => ({ ...c, autoCheckOut: e.target.checked }))} />
           </label>
           <div className="flex items-center justify-between gap-3 border-t border-dark-border pt-4">
@@ -748,7 +748,7 @@ function PengaturanTab({ tenantId }) {
             <span className="text-sm text-off-white">Wajib foto selfie
               <span className="block text-xs text-muted">Staf harus mengambil foto selfie tiap check-in &amp; check-out sebagai bukti.</span>
             </span>
-            <input type="checkbox" checked={cfg.requireSelfie} className="accent-gold w-4 h-4"
+            <input type="checkbox" checked={cfg.requireSelfie} className="accent-brand w-4 h-4"
               onChange={(e) => setCfg((c) => ({ ...c, requireSelfie: e.target.checked }))} />
           </label>
           <Button onClick={saveCfg} loading={updateTenant.isLoading} icon={Save}>Simpan Konfigurasi</Button>
@@ -855,7 +855,7 @@ function BranchGeofenceRow({ branch, tenantId, updateBranch }) {
           <a
             href={`https://www.google.com/maps?q=${form.latitude},${form.longitude}`}
             target="_blank" rel="noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-gold hover:underline"
+            className="inline-flex items-center gap-1 text-xs text-brand hover:underline"
           >
             <MapPin className="w-3.5 h-3.5" /> Lihat di Maps
           </a>

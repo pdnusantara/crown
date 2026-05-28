@@ -287,7 +287,7 @@ function TAVouchersInner() {
     { label: t('tenantAdmin.vouchers.totalVoucher'), value: stats?.total ?? '—', tone: 'text-off-white' },
     { label: t('tenantAdmin.vouchers.active'), value: stats?.active ?? '—', tone: 'text-green-400' },
     { label: t('tenantAdmin.vouchers.expired'), value: stats?.expired ?? '—', tone: 'text-red-400' },
-    { label: t('tenantAdmin.vouchers.totalUses'), value: stats?.totalUses ?? '—', tone: 'text-gold' },
+    { label: t('tenantAdmin.vouchers.totalUses'), value: stats?.totalUses ?? '—', tone: 'text-brand' },
   ]
 
   return (
@@ -343,7 +343,7 @@ function TAVouchersInner() {
 
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-2">
-        <label className="flex-1 min-w-[200px] flex items-center gap-2 bg-dark-surface border border-dark-border rounded-xl px-3 py-2 focus-within:border-gold/60 transition-colors">
+        <label className="flex-1 min-w-[200px] flex items-center gap-2 bg-dark-surface border border-dark-border rounded-xl px-3 py-2 focus-within:border-brand/60 transition-colors">
           <Search aria-hidden="true" className="w-4 h-4 text-muted flex-shrink-0" />
           <input
             type="text"
@@ -369,7 +369,7 @@ function TAVouchersInner() {
         <select
           value={status}
           onChange={e => setStatus(e.target.value)}
-          className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-gold/60 cursor-pointer"
+          className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-brand/60 cursor-pointer"
         >
           <option value="">{t('tenantAdmin.vouchers.filterAll')}</option>
           <option value="active">{t('tenantAdmin.vouchers.filterActive')}</option>
@@ -379,7 +379,7 @@ function TAVouchersInner() {
         <select
           value={typeFilter}
           onChange={e => setTypeFilter(e.target.value)}
-          className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-gold/60 cursor-pointer"
+          className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-brand/60 cursor-pointer"
         >
           <option value="">{t('tenantAdmin.vouchers.typeAll')}</option>
           <option value="percentage">{t('tenantAdmin.vouchers.typePercent')}</option>
@@ -388,7 +388,7 @@ function TAVouchersInner() {
         <select
           value={sortBy}
           onChange={e => setSortBy(e.target.value)}
-          className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-gold/60 cursor-pointer"
+          className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-brand/60 cursor-pointer"
         >
           <option value="createdAt-desc">{t('tenantAdmin.vouchers.sortNewest')}</option>
           <option value="code-asc">{t('tenantAdmin.vouchers.sortCodeAsc')}</option>
@@ -402,9 +402,9 @@ function TAVouchersInner() {
 
       {/* Bulk action bar */}
       {bulkMode && (
-        <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-2xl bg-gold/10 border border-gold/30">
+        <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-2xl bg-brand/10 border border-brand/30">
           <div className="flex items-center gap-2 text-sm text-off-white">
-            <CheckSquare size={14} className="text-gold" />
+            <CheckSquare size={14} className="text-brand" />
             <span className="font-medium">{t('tenantAdmin.vouchers.bulkSelectedCount', { count: selected.size })}</span>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -463,7 +463,7 @@ function TAVouchersInner() {
                     {bulkMode && (
                       <th className="px-3 py-3 w-10">
                         <button onClick={() => allVisibleSelected ? setSelected(new Set()) : selectAllVisible()} aria-label="Select all on page">
-                          {allVisibleSelected ? <CheckSquare size={16} className="text-gold" /> : <Square size={16} className="text-muted" />}
+                          {allVisibleSelected ? <CheckSquare size={16} className="text-brand" /> : <Square size={16} className="text-muted" />}
                         </button>
                       </th>
                     )}
@@ -489,20 +489,20 @@ function TAVouchersInner() {
                       <tr
                         key={v.id}
                         className={`border-b border-dark-border/50 transition-colors ${
-                          isSelected ? 'bg-gold/5' : 'hover:bg-dark-surface/40'
+                          isSelected ? 'bg-brand/5' : 'hover:bg-dark-surface/40'
                         }`}
                       >
                         {bulkMode && (
                           <td className="px-3 py-3 align-top">
                             <button onClick={() => toggleSelect(v.id)} aria-label={`Select ${v.code}`}>
-                              {isSelected ? <CheckSquare size={16} className="text-gold" /> : <Square size={16} className="text-muted" />}
+                              {isSelected ? <CheckSquare size={16} className="text-brand" /> : <Square size={16} className="text-muted" />}
                             </button>
                           </td>
                         )}
                         <td className="px-4 py-3 align-top max-w-[220px]">
                           <div className="flex items-center gap-2">
-                            <span className="font-mono font-bold text-gold truncate">{v.code}</span>
-                            <button onClick={() => handleCopy(v.code, v.id)} className="p-1 rounded text-muted hover:text-gold transition-colors flex-shrink-0">
+                            <span className="font-mono font-bold text-brand truncate">{v.code}</span>
+                            <button onClick={() => handleCopy(v.code, v.id)} className="p-1 rounded text-muted hover:text-brand transition-colors flex-shrink-0">
                               {copiedId === v.id ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
                             </button>
                           </div>
@@ -560,7 +560,7 @@ function TAVouchersInner() {
                             </button>
                             <button
                               onClick={() => openEdit(v)}
-                              className="p-1.5 rounded-lg text-muted hover:text-gold hover:bg-dark-surface/60 transition-colors"
+                              className="p-1.5 rounded-lg text-muted hover:text-brand hover:bg-dark-surface/60 transition-colors"
                               title={t('tenantAdmin.vouchers.editVoucher')}
                               aria-label={t('tenantAdmin.vouchers.editVoucher')}
                             >
@@ -592,22 +592,22 @@ function TAVouchersInner() {
               return (
                 <Card
                   key={v.id}
-                  className={`p-4 ${isSelected ? 'border-gold ring-1 ring-gold/30' : ''} ${bulkMode ? 'cursor-pointer' : ''}`}
+                  className={`p-4 ${isSelected ? 'border-brand ring-1 ring-brand/30' : ''} ${bulkMode ? 'cursor-pointer' : ''}`}
                   onClick={() => bulkMode && toggleSelect(v.id)}
                 >
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex items-center gap-2 min-w-0">
                       {bulkMode && (
                         <span className="flex-shrink-0">
-                          {isSelected ? <CheckSquare size={16} className="text-gold" /> : <Square size={16} className="text-muted" />}
+                          {isSelected ? <CheckSquare size={16} className="text-brand" /> : <Square size={16} className="text-muted" />}
                         </span>
                       )}
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-gold text-sm truncate max-w-[180px]">{v.code}</span>
+                          <span className="font-mono font-bold text-brand text-sm truncate max-w-[180px]">{v.code}</span>
                           <button
                             onClick={(e) => { e.stopPropagation(); handleCopy(v.code, v.id) }}
-                            className="p-1 rounded text-muted hover:text-gold flex-shrink-0"
+                            className="p-1 rounded text-muted hover:text-brand flex-shrink-0"
                             aria-label="Copy"
                           >
                             {copiedId === v.id ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
@@ -674,7 +674,7 @@ function TAVouchersInner() {
                 <select
                   value={pageSize}
                   onChange={e => setPageSize(Number(e.target.value))}
-                  className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-2 py-1 text-xs outline-none focus:border-gold/60 cursor-pointer"
+                  className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-2 py-1 text-xs outline-none focus:border-brand/60 cursor-pointer"
                 >
                   {PAGE_SIZES.map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
@@ -713,7 +713,7 @@ function TAVouchersInner() {
               onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))}
               placeholder="HEMAT20"
               className={`w-full bg-dark-surface border text-off-white placeholder-muted rounded-xl px-4 py-2.5 text-sm outline-none font-mono font-bold uppercase tracking-widest ${
-                formErr.code ? 'border-red-500/60 focus:border-red-500' : 'border-dark-border focus:border-gold/60'
+                formErr.code ? 'border-red-500/60 focus:border-red-500' : 'border-dark-border focus:border-brand/60'
               }`}
             />
             {formErr.code && <p className="text-xs text-red-400 mt-1">{formErr.code}</p>}
@@ -730,7 +730,7 @@ function TAVouchersInner() {
                   type="button"
                   onClick={() => setForm(f => ({ ...f, type: opt.value }))}
                   className={`py-2.5 rounded-xl border text-sm font-medium transition-all ${
-                    form.type === opt.value ? 'bg-gold/10 border-gold text-gold' : 'border-dark-border text-muted hover:border-gold/30'
+                    form.type === opt.value ? 'bg-brand/10 border-brand text-brand' : 'border-dark-border text-muted hover:border-brand/30'
                   }`}
                 >
                   {opt.label}
@@ -784,7 +784,7 @@ function TAVouchersInner() {
               type="checkbox"
               checked={form.isActive}
               onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))}
-              className="w-4 h-4 rounded border-dark-border bg-dark-surface checked:bg-gold focus:ring-gold/40"
+              className="w-4 h-4 rounded border-dark-border bg-dark-surface checked:bg-brand focus:ring-brand/40"
             />
             <span className="text-sm text-off-white">{t('tenantAdmin.vouchers.active')}</span>
           </label>

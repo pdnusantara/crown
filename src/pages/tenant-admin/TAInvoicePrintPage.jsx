@@ -33,7 +33,7 @@ export default function TAInvoicePrintPage() {
     return (
       <div className="p-8 text-center text-muted">
         <p>Invoice tidak ditemukan atau Anda tidak berhak mengaksesnya.</p>
-        <a href="/admin/billing" className="inline-flex items-center gap-1 mt-4 text-gold hover:underline">
+        <a href="/admin/billing" className="inline-flex items-center gap-1 mt-4 text-brand hover:underline">
           <ArrowLeft size={14} /> Kembali ke Billing
         </a>
       </div>
@@ -64,7 +64,7 @@ export default function TAInvoicePrintPage() {
         </a>
         <button
           onClick={() => window.print()}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold text-dark font-semibold hover:bg-gold/90 transition"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand text-dark font-semibold hover:bg-brand/90 transition"
         >
           <Printer size={14} /> Cetak / Simpan PDF
         </button>

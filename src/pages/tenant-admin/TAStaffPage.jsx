@@ -203,14 +203,14 @@ export default function TAStaffPage() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder={t('tenantAdmin.staff.searchPlaceholder')}
-            className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none focus:border-gold/60"
+            className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none focus:border-brand/60"
           />
         </div>
-        <select value={branchFilter} onChange={e => setBranchFilter(e.target.value)} className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2 text-sm outline-none focus:border-gold/60">
+        <select value={branchFilter} onChange={e => setBranchFilter(e.target.value)} className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2 text-sm outline-none focus:border-brand/60">
           <option value="">{t('tenantAdmin.staff.allBranches')}</option>
           {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
         </select>
-        <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2 text-sm outline-none focus:border-gold/60">
+        <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2 text-sm outline-none focus:border-brand/60">
           <option value="">{t('tenantAdmin.staff.allRoles')}</option>
           <option value="barber">{t('tenantAdmin.staff.roleBarber')}</option>
           <option value="kasir">{t('tenantAdmin.staff.roleKasir')}</option>
@@ -242,7 +242,7 @@ export default function TAStaffPage() {
                         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                           <Badge variant={roleColors[member.role] || 'muted'}>{member.role}</Badge>
                           {member.role === 'kasir' && member.isBarber && (
-                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gold/10 text-gold border border-gold/30">+ Barber</span>
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/30">+ Barber</span>
                           )}
                         </div>
                       </div>
@@ -279,8 +279,8 @@ export default function TAStaffPage() {
                       <div className="flex items-center gap-3 mt-2">
                         {member.rating && (
                           <div className="flex items-center gap-1">
-                            <Star className="w-3.5 h-3.5 text-gold fill-gold" />
-                            <span className="text-xs text-gold">{member.rating}</span>
+                            <Star className="w-3.5 h-3.5 text-brand fill-premium" />
+                            <span className="text-xs text-brand">{member.rating}</span>
                           </div>
                         )}
                         <span className="text-xs text-muted">{t('tenantAdmin.staff.clientsCount', { count: member.totalClients })}</span>
@@ -291,7 +291,7 @@ export default function TAStaffPage() {
                     {member.specializations?.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {member.specializations.slice(0, 3).map(spec => (
-                          <span key={spec} className="px-2 py-0.5 bg-gold/10 text-gold rounded-md text-xs">{spec}</span>
+                          <span key={spec} className="px-2 py-0.5 bg-brand/10 text-brand rounded-md text-xs">{spec}</span>
                         ))}
                       </div>
                     )}
@@ -396,7 +396,7 @@ export default function TAStaffPage() {
                       role="switch"
                       aria-checked={form.isBarber}
                       onClick={() => setForm(f => ({ ...f, isBarber: !f.isBarber }))}
-                      className={`mt-0.5 relative h-6 w-11 shrink-0 rounded-full transition-colors ${form.isBarber ? 'bg-gold' : 'bg-dark-border'}`}
+                      className={`mt-0.5 relative h-6 w-11 shrink-0 rounded-full transition-colors ${form.isBarber ? 'bg-brand' : 'bg-dark-border'}`}
                     >
                       {/* Knob: posisi eksplisit (left+vertikal center) supaya tidak
                           melebar keluar track / menutupi tulisan di sebelahnya. */}
@@ -470,8 +470,8 @@ export default function TAStaffPage() {
                 placeholder="Kosongkan untuk dibuat otomatis"
                 autoComplete="new-password"
                 disabled={resetPassword.isPending}
-                className={`w-full bg-dark-surface text-off-white placeholder-muted rounded-xl px-4 py-2.5 pr-[5.25rem] text-sm font-mono outline-none transition-all border focus:ring-2 focus:ring-gold/15 ${
-                  pwError ? 'border-red-500/60 focus:border-red-500' : 'border-dark-border focus:border-gold/60'
+                className={`w-full bg-dark-surface text-off-white placeholder-muted rounded-xl px-4 py-2.5 pr-[5.25rem] text-sm font-mono outline-none transition-all border focus:ring-2 focus:ring-brand/15 ${
+                  pwError ? 'border-red-500/60 focus:border-red-500' : 'border-dark-border focus:border-brand/60'
                 }`}
               />
               <div className="absolute inset-y-0 right-1.5 flex items-center gap-0.5">
@@ -479,7 +479,7 @@ export default function TAStaffPage() {
                   type="button"
                   onClick={() => setShowPw(s => !s)}
                   aria-label={showPw ? 'Sembunyikan password' : 'Tampilkan password'}
-                  className="p-2 rounded-lg text-muted hover:text-gold transition-colors"
+                  className="p-2 rounded-lg text-muted hover:text-brand transition-colors"
                 >
                   {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -488,7 +488,7 @@ export default function TAStaffPage() {
                   onClick={() => { setCustomPw(genPassword()); setShowPw(true); setPwError('') }}
                   aria-label="Buat password acak"
                   title="Buat acak"
-                  className="p-2 rounded-lg text-muted hover:text-gold transition-colors"
+                  className="p-2 rounded-lg text-muted hover:text-brand transition-colors"
                 >
                   <RefreshCw size={15} />
                 </button>
@@ -572,7 +572,7 @@ function PhotoPicker({ value, name, onChange }) {
     <div className="flex flex-col items-center gap-2">
       <p className="text-xs text-muted self-start">Foto Profil</p>
       <div className="relative group cursor-pointer" onClick={() => inputRef.current?.click()}>
-        <div className="w-20 h-20 rounded-full overflow-hidden ring-2 ring-dark-border group-hover:ring-gold/50 transition-all">
+        <div className="w-20 h-20 rounded-full overflow-hidden ring-2 ring-dark-border group-hover:ring-brand/50 transition-all">
           {value && !imgError ? (
             <img src={value} alt="foto" className="w-full h-full object-cover" onError={() => setImgError(true)} />
           ) : (
@@ -589,7 +589,7 @@ function PhotoPicker({ value, name, onChange }) {
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="text-xs text-gold hover:underline"
+          className="text-xs text-brand hover:underline"
         >
           {value ? 'Ganti foto' : 'Upload foto'}
         </button>
@@ -651,7 +651,7 @@ function CredentialsModal({ credentials, onClose }) {
               <button
                 type="button"
                 onClick={() => copy(credentials.email, 'email')}
-                className="p-2 rounded-xl border border-dark-border text-muted hover:text-gold hover:border-gold/30 transition-colors"
+                className="p-2 rounded-xl border border-dark-border text-muted hover:text-brand hover:border-brand/30 transition-colors"
                 title="Salin email"
               >
                 {copied === 'email' ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
@@ -662,13 +662,13 @@ function CredentialsModal({ credentials, onClose }) {
           <div>
             <p className="text-xs text-muted mb-1">{credentials.custom ? 'Password baru' : 'Password sementara'}</p>
             <div className="flex items-center gap-2">
-              <code className="flex-1 px-3 py-2 bg-dark-surface rounded-xl text-sm text-gold font-mono tracking-wider select-all break-all">
+              <code className="flex-1 px-3 py-2 bg-dark-surface rounded-xl text-sm text-brand font-mono tracking-wider select-all break-all">
                 {credentials.tempPassword}
               </code>
               <button
                 type="button"
                 onClick={() => copy(credentials.tempPassword, 'password')}
-                className="p-2 rounded-xl border border-dark-border text-muted hover:text-gold hover:border-gold/30 transition-colors"
+                className="p-2 rounded-xl border border-dark-border text-muted hover:text-brand hover:border-brand/30 transition-colors"
                 title="Salin password"
               >
                 {copied === 'password' ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
@@ -679,7 +679,7 @@ function CredentialsModal({ credentials, onClose }) {
           <button
             type="button"
             onClick={() => copy(both, 'both')}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 mt-1 rounded-xl border border-gold/30 bg-gold/10 text-gold text-sm font-medium hover:bg-gold/15 transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 mt-1 rounded-xl border border-brand/30 bg-brand/10 text-brand text-sm font-medium hover:bg-brand/15 transition-colors"
           >
             {copied === 'both' ? <Check size={14} /> : <Copy size={14} />}
             {copied === 'both' ? 'Tersalin' : 'Salin keduanya'}

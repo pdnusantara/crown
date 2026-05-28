@@ -107,12 +107,12 @@ const lastVisitLabel = (date) => {
 // ─── Stat tile ──────────────────────────────────────────────────────────────
 function StatTile({ icon: Icon, label, value, valueShort, accent = 'gold', hint, onClick, active, loading = false, delay = 0 }) {
   const palette = {
-    gold:  { icon: 'text-gold',         valueColor: 'text-gold',         bg: 'bg-gold/15 border-gold/30',          ring: 'ring-gold/40' },
+    gold:  { icon: 'text-brand',         valueColor: 'text-brand',         bg: 'bg-brand/15 border-brand/30',          ring: 'ring-brand/40' },
     blue:  { icon: 'text-blue-300',     valueColor: 'text-blue-300',     bg: 'bg-blue-500/15 border-blue-500/30',  ring: 'ring-blue-500/40' },
     green: { icon: 'text-emerald-300',  valueColor: 'text-emerald-300',  bg: 'bg-emerald-500/15 border-emerald-500/30', ring: 'ring-emerald-500/40' },
     amber: { icon: 'text-amber-300',    valueColor: 'text-amber-300',    bg: 'bg-amber-500/15 border-amber-500/30',ring: 'ring-amber-500/40' },
     rose:  { icon: 'text-rose-300',     valueColor: 'text-rose-300',     bg: 'bg-rose-500/15 border-rose-500/30',  ring: 'ring-rose-500/40' },
-    muted: { icon: 'text-muted',        valueColor: 'text-off-white',    bg: 'bg-dark-card/60 border-dark-border', ring: 'ring-gold/40' },
+    muted: { icon: 'text-muted',        valueColor: 'text-off-white',    bg: 'bg-dark-card/60 border-dark-border', ring: 'ring-brand/40' },
   }[accent]
   const Comp = onClick ? 'button' : 'div'
   // Display "—" untuk null/undefined; "0" tetap tampil sebagai 0 (legitimate value).
@@ -165,7 +165,7 @@ function CustomerMobileCard({ customer, onOpen, onEdit, onDelete, selected, onTo
     <div
       onClick={() => onOpen(customer)}
       className={`px-3 py-3 border-b border-dark-border/40 last:border-0 transition-colors active:bg-dark-surface/30 cursor-pointer min-w-0 ${
-        selected ? 'bg-gold/15 border-l-4 border-l-gold' : 'border-l-4 border-l-transparent'
+        selected ? 'bg-brand/15 border-l-4 border-l-brand' : 'border-l-4 border-l-transparent'
       }`}
     >
       <div className="flex items-start gap-3 min-w-0">
@@ -175,7 +175,7 @@ function CustomerMobileCard({ customer, onOpen, onEdit, onDelete, selected, onTo
             checked={selected}
             onClick={(e) => e.stopPropagation()}
             onChange={() => onToggleSelect(customer.id)}
-            className="mt-1 w-4 h-4 rounded border-dark-border bg-dark-surface text-gold focus:ring-gold/40 shrink-0 cursor-pointer"
+            className="mt-1 w-4 h-4 rounded border-dark-border bg-dark-surface text-brand focus:ring-brand/40 shrink-0 cursor-pointer"
             aria-label={`Pilih ${customer.name}`}
           />
         )}
@@ -190,7 +190,7 @@ function CustomerMobileCard({ customer, onOpen, onEdit, onDelete, selected, onTo
               </p>
             </div>
             <div className="text-right shrink-0">
-              <p className="text-sm font-bold text-gold tabular-nums whitespace-nowrap leading-none">
+              <p className="text-sm font-bold text-brand tabular-nums whitespace-nowrap leading-none">
                 {formatRupiahShort(lv)}
               </p>
               <p className="text-[10px] text-muted tabular-nums whitespace-nowrap mt-0.5">
@@ -200,8 +200,8 @@ function CustomerMobileCard({ customer, onOpen, onEdit, onDelete, selected, onTo
           </div>
           <div className="flex flex-wrap items-center gap-1.5 mt-2">
             <Badge variant={getSegmentBadge(segment)}>{segLabel}</Badge>
-            <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-md bg-gold/10 border border-gold/30 text-gold tabular-nums">
-              <Star className="w-2.5 h-2.5 fill-gold" /> {customer.loyaltyPoints || 0}
+            <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-md bg-brand/10 border border-brand/30 text-brand tabular-nums">
+              <Star className="w-2.5 h-2.5 fill-premium" /> {customer.loyaltyPoints || 0}
             </span>
             <span className="text-[11px] text-muted tabular-nums">
               {customer.visitCount || 0}× kunjungan
@@ -246,7 +246,7 @@ function CustomerTableRow({ customer, onOpen, onEdit, onDelete, selected, onTogg
     <div
       onClick={() => onOpen(customer)}
       className={`flex items-center gap-3 px-4 py-2.5 border-b border-dark-border/40 hover:bg-dark-surface/40 transition-colors group cursor-pointer min-w-0 ${
-        selected ? 'bg-gold/15 border-l-4 border-l-gold pl-3' : 'border-l-4 border-l-transparent'
+        selected ? 'bg-brand/15 border-l-4 border-l-brand pl-3' : 'border-l-4 border-l-transparent'
       }`}
     >
       {onToggleSelect && (
@@ -255,7 +255,7 @@ function CustomerTableRow({ customer, onOpen, onEdit, onDelete, selected, onTogg
           checked={selected}
           onClick={(e) => e.stopPropagation()}
           onChange={() => onToggleSelect(customer.id)}
-          className="w-4 h-4 rounded border-dark-border bg-dark-surface accent-gold focus:ring-gold/40 shrink-0 cursor-pointer"
+          className="w-4 h-4 rounded border-dark-border bg-dark-surface accent-brand focus:ring-brand/40 shrink-0 cursor-pointer"
           aria-label={`Pilih ${customer.name}`}
         />
       )}
@@ -284,7 +284,7 @@ function CustomerTableRow({ customer, onOpen, onEdit, onDelete, selected, onTogg
         <Badge variant={getSegmentBadge(segment)}>{segLabel}</Badge>
       </div>
       <div className="hidden md:block w-24 text-right shrink-0">
-        <p className="text-sm font-bold text-gold tabular-nums whitespace-nowrap leading-none">
+        <p className="text-sm font-bold text-brand tabular-nums whitespace-nowrap leading-none">
           <span className="lg:hidden">{formatRupiahShort(lv)}</span>
           <span className="hidden lg:inline">{formatRupiah(lv)}</span>
         </p>
@@ -296,8 +296,8 @@ function CustomerTableRow({ customer, onOpen, onEdit, onDelete, selected, onTogg
         {customer.visitCount || 0}×
       </div>
       <div className="w-16 shrink-0 inline-flex items-center justify-center gap-1">
-        <Star className="w-3 h-3 text-gold fill-gold shrink-0" />
-        <span className="text-gold text-sm font-semibold tabular-nums">{customer.loyaltyPoints || 0}</span>
+        <Star className="w-3 h-3 text-brand fill-premium shrink-0" />
+        <span className="text-brand text-sm font-semibold tabular-nums">{customer.loyaltyPoints || 0}</span>
       </div>
       <div className="hidden lg:block w-20 shrink-0 text-right text-xs text-muted whitespace-nowrap">
         {formatDate(customer.createdAt)}
@@ -376,7 +376,7 @@ function AdjustPointsModal({ open, onClose, customer, presetDelta, onConfirm, lo
             <p className="text-xs text-muted">Pelanggan</p>
             <p className="text-sm text-off-white font-medium">{customer.name}</p>
             <p className="text-xs text-muted mt-1">
-              Saldo saat ini: <span className="text-gold font-semibold tabular-nums">{(customer.loyaltyPoints || 0).toLocaleString('id-ID')}</span> poin
+              Saldo saat ini: <span className="text-brand font-semibold tabular-nums">{(customer.loyaltyPoints || 0).toLocaleString('id-ID')}</span> poin
             </p>
           </div>
 
@@ -388,7 +388,7 @@ function AdjustPointsModal({ open, onClose, customer, presetDelta, onConfirm, lo
                 value={delta}
                 onChange={e => setDelta(Number(e.target.value) || 0)}
                 placeholder="±poin"
-                className="flex-1 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm text-center outline-none focus:border-gold/60 tabular-nums"
+                className="flex-1 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm text-center outline-none focus:border-brand/60 tabular-nums"
               />
             </div>
             <div className="flex gap-1.5 mt-2 flex-wrap">
@@ -409,7 +409,7 @@ function AdjustPointsModal({ open, onClose, customer, presetDelta, onConfirm, lo
             </div>
             {delta !== 0 && (
               <p className="text-[11px] text-muted mt-1.5">
-                Saldo setelah: <span className="text-gold font-semibold tabular-nums">{Math.max(0, (customer.loyaltyPoints || 0) + delta).toLocaleString('id-ID')}</span> poin
+                Saldo setelah: <span className="text-brand font-semibold tabular-nums">{Math.max(0, (customer.loyaltyPoints || 0) + delta).toLocaleString('id-ID')}</span> poin
                 {customer.loyaltyPoints + delta < 0 && (
                   <span className="text-amber-400 ml-1.5">(akan ditahan di 0)</span>
                 )}
@@ -423,7 +423,7 @@ function AdjustPointsModal({ open, onClose, customer, presetDelta, onConfirm, lo
               value={reasonPreset}
               onChange={e => { setReasonPreset(e.target.value); setReasonCustom('') }}
               disabled={delta === 0}
-              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60 disabled:opacity-50"
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/60 disabled:opacity-50"
             >
               <option value="">— Pilih alasan {isAdd ? 'penambahan' : 'pengurangan'} —</option>
               {presets.map(r => <option key={r} value={r}>{r}</option>)}
@@ -435,7 +435,7 @@ function AdjustPointsModal({ open, onClose, customer, presetDelta, onConfirm, lo
               placeholder="Atau tulis alasan sendiri…"
               maxLength={200}
               disabled={delta === 0}
-              className="w-full mt-2 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60 placeholder-muted disabled:opacity-50"
+              className="w-full mt-2 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/60 placeholder-muted disabled:opacity-50"
             />
             <p className="text-[10px] text-muted mt-1">Alasan tercatat di riwayat poin & audit log.</p>
           </div>
@@ -506,12 +506,12 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
               </div>
               <div className="mt-1.5 grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1 text-xs text-muted">
                 {customer.phone && (
-                  <a href={`tel:${customer.phone}`} className="inline-flex items-center gap-1.5 hover:text-gold truncate">
+                  <a href={`tel:${customer.phone}`} className="inline-flex items-center gap-1.5 hover:text-brand truncate">
                     <Phone className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">{customer.phone}</span>
                   </a>
                 )}
                 {customer.email && (
-                  <a href={`mailto:${customer.email}`} className="inline-flex items-center gap-1.5 hover:text-gold truncate">
+                  <a href={`mailto:${customer.email}`} className="inline-flex items-center gap-1.5 hover:text-brand truncate">
                     <Mail className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">{customer.email}</span>
                   </a>
                 )}
@@ -541,7 +541,7 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <Card className="p-3 min-w-0 overflow-hidden">
               <p className="text-[10px] text-muted uppercase tracking-wide truncate">Total Belanja</p>
-              <p className="text-base sm:text-lg font-bold text-gold tabular-nums truncate">
+              <p className="text-base sm:text-lg font-bold text-brand tabular-nums truncate">
                 <span className="sm:hidden">{formatRupiahShort(customer.lifetimeValue || 0)}</span>
                 <span className="hidden sm:inline">{formatRupiah(customer.lifetimeValue || 0)}</span>
               </p>
@@ -568,13 +568,13 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
           </div>
 
           {/* Loyalty: saldo + adjust + alur + riwayat */}
-          <Card className="p-3 sm:p-4 bg-gold/5 border-gold/20">
+          <Card className="p-3 sm:p-4 bg-brand/5 border-brand/20">
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div className="min-w-0">
                 <p className="text-[11px] text-muted uppercase tracking-wide font-medium inline-flex items-center gap-1">
-                  <Star className="w-3 h-3 fill-gold text-gold" /> Poin Loyalty
+                  <Star className="w-3 h-3 fill-premium text-brand" /> Poin Loyalty
                 </p>
-                <p className="text-3xl font-display font-bold text-gold tabular-nums leading-none mt-1">
+                <p className="text-3xl font-display font-bold text-brand tabular-nums leading-none mt-1">
                   {(customer.loyaltyPoints || 0).toLocaleString('id-ID')}
                 </p>
                 <p className="text-[11px] text-muted mt-1">
@@ -587,7 +587,7 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
                 <button
                   type="button"
                   onClick={() => openAdjust(0)}
-                  className="px-3 py-1.5 rounded-lg bg-gold text-dark text-xs font-semibold hover:bg-gold-light inline-flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-lg bg-brand text-dark text-xs font-semibold hover:bg-brand-light inline-flex items-center gap-1.5"
                 >
                   <Edit2 className="w-3 h-3" />
                   Sesuaikan Poin
@@ -612,14 +612,14 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
             </div>
 
             {/* Earning rules — alur poin yang dijelaskan */}
-            <div className="mt-3 pt-3 border-t border-gold/20">
+            <div className="mt-3 pt-3 border-t border-brand/20">
               <p className="text-[11px] text-muted uppercase tracking-wide font-medium mb-1.5 inline-flex items-center gap-1">
-                <Award className="w-3 h-3 text-gold" /> Cara Mendapatkan Poin
+                <Award className="w-3 h-3 text-brand" /> Cara Mendapatkan Poin
               </p>
               <ul className="space-y-1 text-[11px] text-off-white">
                 <li className="flex items-center justify-between gap-2">
                   <span>Otomatis dari transaksi POS</span>
-                  <span className="text-gold tabular-nums">+1 poin / Rp10.000 (setelah diskon)</span>
+                  <span className="text-brand tabular-nums">+1 poin / Rp10.000 (setelah diskon)</span>
                 </li>
                 <li className="flex items-center justify-between gap-2">
                   <span>Penyesuaian manual oleh admin</span>
@@ -716,7 +716,7 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
                   const ptsEarned = Math.floor((tx.total || 0) / 10_000)
                   return (
                     <div key={tx.id} className="flex items-center gap-2 p-2 rounded-lg bg-dark-card/40 border border-dark-border/60 min-w-0">
-                      <div className="shrink-0 w-8 h-8 rounded-lg bg-gold/10 border border-gold/30 flex items-center justify-center text-gold">
+                      <div className="shrink-0 w-8 h-8 rounded-lg bg-brand/10 border border-brand/30 flex items-center justify-center text-brand">
                         <ShoppingBag className="w-3.5 h-3.5" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -729,14 +729,14 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
                           {ptsEarned > 0 && (
                             <>
                               <span className="opacity-50">·</span>
-                              <span className="inline-flex items-center gap-0.5 text-gold whitespace-nowrap">
-                                <Star className="w-2.5 h-2.5 fill-gold" /> +{ptsEarned}
+                              <span className="inline-flex items-center gap-0.5 text-brand whitespace-nowrap">
+                                <Star className="w-2.5 h-2.5 fill-premium" /> +{ptsEarned}
                               </span>
                             </>
                           )}
                         </p>
                       </div>
-                      <p className="shrink-0 text-sm font-bold text-gold tabular-nums whitespace-nowrap">
+                      <p className="shrink-0 text-sm font-bold text-brand tabular-nums whitespace-nowrap">
                         <span className="sm:hidden">{formatRupiahShort(tx.total)}</span>
                         <span className="hidden sm:inline">{formatRupiah(tx.total)}</span>
                       </p>
@@ -883,7 +883,7 @@ function CustomerFormModal({ open, onClose, editing, onSave, saving }) {
               <select
                 value={form.gender}
                 onChange={e => setForm(f => ({ ...f, gender: e.target.value }))}
-                className="w-full appearance-none bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60 cursor-pointer"
+                className="w-full appearance-none bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60 cursor-pointer"
               >
                 <option value="">Tidak diisi</option>
                 <option value="L">Laki-laki</option>
@@ -1148,7 +1148,7 @@ export default function TACustomersPage() {
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white inline-flex items-center gap-2">
-            <Users className="w-5 h-5 text-gold" /> Pelanggan
+            <Users className="w-5 h-5 text-brand" /> Pelanggan
           </h1>
           <p className="text-muted text-xs sm:text-sm mt-1">
             {totalItems} pelanggan
@@ -1165,7 +1165,7 @@ export default function TACustomersPage() {
               onClick={exportCSV}
               disabled={exporting || totalItems === 0}
               title={totalItems > 0 ? `Ekspor ${totalItems} pelanggan terfilter` : 'Tidak ada data'}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-dark-card/60 border border-dark-border text-muted text-xs font-medium hover:text-off-white hover:border-gold/40 disabled:opacity-50 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-dark-card/60 border border-dark-border text-muted text-xs font-medium hover:text-off-white hover:border-brand/40 disabled:opacity-50 transition-colors"
             >
               {exporting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               <span className="hidden sm:inline">Ekspor CSV</span>
@@ -1239,7 +1239,7 @@ export default function TACustomersPage() {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Cari nama, telepon, email…"
-                className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-10 pr-9 py-2.5 text-sm outline-none focus:border-gold/60 focus:ring-2 focus:ring-gold/15"
+                className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-10 pr-9 py-2.5 text-sm outline-none focus:border-brand/60 focus:ring-2 focus:ring-brand/15"
               />
               {search && (
                 <button
@@ -1255,14 +1255,14 @@ export default function TACustomersPage() {
             <select
               value={sort}
               onChange={e => setSort(e.target.value)}
-              className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/60 cursor-pointer appearance-none"
+              className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60 cursor-pointer appearance-none"
             >
               {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
             <select
               value={gender}
               onChange={e => setGender(e.target.value)}
-              className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/60 cursor-pointer appearance-none"
+              className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60 cursor-pointer appearance-none"
             >
               <option value="">Semua Gender</option>
               <option value="L">Laki-laki</option>
@@ -1272,7 +1272,7 @@ export default function TACustomersPage() {
               <select
                 value={provinsi}
                 onChange={e => setProvinsi(e.target.value)}
-                className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/60 cursor-pointer appearance-none max-w-[160px]"
+                className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60 cursor-pointer appearance-none max-w-[160px]"
               >
                 <option value="">Semua Provinsi</option>
                 {allProvinces.map(p => <option key={p} value={p}>{p}</option>)}
@@ -1300,7 +1300,7 @@ export default function TACustomersPage() {
                   onClick={() => setSegment(s.id)}
                   className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors inline-flex items-center gap-1 ${
                     active
-                      ? 'bg-gold text-dark'
+                      ? 'bg-brand text-dark'
                       : 'bg-dark-card/60 border border-dark-border text-muted hover:text-off-white'
                   }`}
                 >
@@ -1365,9 +1365,9 @@ export default function TACustomersPage() {
 
       {/* ── Bulk action bar ────────────────────────────────────────────────── */}
       {canManage && selected.size > 0 && (
-        <div className="flex items-center justify-between gap-3 px-3 sm:px-4 py-2.5 rounded-xl bg-dark-card border-2 border-gold shadow-gold">
+        <div className="flex items-center justify-between gap-3 px-3 sm:px-4 py-2.5 rounded-xl bg-dark-card border-2 border-brand shadow-brand">
           <div className="text-sm text-off-white inline-flex items-center gap-2">
-            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gold text-dark text-xs font-bold tabular-nums">
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-brand text-dark text-xs font-bold tabular-nums">
               {selected.size}
             </span>
             <span className="font-medium">pelanggan dipilih</span>
@@ -1414,8 +1414,8 @@ export default function TACustomersPage() {
         </Card>
       ) : items.length === 0 ? (
         <Card className="p-10 text-center">
-          <div className="w-14 h-14 mx-auto rounded-2xl bg-gold/10 border border-gold/30 flex items-center justify-center mb-3">
-            <Users className="w-7 h-7 text-gold" />
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-brand/10 border border-brand/30 flex items-center justify-center mb-3">
+            <Users className="w-7 h-7 text-brand" />
           </div>
           <h3 className="font-display text-lg font-semibold text-off-white">
             {activeFilterCount > 0 ? 'Tidak ada pelanggan cocok dengan filter' : 'Belum ada pelanggan'}
@@ -1443,7 +1443,7 @@ export default function TACustomersPage() {
                     type="checkbox"
                     checked={allOnPageSelected}
                     onChange={() => allOnPageSelected ? clearSelection() : selectAllOnPage()}
-                    className="w-4 h-4 rounded border-dark-border bg-dark-surface accent-gold focus:ring-gold/40 cursor-pointer"
+                    className="w-4 h-4 rounded border-dark-border bg-dark-surface accent-brand focus:ring-brand/40 cursor-pointer"
                     aria-label="Pilih semua di halaman"
                   />
                   <span>Pilih semua di halaman ({items.length})</span>
@@ -1472,7 +1472,7 @@ export default function TACustomersPage() {
                     type="checkbox"
                     checked={allOnPageSelected}
                     onChange={() => allOnPageSelected ? clearSelection() : selectAllOnPage()}
-                    className="w-4 h-4 rounded border-dark-border bg-dark-surface accent-gold focus:ring-gold/40 shrink-0 cursor-pointer"
+                    className="w-4 h-4 rounded border-dark-border bg-dark-surface accent-brand focus:ring-brand/40 shrink-0 cursor-pointer"
                     aria-label="Pilih semua di halaman"
                   />
                 )}

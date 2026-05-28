@@ -38,7 +38,7 @@ const DEFAULT_PRESETS = [
 const PRESET_COLORS = [
   'bg-blue-500/20 text-blue-300 border-blue-500/30',
   'bg-orange-500/20 text-orange-300 border-orange-500/30',
-  'bg-gold/20 text-gold border-gold/30',
+  'bg-brand/20 text-brand border-brand/30',
   'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
   'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
   'bg-sky-500/20 text-sky-300 border-sky-500/30',
@@ -639,12 +639,12 @@ function TASchedulePageInner() {
           ${bulkMode ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'}
           ${isDragging ? 'opacity-40' : ''}
           ${hideByFilter ? 'opacity-30' : ''}
-          ${isSelected ? 'ring-2 ring-gold ring-offset-1 ring-offset-dark-surface' : 'hover:opacity-80'}
+          ${isSelected ? 'ring-2 ring-brand ring-offset-1 ring-offset-dark-surface' : 'hover:opacity-80'}
           transition-all`}
       >
         {bulkMode && (
           <span className="absolute -top-1 -left-1 w-4 h-4 rounded-full bg-dark-surface border border-dark-border flex items-center justify-center">
-            {isSelected ? <CheckSquare size={12} className="text-gold" /> : <Square size={12} className="text-muted" />}
+            {isSelected ? <CheckSquare size={12} className="text-brand" /> : <Square size={12} className="text-muted" />}
           </span>
         )}
         <span className="truncate">
@@ -663,13 +663,13 @@ function TASchedulePageInner() {
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div className="min-w-0">
           <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white truncate">Jadwal Kerja Mingguan</h1>
-          <p className="text-muted text-xs sm:text-sm mt-1">Rencana shift kasir &amp; barber per tanggal. Pola jam dasar diatur di <Link to="/admin/attendance?tab=jadwal" className="text-gold hover:underline">Pola Mingguan</Link>.</p>
+          <p className="text-muted text-xs sm:text-sm mt-1">Rencana shift kasir &amp; barber per tanggal. Pola jam dasar diatur di <Link to="/admin/attendance?tab=jadwal" className="text-brand hover:underline">Pola Mingguan</Link>.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
             onClick={() => setShowPresetEditor(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs sm:text-sm text-muted hover:text-gold hover:border-gold/40 transition-all"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs sm:text-sm text-muted hover:text-brand hover:border-brand/40 transition-all"
             title="Atur preset jam shift"
           >
             <Sliders className="w-4 h-4" />
@@ -677,7 +677,7 @@ function TASchedulePageInner() {
           </button>
           <Link
             to="/admin/attendance"
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs sm:text-sm text-muted hover:text-gold hover:border-gold/40 transition-all"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs sm:text-sm text-muted hover:text-brand hover:border-brand/40 transition-all"
             title="Halaman Absensi & Jadwal Mingguan"
           >
             <Fingerprint className="w-4 h-4" />
@@ -688,7 +688,7 @@ function TASchedulePageInner() {
             <select
               value={branchFilter}
               onChange={e => setBranchFilter(e.target.value)}
-              className="bg-dark-card border border-dark-border text-off-white rounded-xl px-3 py-2 text-xs sm:text-sm outline-none focus:border-gold/60 cursor-pointer max-w-[160px]"
+              className="bg-dark-card border border-dark-border text-off-white rounded-xl px-3 py-2 text-xs sm:text-sm outline-none focus:border-brand/60 cursor-pointer max-w-[160px]"
               aria-label={t('tenantAdmin.schedule.branchFilterAria')}
             >
               <option value="all">{t('tenantAdmin.schedule.branchAll')}</option>
@@ -704,7 +704,7 @@ function TASchedulePageInner() {
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setCurrentWeek(w => subWeeks(w, 1))}
-            className="p-2 rounded-xl border border-dark-border text-muted hover:text-off-white hover:border-gold/30 transition-all"
+            className="p-2 rounded-xl border border-dark-border text-muted hover:text-off-white hover:border-brand/30 transition-all"
             aria-label={t('tenantAdmin.schedule.prevWeekAria')}
           >
             <ChevronLeft size={18} />
@@ -714,7 +714,7 @@ function TASchedulePageInner() {
           </span>
           <button
             onClick={() => setCurrentWeek(w => addWeeks(w, 1))}
-            className="p-2 rounded-xl border border-dark-border text-muted hover:text-off-white hover:border-gold/30 transition-all"
+            className="p-2 rounded-xl border border-dark-border text-muted hover:text-off-white hover:border-brand/30 transition-all"
             aria-label={t('tenantAdmin.schedule.nextWeekAria')}
           >
             <ChevronRight size={18} />
@@ -731,7 +731,7 @@ function TASchedulePageInner() {
               onClick={() => setViewMode('calendar')}
               aria-pressed={viewMode === 'calendar'}
               className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                viewMode === 'calendar' ? 'bg-gold text-dark' : 'text-muted hover:text-off-white'
+                viewMode === 'calendar' ? 'bg-brand text-dark' : 'text-muted hover:text-off-white'
               }`}
             >
               <LayoutGrid size={13} />
@@ -741,7 +741,7 @@ function TASchedulePageInner() {
               onClick={() => setViewMode('list')}
               aria-pressed={viewMode === 'list'}
               className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                viewMode === 'list' ? 'bg-gold text-dark' : 'text-muted hover:text-off-white'
+                viewMode === 'list' ? 'bg-brand text-dark' : 'text-muted hover:text-off-white'
               }`}
             >
               <ListIcon size={13} />
@@ -794,7 +794,7 @@ function TASchedulePageInner() {
 
       {/* Search + KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <label className="col-span-1 sm:col-span-1 flex items-center gap-2 bg-dark-surface border border-dark-border rounded-xl px-3 py-2 focus-within:border-gold/60 transition-colors min-w-0">
+        <label className="col-span-1 sm:col-span-1 flex items-center gap-2 bg-dark-surface border border-dark-border rounded-xl px-3 py-2 focus-within:border-brand/60 transition-colors min-w-0">
           <Search aria-hidden="true" className="w-4 h-4 text-muted flex-shrink-0" />
           <input
             type="text"
@@ -831,7 +831,7 @@ function TASchedulePageInner() {
                 onClick={() => setRoleFilter(opt.id)}
                 className={`px-2 py-1 text-[11px] font-medium transition-colors ${
                   roleFilter === opt.id
-                    ? 'bg-gold text-dark'
+                    ? 'bg-brand text-dark'
                     : 'text-muted hover:text-off-white hover:bg-dark-card'
                 }`}
               >
@@ -842,7 +842,7 @@ function TASchedulePageInner() {
         </label>
         <div className="grid grid-cols-2 gap-3 col-span-1 sm:col-span-2">
           <Card className="p-3 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gold/10 border border-gold/20 flex items-center justify-center text-gold">
+            <div className="w-9 h-9 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
               <CalendarDays size={16} />
             </div>
             <div className="min-w-0">
@@ -864,9 +864,9 @@ function TASchedulePageInner() {
 
       {/* Bulk actions bar */}
       {bulkMode && (
-        <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-2xl bg-gold/10 border border-gold/30">
+        <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-2xl bg-brand/10 border border-brand/30">
           <div className="flex items-center gap-2 text-sm text-off-white">
-            <Users size={14} className="text-gold" />
+            <Users size={14} className="text-brand" />
             <span className="font-medium">{t('tenantAdmin.schedule.bulkSelectedCount', { count: selected.size })}</span>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -917,7 +917,7 @@ function TASchedulePageInner() {
               </span>
               <span>
                 Chip bergaris putus-putus = <span className="text-off-white">pola kerja mingguan</span> staf (diatur di
-                <Link to="/admin/attendance" className="ml-1 text-gold hover:underline">Pola Mingguan</Link>).
+                <Link to="/admin/attendance" className="ml-1 text-brand hover:underline">Pola Mingguan</Link>).
                 Klik untuk tambahkan sebagai shift khusus tanggal itu.
               </span>
             </div>
@@ -937,9 +937,9 @@ function TASchedulePageInner() {
                       return (
                         <div key={i} className={`p-2 text-center text-xs font-medium border-l border-dark-border relative ${
                           cs.allClosed ? 'bg-red-500/10' : cs.partial ? 'bg-amber-500/5' : ''
-                        } ${isToday ? 'text-gold' : 'text-muted'}`}>
+                        } ${isToday ? 'text-brand' : 'text-muted'}`}>
                           <div>{DAY_NAMES[i]}</div>
-                          <div className={`text-base font-bold mt-0.5 ${isToday ? 'w-7 h-7 bg-gold text-dark rounded-full flex items-center justify-center mx-auto' : 'text-off-white'}`}>
+                          <div className={`text-base font-bold mt-0.5 ${isToday ? 'w-7 h-7 bg-brand text-dark rounded-full flex items-center justify-center mx-auto' : 'text-off-white'}`}>
                             {format(day, 'd')}
                           </div>
                           {cs.allClosed && (
@@ -998,7 +998,7 @@ function TASchedulePageInner() {
                               dayClosure.allClosed
                                 ? 'bg-red-500/[0.04] cursor-not-allowed'
                                 : bulkMode ? '' : 'cursor-pointer'
-                            } ${isDropHover ? 'bg-gold/15 ring-2 ring-gold/40 ring-inset' : (dayClosure.allClosed ? '' : 'hover:bg-dark-card/30')}`}
+                            } ${isDropHover ? 'bg-brand/15 ring-2 ring-brand/40 ring-inset' : (dayClosure.allClosed ? '' : 'hover:bg-dark-card/30')}`}
                           >
                             {cellScheds.map(sch => <ChipSchedule key={sch.id} sch={sch} dense />)}
                             {cellGhosts.map((g) => (
@@ -1007,7 +1007,7 @@ function TASchedulePageInner() {
                                 type="button"
                                 onClick={(e) => handleGhostClick(e, day, g)}
                                 title={`Pola mingguan ${g.name} (${g.role}): ${g.startTime}–${g.endTime}. Klik untuk tambahkan sebagai shift khusus.`}
-                                className="block w-full text-xs px-1.5 py-1 mb-0.5 rounded border border-dashed border-dark-border/70 bg-dark-card/20 text-muted italic opacity-70 hover:opacity-100 hover:border-gold/40 hover:text-gold transition-all truncate text-left"
+                                className="block w-full text-xs px-1.5 py-1 mb-0.5 rounded border border-dashed border-dark-border/70 bg-dark-card/20 text-muted italic opacity-70 hover:opacity-100 hover:border-brand/40 hover:text-brand transition-all truncate text-left"
                               >
                                 <span className="truncate">
                                   <span className="inline-block w-3 text-center text-[9px] font-bold mr-1 opacity-70 not-italic">
@@ -1048,20 +1048,20 @@ function TASchedulePageInner() {
                       onClick={() => setActiveDayIdx(i)}
                       className={`snap-start flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2 rounded-xl border transition-all min-w-[64px] ${
                         isActive
-                          ? cs.allClosed ? 'bg-red-500/80 text-white border-red-500' : 'bg-gold text-dark border-gold'
+                          ? cs.allClosed ? 'bg-red-500/80 text-white border-red-500' : 'bg-brand text-dark border-brand'
                           : cs.allClosed
                             ? 'bg-red-500/10 border-red-500/30 text-red-300'
-                            : `bg-dark-card border-dark-border ${isToday ? 'text-gold' : 'text-muted'}`
+                            : `bg-dark-card border-dark-border ${isToday ? 'text-brand' : 'text-muted'}`
                       }`}
                     >
                       <span className="text-[10px] uppercase tracking-wide font-medium">{DAY_NAMES[i]}</span>
-                      <span className={`text-lg font-bold tabular-nums ${isActive ? '' : isToday ? 'text-gold' : 'text-off-white'} ${cs.allClosed && !isActive ? 'text-red-300' : ''}`}>{format(day, 'd')}</span>
+                      <span className={`text-lg font-bold tabular-nums ${isActive ? '' : isToday ? 'text-brand' : 'text-off-white'} ${cs.allClosed && !isActive ? 'text-red-300' : ''}`}>{format(day, 'd')}</span>
                       {cs.allClosed ? (
                         <span className={`text-[10px] inline-flex items-center gap-0.5 ${isActive ? 'text-white/90' : 'text-red-300'}`}>
                           <Lock className="w-2.5 h-2.5" /> Tutup
                         </span>
                       ) : count > 0 ? (
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isActive ? 'bg-dark/20 text-dark' : 'bg-gold/15 text-gold'}`}>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isActive ? 'bg-dark/20 text-dark' : 'bg-brand/15 text-brand'}`}>
                           {count}
                         </span>
                       ) : null}
@@ -1122,7 +1122,7 @@ function TASchedulePageInner() {
                     ) : daySch.length === 0 && !dayCs.allClosed ? (
                       <button
                         onClick={() => handleCellClick(day, TIME_SLOTS[0])}
-                        className="w-full py-8 rounded-xl border border-dashed border-dark-border text-center hover:border-gold/40 transition-colors"
+                        className="w-full py-8 rounded-xl border border-dashed border-dark-border text-center hover:border-brand/40 transition-colors"
                       >
                         <CalendarDays size={24} className="mx-auto mb-2 text-muted" />
                         <p className="text-sm font-medium text-off-white">{t('tenantAdmin.schedule.noScheduleOnDay')}</p>
@@ -1146,13 +1146,13 @@ function TASchedulePageInner() {
                             <div
                               key={sch.id}
                               onClick={(e) => handleScheduleClick(e, sch)}
-                              className={`flex items-center gap-3 p-3 rounded-xl border bg-dark-card cursor-pointer hover:border-gold/30 transition-all ${
-                                isSelected ? 'border-gold ring-1 ring-gold/30' : 'border-dark-border'
+                              className={`flex items-center gap-3 p-3 rounded-xl border bg-dark-card cursor-pointer hover:border-brand/30 transition-all ${
+                                isSelected ? 'border-brand ring-1 ring-brand/30' : 'border-dark-border'
                               }`}
                             >
                               {bulkMode && (
                                 <div className="flex-shrink-0">
-                                  {isSelected ? <CheckSquare size={18} className="text-gold" /> : <Square size={18} className="text-muted" />}
+                                  {isSelected ? <CheckSquare size={18} className="text-brand" /> : <Square size={18} className="text-muted" />}
                                 </div>
                               )}
                               <div className={`flex-shrink-0 w-10 h-10 rounded-lg border flex items-center justify-center ${color}`}>
@@ -1161,7 +1161,7 @@ function TASchedulePageInner() {
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <span className="font-semibold text-off-white text-sm truncate">{staffMember?.name || '—'}</span>
-                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-gold/10 text-gold border border-gold/20 font-medium">
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand/10 text-brand border border-brand/20 font-medium">
                                     {sch.shift}
                                   </span>
                                 </div>
@@ -1201,7 +1201,7 @@ function TASchedulePageInner() {
                   <Button variant="secondary" size="sm" icon={Copy} onClick={() => setConfirmCopy(true)} loading={copyWeekMut.isPending}>
                     {t('tenantAdmin.schedule.copyLastWeek')}
                   </Button>
-                  <button type="button" onClick={showWizard} className="text-xs text-gold hover:underline">
+                  <button type="button" onClick={showWizard} className="text-xs text-brand hover:underline">
                     Buka panduan
                   </button>
                 </div>
@@ -1230,7 +1230,7 @@ function TASchedulePageInner() {
                     onClick={() => setSortHours(v => !v)}
                     aria-pressed={sortHours}
                     className={`inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-lg border transition-colors ${
-                      sortHours ? 'bg-gold/15 border-gold/40 text-gold' : 'border-dark-border text-muted hover:text-off-white'
+                      sortHours ? 'bg-brand/15 border-brand/40 text-brand' : 'border-dark-border text-muted hover:text-off-white'
                     }`}
                   >
                     <ArrowDownAZ size={12} />
@@ -1253,7 +1253,7 @@ function TASchedulePageInner() {
                     {branchHours.map(b => (
                       <div key={b.id} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dark-border bg-dark-card text-xs sm:text-sm">
                         <span className="text-off-white font-medium truncate max-w-[140px]">{b.name}</span>
-                        <span className="text-gold font-bold tabular-nums">{t('tenantAdmin.schedule.hoursValue', { hours: b.weekHours })}</span>
+                        <span className="text-brand font-bold tabular-nums">{t('tenantAdmin.schedule.hoursValue', { hours: b.weekHours })}</span>
                       </div>
                     ))}
                   </div>
@@ -1281,9 +1281,9 @@ function TASchedulePageInner() {
             <div className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-xs ${
               wsWarning.tone === 'warn'
                 ? 'border-amber-500/30 bg-amber-500/10 text-amber-200'
-                : 'border-gold/20 bg-gold/5 text-muted'
+                : 'border-brand/20 bg-brand/5 text-muted'
             }`}>
-              <AlertTriangle className={`w-4 h-4 mt-0.5 shrink-0 ${wsWarning.tone === 'warn' ? 'text-amber-400' : 'text-gold/80'}`} />
+              <AlertTriangle className={`w-4 h-4 mt-0.5 shrink-0 ${wsWarning.tone === 'warn' ? 'text-amber-400' : 'text-brand/80'}`} />
               <span>{wsWarning.text}</span>
             </div>
           )}
@@ -1292,7 +1292,7 @@ function TASchedulePageInner() {
             <select
               value={form.staffId}
               onChange={e => setForm(f => ({ ...f, staffId: e.target.value }))}
-              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60"
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60"
             >
               {allUsers.map(s => <option key={s.id} value={s.id}>{s.name} ({s.role})</option>)}
             </select>
@@ -1303,7 +1303,7 @@ function TASchedulePageInner() {
               <select
                 value={form.branchId}
                 onChange={e => setForm(f => ({ ...f, branchId: e.target.value }))}
-                className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60"
+                className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60"
               >
                 <option value="">— {t('tenantAdmin.schedule.branchNone')} —</option>
                 {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -1316,7 +1316,7 @@ function TASchedulePageInner() {
               <button
                 type="button"
                 onClick={() => setShowPresetEditor(true)}
-                className="inline-flex items-center gap-1 text-[11px] text-gold hover:underline"
+                className="inline-flex items-center gap-1 text-[11px] text-brand hover:underline"
                 title="Atur preset jam shift untuk tenant ini"
               >
                 <Sliders className="w-3 h-3" /> Atur Preset
@@ -1329,7 +1329,7 @@ function TASchedulePageInner() {
                   type="button"
                   onClick={() => pickPreset(s.value)}
                   className={`w-full text-left px-3 py-2.5 rounded-xl border text-sm transition-all ${
-                    form.shift === s.value ? s.color : 'border-dark-border text-muted hover:border-gold/30'
+                    form.shift === s.value ? s.color : 'border-dark-border text-muted hover:border-brand/30'
                   }`}
                 >
                   <span className="font-medium">{s.value}</span>
@@ -1345,7 +1345,7 @@ function TASchedulePageInner() {
                 type="time"
                 value={form.startTime}
                 onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))}
-                className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60 tabular-nums"
+                className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60 tabular-nums"
               />
             </div>
             <div>
@@ -1354,7 +1354,7 @@ function TASchedulePageInner() {
                 type="time"
                 value={form.endTime}
                 onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))}
-                className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60 tabular-nums"
+                className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60 tabular-nums"
               />
             </div>
           </div>
@@ -1484,7 +1484,7 @@ function TASchedulePageInner() {
                   onClick={() => setRepeatWeeks(n)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
                     repeatWeeks === n
-                      ? 'bg-gold text-dark border-gold'
+                      ? 'bg-brand text-dark border-brand'
                       : 'bg-dark-card border-dark-border text-muted hover:text-off-white'
                   }`}
                 >
@@ -1575,7 +1575,7 @@ function ClosureModal({ isOpen, date, mode, branches, branchFilter, closureLooku
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm font-medium text-muted">Pilih cabang</label>
-              <button type="button" onClick={toggleAll} className="text-[11px] text-gold hover:underline">
+              <button type="button" onClick={toggleAll} className="text-[11px] text-brand hover:underline">
                 {selected.size === branches.length ? 'Kosongkan' : 'Pilih semua'}
               </button>
             </div>
@@ -1588,10 +1588,10 @@ function ClosureModal({ isOpen, date, mode, branches, branchFilter, closureLooku
                     className={`flex items-center gap-3 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
                       checked
                         ? isClose ? 'border-red-500/40 bg-red-500/10' : 'border-emerald-500/40 bg-emerald-500/10'
-                        : 'border-dark-border hover:border-gold/30'
+                        : 'border-dark-border hover:border-brand/30'
                     }`}
                   >
-                    <input type="checkbox" checked={checked} onChange={() => toggleBranch(b.id)} className="accent-gold w-4 h-4" />
+                    <input type="checkbox" checked={checked} onChange={() => toggleBranch(b.id)} className="accent-brand w-4 h-4" />
                     <span className="text-sm text-off-white flex-1 truncate">{b.name}</span>
                     {mode === 'reopen' && closureLookup[b.id]?.[`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`] && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-300">Tutup</span>
@@ -1611,7 +1611,7 @@ function ClosureModal({ isOpen, date, mode, branches, branchFilter, closureLooku
               value={note}
               onChange={(e) => setNote(e.target.value.slice(0, 200))}
               placeholder="mis. Libur Lebaran, Pemeliharaan AC"
-              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60"
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60"
               maxLength={200}
             />
             <p className="text-[11px] text-muted mt-1">Tampil di kalender saat staf/admin melihat tanggal ini.</p>
@@ -1675,7 +1675,7 @@ function OnboardingPanel({
   const completedCount = steps.filter((s) => s.done).length
 
   return (
-    <div className="rounded-2xl border border-gold/20 bg-gradient-to-b from-gold/[0.04] to-transparent p-5 sm:p-6">
+    <div className="rounded-2xl border border-brand/20 bg-gradient-to-b from-brand/[0.04] to-transparent p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3 mb-4">
         <div>
           <h3 className="font-display text-lg sm:text-xl font-bold text-off-white">Panduan Cepat: Mulai Jadwal Shift</h3>
@@ -1701,7 +1701,7 @@ function OnboardingPanel({
         </div>
         <div className="h-1.5 rounded-full bg-dark-card overflow-hidden">
           <div
-            className="h-full bg-gold transition-all"
+            className="h-full bg-brand transition-all"
             style={{ width: `${(completedCount / steps.length) * 100}%` }}
           />
         </div>
@@ -1716,7 +1716,7 @@ function OnboardingPanel({
               className={`flex items-start gap-3 rounded-xl border p-3.5 transition-colors ${
                 step.done
                   ? 'border-emerald-500/20 bg-emerald-500/5'
-                  : 'border-dark-border bg-dark-surface/40 hover:border-gold/30'
+                  : 'border-dark-border bg-dark-surface/40 hover:border-brand/30'
               }`}
             >
               <div className="shrink-0 mt-0.5">
@@ -1726,7 +1726,7 @@ function OnboardingPanel({
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <Icon className={`w-3.5 h-3.5 ${step.done ? 'text-emerald-400' : 'text-gold'}`} />
+                  <Icon className={`w-3.5 h-3.5 ${step.done ? 'text-emerald-400' : 'text-brand'}`} />
                   <p className="text-sm font-medium text-off-white">
                     <span className="text-muted mr-1">{i + 1}.</span>{step.title}
                   </p>
@@ -1740,8 +1740,8 @@ function OnboardingPanel({
                       to={step.action.to}
                       className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                         step.action.primary
-                          ? 'bg-gold text-dark hover:bg-gold-light'
-                          : 'border border-dark-border text-muted hover:text-gold hover:border-gold/40'
+                          ? 'bg-brand text-dark hover:bg-brand-light'
+                          : 'border border-dark-border text-muted hover:text-brand hover:border-brand/40'
                       }`}
                     >
                       {step.action.label} <ChevronRight className="w-3.5 h-3.5" />
@@ -1752,8 +1752,8 @@ function OnboardingPanel({
                       onClick={step.action.onClick}
                       className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                         step.action.primary
-                          ? 'bg-gold text-dark hover:bg-gold-light'
-                          : 'border border-dark-border text-muted hover:text-gold hover:border-gold/40'
+                          ? 'bg-brand text-dark hover:bg-brand-light'
+                          : 'border border-dark-border text-muted hover:text-brand hover:border-brand/40'
                       }`}
                     >
                       {step.action.label} <ChevronRight className="w-3.5 h-3.5" />
@@ -1833,18 +1833,18 @@ function PresetEditorModal({ isOpen, onClose, initial, onSave, saving }) {
                 type="text" value={r.value}
                 onChange={(e) => update(i, { value: e.target.value })}
                 placeholder="Label (mis. Pagi)"
-                className="col-span-5 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-gold/60"
+                className="col-span-5 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/60"
                 maxLength={20}
               />
               <input
                 type="time" value={r.startTime}
                 onChange={(e) => update(i, { startTime: e.target.value })}
-                className="col-span-3 bg-dark-surface border border-dark-border text-off-white rounded-lg px-2 py-2 text-sm outline-none focus:border-gold/60 tabular-nums"
+                className="col-span-3 bg-dark-surface border border-dark-border text-off-white rounded-lg px-2 py-2 text-sm outline-none focus:border-brand/60 tabular-nums"
               />
               <input
                 type="time" value={r.endTime}
                 onChange={(e) => update(i, { endTime: e.target.value })}
-                className="col-span-3 bg-dark-surface border border-dark-border text-off-white rounded-lg px-2 py-2 text-sm outline-none focus:border-gold/60 tabular-nums"
+                className="col-span-3 bg-dark-surface border border-dark-border text-off-white rounded-lg px-2 py-2 text-sm outline-none focus:border-brand/60 tabular-nums"
               />
               <button
                 type="button"

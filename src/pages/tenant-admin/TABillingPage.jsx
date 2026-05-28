@@ -29,7 +29,7 @@ import { formatRupiah, formatDate } from '../../utils/format.js'
 const PACKAGE_TIER = { Basic: 1, Pro: 2, Enterprise: 3 }
 const PACKAGE_COLORS = {
   Basic:      { border: 'border-blue-400/30',   badge: 'text-blue-400 bg-blue-400/10 border-blue-400/30' },
-  Pro:        { border: 'border-gold/30',        badge: 'text-gold bg-gold/10 border-gold/30' },
+  Pro:        { border: 'border-brand/30',        badge: 'text-brand bg-brand/10 border-brand/30' },
   Enterprise: { border: 'border-purple-400/30',  badge: 'text-purple-400 bg-purple-400/10 border-purple-400/30' },
 }
 
@@ -353,7 +353,7 @@ export default function TABillingPage() {
                 <button
                   onClick={() => handleResendOrder(order.merchantOrderId)}
                   disabled={resendOrder.isPending}
-                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-dark-border text-xs text-muted hover:text-off-white hover:border-gold/30 transition-colors disabled:opacity-40"
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-dark-border text-xs text-muted hover:text-off-white hover:border-brand/30 transition-colors disabled:opacity-40"
                   title="Kirim ulang link via WhatsApp"
                 >
                   <Send size={11} /> Resend
@@ -388,7 +388,7 @@ export default function TABillingPage() {
               </div>
             </div>
             <div className="text-right">
-              <p className="text-3xl font-bold text-gold">{formatRupiah(sub.price)}</p>
+              <p className="text-3xl font-bold text-brand">{formatRupiah(sub.price)}</p>
               <p className="text-xs text-muted">{t('tenantAdmin.billing.perMonth')}</p>
             </div>
           </div>
@@ -418,7 +418,7 @@ export default function TABillingPage() {
               </Button>
               <a
                 href="#available-packages"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-dark-card border border-dark-border text-xs font-semibold text-off-white hover:border-gold/40 transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-dark-card border border-dark-border text-xs font-semibold text-off-white hover:border-brand/40 transition-colors"
               >
                 <ArrowUpCircle size={13} /> Upgrade paket
               </a>
@@ -428,7 +428,7 @@ export default function TABillingPage() {
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors disabled:opacity-40 ${
                   sub.autoRenew
                     ? 'bg-green-500/10 border-green-500/30 text-green-300 hover:bg-green-500/20'
-                    : 'bg-dark-card border-dark-border text-muted hover:border-gold/30 hover:text-off-white'
+                    : 'bg-dark-card border-dark-border text-muted hover:border-brand/30 hover:text-off-white'
                 }`}
               >
                 <RefreshCw size={11} className={toggleAutoRenew.isPending ? 'animate-spin' : ''} />
@@ -472,10 +472,10 @@ export default function TABillingPage() {
             const isDowngrade = targetTier < currentTier
             const annual = annualPrice(p.price, p.annualDiscountPercent ?? 17)
             return (
-              <Card key={p.name} className={`p-4 border ${pStyle.border} ${isCurrent ? 'ring-1 ring-gold/40' : ''} flex flex-col`}>
+              <Card key={p.name} className={`p-4 border ${pStyle.border} ${isCurrent ? 'ring-1 ring-brand/40' : ''} flex flex-col`}>
                 <div className="flex items-center justify-between mb-2">
                   <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${pStyle.badge}`}>{p.name}</span>
-                  {isCurrent && <CheckCircle size={14} className="text-gold" />}
+                  {isCurrent && <CheckCircle size={14} className="text-brand" />}
                 </div>
                 <p className="text-2xl font-bold text-off-white mb-1">
                   {formatRupiah(p.price)}<span className="text-xs text-muted font-normal">{t('tenantAdmin.billing.perMonthShort')}</span>
@@ -545,7 +545,7 @@ export default function TABillingPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Zap size={15} className="text-gold" />
+              <Zap size={15} className="text-brand" />
               <h3 className="font-semibold text-off-white">{t('tenantAdmin.billing.activeFeatures')}</h3>
               <span className="text-xs text-muted ml-1">{t('tenantAdmin.billing.featureCount', { active: flags.length, total: ALL_FEATURE_FLAGS.length })}</span>
             </div>
@@ -555,7 +555,7 @@ export default function TABillingPage() {
               {ALL_FEATURE_FLAGS.map(f => {
                 const active = flags.includes(f.id)
                 return (
-                  <span key={f.id} className={`px-2.5 py-1 rounded-full border text-xs font-medium ${active ? 'border-gold/30 bg-gold/10 text-gold' : 'border-dark-border text-muted opacity-40 line-through'}`}>
+                  <span key={f.id} className={`px-2.5 py-1 rounded-full border text-xs font-medium ${active ? 'border-brand/30 bg-brand/10 text-brand' : 'border-dark-border text-muted opacity-40 line-through'}`}>
                     {f.label}
                   </span>
                 )
@@ -570,7 +570,7 @@ export default function TABillingPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Receipt size={15} className="text-gold" />
+              <Receipt size={15} className="text-brand" />
               <h3 className="font-semibold text-off-white">{t('tenantAdmin.billing.invoiceHistory')}</h3>
             </div>
           </CardHeader>
@@ -601,7 +601,7 @@ export default function TABillingPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-gold">{formatRupiah(inv.amount)}</span>
+                    <span className="font-semibold text-brand">{formatRupiah(inv.amount)}</span>
                     <Badge variant={inv.status === 'paid' ? 'success' : inv.status === 'overdue' ? 'danger' : 'warning'}>
                       {inv.status === 'paid' ? t('tenantAdmin.billing.paid') : inv.status === 'overdue' ? t('tenantAdmin.billing.overdue') : t('tenantAdmin.billing.pending')}
                     </Badge>
@@ -610,7 +610,7 @@ export default function TABillingPage() {
                         href={`/admin/billing/invoice/${inv.id}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-dark-surface border border-dark-border text-xs text-muted hover:text-off-white hover:border-gold/30 transition-all"
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-dark-surface border border-dark-border text-xs text-muted hover:text-off-white hover:border-brand/30 transition-all"
                         title="Cetak / unduh struk"
                       >
                         <Printer size={11} />
@@ -695,12 +695,12 @@ function CycleToggle({ value, onChange, monthlyPrice, annualDiscountPct = 17 }) 
           key={opt.id}
           onClick={() => onChange(opt.id)}
           className={`text-left p-3 rounded-xl border transition-all ${
-            value === opt.id ? 'border-gold/60 bg-gold/10' : 'border-dark-border bg-dark-card hover:border-gold/30'
+            value === opt.id ? 'border-brand/60 bg-brand/10' : 'border-dark-border bg-dark-card hover:border-brand/30'
           }`}
         >
           <div className="flex items-center justify-between mb-1">
-            <span className={`text-sm font-semibold ${value === opt.id ? 'text-gold' : 'text-off-white'}`}>{opt.label}</span>
-            {value === opt.id && <CheckCircle size={14} className="text-gold" />}
+            <span className={`text-sm font-semibold ${value === opt.id ? 'text-brand' : 'text-off-white'}`}>{opt.label}</span>
+            {value === opt.id && <CheckCircle size={14} className="text-brand" />}
           </div>
           <p className="text-base font-bold text-off-white">{formatRupiah(opt.price)}</p>
           <p className="text-[11px] text-muted">{opt.hint}</p>
@@ -810,14 +810,14 @@ function UpgradeModal({ isOpen, onClose, sub, target, form, setForm, onApplyProm
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Upgrade ke ${target.name}`}>
       <div className="space-y-4">
-        <div className="p-3 bg-gold/10 border border-gold/20 rounded-xl space-y-1 text-sm">
+        <div className="p-3 bg-brand/10 border border-brand/20 rounded-xl space-y-1 text-sm">
           <div className="flex justify-between text-muted">
             <span>Sekarang</span>
             <span className="text-off-white">{sub.package} · {formatRupiah(sub.price)}/bulan</span>
           </div>
           <div className="flex justify-between text-muted">
             <span>Tujuan</span>
-            <span className="text-gold font-semibold">{target.name} · {formatRupiah(target.price)}/bulan</span>
+            <span className="text-brand font-semibold">{target.name} · {formatRupiah(target.price)}/bulan</span>
           </div>
         </div>
 

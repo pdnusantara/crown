@@ -190,7 +190,7 @@ export default function TAReportsPage() {
   const barberColumns = [
     { key: 'barberName',   label: t('tenantAdmin.reports.colBarber'),    render: v => <span className="font-medium text-off-white">{v}</span> },
     { key: 'servicesCount', label: t('common.transactions'), sortable: true, render: v => <span className="text-off-white">{v}</span> },
-    { key: 'revenue',      label: t('common.revenue'), sortable: true, render: v => <span className="text-gold font-medium whitespace-nowrap">{formatRupiah(v)}</span> },
+    { key: 'revenue',      label: t('common.revenue'), sortable: true, render: v => <span className="text-brand font-medium whitespace-nowrap">{formatRupiah(v)}</span> },
     // Komisi riil per barber (revenue × rate barber) — acuan penggajian.
     { key: 'commission',   label: 'Komisi', sortable: true, render: (v, row) => (
       <span className="whitespace-nowrap">
@@ -232,7 +232,7 @@ export default function TAReportsPage() {
             <select
               value={branchId}
               onChange={e => setBranchId(e.target.value)}
-              className="bg-dark-card border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-gold/60 cursor-pointer max-w-[180px]"
+              className="bg-dark-card border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-brand/60 cursor-pointer max-w-[180px]"
               aria-label="Filter cabang"
             >
               <option value="">{t('tenantAdmin.reports.allBranches')}</option>
@@ -245,7 +245,7 @@ export default function TAReportsPage() {
                 key={p.id}
                 onClick={() => setPeriod(p.id)}
                 className={`px-3 sm:px-4 py-2 text-sm font-medium transition-colors ${
-                  period === p.id ? 'bg-gold text-dark' : 'text-off-white hover:bg-dark-surface/60'
+                  period === p.id ? 'bg-brand text-dark' : 'text-off-white hover:bg-dark-surface/60'
                 }`}
               >
                 {periodLabel(p.id)}
@@ -311,8 +311,8 @@ export default function TAReportsPage() {
                     </p>
                   )}
                 </div>
-                <div className="w-9 h-9 rounded-xl bg-gold/10 flex items-center justify-center flex-shrink-0">
-                  <kpi.icon className="w-[18px] h-[18px] text-gold" />
+                <div className="w-9 h-9 rounded-xl bg-brand/10 flex items-center justify-center flex-shrink-0">
+                  <kpi.icon className="w-[18px] h-[18px] text-brand" />
                 </div>
               </div>
             </Card>
@@ -356,16 +356,16 @@ export default function TAReportsPage() {
             <div className="flex items-center justify-between flex-wrap gap-2">
               <h3 className="font-semibold text-off-white">{t('tenantAdmin.reports.revenueForecast')}</h3>
               <div className="flex items-center gap-4 text-xs text-muted">
-                <span className="flex items-center gap-1.5"><span className="w-8 h-0.5 bg-gold inline-block" /> {t('tenantAdmin.reports.actual')}</span>
-                <span className="flex items-center gap-1.5"><span className="w-8 border-t-2 border-dashed border-gold inline-block" /> {t('tenantAdmin.reports.prediction')}</span>
+                <span className="flex items-center gap-1.5"><span className="w-8 h-0.5 bg-brand inline-block" /> {t('tenantAdmin.reports.actual')}</span>
+                <span className="flex items-center gap-1.5"><span className="w-8 border-t-2 border-dashed border-brand inline-block" /> {t('tenantAdmin.reports.prediction')}</span>
               </div>
             </div>
           </CardHeader>
           <CardBody>
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
-              <div className="lg:col-span-1 p-4 bg-gold/10 border border-gold/20 rounded-xl">
+              <div className="lg:col-span-1 p-4 bg-brand/10 border border-brand/20 rounded-xl">
                 <p className="text-xs text-muted mb-1">{t('tenantAdmin.reports.forecast7Days')}</p>
-                <p className="text-xl font-bold text-gold">{formatRupiah(forecastTotal7)}</p>
+                <p className="text-xl font-bold text-brand">{formatRupiah(forecastTotal7)}</p>
                 <p className="text-xs text-muted mt-1">
                   {t('tenantAdmin.reports.trendLabel')}: {slope >= 0 ? '📈' : '📉'} {slope >= 0 ? '+' : ''}{formatRupiah(Math.round(slope))}{t('tenantAdmin.reports.perDay')}
                 </p>
@@ -458,7 +458,7 @@ export default function TAReportsPage() {
                         <div className="grid grid-cols-2 gap-2 mt-2.5">
                           <div className="bg-dark-surface rounded-lg px-2.5 py-1.5">
                             <p className="text-[10px] text-muted">Omzet</p>
-                            <p className="text-sm font-semibold text-gold whitespace-nowrap tabular-nums">{formatRupiahShort(b.revenue || 0)}</p>
+                            <p className="text-sm font-semibold text-brand whitespace-nowrap tabular-nums">{formatRupiahShort(b.revenue || 0)}</p>
                           </div>
                           <div className="bg-dark-surface rounded-lg px-2.5 py-1.5">
                             <p className="text-[10px] text-muted">Komisi · {Math.round((b.commissionRate || 0) * 100)}%</p>

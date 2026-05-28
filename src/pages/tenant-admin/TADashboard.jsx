@@ -133,8 +133,8 @@ function StatCard({ title, value, valueShort, icon: Icon, trend, loading, delay 
                 </div>
               )}
             </div>
-            <div className="w-11 h-11 rounded-xl bg-gold/10 flex items-center justify-center flex-shrink-0">
-              <Icon className="w-6 h-6 text-gold" />
+            <div className="w-11 h-11 rounded-xl bg-brand/10 flex items-center justify-center flex-shrink-0">
+              <Icon className="w-6 h-6 text-brand" />
             </div>
           </div>
         )}
@@ -144,12 +144,12 @@ function StatCard({ title, value, valueShort, icon: Icon, trend, loading, delay 
 }
 
 // ── Quick Action ──────────────────────────────────────────────────────────────
-function QuickAction({ icon: Icon, label, to, color = 'text-gold', bg = 'bg-gold/10' }) {
+function QuickAction({ icon: Icon, label, to, color = 'text-brand', bg = 'bg-brand/10' }) {
   const navigate = useNavigate()
   return (
     <button
       onClick={() => navigate(to)}
-      className="flex flex-col items-center gap-2 p-3 rounded-2xl border border-dark-border hover:border-gold/30 hover:bg-dark-surface/60 transition-all group"
+      className="flex flex-col items-center gap-2 p-3 rounded-2xl border border-dark-border hover:border-brand/30 hover:bg-dark-surface/60 transition-all group"
     >
       <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center group-hover:scale-110 transition-transform`}>
         <Icon size={18} className={color} />
@@ -225,7 +225,7 @@ function LeaderboardRow({ barber, index, maxRevenue, branchName }) {
       className="border-b border-dark-border/50 hover:bg-dark-surface/50 transition-colors"
     >
       <td className="px-3 sm:px-4 py-3 w-10">
-        <span className={`font-bold text-lg ${index === 0 ? 'text-gold' : index === 1 ? 'text-gray-300' : index === 2 ? 'text-amber-700' : 'text-muted'}`}>
+        <span className={`font-bold text-lg ${index === 0 ? 'text-brand' : index === 1 ? 'text-gray-300' : index === 2 ? 'text-amber-700' : 'text-muted'}`}>
           {index < 3 ? medals[index] : index + 1}
         </span>
       </td>
@@ -249,10 +249,10 @@ function LeaderboardRow({ barber, index, maxRevenue, branchName }) {
               initial={{ width: 0 }}
               animate={{ width: `${((barber.revenue || 0) / maxRevenue) * 100}%` }}
               transition={{ delay: index * 0.07 + 0.3, duration: 0.5 }}
-              className="h-1.5 rounded-full bg-gold"
+              className="h-1.5 rounded-full bg-brand"
             />
           </div>
-          <span className="font-semibold text-gold text-sm whitespace-nowrap tabular-nums">
+          <span className="font-semibold text-brand text-sm whitespace-nowrap tabular-nums">
             Rp <AnimNum value={barber.revenue || 0} />
           </span>
         </div>
@@ -267,7 +267,7 @@ function ChartTooltip({ active, payload, label }) {
   return (
     <div className="bg-dark-card border border-dark-border rounded-xl px-3 py-2 text-xs shadow-xl">
       <p className="text-muted mb-1">{label}</p>
-      <p className="font-semibold text-gold">{formatRupiah(payload[0].value)}</p>
+      <p className="font-semibold text-brand">{formatRupiah(payload[0].value)}</p>
       {payload[1] && <p className="text-muted">{payload[1].value} transaksi</p>}
     </div>
   )
@@ -325,7 +325,7 @@ export default function TADashboard() {
   // ── Quick actions config ──────────────────────────────────────────────────
   const quickActions = [
     { icon: Users,      label: 'Pelanggan Baru',   to: '/admin/customers',      bg: 'bg-blue-400/10',   color: 'text-blue-400'   },
-    { icon: BarChart3,  label: 'Laporan',           to: '/admin/reports',        bg: 'bg-gold/10',       color: 'text-gold'       },
+    { icon: BarChart3,  label: 'Laporan',           to: '/admin/reports',        bg: 'bg-brand/10',       color: 'text-brand'       },
     { icon: CalendarDays, label: 'Jadwal',          to: '/admin/schedule',       bg: 'bg-purple-400/10', color: 'text-purple-400' },
     { icon: MapPin,     label: 'Laporan Wilayah',   to: '/admin/wilayah-report', bg: 'bg-green-400/10',  color: 'text-green-400'  },
     { icon: Tag,        label: 'Voucher',           to: '/admin/vouchers',       bg: 'bg-pink-400/10',   color: 'text-pink-400'   },
@@ -344,7 +344,7 @@ export default function TADashboard() {
         <div>
           <p className="text-sm text-muted">{todayLabel()}</p>
           <h1 className="font-display text-2xl font-bold text-off-white mt-0.5">
-            {getGreeting()}, <span className="gold-text">{user?.name?.split(' ')[0] || 'Admin'}</span> 👋
+            {getGreeting()}, <span className="brand-text">{user?.name?.split(' ')[0] || 'Admin'}</span> 👋
           </h1>
           <p className="text-sm text-muted mt-1">{t('tenantAdmin.dashboard.subtitle')}</p>
         </div>
@@ -357,7 +357,7 @@ export default function TADashboard() {
       {/* Quick actions */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
         <div className="flex items-center gap-2 mb-3">
-          <Zap size={14} className="text-gold" />
+          <Zap size={14} className="text-brand" />
           <p className="text-sm font-medium text-off-white">Aksi Cepat</p>
         </div>
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
@@ -415,7 +415,7 @@ export default function TADashboard() {
                 <h3 className="font-semibold text-off-white">Tren Pendapatan (7 Hari)</h3>
                 {chartData.length > 0 && (
                   <span className="text-xs text-muted">
-                    Total: <span className="text-gold font-medium">{formatRupiah(chartData.reduce((s, d) => s + d.revenue, 0))}</span>
+                    Total: <span className="text-brand font-medium">{formatRupiah(chartData.reduce((s, d) => s + d.revenue, 0))}</span>
                   </span>
                 )}
               </div>
@@ -461,7 +461,7 @@ export default function TADashboard() {
                 const pct = ((svc.count || 0) / maxCount) * 100
                 return (
                   <div key={i} className="flex items-center gap-3">
-                    <span className={`text-sm w-5 font-medium ${i === 0 ? 'text-gold' : 'text-muted'}`}>{i + 1}</span>
+                    <span className={`text-sm w-5 font-medium ${i === 0 ? 'text-brand' : 'text-muted'}`}>{i + 1}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-off-white truncate">{svc.name}</p>
                       <div className="mt-1 h-1.5 bg-dark-surface rounded-full overflow-hidden">
@@ -469,7 +469,7 @@ export default function TADashboard() {
                           initial={{ width: 0 }}
                           animate={{ width: `${pct}%` }}
                           transition={{ delay: i * 0.07 + 0.4, duration: 0.5 }}
-                          className="h-full bg-gold rounded-full"
+                          className="h-full bg-brand rounded-full"
                         />
                       </div>
                     </div>
@@ -487,7 +487,7 @@ export default function TADashboard() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Crown className="w-5 h-5 text-gold" />
+              <Crown className="w-5 h-5 text-brand" />
               <h3 className="font-semibold text-off-white">{t('tenantAdmin.dashboard.leaderboardToday')}</h3>
             </div>
           </CardHeader>
@@ -564,10 +564,10 @@ export default function TADashboard() {
             className="w-full text-left group"
             aria-label="Kelola rating barber"
           >
-            <Card className="p-4 sm:p-5 hover:border-gold/40 transition-colors">
+            <Card className="p-4 sm:p-5 hover:border-brand/40 transition-colors">
               <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gold/10 border border-gold/30 flex items-center justify-center text-gold flex-shrink-0">
-                  <Star className="w-5 h-5 fill-gold" />
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-brand/10 border border-brand/30 flex items-center justify-center text-brand flex-shrink-0">
+                  <Star className="w-5 h-5 fill-premium" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-off-white inline-flex items-center gap-2 text-sm sm:text-base">
@@ -593,7 +593,7 @@ export default function TADashboard() {
                     <>
                       <div className="text-right">
                         <p className="text-[10px] uppercase tracking-wide text-muted">Avg</p>
-                        <p className="text-lg font-bold text-gold tabular-nums">
+                        <p className="text-lg font-bold text-brand tabular-nums">
                           {ratingStats.avgRating?.toFixed(1) || '–'}
                         </p>
                       </div>
@@ -615,7 +615,7 @@ export default function TADashboard() {
                       )}
                     </>
                   )}
-                  <ArrowRight className="w-4 h-4 text-muted group-hover:text-gold transition-colors" />
+                  <ArrowRight className="w-4 h-4 text-muted group-hover:text-brand transition-colors" />
                 </div>
               </div>
             </Card>
@@ -650,7 +650,7 @@ function TrialBanner({ tenantId }) {
       className={`flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-gradient-to-r border ${styles}`}
     >
       <div className="flex items-center gap-3 min-w-0">
-        <Sparkles size={16} className="text-gold flex-shrink-0" />
+        <Sparkles size={16} className="text-brand flex-shrink-0" />
         <div className="text-sm">
           <span className="text-off-white font-semibold">
             {isTrial ? 'Trial' : 'Langganan'} berakhir dalam {daysLeft} hari
@@ -662,7 +662,7 @@ function TrialBanner({ tenantId }) {
       </div>
       <button
         onClick={() => navigate('/admin/billing')}
-        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gold text-dark text-sm font-semibold hover:bg-gold/90 transition-colors"
+        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-brand text-dark text-sm font-semibold hover:bg-brand/90 transition-colors"
       >
         {isTrial ? 'Aktifkan Sekarang' : 'Perpanjang'} <ArrowRight size={12} />
       </button>
@@ -730,15 +730,15 @@ function SetupChecklist({ tenantId }) {
     <motion.div
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl bg-gradient-to-br from-gold/10 via-amber-500/5 to-transparent border border-gold/30 overflow-hidden"
+      className="rounded-2xl bg-gradient-to-br from-brand/10 via-amber-500/5 to-transparent border border-brand/30 overflow-hidden"
     >
       <button
         onClick={toggle}
         aria-expanded={!collapsed}
         className="w-full flex items-center gap-3 p-4 sm:p-5 text-left"
       >
-        <div className="w-10 h-10 rounded-xl bg-gold/20 border border-gold/30 flex items-center justify-center flex-shrink-0">
-          <Sparkles className="text-gold" size={18} />
+        <div className="w-10 h-10 rounded-xl bg-brand/20 border border-brand/30 flex items-center justify-center flex-shrink-0">
+          <Sparkles className="text-brand" size={18} />
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="font-display text-base sm:text-lg font-bold text-off-white">
@@ -748,7 +748,7 @@ function SetupChecklist({ tenantId }) {
             {doneCount} dari {steps.length} langkah selesai — lengkapi agar toko siap dipakai.
           </p>
         </div>
-        <span className="text-sm font-bold text-gold flex-shrink-0">{pct}%</span>
+        <span className="text-sm font-bold text-brand flex-shrink-0">{pct}%</span>
         {collapsed
           ? <ChevronDown size={18} className="text-muted flex-shrink-0" />
           : <ChevronUp size={18} className="text-muted flex-shrink-0" />}
@@ -757,7 +757,7 @@ function SetupChecklist({ tenantId }) {
       <div className="px-4 sm:px-5">
         <div className="h-1.5 rounded-full bg-dark-card overflow-hidden">
           <motion.div
-            className="h-full rounded-full bg-gold"
+            className="h-full rounded-full bg-brand"
             initial={false}
             animate={{ width: `${pct}%` }}
             transition={{ duration: 0.4 }}
@@ -785,7 +785,7 @@ function SetupChecklist({ tenantId }) {
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <Icon size={13} className={step.done ? 'text-green-400' : 'text-gold'} />
+                    <Icon size={13} className={step.done ? 'text-green-400' : 'text-brand'} />
                     <p className={`text-sm font-semibold ${step.done ? 'text-muted line-through' : 'text-off-white'}`}>
                       {i + 1}. {step.label}
                     </p>
@@ -795,7 +795,7 @@ function SetupChecklist({ tenantId }) {
                 {!step.done && step.to && (
                   <button
                     onClick={() => navigate(step.to)}
-                    className="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gold text-dark text-xs font-semibold hover:bg-gold/90 transition-colors"
+                    className="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-brand text-dark text-xs font-semibold hover:bg-brand/90 transition-colors"
                   >
                     Buka <ArrowRight size={12} />
                   </button>
@@ -805,7 +805,7 @@ function SetupChecklist({ tenantId }) {
           })}
           <button
             onClick={() => navigate('/admin/bantuan')}
-            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs font-medium text-muted hover:text-off-white hover:border-gold/30 transition-colors"
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs font-medium text-muted hover:text-off-white hover:border-brand/30 transition-colors"
           >
             Butuh panduan lengkap? Buka Pusat Bantuan
             <ArrowRight size={12} />
@@ -835,7 +835,7 @@ function WelcomeBanner() {
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative overflow-hidden p-5 rounded-2xl bg-gradient-to-br from-gold/15 via-amber-500/5 to-transparent border border-gold/30"
+      className="relative overflow-hidden p-5 rounded-2xl bg-gradient-to-br from-brand/15 via-amber-500/5 to-transparent border border-brand/30"
     >
       <button
         onClick={dismiss}
@@ -845,8 +845,8 @@ function WelcomeBanner() {
         <X size={14} />
       </button>
       <div className="flex items-start gap-4">
-        <div className="w-12 h-12 rounded-xl bg-gold/20 border border-gold/30 flex items-center justify-center flex-shrink-0">
-          <Sparkles className="text-gold" size={22} />
+        <div className="w-12 h-12 rounded-xl bg-brand/20 border border-brand/30 flex items-center justify-center flex-shrink-0">
+          <Sparkles className="text-brand" size={22} />
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="font-display text-lg font-bold text-off-white mb-1">
@@ -860,13 +860,13 @@ function WelcomeBanner() {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => { dismiss(); navigate('/admin/branches') }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-gold text-dark text-sm font-semibold hover:bg-gold/90 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-brand text-dark text-sm font-semibold hover:bg-brand/90 transition-colors"
             >
               Mulai Setup <ArrowRight size={13} />
             </button>
             <button
               onClick={() => { dismiss(); navigate('/admin/billing') }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-dark-card border border-dark-border text-sm hover:border-gold/40 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-dark-card border border-dark-border text-sm hover:border-brand/40 transition-colors"
             >
               Lihat Status Trial
             </button>

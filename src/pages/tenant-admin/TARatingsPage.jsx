@@ -60,7 +60,7 @@ function StarsRow({ value, size = 'sm' }) {
   const isLow = value <= 2
   const isHigh = value >= 4
   const cls = size === 'lg' ? 'text-lg' : size === 'md' ? 'text-base' : 'text-sm'
-  const color = isLow ? 'text-red-400' : isHigh ? 'text-gold' : 'text-amber-400'
+  const color = isLow ? 'text-red-400' : isHigh ? 'text-brand' : 'text-amber-400'
   return (
     <span
       role="img"
@@ -92,7 +92,7 @@ function StatusBadge({ status }) {
 
 function KpiTile({ icon: Icon, label, value, accent = 'gold', loading, onClick, active }) {
   const accents = {
-    gold:    'bg-gold/10 border-gold/30 text-gold',
+    gold:    'bg-brand/10 border-brand/30 text-brand',
     emerald: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300',
     amber:   'bg-amber-500/10 border-amber-500/30 text-amber-300',
     red:     'bg-red-500/10 border-red-500/30 text-red-400',
@@ -121,8 +121,8 @@ function KpiTile({ icon: Icon, label, value, accent = 'gold', loading, onClick, 
         onClick={onClick}
         aria-pressed={active}
         title={active ? 'Klik untuk hapus filter' : 'Klik untuk filter daftar'}
-        className={`bg-dark-card rounded-2xl border p-3 sm:p-4 min-w-0 overflow-hidden text-left w-full transition-all hover:border-gold/40 hover:bg-dark-surface active:scale-[0.98] ${
-          active ? 'border-gold/60 ring-2 ring-gold/30' : 'border-dark-border'
+        className={`bg-dark-card rounded-2xl border p-3 sm:p-4 min-w-0 overflow-hidden text-left w-full transition-all hover:border-brand/40 hover:bg-dark-surface active:scale-[0.98] ${
+          active ? 'border-brand/60 ring-2 ring-brand/30' : 'border-dark-border'
         }`}
       >
         {inner}
@@ -298,7 +298,7 @@ function TARatingsPageInner() {
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div className="min-w-0">
           <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white inline-flex items-center gap-2">
-            <Star className="w-5 h-5 sm:w-6 sm:h-6 text-gold fill-gold" />
+            <Star className="w-5 h-5 sm:w-6 sm:h-6 text-brand fill-premium" />
             Rating Barber
           </h1>
           <p className="text-muted text-xs sm:text-sm mt-1">
@@ -362,7 +362,7 @@ function TARatingsPageInner() {
       {/* Search + filter toggle */}
       <Card className="p-3 sm:p-4">
         <div className="flex flex-wrap items-center gap-2">
-          <label className="flex-1 min-w-[200px] flex items-center gap-2 bg-dark-surface border border-dark-border rounded-xl px-3 py-2 focus-within:border-gold/60 transition-colors">
+          <label className="flex-1 min-w-[200px] flex items-center gap-2 bg-dark-surface border border-dark-border rounded-xl px-3 py-2 focus-within:border-brand/60 transition-colors">
             <Search aria-hidden className="w-4 h-4 text-muted flex-shrink-0" />
             <input
               type="text"
@@ -390,14 +390,14 @@ function TARatingsPageInner() {
             onClick={() => setShowFilters(v => !v)}
             className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition-colors ${
               showFilters || hasActiveFilter
-                ? 'bg-gold/10 border-gold/40 text-gold'
+                ? 'bg-brand/10 border-brand/40 text-brand'
                 : 'bg-dark-card border-dark-border text-muted hover:text-off-white'
             }`}
           >
             <Filter className="w-3.5 h-3.5" />
             Filter
             {hasActiveFilter && (
-              <span className="ml-1 w-4 h-4 rounded-full bg-gold text-dark text-[9px] font-bold flex items-center justify-center">
+              <span className="ml-1 w-4 h-4 rounded-full bg-brand text-dark text-[9px] font-bold flex items-center justify-center">
                 !
               </span>
             )}
@@ -446,7 +446,7 @@ function TARatingsPageInner() {
               onClick={() => setStatus(s.id)}
               className={`flex-shrink-0 px-2.5 py-1 rounded-md text-[11px] font-medium border transition-colors ${
                 status === s.id
-                  ? 'bg-gold/15 border-gold/40 text-gold'
+                  ? 'bg-brand/15 border-brand/40 text-brand'
                   : 'bg-dark-surface border-dark-border text-muted hover:text-off-white'
               }`}
             >
@@ -518,10 +518,10 @@ function TARatingsPageInner() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.15 }}
-            className="sticky top-3 z-20 p-3 rounded-2xl bg-dark-card border border-gold/40 shadow-lg flex flex-wrap items-center justify-between gap-2"
+            className="sticky top-3 z-20 p-3 rounded-2xl bg-dark-card border border-brand/40 shadow-lg flex flex-wrap items-center justify-between gap-2"
           >
             <div className="text-sm text-off-white inline-flex items-center gap-2">
-              <CheckSquare className="w-4 h-4 text-gold" />
+              <CheckSquare className="w-4 h-4 text-brand" />
               <span className="font-medium">{selected.size} dipilih</span>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -583,10 +583,10 @@ function TARatingsPageInner() {
                       <button
                         onClick={() => selected.size === items.length ? clearSel() : selectAllOnPage()}
                         aria-label="Pilih semua"
-                        className="text-muted hover:text-gold"
+                        className="text-muted hover:text-brand"
                       >
                         {selected.size === items.length && items.length > 0
-                          ? <CheckSquare className="w-4 h-4 text-gold" />
+                          ? <CheckSquare className="w-4 h-4 text-brand" />
                           : <Square className="w-4 h-4" />}
                       </button>
                     </th>
@@ -693,7 +693,7 @@ function FilterSelect({ label, value, onChange, options }) {
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-gold/60 cursor-pointer"
+        className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-brand/60 cursor-pointer"
       >
         {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
       </select>
@@ -710,8 +710,8 @@ function RatingTableRow({ rating: r, checked, onToggle, onDetail, onPublish, onV
       published ? 'bg-emerald-500/[0.03]' : ''
     }`}>
       <td className="px-3 py-2.5">
-        <button onClick={onToggle} aria-label="Pilih" className="text-muted hover:text-gold">
-          {checked ? <CheckSquare className="w-4 h-4 text-gold" /> : <Square className="w-4 h-4" />}
+        <button onClick={onToggle} aria-label="Pilih" className="text-muted hover:text-brand">
+          {checked ? <CheckSquare className="w-4 h-4 text-brand" /> : <Square className="w-4 h-4" />}
         </button>
       </td>
       <td className="px-3 py-2.5 max-w-[180px]">
@@ -804,8 +804,8 @@ function RatingMobileCard({ rating: r, checked, onToggle, onDetail, onPublish, o
       published ? 'bg-emerald-500/[0.05] border-emerald-500/30' : ''
     }`}>
       <div className="flex items-start gap-2.5">
-        <button onClick={onToggle} aria-label="Pilih" className="flex-shrink-0 mt-0.5 text-muted hover:text-gold">
-          {checked ? <CheckSquare className="w-4 h-4 text-gold" /> : <Square className="w-4 h-4" />}
+        <button onClick={onToggle} aria-label="Pilih" className="flex-shrink-0 mt-0.5 text-muted hover:text-brand">
+          {checked ? <CheckSquare className="w-4 h-4 text-brand" /> : <Square className="w-4 h-4" />}
         </button>
         <div className="flex-1 min-w-0 space-y-1.5">
           <div className="flex items-center justify-between gap-2 flex-wrap">

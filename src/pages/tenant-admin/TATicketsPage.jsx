@@ -144,7 +144,7 @@ export default function TATicketsPage() {
                   key={ticket.id}
                   onClick={() => setSelectedId(ticket.id)}
                   initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
-                  className={`w-full text-left p-4 rounded-2xl border transition-all ${isSelected ? 'border-gold bg-gold/5' : 'border-dark-border bg-dark-surface hover:border-gold/30'}`}
+                  className={`w-full text-left p-4 rounded-2xl border transition-all ${isSelected ? 'border-brand bg-brand/5' : 'border-dark-border bg-dark-surface hover:border-brand/30'}`}
                 >
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <p className="text-sm font-medium text-off-white line-clamp-1 flex-1">{ticket.subject}</p>
@@ -154,7 +154,7 @@ export default function TATicketsPage() {
                     {pr && <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${pr.color}`}>{pr.label}</span>}
                     <Badge variant={sc.variant} className="text-[10px]">{sc.label}</Badge>
                     <span className="text-xs text-muted">{ticket.category}</span>
-                    {hasNewReply && <span className="text-[10px] text-gold bg-gold/10 px-1.5 py-0.5 rounded-full">Ada balasan</span>}
+                    {hasNewReply && <span className="text-[10px] text-brand bg-brand/10 px-1.5 py-0.5 rounded-full">Ada balasan</span>}
                   </div>
                   <p className="text-xs text-muted mt-1.5" title={formatDateTime(ticket.createdAt)}>{timeAgo(ticket.createdAt)}</p>
                 </motion.button>
@@ -199,10 +199,10 @@ export default function TATicketsPage() {
 
                       {/* Replies */}
                       {(selectedTicket.replies || []).map((r, i) => (
-                        <div key={r.id || i} className={`p-3 rounded-xl border ${r.isAdmin ? 'border-gold/20 bg-gold/5 ml-4' : 'border-dark-border bg-dark-card'}`}>
+                        <div key={r.id || i} className={`p-3 rounded-xl border ${r.isAdmin ? 'border-brand/20 bg-brand/5 ml-4' : 'border-dark-border bg-dark-card'}`}>
                           <div className="flex items-center gap-2 mb-2">
                             {r.isAdmin
-                              ? <><ShieldCheck size={13} className="text-gold" /><span className="text-xs font-semibold text-gold">{r.author?.name || r.author?.email || '—'} (Support)</span></>
+                              ? <><ShieldCheck size={13} className="text-brand" /><span className="text-xs font-semibold text-brand">{r.author?.name || r.author?.email || '—'} (Support)</span></>
                               : <><User size={13} className="text-muted" /><span className="text-xs font-medium text-off-white">{r.author?.name || r.author?.email || '—'}</span></>
                             }
                             <span className="text-xs text-muted" title={formatDateTime(r.createdAt)}>{timeAgo(r.createdAt)}</span>
@@ -220,7 +220,7 @@ export default function TATicketsPage() {
                             onChange={e => setReplyText(e.target.value)}
                             rows={3}
                             placeholder="Tambah informasi atau pertanyaan lanjutan..."
-                            className="w-full bg-dark-card border border-dark-border rounded-xl px-3 py-2.5 text-sm text-off-white placeholder-muted resize-none focus:outline-none focus:border-gold/50"
+                            className="w-full bg-dark-card border border-dark-border rounded-xl px-3 py-2.5 text-sm text-off-white placeholder-muted resize-none focus:outline-none focus:border-brand/50"
                           />
                           <AttachmentPicker value={replyAttachments} onChange={setReplyAttachments} disabled={sending} />
                           <Button icon={Send} size="sm" onClick={handleReply} disabled={sending || (!replyText.trim() && replyAttachments.length === 0)}>
@@ -262,21 +262,21 @@ export default function TATicketsPage() {
               onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
               rows={4}
               placeholder="Jelaskan masalah secara detail, langkah reproduksi, dll."
-              className="w-full bg-dark-card border border-dark-border rounded-xl px-3 py-2.5 text-sm text-off-white placeholder-muted resize-none focus:outline-none focus:border-gold/50"
+              className="w-full bg-dark-card border border-dark-border rounded-xl px-3 py-2.5 text-sm text-off-white placeholder-muted resize-none focus:outline-none focus:border-brand/50"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-muted mb-1.5">Kategori</label>
               <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-                className="w-full bg-dark-card border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-gold/50">
+                className="w-full bg-dark-card border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-brand/50">
                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-xs text-muted mb-1.5">Prioritas</label>
               <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}
-                className="w-full bg-dark-card border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-gold/50">
+                className="w-full bg-dark-card border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-brand/50">
                 {PRIORITIES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
               </select>
             </div>

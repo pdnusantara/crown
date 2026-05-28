@@ -39,7 +39,7 @@ function QuotaDots({ current, max, extra = 0 }) {
           <div
             key={i}
             className={`w-3 h-3 rounded-full border transition-all ${
-              used && paid  ? 'bg-gold border-gold' :
+              used && paid  ? 'bg-brand border-brand' :
               addon         ? 'bg-amber-400 border-amber-400' :
                               'bg-transparent border-dark-border'
             }`}
@@ -261,8 +261,8 @@ export default function TABranchesPage() {
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <GitBranch size={14} className="text-gold" />
-                  <span className="text-sm font-medium text-off-white">Kuota Cabang — Paket <span className="text-gold">{sub.package}</span></span>
+                  <GitBranch size={14} className="text-brand" />
+                  <span className="text-sm font-medium text-off-white">Kuota Cabang — Paket <span className="text-brand">{sub.package}</span></span>
                   <Badge variant={SUB_STATUS_CFG[subStatus]?.variant || 'muted'}>
                     {SUB_STATUS_CFG[subStatus]?.label || subStatus}
                   </Badge>
@@ -334,7 +334,7 @@ export default function TABranchesPage() {
                 Cabang add-on akan aktif setelah super admin mengkonfirmasi pembayaran.
                 Transfer ke rekening yang tertera, lalu hubungi via tiket.
               </p>
-              <button onClick={() => navigate('/admin/tickets')} className="ml-auto text-xs text-gold underline flex-shrink-0 hover:text-gold/80">
+              <button onClick={() => navigate('/admin/tickets')} className="ml-auto text-xs text-brand underline flex-shrink-0 hover:text-brand/80">
                 Buka Tiket
               </button>
             </div>
@@ -390,9 +390,9 @@ export default function TABranchesPage() {
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border ${
-                        unlicensed ? 'bg-amber-400/10 border-amber-400/20' : 'bg-gold/10 border-gold/20'
+                        unlicensed ? 'bg-amber-400/10 border-amber-400/20' : 'bg-brand/10 border-brand/20'
                       }`}>
-                        <Building2 size={18} className={unlicensed ? 'text-amber-400' : 'text-gold'} />
+                        <Building2 size={18} className={unlicensed ? 'text-amber-400' : 'text-brand'} />
                       </div>
                       <div className="min-w-0">
                         <h3 className="font-semibold text-off-white truncate">{branch.name}</h3>
@@ -458,7 +458,7 @@ export default function TABranchesPage() {
                         <p className="text-[10px] text-muted">Staf aktif</p>
                       </div>
                       <div className="bg-dark-surface rounded-xl p-2.5 text-center">
-                        <p className="text-sm font-bold text-gold">{formatRupiah(branch.monthlyRevenue || 0)}</p>
+                        <p className="text-sm font-bold text-brand">{formatRupiah(branch.monthlyRevenue || 0)}</p>
                         <p className="text-[10px] text-muted">Omzet bulan ini</p>
                       </div>
                     </div>
@@ -483,7 +483,7 @@ export default function TABranchesPage() {
             <div className="flex-1">
               <p className="font-semibold text-off-white">Butuh lebih banyak cabang?</p>
               <p className="text-xs text-muted mt-0.5">
-                Upgrade ke <strong className="text-gold">Pro</strong> (maks 5 cabang) atau{' '}
+                Upgrade ke <strong className="text-brand">Pro</strong> (maks 5 cabang) atau{' '}
                 <strong className="text-purple-400">Enterprise</strong> (tidak terbatas). Hubungi super admin atau buka halaman tagihan.
               </p>
             </div>
@@ -547,8 +547,8 @@ export default function TABranchesPage() {
         <div className="space-y-4">
           <div className="p-4 bg-dark-card rounded-2xl border border-dark-border space-y-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gold/10 border border-gold/20 flex items-center justify-center">
-                <Building2 size={18} className="text-gold" />
+              <div className="w-10 h-10 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center">
+                <Building2 size={18} className="text-brand" />
               </div>
               <div>
                 <p className="font-semibold text-off-white">{pendingForm?.name}</p>
@@ -558,7 +558,7 @@ export default function TABranchesPage() {
             <div className="border-t border-dark-border pt-3 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted">Biaya cabang add-on</span>
-                <span className="font-semibold text-gold">{formatRupiah(addonPrice)}</span>
+                <span className="font-semibold text-brand">{formatRupiah(addonPrice)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted">Jenis biaya</span>
