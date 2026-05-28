@@ -1,10 +1,13 @@
 import React, { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
-import { Plus, Edit2, Trash2, Star, Search, Mail, KeyRound, Copy, Check, AlertTriangle, Camera, X, Eye, EyeOff, RefreshCw } from 'lucide-react'
+import { Plus, Edit2, Trash2, Star, Search, Mail, KeyRound, Copy, Check, AlertTriangle, Camera, X, Eye, EyeOff, RefreshCw, Users } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useResetUserPassword } from '../../hooks/useUsers.js'
 import { useBranches } from '../../hooks/useBranches.js'
+import { useSubscription } from '../../hooks/useSubscription.js'
+import { usePackages } from '../../hooks/usePackages.js'
+import { formatRupiah } from '../../utils/format.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import Card from '../../components/ui/Card.jsx'
 import Badge from '../../components/ui/Badge.jsx'
@@ -51,12 +54,26 @@ export default function TAStaffPage() {
 
   const { data: allStaff = [], isLoading: isLoadingStaff } = useUsers({ tenantId: user?.tenantId })
   const { data: branches = [] } = useBranches(user?.tenantId)
+  const { data: subscription } = useSubscription(user?.tenantId)
+  const { data: packages = [] } = usePackages()
   const createUser = useCreateUser()
   const updateUser = useUpdateUser()
   const deleteUser = useDeleteUser()
   const resetPassword = useResetUserPassword()
 
   const isLoading = isLoadingStaff
+
+  // Kuota staf dari paket tenant (rebrand 2026-05-28: maxStaff = total termasuk
+  // owner/admin). Lebih dari ini akan kena add-on per staf (kalau super-admin
+  // sudah set staffAddonPrice > 0).
+  const tenantPackage = packages.find(p => p.name === subscription?.package)
+  const staffQuota    = tenantPackage?.maxStaff ?? null
+  const staffUsed     = allStaff.length
+  const staffAddonPrice = tenantPackage?.staffAddonPrice ?? 0
+  const staffAddonType  = tenantPackage?.staffAddonType  ?? 'monthly'
+  const quotaPct      = staffQuota ? Math.round((staffUsed / staffQuota) * 100) : 0
+  const overQuota     = staffQuota !== null && staffUsed > staffQuota
+  const nearQuota     = staffQuota !== null && !overQuota && quotaPct >= 80
 
   const filtered = allStaff.filter(s => {
     const matchSearch = s.name.toLowerCase().includes(search.toLowerCase())
@@ -190,7 +207,39 @@ export default function TAStaffPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold text-off-white">{t('tenantAdmin.staff.title')}</h1>
-          <p className="text-muted text-sm mt-1">{t('tenantAdmin.staff.registeredCount', { count: allStaff.length })}</p>
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <p className="text-muted text-sm">{t('tenantAdmin.staff.registeredCount', { count: allStaff.length })}</p>
+            {/* Kuota chip — tenant tahu posisi vs paket. Warna ikut state:
+                hijau (aman), amber (≥80% mendekati), merah (over kuota). */}
+            {staffQuota !== null && (
+              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
+                overQuota
+                  ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                  : nearQuota
+                  ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+                  : 'bg-green-500/10 border-green-500/30 text-green-400'
+              }`}>
+                <Users className="w-3 h-3" />
+                {staffUsed} / {staffQuota} staf
+                {overQuota && ` · over ${staffUsed - staffQuota}`}
+              </span>
+            )}
+          </div>
+          {/* Warning kalau over atau mendekati. Add-on info muncul kalau super-
+              admin sudah set staffAddonPrice > 0; kalau 0 (soft launch) cuma
+              info "naik paket" tanpa angka. */}
+          {overQuota && (
+            <p className="text-xs text-red-300 mt-2 max-w-md">
+              {staffAddonPrice > 0
+                ? <>Anda kena tambahan biaya <b className="text-off-white">{formatRupiah(staffAddonPrice)}/{staffAddonType === 'monthly' ? 'bln' : 'staf'}</b> untuk {staffUsed - staffQuota} staf di atas kuota paket {subscription?.package}. Upgrade paket untuk kuota lebih besar.</>
+                : <>Anda melebihi kuota paket <b className="text-off-white">{subscription?.package}</b> ({staffUsed}/{staffQuota}). Pertimbangkan upgrade ke paket lebih besar.</>}
+            </p>
+          )}
+          {nearQuota && !overQuota && staffAddonPrice > 0 && (
+            <p className="text-xs text-amber-300 mt-2 max-w-md">
+              Kuota staf hampir habis. Staf ke-{staffQuota + 1} dst akan kena <b className="text-off-white">{formatRupiah(staffAddonPrice)}/{staffAddonType === 'monthly' ? 'bln' : 'staf'}</b>.
+            </p>
+          )}
         </div>
         <Button icon={Plus} onClick={openAdd} className="w-full sm:w-auto flex-shrink-0">{t('tenantAdmin.staff.addStaff')}</Button>
       </div>

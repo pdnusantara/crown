@@ -493,7 +493,13 @@ model Package {
   name                  SubscriptionPackage @id
   price                 Int
   maxBranches           Int                 @default(1)
-  maxStaff              Int                 @default(5)
+  // Total staf (TERMASUK owner/admin) yang sudah include di paket. Lebih dari
+  // ini kena tarif add-on per staf (staffAddonPrice × staffAddonType monthly/
+  // onetime). 2026-05-28 default 5→4 (Basic 4, Pro 15, Enterprise 999 set via
+  // UPDATE saat rollout). Reuse enum BranchAddonType untuk konsistensi.
+  maxStaff              Int                 @default(4)
+  staffAddonPrice       Int                 @default(0)
+  staffAddonType        BranchAddonType     @default(monthly)
   branchAddonPrice      Int                 @default(0)
   branchAddonType       BranchAddonType     @default(monthly)
   // Diskon untuk pembayaran tahunan (% dari harga 12 bulan). Default 17 ≈ 2 bulan gratis.

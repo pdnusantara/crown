@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useQueryClient } from '@tanstack/react-query'
 import {
-  Edit2, Check, X, Building2, Users, GitBranch, Info, Save, AlertTriangle,
+  Edit2, Check, X, Building2, Users, GitBranch, Info, Save, AlertTriangle, AlertCircle,
   Plus, Minus, Calculator, ArrowRight, TrendingUp, TrendingDown, Clock,
   ChevronRight, Eye, EyeOff,
 } from 'lucide-react'
@@ -290,7 +290,9 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
   const [form, setForm] = useState({
     price:                 pkg.price ?? 0,
     maxBranches:           pkg.maxBranches ?? 1,
-    maxStaff:              pkg.maxStaff ?? 5,
+    maxStaff:              pkg.maxStaff ?? 4,
+    staffAddonPrice:       pkg.staffAddonPrice ?? 0,
+    staffAddonType:        pkg.staffAddonType ?? 'monthly',
     branchAddonPrice:      pkg.branchAddonPrice ?? 0,
     branchAddonType:       pkg.branchAddonType ?? 'monthly',
     annualDiscountPercent: pkg.annualDiscountPercent ?? 17,
@@ -312,6 +314,7 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
     if (form.maxBranches < 1) err.maxBranches = 'Min 1'
     if (form.maxStaff < 1) err.maxStaff = 'Min 1'
     if (form.branchAddonPrice < 0) err.branchAddonPrice = 'Tidak boleh negatif'
+    if (form.staffAddonPrice < 0) err.staffAddonPrice = 'Tidak boleh negatif'
     if (form.annualDiscountPercent < 0 || form.annualDiscountPercent > 100) err.annualDiscountPercent = '0-100%'
     setErrors(err)
     return Object.keys(err).length === 0
@@ -322,6 +325,7 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
     onSave({
       price: form.price, maxBranches: form.maxBranches, maxStaff: form.maxStaff,
       branchAddonPrice: form.branchAddonPrice, branchAddonType: form.branchAddonType,
+      staffAddonPrice:  form.staffAddonPrice,  staffAddonType:  form.staffAddonType,
       annualDiscountPercent: form.annualDiscountPercent,
       description: form.description.trim() || null, features: form.features,
     })
@@ -330,7 +334,7 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
   const style = PACKAGE_STYLES[name] || PACKAGE_STYLES.Basic
   const TABS = [
     { key: 'pricing',  label: 'Harga' },
-    { key: 'addon',    label: 'Biaya Cabang' },
+    { key: 'addon',    label: 'Add-on' },
     { key: 'limits',   label: 'Batas' },
     { key: 'features', label: `Fitur (${form.features.length})` },
   ]
@@ -426,63 +430,123 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
           </motion.div>
         )}
 
-        {/* Biaya Cabang */}
+        {/* Add-on (Cabang + Staf) */}
         {tab === 'addon' && (
-          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-            <div className="p-3.5 bg-dark-surface rounded-xl border border-dark-border text-xs text-muted flex gap-2.5">
-              <Info size={13} className="text-brand flex-shrink-0 mt-0.5" />
-              <span>
-                Setiap paket menyertakan <strong className="text-off-white">{form.maxBranches} cabang</strong> dalam harga pokok.
-                Cabang melebihi batas ini dikenakan biaya sesuai pengaturan di bawah.
-              </span>
-            </div>
-
-            <RpInput
-              label="Biaya per Cabang Tambahan"
-              value={form.branchAddonPrice}
-              onChange={v => set('branchAddonPrice', v)}
-              hint="Isi 0 untuk memberikan cabang tambahan gratis tanpa batas."
-              error={errors.branchAddonPrice}
-              step={10000}
-            />
-
-            <div>
-              <label className="block text-xs text-muted mb-2">Jenis Penagihan</label>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { key: 'monthly', icon: '🔄', title: 'Berulang / Bulan', desc: 'Ditagih tiap bulan selama cabang aktif.' },
-                  { key: 'onetime', icon: '💳', title: 'Sekali Bayar',     desc: 'Dibayar satu kali saat menambah cabang.' },
-                ].map(opt => (
-                  <button key={opt.key} type="button" onClick={() => set('branchAddonType', opt.key)}
-                    className={`p-3.5 rounded-xl border text-left transition-all ${form.branchAddonType === opt.key ? 'border-brand bg-brand/10' : 'border-dark-border hover:border-brand/30'}`}>
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className="text-base">{opt.icon}</span>
-                      <span className="text-sm font-medium text-off-white">{opt.title}</span>
-                      {form.branchAddonType === opt.key && <Check size={12} className="text-brand ml-auto" />}
-                    </div>
-                    <p className="text-xs text-muted">{opt.desc}</p>
-                  </button>
-                ))}
+          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+            {/* ── BRANCH ADD-ON ──────────────────────────────────────── */}
+            <section className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Building2 size={15} className="text-brand" />
+                <h4 className="text-sm font-semibold text-off-white">Cabang Tambahan</h4>
               </div>
-            </div>
-
-            {form.branchAddonPrice > 0 ? (
+              <div className="p-3.5 bg-dark-surface rounded-xl border border-dark-border text-xs text-muted flex gap-2.5">
+                <Info size={13} className="text-brand flex-shrink-0 mt-0.5" />
+                <span>
+                  Paket sudah termasuk <strong className="text-off-white">{form.maxBranches} cabang</strong>.
+                  Cabang ke-{form.maxBranches + 1} dst dikenakan tarif berikut.
+                </span>
+              </div>
+              <RpInput
+                label="Biaya per Cabang Tambahan"
+                value={form.branchAddonPrice}
+                onChange={v => set('branchAddonPrice', v)}
+                hint="Isi 0 untuk gratis tanpa batas."
+                error={errors.branchAddonPrice}
+                step={10000}
+              />
               <div>
-                <p className="text-xs text-muted font-medium mb-2 flex items-center gap-1.5">
-                  <Calculator size={12} className="text-brand" />Simulator total tagihan
-                </p>
-                <BranchSimulator
-                  basePrice={form.price}
-                  maxBranches={form.maxBranches}
-                  addonPrice={form.branchAddonPrice}
-                  addonType={form.branchAddonType}
-                />
+                <label className="block text-xs text-muted mb-2">Jenis Penagihan</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { key: 'monthly', icon: '🔄', title: 'Berulang / Bulan', desc: 'Ditagih tiap bulan selama aktif.' },
+                    { key: 'onetime', icon: '💳', title: 'Sekali Bayar',     desc: 'Dibayar satu kali saat menambah.' },
+                  ].map(opt => (
+                    <button key={opt.key} type="button" onClick={() => set('branchAddonType', opt.key)}
+                      className={`p-3.5 rounded-xl border text-left transition-all ${form.branchAddonType === opt.key ? 'border-brand bg-brand/10' : 'border-dark-border hover:border-brand/30'}`}>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="text-base">{opt.icon}</span>
+                        <span className="text-sm font-medium text-off-white">{opt.title}</span>
+                        {form.branchAddonType === opt.key && <Check size={12} className="text-brand ml-auto" />}
+                      </div>
+                      <p className="text-xs text-muted">{opt.desc}</p>
+                    </button>
+                  ))}
+                </div>
               </div>
-            ) : (
-              <div className="p-3 bg-green-500/5 border border-green-500/20 rounded-xl text-xs text-green-400 flex items-center gap-2">
-                <Check size={13} />Cabang tambahan gratis — tenant bebas menambah cabang tanpa biaya ekstra
+              {form.branchAddonPrice > 0 ? (
+                <div>
+                  <p className="text-xs text-muted font-medium mb-2 flex items-center gap-1.5">
+                    <Calculator size={12} className="text-brand" />Simulator total tagihan
+                  </p>
+                  <BranchSimulator
+                    basePrice={form.price}
+                    maxBranches={form.maxBranches}
+                    addonPrice={form.branchAddonPrice}
+                    addonType={form.branchAddonType}
+                  />
+                </div>
+              ) : (
+                <div className="p-3 bg-green-500/5 border border-green-500/20 rounded-xl text-xs text-green-400 flex items-center gap-2">
+                  <Check size={13} />Cabang tambahan gratis
+                </div>
+              )}
+            </section>
+
+            <div className="h-px bg-dark-border" />
+
+            {/* ── STAFF ADD-ON ───────────────────────────────────────── */}
+            <section className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Users size={15} className="text-brand" />
+                <h4 className="text-sm font-semibold text-off-white">Staf Tambahan</h4>
               </div>
-            )}
+              <div className="p-3.5 bg-dark-surface rounded-xl border border-dark-border text-xs text-muted flex gap-2.5">
+                <Info size={13} className="text-brand flex-shrink-0 mt-0.5" />
+                <span>
+                  Paket sudah termasuk <strong className="text-off-white">{form.maxStaff} staf</strong> (termasuk owner/admin).
+                  Staf ke-{form.maxStaff + 1} dst dikenakan tarif berikut. Pola sama seperti cabang.
+                </span>
+              </div>
+              <RpInput
+                label="Biaya per Staf Tambahan"
+                value={form.staffAddonPrice}
+                onChange={v => set('staffAddonPrice', v)}
+                hint="Isi 0 untuk gratis tanpa batas (soft launch: belum ada charging)."
+                error={errors.staffAddonPrice}
+                step={5000}
+              />
+              <div>
+                <label className="block text-xs text-muted mb-2">Jenis Penagihan</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { key: 'monthly', icon: '🔄', title: 'Berulang / Bulan', desc: 'Ditagih tiap bulan selama staf aktif.' },
+                    { key: 'onetime', icon: '💳', title: 'Sekali Bayar',     desc: 'Dibayar satu kali saat menambah staf.' },
+                  ].map(opt => (
+                    <button key={opt.key} type="button" onClick={() => set('staffAddonType', opt.key)}
+                      className={`p-3.5 rounded-xl border text-left transition-all ${form.staffAddonType === opt.key ? 'border-brand bg-brand/10' : 'border-dark-border hover:border-brand/30'}`}>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="text-base">{opt.icon}</span>
+                        <span className="text-sm font-medium text-off-white">{opt.title}</span>
+                        {form.staffAddonType === opt.key && <Check size={12} className="text-brand ml-auto" />}
+                      </div>
+                      <p className="text-xs text-muted">{opt.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {form.staffAddonPrice > 0 ? (
+                <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl text-xs text-amber-300 flex items-start gap-2">
+                  <AlertCircle size={13} className="mt-0.5 flex-shrink-0" />
+                  <span>
+                    Tenant akan dikenakan <strong className="text-off-white">{formatRupiah(form.staffAddonPrice)}/staf/{form.staffAddonType === 'monthly' ? 'bln' : 'sekali'}</strong> untuk setiap staf di atas {form.maxStaff}. Tarif aktif saat tenant menambah staf baru.
+                  </span>
+                </div>
+              ) : (
+                <div className="p-3 bg-green-500/5 border border-green-500/20 rounded-xl text-xs text-green-400 flex items-center gap-2">
+                  <Check size={13} />Staf tambahan gratis
+                </div>
+              )}
+            </section>
           </motion.div>
         )}
 
@@ -497,18 +561,19 @@ function EditPackageModal({ name, pkg, onSave, onClose, submitting }) {
               min={1} max={9999} error={errors.maxBranches}
             />
             <NumberInput
-              label="Maksimum Staf"
+              label="Staf Termasuk dalam Paket"
               value={form.maxStaff}
               onChange={v => set('maxStaff', v)}
-              hint="Total staf (kasir, barber, admin) yang bisa didaftarkan di semua cabang."
+              hint="Total staf (TERMASUK owner/admin) yang sudah include di harga pokok. Lebih dari ini kena add-on per staf — atur tarif di tab Add-on."
               min={1} max={9999} error={errors.maxStaff}
             />
             <div className="p-4 bg-dark-surface rounded-xl border border-dark-border space-y-2.5">
               <p className="text-xs text-muted font-medium uppercase">Ringkasan Batas</p>
               {[
-                { icon: Building2, label: 'Cabang termasuk',    value: `${form.maxBranches} cabang`,                                                                    color: 'text-blue-400' },
-                { icon: Users,     label: 'Maks staf',          value: `${form.maxStaff} orang`,                                                                         color: 'text-green-400' },
+                { icon: Building2, label: 'Cabang termasuk',    value: `${form.maxBranches} cabang`, color: 'text-blue-400' },
+                { icon: Users,     label: 'Staf termasuk',      value: `${form.maxStaff} orang (termasuk owner)`, color: 'text-green-400' },
                 { icon: GitBranch, label: 'Biaya extra cabang', value: form.branchAddonPrice > 0 ? `${formatRupiah(form.branchAddonPrice)}/${form.branchAddonType === 'monthly' ? 'bln' : 'cabang'}` : 'Gratis', color: form.branchAddonPrice > 0 ? 'text-amber-400' : 'text-green-400' },
+                { icon: Users,     label: 'Biaya extra staf',   value: form.staffAddonPrice  > 0 ? `${formatRupiah(form.staffAddonPrice)}/${form.staffAddonType === 'monthly' ? 'bln' : 'staf'}`     : 'Gratis', color: form.staffAddonPrice  > 0 ? 'text-amber-400' : 'text-green-400' },
               ].map(row => (
                 <div key={row.label} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2 text-muted"><row.icon size={13} className={row.color} />{row.label}</div>
