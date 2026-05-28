@@ -124,10 +124,10 @@ const STATUS_FILTERS = [
 // Subtle pulse — booking baru masuk dalam 5 menit terakhir.
 function FreshBadge() {
   return (
-    <span className="relative inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gold text-dark whitespace-nowrap shadow-gold">
+    <span className="relative inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand text-dark whitespace-nowrap shadow-brand">
       <Sparkles className="w-2.5 h-2.5" />
       BARU
-      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-gold animate-ping" />
+      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-brand animate-ping" />
     </span>
   )
 }
@@ -165,8 +165,8 @@ function SelectBox({ checked, onChange, label }) {
       onClick={(e) => { e.stopPropagation(); onChange() }}
       className={`flex-shrink-0 w-5 h-5 rounded-md border inline-flex items-center justify-center transition-colors ${
         checked
-          ? 'bg-gold border-gold text-dark'
-          : 'bg-dark-surface border-dark-border text-transparent hover:border-gold/50'
+          ? 'bg-brand border-brand text-dark'
+          : 'bg-dark-surface border-dark-border text-transparent hover:border-brand/50'
       }`}
     >
       <Check className="w-3.5 h-3.5" strokeWidth={3} />
@@ -477,7 +477,7 @@ export default function BookingsPage() {
         <button
           onClick={() => setCheckInTarget(b)}
           title="Masukkan ke Antrian" aria-label={`Masukkan ${b.customerName} ke antrian`}
-          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-gold/10 border border-gold/20 text-gold hover:bg-gold/20 transition"
+          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-brand/10 border border-brand/20 text-brand hover:bg-brand/20 transition"
         >
           <LogIn className="w-4 h-4" />
         </button>
@@ -495,7 +495,7 @@ export default function BookingsPage() {
       <button
         onClick={() => openDetail(b)}
         title="Detail" aria-label={`Lihat detail booking ${b.customerName}`}
-        className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-dark-card border border-dark-border text-muted hover:text-off-white hover:border-gold/40 transition"
+        className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-dark-card border border-dark-border text-muted hover:text-off-white hover:border-brand/40 transition"
       >
         <Eye className="w-4 h-4" />
       </button>
@@ -555,7 +555,7 @@ export default function BookingsPage() {
           {/* Add booking */}
           <button
             onClick={() => setShowCreate(true)}
-            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl bg-gold text-dark text-xs sm:text-sm font-semibold hover:bg-gold-light transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl bg-brand text-dark text-xs sm:text-sm font-semibold hover:bg-brand-light transition-colors"
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Tambah Booking</span>
@@ -567,7 +567,7 @@ export default function BookingsPage() {
       {/* Stat cards */}
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
         {[
-          { label: 'Hari Ini',            value: stats.today,   color: 'text-gold' },
+          { label: 'Hari Ini',            value: stats.today,   color: 'text-brand' },
           { label: 'Menunggu Konfirmasi', value: stats.pending, color: 'text-amber-400' },
           { label: 'Total',               value: stats.total,   color: 'text-off-white' },
         ].map(s => (
@@ -587,7 +587,7 @@ export default function BookingsPage() {
             onChange={e => setSearch(e.target.value)}
             aria-label="Cari booking"
             placeholder="Cari nama, nomor HP, layanan, barber…"
-            className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-10 pr-9 py-2.5 text-sm outline-none focus:border-gold/60 transition-colors"
+            className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-10 pr-9 py-2.5 text-sm outline-none focus:border-brand/60 transition-colors"
           />
           {search && (
             <button
@@ -605,7 +605,7 @@ export default function BookingsPage() {
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
             aria-label="Filter status"
-            className="w-full appearance-none bg-dark-surface border border-dark-border text-off-white rounded-xl pl-9 pr-8 py-2.5 text-sm outline-none focus:border-gold/60 cursor-pointer"
+            className="w-full appearance-none bg-dark-surface border border-dark-border text-off-white rounded-xl pl-9 pr-8 py-2.5 text-sm outline-none focus:border-brand/60 cursor-pointer"
           >
             {STATUS_FILTERS.map(s => (
               <option key={s.id} value={s.id}>{s.label}</option>
@@ -632,7 +632,7 @@ export default function BookingsPage() {
             aria-pressed={dateFilter === f.id}
             className={`px-4 py-1.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${
               dateFilter === f.id
-                ? 'bg-gold text-dark border border-gold'
+                ? 'bg-brand text-dark border border-brand'
                 : 'bg-dark-card border border-dark-border text-muted hover:text-off-white'
             }`}
           >
@@ -659,7 +659,7 @@ export default function BookingsPage() {
                 isActive
                   ? f.id === 'online'  ? 'bg-blue-500/15 text-blue-400 border-blue-500/40'
                     : f.id === 'walk_in' ? 'bg-amber-500/15 text-amber-400 border-amber-500/40'
-                    : 'bg-gold/15 text-gold border-gold/40'
+                    : 'bg-brand/15 text-brand border-brand/40'
                   : 'bg-dark-card border-dark-border text-muted hover:text-off-white'
               }`}
             >
@@ -687,7 +687,7 @@ export default function BookingsPage() {
           <p className="text-muted text-sm mt-1">Periksa koneksi lalu coba lagi.</p>
           <button
             onClick={() => refetch()}
-            className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gold text-dark text-sm font-semibold hover:bg-gold-light transition-colors"
+            className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand text-dark text-sm font-semibold hover:bg-brand-light transition-colors"
           >
             <RefreshCw className="w-4 h-4" /> Coba Lagi
           </button>
@@ -738,7 +738,7 @@ export default function BookingsPage() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }}
                         transition={{ delay: Math.min(i * 0.02, 0.2) }}
-                        className={`transition-colors ${checked ? 'bg-gold/[0.06]' : 'hover:bg-dark-card/40'}`}
+                        className={`transition-colors ${checked ? 'bg-brand/[0.06]' : 'hover:bg-dark-card/40'}`}
                       >
                         <td className="px-3 py-3 align-middle">
                           {selectable && (
@@ -816,7 +816,7 @@ export default function BookingsPage() {
                   transition={{ delay: Math.min(i * 0.02, 0.2) }}
                 >
                   <Card className={`p-3.5 active:bg-dark-card/60 transition-colors ${
-                    checked ? 'border-gold/50' : isFreshBooking(b) ? 'border-gold/40 shadow-gold' : ''
+                    checked ? 'border-brand/50' : isFreshBooking(b) ? 'border-brand/40 shadow-brand' : ''
                   }`}>
                     <div className="flex gap-2.5">
                       {selectable && (
@@ -894,7 +894,7 @@ export default function BookingsPage() {
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page <= 1 || isFetching}
               aria-label="Halaman sebelumnya"
-              className="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-sm bg-dark-card border border-dark-border text-off-white hover:border-gold/40 transition disabled:opacity-40"
+              className="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-sm bg-dark-card border border-dark-border text-off-white hover:border-brand/40 transition disabled:opacity-40"
             >
               <ChevronLeft className="w-4 h-4" /> Sebelum
             </button>
@@ -902,7 +902,7 @@ export default function BookingsPage() {
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages || isFetching}
               aria-label="Halaman berikutnya"
-              className="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-sm bg-dark-card border border-dark-border text-off-white hover:border-gold/40 transition disabled:opacity-40"
+              className="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-sm bg-dark-card border border-dark-border text-off-white hover:border-brand/40 transition disabled:opacity-40"
             >
               Lanjut <ChevronRight className="w-4 h-4" />
             </button>
@@ -919,7 +919,7 @@ export default function BookingsPage() {
             exit={{ opacity: 0, y: 20 }}
             className="fixed left-3 right-3 bottom-[5.5rem] sm:left-auto sm:right-6 sm:bottom-6 z-40"
           >
-            <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 rounded-2xl bg-dark-surface border border-gold/30 shadow-xl shadow-black/40">
+            <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 rounded-2xl bg-dark-surface border border-brand/30 shadow-xl shadow-black/40">
               <span className="text-sm text-off-white font-semibold whitespace-nowrap">
                 {selectedIds.size} dipilih
               </span>
@@ -963,7 +963,7 @@ export default function BookingsPage() {
                 {isSoonBooking(detail, today) && <SoonBadge time={detail.time} />}
                 {detail.customer?.visitCount > 5 && (
                   <span
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gold/15 text-gold border border-gold/30"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-brand/15 text-brand border border-brand/30"
                     title={`Pelanggan tetap — ${detail.customer.visitCount} kunjungan`}
                   >
                     <Star className="w-2.5 h-2.5 fill-current" /> Pelanggan Tetap
@@ -1056,7 +1056,7 @@ export default function BookingsPage() {
               {(detail.status === 'pending' || detail.status === 'confirmed') && (
                 <button
                   onClick={() => setCheckInTarget(detail)}
-                  className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-gold/15 border border-gold/30 text-gold font-semibold text-sm hover:bg-gold/25 transition"
+                  className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand/15 border border-brand/30 text-brand font-semibold text-sm hover:bg-brand/25 transition"
                 >
                   <LogIn className="w-4 h-4" /> Masuk Antrian
                 </button>
@@ -1224,7 +1224,7 @@ function CreateBookingModal({ isOpen, onClose, branchId, defaultDate, onCreated,
             value={form.customerName}
             onChange={e => set('customerName', e.target.value)}
             placeholder="Nama pelanggan"
-            className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60 transition-colors"
+            className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60 transition-colors"
           />
         </div>
         <div>
@@ -1234,7 +1234,7 @@ function CreateBookingModal({ isOpen, onClose, branchId, defaultDate, onCreated,
             value={form.customerPhone}
             onChange={e => set('customerPhone', e.target.value)}
             placeholder="081234567890"
-            className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60 transition-colors font-mono"
+            className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60 transition-colors font-mono"
           />
         </div>
         <div>
@@ -1242,7 +1242,7 @@ function CreateBookingModal({ isOpen, onClose, branchId, defaultDate, onCreated,
           <select
             value={form.serviceId}
             onChange={e => set('serviceId', e.target.value)}
-            className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60 cursor-pointer"
+            className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60 cursor-pointer"
           >
             <option value="">Pilih layanan…</option>
             {services.map(s => (
@@ -1257,7 +1257,7 @@ function CreateBookingModal({ isOpen, onClose, branchId, defaultDate, onCreated,
           <select
             value={form.barberId}
             onChange={e => set('barberId', e.target.value)}
-            className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60 cursor-pointer"
+            className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60 cursor-pointer"
           >
             <option value="">Belum ditentukan</option>
             {barbers.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -1270,7 +1270,7 @@ function CreateBookingModal({ isOpen, onClose, branchId, defaultDate, onCreated,
               type="date"
               value={form.date}
               onChange={e => set('date', e.target.value)}
-              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/60"
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60"
             />
           </div>
           <div>
@@ -1279,7 +1279,7 @@ function CreateBookingModal({ isOpen, onClose, branchId, defaultDate, onCreated,
               type="time"
               value={form.time}
               onChange={e => set('time', e.target.value)}
-              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-gold/60"
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60"
             />
           </div>
         </div>
@@ -1290,7 +1290,7 @@ function CreateBookingModal({ isOpen, onClose, branchId, defaultDate, onCreated,
             onChange={e => set('notes', e.target.value)}
             rows={2}
             placeholder="Permintaan khusus, dll."
-            className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60 resize-none"
+            className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60 resize-none"
           />
         </div>
         <div className="flex flex-col gap-2 pt-2">
@@ -1298,7 +1298,7 @@ function CreateBookingModal({ isOpen, onClose, branchId, defaultDate, onCreated,
             <button
               onClick={() => submit(true)}
               disabled={busy}
-              className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-gold text-dark font-semibold text-sm hover:bg-gold-light transition disabled:opacity-50"
+              className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand text-dark font-semibold text-sm hover:bg-brand-light transition disabled:opacity-50"
             >
               <LogIn className="w-4 h-4" />
               {busy ? 'Memproses…' : 'Simpan & Masuk Antrian'}
@@ -1308,7 +1308,7 @@ function CreateBookingModal({ isOpen, onClose, branchId, defaultDate, onCreated,
             <button
               onClick={onClose}
               disabled={busy}
-              className="flex-1 px-4 py-2.5 rounded-xl bg-dark-card border border-dark-border text-off-white text-sm hover:border-gold/40 transition disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 rounded-xl bg-dark-card border border-dark-border text-off-white text-sm hover:border-brand/40 transition disabled:opacity-50"
             >
               Batal
             </button>
@@ -1317,8 +1317,8 @@ function CreateBookingModal({ isOpen, onClose, branchId, defaultDate, onCreated,
               disabled={busy}
               className={`flex-1 px-4 py-2.5 rounded-xl font-semibold text-sm transition disabled:opacity-50 ${
                 isToday
-                  ? 'bg-dark-card border border-dark-border text-off-white hover:border-gold/40'
-                  : 'bg-gold text-dark hover:bg-gold-light'
+                  ? 'bg-dark-card border border-dark-border text-off-white hover:border-brand/40'
+                  : 'bg-brand text-dark hover:bg-brand-light'
               }`}
             >
               {busy ? 'Menyimpan…' : 'Simpan Booking'}

@@ -35,7 +35,7 @@ const COLUMNS = [
   { id: 'waiting', label: 'Menunggu', short: 'Antri', color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/20', dot: 'bg-amber-400' },
   { id: 'in-progress', label: 'Sedang Dilayani', short: 'Dilayani', color: 'text-blue-400', bg: 'bg-blue-400/10', border: 'border-blue-400/20', dot: 'bg-blue-400' },
   { id: 'done', label: 'Selesai', short: 'Selesai', color: 'text-green-400', bg: 'bg-green-400/10', border: 'border-green-400/20', dot: 'bg-green-400' },
-  { id: 'paid', label: 'Sudah Bayar', short: 'Bayar', color: 'text-gold', bg: 'bg-gold/10', border: 'border-gold/20', dot: 'bg-gold' },
+  { id: 'paid', label: 'Sudah Bayar', short: 'Bayar', color: 'text-brand', bg: 'bg-brand/10', border: 'border-brand/20', dot: 'bg-brand' },
 ]
 
 const STATUS_NEXT = { waiting: 'in-progress', 'in-progress': 'done', done: 'paid' }
@@ -116,7 +116,7 @@ function TicketCard({ item, col, onAdvance, onCancel, isDragging = false, compac
           onClick={() => onAdvance(item)}
           className={`mt-2.5 w-full py-2.5 sm:py-1.5 rounded-lg text-sm sm:text-xs font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] ${
             item.status === 'done'
-              ? 'bg-gold/15 text-gold border border-gold/40 hover:bg-gold/25'
+              ? 'bg-brand/15 text-brand border border-brand/40 hover:bg-brand/25'
               : `${col.bg} ${col.color} border ${col.border} hover:opacity-80`
           }`}
         >
@@ -427,7 +427,7 @@ export default function QueuePage() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Cari nama, tiket, atau layanan…"
-            className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-10 pr-9 py-2.5 text-sm outline-none focus:border-gold/60 transition-colors"
+            className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-10 pr-9 py-2.5 text-sm outline-none focus:border-brand/60 transition-colors"
           />
           {search && (
             <button
@@ -445,7 +445,7 @@ export default function QueuePage() {
             <select
               value={filterBarber}
               onChange={e => setFilterBarber(e.target.value)}
-              className="w-full appearance-none bg-dark-surface border border-dark-border text-off-white rounded-xl pl-9 pr-8 py-2.5 text-sm outline-none focus:border-gold/60 cursor-pointer"
+              className="w-full appearance-none bg-dark-surface border border-dark-border text-off-white rounded-xl pl-9 pr-8 py-2.5 text-sm outline-none focus:border-brand/60 cursor-pointer"
             >
               <option value="">Semua barber</option>
               {barbers.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -530,7 +530,7 @@ export default function QueuePage() {
         <button
           onClick={() => setShowModal(true)}
           aria-label="Tambah Walk-in"
-          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-30 h-14 w-14 rounded-full bg-gold text-dark-bg shadow-2xl shadow-gold/30 flex items-center justify-center active:scale-95 transition-transform"
+          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-30 h-14 w-14 rounded-full bg-brand text-dark-bg shadow-2xl shadow-brand/30 flex items-center justify-center active:scale-95 transition-transform"
         >
           <Plus className="w-6 h-6" strokeWidth={2.5} />
         </button>
@@ -543,14 +543,14 @@ export default function QueuePage() {
           <Input label="Telepon (opsional)" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="081234567890" />
           <div>
             <label className="block text-sm font-medium text-muted mb-1.5">Layanan</label>
-            <select value={form.services} onChange={e => setForm(f => ({ ...f, services: e.target.value }))} className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60">
+            <select value={form.services} onChange={e => setForm(f => ({ ...f, services: e.target.value }))} className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60">
               <option value="">Pilih layanan...</option>
               {services.map(s => <option key={s.id} value={s.name}>{s.name} — {s.duration} min</option>)}
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-muted mb-1.5">Barber (opsional)</label>
-            <select value={form.barberId} onChange={e => setForm(f => ({ ...f, barberId: e.target.value }))} className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60">
+            <select value={form.barberId} onChange={e => setForm(f => ({ ...f, barberId: e.target.value }))} className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60">
               <option value="">Pilih barber...</option>
               {barbers.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>

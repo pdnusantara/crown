@@ -46,7 +46,7 @@ function CustomerSourceBadge({ tx, size = 'sm' }) {
     : 'gap-1 px-2 py-0.5 text-[11px]'
   return isBooking ? (
     <span
-      className={`inline-flex items-center ${cls} rounded-full font-semibold whitespace-nowrap bg-gold/15 text-gold border border-gold/30`}
+      className={`inline-flex items-center ${cls} rounded-full font-semibold whitespace-nowrap bg-brand/15 text-brand border border-brand/30`}
       title="Pelanggan booking — datang dari reservasi sebelumnya"
     >
       <BookmarkCheck className={isCompact ? 'w-2.5 h-2.5' : 'w-3 h-3'} />
@@ -306,14 +306,14 @@ export default function TransactionsPage() {
             disabled={isFetching}
             title="Muat ulang"
             aria-label="Muat ulang"
-            className="hidden sm:inline-flex w-10 h-10 items-center justify-center rounded-xl border border-dark-border text-muted hover:text-off-white hover:border-gold/40 disabled:opacity-50 transition-colors"
+            className="hidden sm:inline-flex w-10 h-10 items-center justify-center rounded-xl border border-dark-border text-muted hover:text-off-white hover:border-brand/40 disabled:opacity-50 transition-colors"
           >
             <RefreshCcw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
           </button>
           <button
             onClick={handleExport}
             disabled={exporting || !total}
-            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl bg-gold/10 border border-gold/40 text-gold text-xs sm:text-sm font-semibold hover:bg-gold/20 disabled:opacity-50 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl bg-brand/10 border border-brand/40 text-brand text-xs sm:text-sm font-semibold hover:bg-brand/20 disabled:opacity-50 transition-colors"
           >
             <Download className={`w-4 h-4 ${exporting ? 'animate-pulse' : ''}`} />
             <span className="hidden sm:inline">{exporting ? 'Mengekspor…' : 'Ekspor CSV'}</span>
@@ -335,8 +335,8 @@ export default function TransactionsPage() {
                 onClick={() => setDateRange(p.range())}
                 className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all border ${
                   active
-                    ? 'bg-gold text-dark-bg border-gold'
-                    : 'text-muted bg-dark-surface border-dark-border hover:text-off-white hover:border-gold/40'
+                    ? 'bg-brand text-dark-bg border-brand'
+                    : 'text-muted bg-dark-surface border-dark-border hover:text-off-white hover:border-brand/40'
                 }`}
               >
                 {p.id === 'today' && <Calendar className="w-3.5 h-3.5" />}
@@ -361,10 +361,10 @@ export default function TransactionsPage() {
                 onClick={() => setSourceFilter(opt.id)}
                 className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all border ${
                   active
-                    ? opt.id === 'booking' ? 'bg-gold/15 text-gold border-gold/40'
+                    ? opt.id === 'booking' ? 'bg-brand/15 text-brand border-brand/40'
                       : opt.id === 'walk_in' ? 'bg-amber-500/15 text-amber-400 border-amber-500/40'
                       : 'bg-dark-surface text-muted border-dark-border'
-                    : 'text-muted bg-dark-surface border-dark-border hover:text-off-white hover:border-gold/40'
+                    : 'text-muted bg-dark-surface border-dark-border hover:text-off-white hover:border-brand/40'
                 }`}
               >
                 {Icon && <Icon className="w-3.5 h-3.5" />}
@@ -378,13 +378,13 @@ export default function TransactionsPage() {
               onClick={() => setShowFilters(v => !v)}
               className={`relative inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold border whitespace-nowrap transition-all ${
                 showFilters || activeFilterCount
-                  ? 'bg-gold/10 text-gold border-gold/40'
+                  ? 'bg-brand/10 text-brand border-brand/40'
                   : 'text-muted bg-dark-surface border-dark-border hover:text-off-white'
               }`}
             >
               <Filter className="w-3.5 h-3.5" /> Filter
               {activeFilterCount > 0 && (
-                <span className="ml-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-gold text-dark-bg text-[10px] font-bold flex items-center justify-center">
+                <span className="ml-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-brand text-dark-bg text-[10px] font-bold flex items-center justify-center">
                   {activeFilterCount}
                 </span>
               )}
@@ -400,7 +400,7 @@ export default function TransactionsPage() {
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Cari ID, pelanggan, atau layanan…"
-          className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-10 pr-9 py-2.5 text-sm outline-none focus:border-gold/60 transition-colors"
+          className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-10 pr-9 py-2.5 text-sm outline-none focus:border-brand/60 transition-colors"
         />
         {search && (
           <button
@@ -543,7 +543,7 @@ export default function TransactionsPage() {
                           </Badge>
                         </Td>
                         <Td className="text-right">
-                          <span className="font-semibold text-gold tabular-nums whitespace-nowrap">
+                          <span className="font-semibold text-brand tabular-nums whitespace-nowrap">
                             {formatRupiah(tx.total)}
                           </span>
                         </Td>
@@ -551,7 +551,7 @@ export default function TransactionsPage() {
                           <StatusPill status={tx.status} />
                         </Td>
                         <Td className="text-right">
-                          <Eye className="w-4 h-4 text-muted group-hover:text-gold transition-colors" />
+                          <Eye className="w-4 h-4 text-muted group-hover:text-brand transition-colors" />
                         </Td>
                       </tr>
                       )
@@ -579,7 +579,7 @@ export default function TransactionsPage() {
                           <span className="text-muted">·</span>
                           <span className="text-muted font-mono">#{tx.id.slice(-6).toUpperCase()}</span>
                         </span>
-                        <span className="font-bold text-gold tabular-nums whitespace-nowrap">
+                        <span className="font-bold text-brand tabular-nums whitespace-nowrap">
                           {formatRupiah(tx.total)}
                         </span>
                       </div>
@@ -724,7 +724,7 @@ function DateField({ label, value, min, max, onChange }) {
   return (
     <label
       onClick={openPicker}
-      className="relative block w-full bg-dark-bg border border-dark-border rounded-xl px-3.5 py-2 cursor-pointer hover:border-gold/40 focus-within:border-gold/60 transition-colors"
+      className="relative block w-full bg-dark-bg border border-dark-border rounded-xl px-3.5 py-2 cursor-pointer hover:border-brand/40 focus-within:border-brand/60 transition-colors"
     >
       <span className="block text-[10px] font-medium text-muted uppercase tracking-wider">{label}</span>
       <span className="flex items-center justify-between gap-2 mt-0.5">
@@ -789,7 +789,7 @@ function Pagination({ page, totalPages, total, onChange, loading }) {
             disabled={loading}
             className={`min-w-8 h-8 px-2 rounded-lg text-xs font-semibold transition-colors ${
               p === page
-                ? 'bg-gold text-dark-bg'
+                ? 'bg-brand text-dark-bg'
                 : 'text-muted hover:text-off-white hover:bg-dark-card'
             }`}
           >
@@ -819,7 +819,7 @@ function EmptyState({ onReset }) {
       <p className="text-muted text-sm mb-4">Coba ubah rentang tanggal atau hapus filter aktif.</p>
       <button
         onClick={onReset}
-        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-dark-card border border-dark-border text-sm text-off-white hover:border-gold/40 transition-colors"
+        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-dark-card border border-dark-border text-sm text-off-white hover:border-brand/40 transition-colors"
       >
         Reset filter
       </button>
@@ -1030,7 +1030,7 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
                 <CustomerSourceBadge tx={tx} />
                 {tx.customer?.visitCount > 5 && (
                   <span
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gold/15 text-gold border border-gold/30 whitespace-nowrap"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-brand/15 text-brand border border-brand/30 whitespace-nowrap"
                     title={`Pelanggan tetap — ${tx.customer.visitCount} kunjungan`}
                   >
                     <Star className="w-3 h-3 fill-current" /> Pelanggan Tetap
@@ -1074,10 +1074,10 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
 
           {/* Booking source detail — kalau transaksi datang dari booking */}
           {tx.booking && (
-            <div className="px-6 py-4 border-b border-dark-border bg-gold/5">
+            <div className="px-6 py-4 border-b border-dark-border bg-brand/5">
               <div className="flex items-center gap-2 mb-2">
-                <BookmarkCheck className="w-4 h-4 text-gold" />
-                <p className="text-[11px] font-semibold text-gold uppercase tracking-wider">
+                <BookmarkCheck className="w-4 h-4 text-brand" />
+                <p className="text-[11px] font-semibold text-brand uppercase tracking-wider">
                   Asal Booking · {tx.booking.source === 'online' ? 'Online' : 'Walk-in'}
                 </p>
               </div>
@@ -1139,7 +1139,7 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
             <div className="border-t border-dark-border my-2" />
             <Row
               label={<span className="text-base font-semibold text-off-white">Total</span>}
-              value={<span className="text-lg font-bold text-gold tabular-nums">{formatRupiah(tx.total)}</span>}
+              value={<span className="text-lg font-bold text-brand tabular-nums">{formatRupiah(tx.total)}</span>}
             />
             {tx.paymentMethod === 'cash' && cashReceived > 0 && (
               <>
@@ -1160,7 +1160,7 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
               <div className="flex items-center justify-between gap-2 text-xs">
                 <span className="text-muted truncate min-w-0">
                   {bt.connected
-                    ? <>Printer: <b className="text-off-white">{bt.deviceName}</b> · <button type="button" onClick={bt.disconnect} className="text-gold hover:underline">putuskan</button></>
+                    ? <>Printer: <b className="text-off-white">{bt.deviceName}</b> · <button type="button" onClick={bt.disconnect} className="text-brand hover:underline">putuskan</button></>
                     : 'Printer Bluetooth belum tersambung'}
                 </span>
                 <select
@@ -1179,7 +1179,7 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
                 <button
                   onClick={handleBtPrint}
                   disabled={btBusy}
-                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gold text-dark-bg text-sm font-semibold hover:bg-gold/90 disabled:opacity-50 transition-colors"
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-brand text-dark-bg text-sm font-semibold hover:bg-brand/90 disabled:opacity-50 transition-colors"
                 >
                   <Bluetooth className="w-4 h-4" />
                   {btBusy ? 'Mencetak…' : (bt.connected ? 'Cetak Bluetooth' : 'Hubungkan & Cetak')}
@@ -1187,7 +1187,7 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
               )}
               <button
                 onClick={() => window.print()}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-dark-card border border-dark-border text-off-white text-sm font-semibold hover:border-gold/40 transition-colors"
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-dark-card border border-dark-border text-off-white text-sm font-semibold hover:border-brand/40 transition-colors"
               >
                 <Printer className="w-4 h-4" /> Cetak
               </button>
@@ -1201,9 +1201,9 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
 
           {/* Rating Barber untuk transaksi ini */}
           {ratings.length > 0 && (
-            <div className="px-6 py-4 border-t border-dark-border bg-gold/[0.02]">
+            <div className="px-6 py-4 border-t border-dark-border bg-brand/[0.02]">
               <p className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-3 inline-flex items-center gap-2">
-                <Star className="w-3 h-3 text-gold fill-gold" /> Rating Barber
+                <Star className="w-3 h-3 text-brand fill-premium" /> Rating Barber
               </p>
               <div className="space-y-2">
                 {ratings.map(r => {
@@ -1219,7 +1219,7 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
                         <span className="text-sm text-off-white font-medium truncate">
                           {r.barber?.name || '—'}
                         </span>
-                        <span className={`text-sm tabular-nums whitespace-nowrap ${isLow ? 'text-red-400' : 'text-gold'}`}>
+                        <span className={`text-sm tabular-nums whitespace-nowrap ${isLow ? 'text-red-400' : 'text-brand'}`}>
                           {'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}
                         </span>
                       </div>

@@ -56,7 +56,7 @@ const classifyCustomerSegment = (visitCount = 0, lastVisitAt = null) => {
 }
 // Skema warna badge per-segmen untuk loyalty card.
 const SEGMENT_META = {
-  vip:    { key: 'pos.segVip',    cls: 'text-gold bg-gold/15 border-gold/40' },
+  vip:    { key: 'pos.segVip',    cls: 'text-brand bg-brand/15 border-brand/40' },
   loyal:  { key: 'pos.segLoyal',  cls: 'text-blue-300 bg-blue-400/10 border-blue-400/30' },
   new:    { key: 'pos.segNew',    cls: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/30' },
   atRisk: { key: 'pos.segAtRisk', cls: 'text-amber-300 bg-amber-500/10 border-amber-500/30' },
@@ -95,16 +95,16 @@ function CustomerHistorySnippet({ customer, transactionTotal = 0 }) {
       className="overflow-hidden"
     >
       {/* Kartu member digital — kompak: tinggi ~2 baris (+1 baris preview poin) */}
-      <div className="relative overflow-hidden rounded-xl border border-gold/30 bg-dark-card px-3 py-2 lg:py-2.5">
+      <div className="relative overflow-hidden rounded-xl border border-brand/30 bg-dark-card px-3 py-2 lg:py-2.5">
         {/* Aksen emas — pakai overlay transparan, bukan gradient warna-dark
             (gradient stop `to-dark-card` tidak ikut light-mode override). */}
-        <div className="pointer-events-none absolute inset-0 bg-gold/[0.06]" />
-        <div className="pointer-events-none absolute -right-5 -top-8 h-20 w-20 rounded-full bg-gold/15 blur-2xl" />
+        <div className="pointer-events-none absolute inset-0 bg-brand/[0.06]" />
+        <div className="pointer-events-none absolute -right-5 -top-8 h-20 w-20 rounded-full bg-brand/15 blur-2xl" />
 
         {/* Baris 1: label kartu + badge segmen */}
         <div className="relative flex items-center justify-between gap-2">
-          <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-gold">
-            <Star size={10} className="fill-gold text-gold flex-shrink-0" />
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-brand">
+            <Star size={10} className="fill-premium text-brand flex-shrink-0" />
             {t('pos.loyaltyCardLabel')}
           </span>
           <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border font-semibold uppercase tracking-wide flex-shrink-0 ${segMeta.cls}`}>
@@ -115,17 +115,17 @@ function CustomerHistorySnippet({ customer, transactionTotal = 0 }) {
 
         {/* Baris 2: saldo poin (fokus) + meta kunjungan inline */}
         <div className="relative mt-1 flex items-baseline gap-x-2.5 gap-y-0.5 flex-wrap">
-          <span className="text-lg font-bold text-gold leading-none tabular-nums">
+          <span className="text-lg font-bold text-brand leading-none tabular-nums">
             {points.toLocaleString('id-ID')}
             <span className="text-[10px] font-medium text-muted ml-1">{t('pos.pointsUnit')}</span>
           </span>
           <span className="inline-flex items-center gap-1 text-[11px] text-muted whitespace-nowrap">
-            <Scissors size={10} className="text-gold/70 flex-shrink-0" />
+            <Scissors size={10} className="text-brand/70 flex-shrink-0" />
             {t('pos.visitsCount', { count: visits })}
           </span>
           {metaLabel && (
             <span className="inline-flex items-center gap-1 text-[11px] text-muted min-w-0">
-              <Clock size={10} className="text-gold/70 flex-shrink-0" />
+              <Clock size={10} className="text-brand/70 flex-shrink-0" />
               <span className="truncate">{metaLabel}</span>
             </span>
           )}
@@ -202,7 +202,7 @@ function PaymentModalBody({ posStore, appliedVoucher, methodLabel, processing, o
       <div className="rounded-2xl p-5 text-center"
         style={{ background: 'linear-gradient(135deg, rgba(201,168,76,0.18) 0%, rgba(201,168,76,0.06) 100%)', border: '1px solid rgba(201,168,76,0.30)' }}>
         <p className="text-[10px] uppercase tracking-[0.2em] text-muted font-semibold">{t('pos.totalPayment')}</p>
-        <p className="font-display text-4xl font-bold text-gold tabular-nums mt-1">{formatRupiah(total)}</p>
+        <p className="font-display text-4xl font-bold text-brand tabular-nums mt-1">{formatRupiah(total)}</p>
         <div className="flex items-center justify-center gap-2 mt-2 flex-wrap text-xs text-muted">
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-dark-card border border-dark-border">
             <Wallet size={11} /> {methodLabel(posStore.paymentMethod)}
@@ -258,8 +258,8 @@ function PaymentModalBody({ posStore, appliedVoucher, methodLabel, processing, o
                     : exactMatch
                       ? 'border-green-500/60 focus:border-green-500'
                       : enough && cashReceived > 0
-                        ? 'border-gold/50 focus:border-gold'
-                        : 'border-dark-border focus:border-gold/60'
+                        ? 'border-brand/50 focus:border-brand'
+                        : 'border-dark-border focus:border-brand/60'
                 }`}
               />
             </div>
@@ -285,14 +285,14 @@ function PaymentModalBody({ posStore, appliedVoucher, methodLabel, processing, o
                       onClick={() => setAmount(amt)}
                       className={`relative rounded-xl border px-3 py-3 text-center transition-all active:scale-95 ${
                         isSelected
-                          ? 'bg-gold/15 border-gold text-gold shadow-[0_0_0_3px_rgba(201,168,76,0.15)]'
+                          ? 'bg-brand/15 border-brand text-brand shadow-[0_0_0_3px_rgba(201,168,76,0.15)]'
                           : isExact
-                            ? 'bg-gold/5 border-gold/40 text-off-white hover:bg-gold/10'
-                            : 'bg-dark-card border-dark-border text-off-white hover:border-gold/40'
+                            ? 'bg-brand/5 border-brand/40 text-off-white hover:bg-brand/10'
+                            : 'bg-dark-card border-dark-border text-off-white hover:border-brand/40'
                       }`}
                     >
                       {isExact && (
-                        <span className="absolute top-1 right-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-gold text-dark uppercase tracking-wider">
+                        <span className="absolute top-1 right-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-brand text-dark uppercase tracking-wider">
                           {t('pos.quickCashExact')}
                         </span>
                       )}
@@ -320,7 +320,7 @@ function PaymentModalBody({ posStore, appliedVoucher, methodLabel, processing, o
                   key={d}
                   type="button"
                   onClick={() => addAmount(d)}
-                  className="rounded-xl border border-dark-border bg-dark-card px-2 py-2 text-xs font-semibold text-off-white hover:border-gold/40 hover:bg-dark-surface transition-all active:scale-95 inline-flex items-center justify-center gap-1"
+                  className="rounded-xl border border-dark-border bg-dark-card px-2 py-2 text-xs font-semibold text-off-white hover:border-brand/40 hover:bg-dark-surface transition-all active:scale-95 inline-flex items-center justify-center gap-1"
                 >
                   <Plus size={12} />
                   <span className="tabular-nums">
@@ -868,7 +868,7 @@ function POSPageInner() {
       {isMobile ? (
         posStore.selectedCustomer ? (
           <div className="flex items-center gap-2 px-1">
-            <User className="w-3.5 h-3.5 text-gold flex-shrink-0" />
+            <User className="w-3.5 h-3.5 text-brand flex-shrink-0" />
             <button onClick={() => setShowCustomerModal(true)} className="flex-1 min-w-0 text-left truncate">
               <span className="text-sm font-medium text-off-white">{posStore.selectedCustomer.name}</span>
               {posStore.selectedCustomer.phone && (
@@ -888,17 +888,17 @@ function POSPageInner() {
             onClick={() => setShowCustomerModal(true)}
             className="w-full flex items-center gap-2 px-1 py-1 text-sm text-muted hover:text-off-white transition-colors"
           >
-            <Plus className="w-3.5 h-3.5 text-gold" /> {t('pos.selectCustomerOptional')}
+            <Plus className="w-3.5 h-3.5 text-brand" /> {t('pos.selectCustomerOptional')}
           </button>
         )
       ) : (
         <div className="bg-dark-card border border-dark-border rounded-xl p-3">
           <label className="inline-flex text-[11px] uppercase tracking-wider text-off-white font-semibold mb-2 items-center gap-1.5">
-            <User className="w-3 h-3 text-gold" /> {t('pos.customerLabel')}
+            <User className="w-3 h-3 text-brand" /> {t('pos.customerLabel')}
           </label>
           {posStore.selectedCustomer ? (
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-gold to-amber-600 flex items-center justify-center text-dark font-bold text-sm flex-shrink-0">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand to-amber-600 flex items-center justify-center text-dark font-bold text-sm flex-shrink-0">
                 {posStore.selectedCustomer.name?.[0]?.toUpperCase() || '?'}
               </div>
               <button onClick={() => setShowCustomerModal(true)} className="flex-1 min-w-0 text-left">
@@ -907,7 +907,7 @@ function POSPageInner() {
               </button>
               <button
                 onClick={() => setShowCustomerModal(true)}
-                className="flex-shrink-0 px-2 py-1 rounded-lg text-xs font-medium text-gold hover:bg-gold/10 transition-colors"
+                className="flex-shrink-0 px-2 py-1 rounded-lg text-xs font-medium text-brand hover:bg-brand/10 transition-colors"
               >
                 {t('pos.changeCustomer')}
               </button>
@@ -922,7 +922,7 @@ function POSPageInner() {
           ) : (
             <button
               onClick={() => setShowCustomerModal(true)}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-dashed border-dark-border text-muted hover:border-gold/40 hover:text-off-white transition-all text-sm"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-dashed border-dark-border text-muted hover:border-brand/40 hover:text-off-white transition-all text-sm"
             >
               <Plus className="w-4 h-4" /> {t('pos.selectCustomerOptional')}
             </button>
@@ -946,13 +946,13 @@ function POSPageInner() {
           (otomatis ke dirinya), bukan dropdown. */}
       <div className="bg-dark-card border border-dark-border rounded-xl p-2.5 lg:p-3">
         <label className="hidden lg:inline-flex text-[11px] uppercase tracking-wider text-off-white font-semibold mb-1.5 items-center gap-1.5">
-          <Scissors className="w-3 h-3 text-gold" /> {t('pos.barberServing')}
+          <Scissors className="w-3 h-3 text-brand" /> {t('pos.barberServing')}
         </label>
         {soloSelfBarber ? (
           <div className="flex items-center gap-2 bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-off-white">
-            <Scissors className="w-3.5 h-3.5 text-gold flex-shrink-0" />
+            <Scissors className="w-3.5 h-3.5 text-brand flex-shrink-0" />
             <span className="truncate">{posStore.defaultBarberName || barbers[0]?.name || user?.name}</span>
-            <span className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gold/10 text-gold border border-gold/30 flex-shrink-0">Anda</span>
+            <span className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/30 flex-shrink-0">Anda</span>
           </div>
         ) : (
           <>
@@ -963,7 +963,7 @@ function POSPageInner() {
                 posStore.setDefaultBarber(b?.id || null, b?.name || null)
               }}
               className={`w-full bg-dark-surface border text-off-white rounded-lg px-3 py-2 text-sm outline-none transition-colors ${
-                missingBarber ? 'border-amber-500/60 focus:border-amber-500' : 'border-dark-border focus:border-gold/60'
+                missingBarber ? 'border-amber-500/60 focus:border-amber-500' : 'border-dark-border focus:border-brand/60'
               }`}
             >
               <option value="">{t('pos.pickBarber')}</option>
@@ -992,7 +992,7 @@ function POSPageInner() {
           posStore.cartItems.map(item => (
             <div key={item.id} className="p-3 bg-dark-card rounded-xl border border-dark-border flex items-center justify-between gap-2">
               <p className="text-sm font-medium text-off-white leading-tight flex-1 min-w-0 truncate">{item.name}</p>
-              <span className="text-sm font-semibold text-gold whitespace-nowrap tabular-nums">{formatRupiah(item.price)}</span>
+              <span className="text-sm font-semibold text-brand whitespace-nowrap tabular-nums">{formatRupiah(item.price)}</span>
               <button
                 onClick={() => posStore.removeFromCart(item.id)}
                 className="p-2.5 -m-1 text-muted hover:text-red-400 active:text-red-400 transition-colors flex-shrink-0"
@@ -1011,7 +1011,7 @@ function POSPageInner() {
           <button
             onClick={() => setDiscountTab('manual')}
             className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              discountTab === 'manual' ? 'bg-gold/10 text-gold border border-gold/30' : 'text-muted hover:text-off-white'
+              discountTab === 'manual' ? 'bg-brand/10 text-brand border border-brand/30' : 'text-muted hover:text-off-white'
             }`}
           >
             {t('pos.manualDiscount')}
@@ -1020,7 +1020,7 @@ function POSPageInner() {
             <button
               onClick={() => setDiscountTab('voucher')}
               className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1 ${
-                discountTab === 'voucher' ? 'bg-gold/10 text-gold border border-gold/30' : 'text-muted hover:text-off-white'
+                discountTab === 'voucher' ? 'bg-brand/10 text-brand border border-brand/30' : 'text-muted hover:text-off-white'
               }`}
             >
               <Tag size={12} /> {t('pos.voucher')}
@@ -1048,7 +1048,7 @@ function POSPageInner() {
               />
               <button
                 onClick={handleApplyDiscount}
-                className="px-3 py-2 bg-gold/10 border border-gold/20 text-gold rounded-xl text-xs font-medium hover:bg-gold/20 transition-colors flex-shrink-0"
+                className="px-3 py-2 bg-brand/10 border border-brand/20 text-brand rounded-xl text-xs font-medium hover:bg-brand/20 transition-colors flex-shrink-0"
               >
                 {t('pos.apply')}
               </button>
@@ -1087,7 +1087,7 @@ function POSPageInner() {
                 <button
                   onClick={handleApplyVoucher}
                   disabled={validateVoucherMut.isPending}
-                  className="px-3 py-2 bg-gold/10 border border-gold/20 text-gold rounded-xl text-xs font-medium hover:bg-gold/20 transition-colors whitespace-nowrap disabled:opacity-50"
+                  className="px-3 py-2 bg-brand/10 border border-brand/20 text-brand rounded-xl text-xs font-medium hover:bg-brand/20 transition-colors whitespace-nowrap disabled:opacity-50"
                 >
                   {t('pos.apply')}
                 </button>
@@ -1102,7 +1102,7 @@ function POSPageInner() {
         <div className="border-t border-dark-border pt-3">
           <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
             <span className="text-xs font-semibold text-off-white inline-flex items-center gap-1.5">
-              <Star size={12} className="text-gold fill-gold" />
+              <Star size={12} className="text-brand fill-premium" />
               {t('pos.redeemPointsTitle')}
             </span>
             <span className="text-[10px] text-muted tabular-nums">
@@ -1128,13 +1128,13 @@ function POSPageInner() {
                     value={current || ''}
                     onChange={e => posStore.setPointsToRedeem(Number(e.target.value) || 0)}
                     placeholder="0"
-                    className="flex-1 min-w-0 bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl px-3 py-2 text-xs outline-none focus:border-gold/60 tabular-nums"
+                    className="flex-1 min-w-0 bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl px-3 py-2 text-xs outline-none focus:border-brand/60 tabular-nums"
                   />
                   <button
                     type="button"
                     onClick={() => posStore.setPointsToRedeem(cap)}
                     disabled={cap === 0}
-                    className="px-2.5 py-2 bg-gold/10 border border-gold/20 text-gold rounded-xl text-[11px] font-medium hover:bg-gold/20 disabled:opacity-40 whitespace-nowrap"
+                    className="px-2.5 py-2 bg-brand/10 border border-brand/20 text-brand rounded-xl text-[11px] font-medium hover:bg-brand/20 disabled:opacity-40 whitespace-nowrap"
                   >
                     {t('pos.redeemMax', { max: cap })}
                   </button>
@@ -1157,7 +1157,7 @@ function POSPageInner() {
                       onClick={() => posStore.setPointsToRedeem(n)}
                       className={`px-2 py-0.5 rounded-md text-[11px] tabular-nums border transition-colors ${
                         current === n
-                          ? 'bg-gold/30 border-gold text-gold'
+                          ? 'bg-brand/30 border-brand text-brand'
                           : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20'
                       }`}
                     >
@@ -1211,7 +1211,7 @@ function POSPageInner() {
         )}
         <div className="flex justify-between font-bold text-base text-off-white border-t border-dark-border pt-2">
           <span>{t('pos.total')}</span>
-          <span className="text-gold tabular-nums">{formatRupiah(posStore.getTotal())}</span>
+          <span className="text-brand tabular-nums">{formatRupiah(posStore.getTotal())}</span>
         </div>
       </div>
 
@@ -1221,7 +1221,7 @@ function POSPageInner() {
             key={pm.id}
             onClick={() => posStore.setPaymentMethod(pm.id)}
             className={`flex flex-col items-center gap-1 p-2 rounded-xl border text-xs transition-all active:scale-95 ${
-              posStore.paymentMethod === pm.id ? 'bg-gold/10 border-gold text-gold' : 'bg-dark-card border-dark-border text-muted hover:border-gold/30'
+              posStore.paymentMethod === pm.id ? 'bg-brand/10 border-brand text-brand' : 'bg-dark-card border-dark-border text-muted hover:border-brand/30'
             }`}
           >
             <span className="text-lg">{pm.icon}</span>
@@ -1281,7 +1281,7 @@ function POSPageInner() {
     <div className={`flex flex-col lg:flex-row h-[calc(100dvh-7rem)] gap-4 transition-[padding] ${(queueId || showDraftBanner) ? 'pt-14' : ''}`}>
       {/* Queue Context Banner */}
       {queueId && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-gold/95 px-4 py-2.5 flex items-center gap-3">
+        <div className="fixed top-0 left-0 right-0 z-50 bg-brand/95 px-4 py-2.5 flex items-center gap-3">
           <ListOrdered size={16} className="text-dark flex-shrink-0" />
           <p className="text-dark text-sm font-semibold flex-1 truncate">{t('pos.queueBannerMsg')}</p>
           <button
@@ -1323,7 +1323,7 @@ function POSPageInner() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder={t('pos.searchServicePlaceholder')}
-              className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none focus:border-gold/60"
+              className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none focus:border-brand/60"
             />
           </div>
         </div>
@@ -1336,7 +1336,7 @@ function POSPageInner() {
               key={cat}
               onClick={() => setCategory(cat)}
               className={`px-3.5 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all flex-shrink-0 active:scale-95 ${
-                category === cat ? 'bg-gold text-dark' : 'bg-dark-card border border-dark-border text-muted hover:text-off-white'
+                category === cat ? 'bg-brand text-dark' : 'bg-dark-card border border-dark-border text-muted hover:text-off-white'
               }`}
             >
               {cat === 'All' ? t('common.all') : cat}
@@ -1362,7 +1362,7 @@ function POSPageInner() {
               <p className="text-sm">{t('pos.servicesError')}</p>
               <button
                 onClick={() => refetchServices()}
-                className="mt-3 px-4 py-1.5 rounded-lg bg-gold/10 border border-gold/30 text-gold text-xs font-medium hover:bg-gold/20 transition-colors inline-flex items-center gap-1.5"
+                className="mt-3 px-4 py-1.5 rounded-lg bg-brand/10 border border-brand/30 text-brand text-xs font-medium hover:bg-brand/20 transition-colors inline-flex items-center gap-1.5"
               >
                 <RotateCcw size={12} /> {t('common.retry')}
               </button>
@@ -1382,17 +1382,17 @@ function POSPageInner() {
                   key={svc.id}
                   onClick={() => handleAddToCart(svc)}
                   className={`relative p-3 rounded-xl border text-left transition-all active:scale-[0.97] ${
-                    inCart ? 'bg-gold/10 border-gold/40' : 'bg-dark-card border-dark-border hover:border-gold/30 hover:bg-dark-surface'
+                    inCart ? 'bg-brand/10 border-brand/40' : 'bg-dark-card border-dark-border hover:border-brand/30 hover:bg-dark-surface'
                   }`}
                 >
                   {inCart && (
-                    <span className="absolute top-1.5 right-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-gold text-dark">
+                    <span className="absolute top-1.5 right-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-brand text-dark">
                       <Check size={11} strokeWidth={3} />
                     </span>
                   )}
                   <div className="text-xl mb-1.5 leading-none">{svc.icon}</div>
                   <p className="font-medium text-[13px] text-off-white leading-tight mb-0.5 line-clamp-2 min-h-[2.2em]">{svc.name}</p>
-                  <p className="text-gold font-semibold text-sm tabular-nums">{formatRupiah(svc.price)}</p>
+                  <p className="text-brand font-semibold text-sm tabular-nums">{formatRupiah(svc.price)}</p>
                   <p className="text-[11px] text-muted mt-0.5">{svc.duration} {t('pos.minutesShort')}</p>
                 </button>
               )
@@ -1411,13 +1411,13 @@ function POSPageInner() {
       {!showCartSheet && (
         <button
           onClick={() => setShowCartSheet(true)}
-          className="lg:hidden fixed left-3 right-3 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] z-40 flex items-center gap-3 px-4 py-3 rounded-2xl bg-gold text-dark font-semibold shadow-2xl active:scale-[0.98] transition-transform"
+          className="lg:hidden fixed left-3 right-3 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] z-40 flex items-center gap-3 px-4 py-3 rounded-2xl bg-brand text-dark font-semibold shadow-2xl active:scale-[0.98] transition-transform"
           aria-label={t('pos.openCart')}
         >
           <span className="relative flex-shrink-0">
             <ShoppingCart size={20} />
             {posStore.cartItems.length > 0 && (
-              <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-dark text-gold text-[10px] font-bold flex items-center justify-center tabular-nums">
+              <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full bg-dark text-brand text-[10px] font-bold flex items-center justify-center tabular-nums">
                 {posStore.cartItems.length}
               </span>
             )}
@@ -1596,7 +1596,7 @@ function POSPageInner() {
             <div className="no-print flex items-center justify-between gap-2 text-xs">
               <span className="text-muted truncate min-w-0">
                 {bt.connected
-                  ? <>Printer: <b className="text-off-white">{bt.deviceName}</b> · <button type="button" onClick={bt.disconnect} className="text-gold hover:underline">putuskan</button></>
+                  ? <>Printer: <b className="text-off-white">{bt.deviceName}</b> · <button type="button" onClick={bt.disconnect} className="text-brand hover:underline">putuskan</button></>
                   : 'Printer Bluetooth belum tersambung'}
               </span>
               <select
@@ -1714,9 +1714,9 @@ function POSPageInner() {
                 <button
                   key={c.id}
                   onClick={() => handleSelectCustomer(c)}
-                  className="w-full flex items-center gap-3 p-3 bg-dark-card rounded-xl hover:bg-dark-surface border border-dark-border hover:border-gold/30 transition-all text-left"
+                  className="w-full flex items-center gap-3 p-3 bg-dark-card rounded-xl hover:bg-dark-surface border border-dark-border hover:border-brand/30 transition-all text-left"
                 >
-                  <div className="w-8 h-8 rounded-full bg-gold/10 flex items-center justify-center text-gold font-bold text-sm flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-brand/10 flex items-center justify-center text-brand font-bold text-sm flex-shrink-0">
                     {c.name?.[0]?.toUpperCase() || '?'}
                   </div>
                   <div className="min-w-0 flex-1">

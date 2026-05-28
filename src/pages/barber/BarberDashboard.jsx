@@ -49,7 +49,7 @@ const initials = (n = '') =>
 // ── Sub-components ──────────────────────────────────────────────────────────
 
 const ACCENTS = {
-  gold:  { grad: 'from-gold/20 to-gold/0',         icon: 'text-gold',         iconBg: 'bg-gold/15 border-gold/30' },
+  gold:  { grad: 'from-brand/20 to-brand/0',         icon: 'text-brand',         iconBg: 'bg-brand/15 border-brand/30' },
   blue:  { grad: 'from-blue-400/20 to-blue-400/0', icon: 'text-blue-300',     iconBg: 'bg-blue-500/15 border-blue-500/30' },
   green: { grad: 'from-emerald-400/20 to-emerald-400/0', icon: 'text-emerald-300', iconBg: 'bg-emerald-500/15 border-emerald-500/30' },
   amber: { grad: 'from-amber-400/20 to-amber-400/0', icon: 'text-amber-300', iconBg: 'bg-amber-500/15 border-amber-500/30' },
@@ -111,7 +111,7 @@ function QueueItemCard({ item, onAdvance, busyId, t }) {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-1.5 mb-1">
-            <span className="text-[11px] font-bold text-gold tabular-nums">{item.ticketNumber}</span>
+            <span className="text-[11px] font-bold text-brand tabular-nums">{item.ticketNumber}</span>
             <span className={`text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-md border ${
               isInProgress
                 ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
@@ -153,7 +153,7 @@ function QueueItemCard({ item, onAdvance, busyId, t }) {
             className={`inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors disabled:opacity-50 ${
               isInProgress
                 ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25'
-                : 'bg-gold/15 text-gold border border-gold/30 hover:bg-gold/25'
+                : 'bg-brand/15 text-brand border border-brand/30 hover:bg-brand/25'
             }`}
           >
             {isBusy ? (
@@ -179,7 +179,7 @@ function Sparkbars({ data, max }) {
         const h = Math.max(4, Math.round((d.value / safeMax) * 100))
         return (
           <div key={i} className="flex flex-col items-center gap-1 flex-1 min-w-0">
-            <div className="w-full rounded-md bg-gradient-to-t from-gold to-gold-light/70 transition-all" style={{ height: `${h}%` }} title={`${d.label}: ${formatRupiah(d.value)}`} />
+            <div className="w-full rounded-md bg-gradient-to-t from-brand to-brand-light/70 transition-all" style={{ height: `${h}%` }} title={`${d.label}: ${formatRupiah(d.value)}`} />
             <span className="text-[9px] text-muted truncate w-full text-center">{d.label}</span>
           </div>
         )
@@ -307,7 +307,7 @@ function ProfileEditModal({ open, onClose, user, toast }) {
           type="button"
           onClick={() => setTab('profile')}
           className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
-            tab === 'profile' ? 'bg-gold text-dark' : 'text-muted hover:text-off-white'
+            tab === 'profile' ? 'bg-brand text-dark' : 'text-muted hover:text-off-white'
           }`}
         >
           Profil
@@ -316,7 +316,7 @@ function ProfileEditModal({ open, onClose, user, toast }) {
           type="button"
           onClick={() => setTab('password')}
           className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
-            tab === 'password' ? 'bg-gold text-dark' : 'text-muted hover:text-off-white'
+            tab === 'password' ? 'bg-brand text-dark' : 'text-muted hover:text-off-white'
           }`}
         >
           Password
@@ -333,7 +333,7 @@ function ProfileEditModal({ open, onClose, user, toast }) {
               role="button"
               tabIndex={0}
             >
-              <div className="w-24 h-24 rounded-full overflow-hidden ring-2 ring-gold/40 group-hover:ring-gold transition-all">
+              <div className="w-24 h-24 rounded-full overflow-hidden ring-2 ring-brand/40 group-hover:ring-brand transition-all">
                 {photo && !imgError ? (
                   <img
                     src={photo}
@@ -342,7 +342,7 @@ function ProfileEditModal({ open, onClose, user, toast }) {
                     onError={() => setImgError(true)}
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-2xl font-semibold text-white bg-gradient-to-br from-gold to-gold-light">
+                  <div className="w-full h-full flex items-center justify-center text-2xl font-semibold text-white bg-gradient-to-br from-brand to-brand-light">
                     {initialsTxt}
                   </div>
                 )}
@@ -352,7 +352,7 @@ function ProfileEditModal({ open, onClose, user, toast }) {
               </div>
             </div>
             <div className="flex items-center gap-3 text-xs">
-              <button type="button" onClick={() => fileRef.current?.click()} className="text-gold hover:underline">
+              <button type="button" onClick={() => fileRef.current?.click()} className="text-brand hover:underline">
                 {photo ? 'Ganti foto' : 'Upload foto'}
               </button>
               {photo && (
@@ -582,7 +582,7 @@ export default function BarberDashboard() {
     return (
       <div className="mx-auto w-full max-w-3xl">
         <Card className="p-8 text-center">
-          <Sparkles className="w-10 h-10 text-gold/60 mx-auto mb-3" />
+          <Sparkles className="w-10 h-10 text-brand/60 mx-auto mb-3" />
           <h2 className="font-display text-xl font-bold text-off-white">Cabang belum ditentukan</h2>
           <p className="text-muted text-sm mt-2">
             Akun Anda belum dipasang ke cabang. Hubungi admin untuk pengaturan.
@@ -597,11 +597,11 @@ export default function BarberDashboard() {
       {/* ── Hero ───────────────────────────────────────────────────────────── */}
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
         <Card className="relative overflow-hidden p-4 sm:p-6">
-          <div className="absolute inset-0 bg-gradient-to-br from-gold/10 via-transparent to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-br from-brand/10 via-transparent to-transparent pointer-events-none" />
           <button
             type="button"
             onClick={() => setProfileOpen(true)}
-            className="absolute top-3 right-3 z-10 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-dark-card/80 border border-dark-border hover:border-gold/50 hover:text-gold text-muted text-xs font-medium transition-colors backdrop-blur"
+            className="absolute top-3 right-3 z-10 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-dark-card/80 border border-dark-border hover:border-brand/50 hover:text-brand text-muted text-xs font-medium transition-colors backdrop-blur"
             aria-label="Edit profil"
           >
             <Edit3 className="w-3.5 h-3.5" />
@@ -616,19 +616,19 @@ export default function BarberDashboard() {
                 aria-label="Ganti foto profil"
               >
                 <Avatar src={user?.photo} name={user?.name} size="xl" ring />
-                <span className="absolute -bottom-0.5 -right-0.5 w-7 h-7 rounded-full bg-gold border-2 border-dark-surface flex items-center justify-center text-dark group-hover:scale-110 transition-transform">
+                <span className="absolute -bottom-0.5 -right-0.5 w-7 h-7 rounded-full bg-brand border-2 border-dark-surface flex items-center justify-center text-dark group-hover:scale-110 transition-transform">
                   <Camera className="w-3.5 h-3.5" />
                 </span>
               </button>
               <div className="flex-1 min-w-0">
-                <p className="text-[11px] sm:text-xs uppercase tracking-wider text-gold/80 font-semibold">
+                <p className="text-[11px] sm:text-xs uppercase tracking-wider text-brand/80 font-semibold">
                   {greeting}
                 </p>
                 <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white truncate">
                   {user?.name || 'Barber'}
                 </h1>
                 <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                  <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-gold/10 border border-gold/30 text-gold">
+                  <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-brand/10 border border-brand/30 text-brand">
                     <Scissors className="w-3 h-3" /> {t('barber.profile')}
                   </span>
                   <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-dark-card/60 border border-dark-border text-muted">
@@ -645,7 +645,7 @@ export default function BarberDashboard() {
             </div>
             <div className="w-full sm:w-auto sm:text-right shrink-0 mt-3 sm:mt-0">
               <p className="text-[11px] uppercase tracking-wide text-muted">Komisi hari ini</p>
-              <p className="text-2xl sm:text-3xl font-display font-bold text-gold tabular-nums whitespace-nowrap">
+              <p className="text-2xl sm:text-3xl font-display font-bold text-brand tabular-nums whitespace-nowrap">
                 {formatRupiah(todayCommission)}
               </p>
               <p className="text-[11px] text-muted tabular-nums">
@@ -715,13 +715,13 @@ export default function BarberDashboard() {
         <div className="lg:col-span-2 space-y-3">
           <div className="flex items-center justify-between gap-2">
             <h3 className="font-semibold text-off-white inline-flex items-center gap-2">
-              <ListOrdered className="w-4 h-4 text-gold" /> {t('queue.myQueue')}
+              <ListOrdered className="w-4 h-4 text-brand" /> {t('queue.myQueue')}
               <span className="text-xs text-muted font-normal">({activeItems.length})</span>
             </h3>
             <button
               type="button"
               onClick={() => navigate('/barber/queue')}
-              className="text-xs text-gold hover:underline inline-flex items-center gap-1"
+              className="text-xs text-brand hover:underline inline-flex items-center gap-1"
             >
               Lihat semua <ArrowRight className="w-3 h-3" />
             </button>
@@ -750,7 +750,7 @@ export default function BarberDashboard() {
               <button
                 type="button"
                 onClick={() => navigate('/barber/queue')}
-                className="w-full text-xs text-gold py-2 hover:underline"
+                className="w-full text-xs text-brand py-2 hover:underline"
               >
                 Lihat {activeItems.length - 6} antrian lain
               </button>
@@ -762,7 +762,7 @@ export default function BarberDashboard() {
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-2">
             <h3 className="font-semibold text-off-white inline-flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-gold" /> Booking Hari Ini
+              <Calendar className="w-4 h-4 text-brand" /> Booking Hari Ini
               <span className="text-xs text-muted font-normal">({upcomingBookings.length})</span>
             </h3>
           </div>
@@ -779,8 +779,8 @@ export default function BarberDashboard() {
               upcomingBookings.map(b => (
                 <Card key={b.id} className="p-3">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="shrink-0 w-10 h-10 rounded-lg bg-gold/10 border border-gold/30 flex items-center justify-center">
-                      <span className="text-[11px] font-bold text-gold tabular-nums">{b.time || '--:--'}</span>
+                    <div className="shrink-0 w-10 h-10 rounded-lg bg-brand/10 border border-brand/30 flex items-center justify-center">
+                      <span className="text-[11px] font-bold text-brand tabular-nums">{b.time || '--:--'}</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-off-white truncate">{b.customerName || b.customer?.name || 'Pelanggan'}</p>
@@ -807,12 +807,12 @@ export default function BarberDashboard() {
         <Card className="p-4 sm:p-5 lg:col-span-1">
           <div className="flex items-center justify-between gap-2 mb-2">
             <h3 className="text-sm font-semibold text-off-white inline-flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-gold" /> Komisi 7 Hari
+              <TrendingUp className="w-4 h-4 text-brand" /> Komisi 7 Hari
             </h3>
             <button
               type="button"
               onClick={() => navigate('/barber/commission')}
-              className="text-xs text-gold hover:underline"
+              className="text-xs text-brand hover:underline"
             >
               Detail
             </button>
@@ -823,7 +823,7 @@ export default function BarberDashboard() {
             <Sparkbars data={chart.days} max={chart.max} />
           )}
           <p className="text-[11px] text-muted mt-2">
-            Total minggu ini: <span className="text-gold font-semibold tabular-nums">
+            Total minggu ini: <span className="text-brand font-semibold tabular-nums">
               {formatRupiah(chart.days.reduce((s, d) => s + d.value, 0))}
             </span>
           </p>
@@ -833,7 +833,7 @@ export default function BarberDashboard() {
         <Card id="riwayat-komisi" className="p-4 sm:p-5 lg:col-span-2 scroll-mt-24">
           <div className="flex items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-off-white inline-flex items-center gap-2">
-              <Wallet className="w-4 h-4 text-gold" /> Riwayat Komisi Hari Ini
+              <Wallet className="w-4 h-4 text-brand" /> Riwayat Komisi Hari Ini
               <span className="text-xs text-muted font-normal">({earningEntries.length})</span>
             </h3>
             <div className="flex items-center gap-1 text-xs text-muted">
@@ -876,7 +876,7 @@ export default function BarberDashboard() {
                   key={row.id}
                   className="flex items-center gap-3 p-2 sm:p-3 rounded-xl bg-dark-card/40 border border-dark-border/50 min-w-0"
                 >
-                  <div className="shrink-0 w-9 h-9 rounded-lg bg-gold/10 border border-gold/30 flex items-center justify-center text-[11px] font-bold text-gold">
+                  <div className="shrink-0 w-9 h-9 rounded-lg bg-brand/10 border border-brand/30 flex items-center justify-center text-[11px] font-bold text-brand">
                     {initials(row.customerName)}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -886,7 +886,7 @@ export default function BarberDashboard() {
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
-                    <p className="text-sm font-bold text-gold tabular-nums whitespace-nowrap">
+                    <p className="text-sm font-bold text-brand tabular-nums whitespace-nowrap">
                       {formatRupiah(row.commission)}
                     </p>
                     <p className="text-[10px] text-muted tabular-nums whitespace-nowrap">
@@ -907,9 +907,9 @@ export default function BarberDashboard() {
           onClick={() => navigate('/barber/queue')}
           className="text-left"
         >
-          <Card className="p-4 hover:border-gold/40 transition-colors">
+          <Card className="p-4 hover:border-brand/40 transition-colors">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="shrink-0 w-10 h-10 rounded-xl bg-gold/10 border border-gold/30 flex items-center justify-center text-gold">
+              <div className="shrink-0 w-10 h-10 rounded-xl bg-brand/10 border border-brand/30 flex items-center justify-center text-brand">
                 <ListOrdered className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
@@ -925,9 +925,9 @@ export default function BarberDashboard() {
           onClick={() => navigate('/barber/commission')}
           className="text-left"
         >
-          <Card className="p-4 hover:border-gold/40 transition-colors">
+          <Card className="p-4 hover:border-brand/40 transition-colors">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="shrink-0 w-10 h-10 rounded-xl bg-gold/10 border border-gold/30 flex items-center justify-center text-gold">
+              <div className="shrink-0 w-10 h-10 rounded-xl bg-brand/10 border border-brand/30 flex items-center justify-center text-brand">
                 <Trophy className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">

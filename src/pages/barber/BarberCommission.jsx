@@ -65,7 +65,7 @@ const initialsOf = (n = '') =>
 // ── Subcomponents ───────────────────────────────────────────────────────────
 
 const ACCENTS = {
-  gold:  { icon: 'text-gold',         iconBg: 'bg-gold/15 border-gold/30' },
+  gold:  { icon: 'text-brand',         iconBg: 'bg-brand/15 border-brand/30' },
   blue:  { icon: 'text-blue-300',     iconBg: 'bg-blue-500/15 border-blue-500/30' },
   green: { icon: 'text-emerald-300',  iconBg: 'bg-emerald-500/15 border-emerald-500/30' },
   amber: { icon: 'text-amber-300',    iconBg: 'bg-amber-500/15 border-amber-500/30' },
@@ -390,7 +390,7 @@ export default function BarberCommission() {
     return (
       <div className="mx-auto w-full max-w-3xl">
         <Card className="p-8 text-center">
-          <Trophy className="w-10 h-10 text-gold/60 mx-auto mb-3" />
+          <Trophy className="w-10 h-10 text-brand/60 mx-auto mb-3" />
           <h2 className="font-display text-xl font-bold text-off-white">Cabang belum ditentukan</h2>
           <p className="text-muted text-sm mt-2">
             Akun Anda belum dipasang ke cabang. Hubungi admin untuk pengaturan.
@@ -406,10 +406,10 @@ export default function BarberCommission() {
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white inline-flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-gold" /> {t('barber.myCommission')}
+            <Trophy className="w-5 h-5 text-brand" /> {t('barber.myCommission')}
           </h1>
           <p className="text-muted text-xs sm:text-sm mt-1">
-            Rate komisi <span className="text-gold font-semibold">{(commissionRate * 100).toFixed(0)}%</span>
+            Rate komisi <span className="text-brand font-semibold">{(commissionRate * 100).toFixed(0)}%</span>
             {' · '}
             {dateRange.start === dateRange.end
               ? format(parseISO(dateRange.start), 'EEEE, d MMM yyyy', { locale: idLocale })
@@ -421,7 +421,7 @@ export default function BarberCommission() {
             type="button"
             onClick={handleExportCSV}
             disabled={exporting || !aggregate.all.length}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gold/10 border border-gold/30 text-gold text-xs font-semibold hover:bg-gold/20 disabled:opacity-50 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-brand/10 border border-brand/30 text-brand text-xs font-semibold hover:bg-brand/20 disabled:opacity-50 transition-colors"
           >
             {exporting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             <span className="hidden sm:inline">{exporting ? 'Mengekspor…' : 'Ekspor CSV'}</span>
@@ -429,7 +429,7 @@ export default function BarberCommission() {
           <button
             type="button"
             onClick={() => navigate('/barber/dashboard')}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-dark-card/60 border border-dark-border text-muted text-xs font-medium hover:text-off-white hover:border-gold/40 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-dark-card/60 border border-dark-border text-muted text-xs font-medium hover:text-off-white hover:border-brand/40 transition-colors"
           >
             <ArrowRight className="w-4 h-4 rotate-180" />
             <span className="hidden sm:inline">Dashboard</span>
@@ -447,7 +447,7 @@ export default function BarberCommission() {
               onClick={() => setPreset(p.id)}
               className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                 activePreset === p.id
-                  ? 'bg-gold text-dark'
+                  ? 'bg-brand text-dark'
                   : 'bg-dark-card/60 border border-dark-border text-muted hover:text-off-white'
               }`}
             >
@@ -459,7 +459,7 @@ export default function BarberCommission() {
             onClick={() => setShowCustom(s => !s)}
             className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors inline-flex items-center gap-1 ${
               activePreset === 'custom' || showCustom
-                ? 'bg-gold text-dark'
+                ? 'bg-brand text-dark'
                 : 'bg-dark-card/60 border border-dark-border text-muted hover:text-off-white'
             }`}
           >
@@ -475,7 +475,7 @@ export default function BarberCommission() {
                 value={dateRange.start}
                 max={dateRange.end || todayISO()}
                 onChange={e => setDateRange(r => ({ ...r, start: e.target.value }))}
-                className="mt-1 w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-gold/60"
+                className="mt-1 w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-brand/60"
               />
             </label>
             <label className="block">
@@ -486,7 +486,7 @@ export default function BarberCommission() {
                 min={dateRange.start || ''}
                 max={todayISO()}
                 onChange={e => setDateRange(r => ({ ...r, end: e.target.value }))}
-                className="mt-1 w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-gold/60"
+                className="mt-1 w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-brand/60"
               />
             </label>
           </div>
@@ -541,7 +541,7 @@ export default function BarberCommission() {
         <Card className="p-4 sm:p-5 lg:col-span-2">
           <div className="flex items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-off-white inline-flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-gold" /> {t('barber.dailyCommission')}
+              <TrendingUp className="w-4 h-4 text-brand" /> {t('barber.dailyCommission')}
             </h3>
             <span className="text-[11px] text-muted">{chart.days.length} hari</span>
           </div>
@@ -586,7 +586,7 @@ export default function BarberCommission() {
         <Card className="p-4 sm:p-5">
           <div className="flex items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-off-white inline-flex items-center gap-2">
-              <Scissors className="w-4 h-4 text-gold" /> Top Layanan
+              <Scissors className="w-4 h-4 text-brand" /> Top Layanan
             </h3>
             <span className="text-[11px] text-muted">{serviceBreakdown.length}</span>
           </div>
@@ -605,13 +605,13 @@ export default function BarberCommission() {
                   <li key={i} className="min-w-0">
                     <div className="flex items-center justify-between gap-2 text-xs mb-1 min-w-0">
                       <span className="text-off-white font-medium truncate">{s.name}</span>
-                      <span className="text-gold tabular-nums whitespace-nowrap shrink-0">
+                      <span className="text-brand tabular-nums whitespace-nowrap shrink-0">
                         {formatRupiah(s.commission)}
                       </span>
                     </div>
                     <div className="relative h-2 bg-dark-card/60 rounded-full overflow-hidden">
                       <div
-                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-gold to-gold-light rounded-full"
+                        className="absolute inset-y-0 left-0 bg-gradient-to-r from-brand to-brand-light rounded-full"
                         style={{ width: `${Math.max(6, pct)}%` }}
                       />
                     </div>
@@ -631,7 +631,7 @@ export default function BarberCommission() {
         <Card className="p-4 sm:p-5">
           <div className="flex items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-off-white inline-flex items-center gap-2">
-              <Users className="w-4 h-4 text-gold" /> Pelanggan Paling Sering
+              <Users className="w-4 h-4 text-brand" /> Pelanggan Paling Sering
             </h3>
             <span className="text-[11px] text-muted">{topCustomers.length}</span>
           </div>
@@ -649,7 +649,7 @@ export default function BarberCommission() {
                   </p>
                 </div>
                 {i === 0 && (
-                  <Star className="w-3.5 h-3.5 text-gold fill-gold shrink-0" />
+                  <Star className="w-3.5 h-3.5 text-brand fill-premium shrink-0" />
                 )}
               </div>
             ))}
@@ -661,7 +661,7 @@ export default function BarberCommission() {
       <div>
         <div className="flex items-center justify-between gap-2 mb-3">
           <h3 className="text-sm font-semibold text-off-white inline-flex items-center gap-2">
-            <Receipt className="w-4 h-4 text-gold" /> {t('barber.transactionHistory')}
+            <Receipt className="w-4 h-4 text-brand" /> {t('barber.transactionHistory')}
             <span className="text-xs text-muted font-normal">({pageQuery.total || 0})</span>
           </h3>
           {totalTxPages > 1 && (
@@ -710,7 +710,7 @@ export default function BarberCommission() {
               return (
                 <Card key={txn.id} className="p-3 sm:p-4">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="shrink-0 w-10 h-10 rounded-xl bg-gold/10 border border-gold/30 flex items-center justify-center text-[11px] font-bold text-gold">
+                    <div className="shrink-0 w-10 h-10 rounded-xl bg-brand/10 border border-brand/30 flex items-center justify-center text-[11px] font-bold text-brand">
                       {initialsOf(customer)}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -722,7 +722,7 @@ export default function BarberCommission() {
                       </p>
                     </div>
                     <div className="shrink-0 text-right">
-                      <p className="text-sm font-bold text-gold tabular-nums whitespace-nowrap">
+                      <p className="text-sm font-bold text-brand tabular-nums whitespace-nowrap">
                         {formatRupiah(myCommission)}
                       </p>
                       <p className="text-[10px] text-muted tabular-nums whitespace-nowrap">

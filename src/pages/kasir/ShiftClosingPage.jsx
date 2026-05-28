@@ -101,8 +101,8 @@ function OpenShiftScreen({ branchId, branchName }) {
   return (
     <div className="max-w-md mx-auto py-6 sm:py-12">
       <Card className="p-6 sm:p-8 text-center">
-        <div className="w-16 h-16 rounded-full bg-gold/10 border border-gold/30 flex items-center justify-center mx-auto mb-4">
-          <Wallet className="w-7 h-7 text-gold" />
+        <div className="w-16 h-16 rounded-full bg-brand/10 border border-brand/30 flex items-center justify-center mx-auto mb-4">
+          <Wallet className="w-7 h-7 text-brand" />
         </div>
         <div className="flex justify-center mb-3">
           <ShiftStatusBadge active={false} />
@@ -123,7 +123,7 @@ function OpenShiftScreen({ branchId, branchName }) {
               value={openingCash}
               onChange={e => setOpeningCash(e.target.value.replace(/\D/g, '').slice(0, 12))}
               placeholder="0"
-              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60 transition-colors font-mono"
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60 transition-colors font-mono"
             />
             {openingCash && (
               <p className="text-xs text-muted mt-1">
@@ -140,7 +140,7 @@ function OpenShiftScreen({ branchId, branchName }) {
               rows={2}
               maxLength={500}
               placeholder="Misal: kondisi kas drawer, modal awal, dst."
-              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60 transition-colors resize-none"
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60 transition-colors resize-none"
             />
           </div>
         </div>
@@ -429,7 +429,7 @@ function ShiftClosingPageInner() {
       {/* KPI row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
         <Kpi icon={Receipt}      label="Total Transaksi"  value={totalTransactions} color="text-blue-400" />
-        <Kpi icon={DollarSign}   label="Total Pendapatan" value={formatRupiah(totalRevenue)} valueShort={formatRupiahShort(totalRevenue)} color="text-gold" />
+        <Kpi icon={DollarSign}   label="Total Pendapatan" value={formatRupiah(totalRevenue)} valueShort={formatRupiahShort(totalRevenue)} color="text-brand" />
         <Kpi icon={TrendingUp}   label="Rata-rata"        value={formatRupiah(avgPerTx)} valueShort={formatRupiahShort(avgPerTx)} color="text-green-400" />
         <Kpi icon={Clock}        label="Durasi Shift"     value={durationLabel(activeShift.openedAt)} color="text-purple-400" />
       </div>
@@ -437,7 +437,7 @@ function ShiftClosingPageInner() {
       {/* Cash drawer */}
       <Card className="p-4 sm:p-5">
         <div className="flex items-center gap-2 mb-3">
-          <Wallet className="w-4 h-4 text-gold" />
+          <Wallet className="w-4 h-4 text-brand" />
           <h3 className="font-semibold text-off-white text-sm sm:text-base">Rekonsiliasi Kas Drawer</h3>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -453,9 +453,9 @@ function ShiftClosingPageInner() {
               {formatRupiah(totalCash)}
             </p>
           </div>
-          <div className="bg-dark-card/50 rounded-xl border border-gold/30 p-3">
-            <p className="text-[10px] sm:text-xs text-gold uppercase tracking-wider">Kas Diharapkan</p>
-            <p className="text-base sm:text-lg font-bold text-gold truncate" title={formatRupiah(expectedCash)}>
+          <div className="bg-dark-card/50 rounded-xl border border-brand/30 p-3">
+            <p className="text-[10px] sm:text-xs text-brand uppercase tracking-wider">Kas Diharapkan</p>
+            <p className="text-base sm:text-lg font-bold text-brand truncate" title={formatRupiah(expectedCash)}>
               {formatRupiah(expectedCash)}
             </p>
           </div>
@@ -467,7 +467,7 @@ function ShiftClosingPageInner() {
               value={closingCash}
               onChange={e => setClosingCash(e.target.value.replace(/\D/g, '').slice(0, 12))}
               placeholder="0"
-              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm sm:text-base outline-none focus:border-gold/60 transition-colors font-mono"
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm sm:text-base outline-none focus:border-brand/60 transition-colors font-mono"
             />
             {closingCash && (
               <p className="text-[10px] sm:text-xs text-muted mt-1 truncate">
@@ -516,14 +516,14 @@ function ShiftClosingPageInner() {
                     <p className="text-xs text-muted">{p.count} tx</p>
                   </div>
                 </div>
-                <span className="font-semibold text-gold text-sm sm:text-base whitespace-nowrap">
+                <span className="font-semibold text-brand text-sm sm:text-base whitespace-nowrap">
                   {formatRupiah(p.amount)}
                 </span>
               </div>
             ))}
             <div className="border-t border-dark-border pt-3 flex items-center justify-between gap-3">
               <span className="font-semibold text-off-white text-sm">Total</span>
-              <span className="font-bold text-gold text-base sm:text-lg whitespace-nowrap">
+              <span className="font-bold text-brand text-base sm:text-lg whitespace-nowrap">
                 {formatRupiah(totalRevenue)}
               </span>
             </div>
@@ -546,19 +546,19 @@ function ShiftClosingPageInner() {
               return (
                 <div key={s.name} className="flex items-center gap-3">
                   <span className={`w-6 text-center font-bold text-sm flex-shrink-0 ${
-                    i === 0 ? 'text-gold' : 'text-muted'
+                    i === 0 ? 'text-brand' : 'text-muted'
                   }`}>
                     {i + 1}
                   </span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-off-white truncate" title={s.name}>{s.name}</p>
                     <div className="w-full bg-dark-card rounded-full h-1.5 mt-1 border border-dark-border">
-                      <div className="h-full rounded-full bg-gold" style={{ width: `${pct}%` }} />
+                      <div className="h-full rounded-full bg-brand" style={{ width: `${pct}%` }} />
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">
                     <p className="text-xs text-muted">{s.count}x</p>
-                    <p className="text-xs font-medium text-gold whitespace-nowrap">{formatRupiah(s.revenue)}</p>
+                    <p className="text-xs font-medium text-brand whitespace-nowrap">{formatRupiah(s.revenue)}</p>
                   </div>
                 </div>
               )
@@ -571,7 +571,7 @@ function ShiftClosingPageInner() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-gold" />
+            <Users className="w-4 h-4 text-brand" />
             <h3 className="font-semibold text-off-white text-sm sm:text-base">Performa Barber</h3>
           </div>
         </CardHeader>
@@ -602,7 +602,7 @@ function ShiftClosingPageInner() {
                       <span className="truncate max-w-[200px] inline-block" title={b.name}>{b.name}</span>
                     </td>
                     <td className="px-4 py-3 text-right text-off-white whitespace-nowrap">{b.transactions}</td>
-                    <td className="px-4 py-3 text-right text-gold whitespace-nowrap">{formatRupiah(b.revenue)}</td>
+                    <td className="px-4 py-3 text-right text-brand whitespace-nowrap">{formatRupiah(b.revenue)}</td>
                     <td className="px-4 py-3 text-right text-muted text-xs whitespace-nowrap">
                       {Math.round((b.commissionRate || 0) * 100)}%
                     </td>
@@ -631,7 +631,7 @@ function ShiftClosingPageInner() {
                 <div className="grid grid-cols-3 gap-2 text-[11px]">
                   <div className="min-w-0">
                     <p className="text-muted uppercase tracking-wide">Pendapatan</p>
-                    <p className="text-gold font-semibold truncate">{formatRupiah(b.revenue)}</p>
+                    <p className="text-brand font-semibold truncate">{formatRupiah(b.revenue)}</p>
                   </div>
                   <div className="min-w-0">
                     <p className="text-muted uppercase tracking-wide">Rate</p>
@@ -657,7 +657,7 @@ function ShiftClosingPageInner() {
           rows={2}
           maxLength={500}
           placeholder="Misal: insiden kas, pelanggan komplain, voucher khusus, dll."
-          className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gold/60 transition-colors resize-none"
+          className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60 transition-colors resize-none"
         />
       </Card>
 
@@ -689,7 +689,7 @@ function ShiftClosingPageInner() {
             Shift akan ditutup. Setelah ditutup, transaksi baru tidak dapat ditambahkan ke shift ini.
           </p>
           <div className="bg-dark-card rounded-xl border border-dark-border p-4 text-center">
-            <p className="text-2xl sm:text-3xl font-bold text-gold truncate" title={formatRupiah(totalRevenue)}>
+            <p className="text-2xl sm:text-3xl font-bold text-brand truncate" title={formatRupiah(totalRevenue)}>
               {formatRupiah(totalRevenue)}
             </p>
             <p className="text-muted text-sm mt-1">{totalTransactions} transaksi</p>
@@ -756,7 +756,7 @@ function ClosedSuccess({ shift, onOpenAgain, onBackToPos, onShowHistory }) {
         {shift?.kasirName ? ` oleh ${shift.kasirName}` : ''}
       </p>
       <p className="text-muted mb-6 text-sm">
-        Total pendapatan shift: <span className="text-gold font-semibold">{formatRupiah(total)}</span>
+        Total pendapatan shift: <span className="text-brand font-semibold">{formatRupiah(total)}</span>
       </p>
 
       {variance != null && (
@@ -814,7 +814,7 @@ function ShiftHistoryModal({ isOpen, onClose }) {
             id="hist-from" type="date" value={dateFrom}
             max={dateTo || undefined}
             onChange={e => setDateFrom(e.target.value)}
-            className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold/60"
+            className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-brand/60"
           />
         </div>
         <div>
@@ -823,7 +823,7 @@ function ShiftHistoryModal({ isOpen, onClose }) {
             id="hist-to" type="date" value={dateTo}
             min={dateFrom || undefined}
             onChange={e => setDateTo(e.target.value)}
-            className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-gold/60"
+            className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-brand/60"
           />
         </div>
         {hasFilter && (
@@ -884,7 +884,7 @@ function ShiftHistoryModal({ isOpen, onClose }) {
                     )}
                   </p>
                 </div>
-                <p className="text-gold font-bold text-sm whitespace-nowrap">
+                <p className="text-brand font-bold text-sm whitespace-nowrap">
                   {formatRupiah(s.totalRevenue || 0)}
                 </p>
               </div>

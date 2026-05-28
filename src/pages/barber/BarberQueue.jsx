@@ -50,7 +50,7 @@ export default function BarberQueue() {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-bold text-gold">{item.ticketNumber}</span>
+                    <span className="text-xs font-bold text-brand">{item.ticketNumber}</span>
                     <Badge variant={item.type === 'booking' ? 'info' : 'muted'}>{item.type}</Badge>
                   </div>
                   <p className="font-semibold text-off-white">{item.customerName}</p>
@@ -65,7 +65,7 @@ export default function BarberQueue() {
                 {(item.status === 'waiting' || item.status === 'in-progress') && (
                   <button
                     onClick={() => handleAdvance(item)}
-                    className="flex items-center gap-1 px-4 py-2 bg-gold/10 border border-gold/20 text-gold rounded-xl text-sm font-medium hover:bg-gold/20 transition-colors"
+                    className="flex items-center gap-1 px-4 py-2 bg-brand/10 border border-brand/20 text-brand rounded-xl text-sm font-medium hover:bg-brand/20 transition-colors"
                   >
                     {item.status === 'waiting' ? 'Mulai' : 'Selesai'}
                     <ChevronRight className="w-4 h-4" />
