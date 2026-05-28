@@ -56,7 +56,9 @@ export default function TAStaffPage() {
   const { data: branches = [] } = useBranches(user?.tenantId)
   const { data: licenseSummary } = useBranchLicenseSummary(user?.tenantId)
   const { data: subscription } = useSubscription(user?.tenantId)
-  const { data: packages = [] } = usePackages()
+  // usePackages() return { list, map } (lihat src/hooks/usePackages.js).
+  // Lookup by name via map untuk dapat package tenant sekarang.
+  const { data: packagesData } = usePackages()
   const createUser = useCreateUser()
   const updateUser = useUpdateUser()
   const deleteUser = useDeleteUser()
@@ -72,7 +74,7 @@ export default function TAStaffPage() {
   //   1 cabang utama   = 4 staf
   //   2 cabang (1 paid) = 4 + 3 = 7 staf
   //   3 cabang (2 paid) = 4 + 6 = 10 staf
-  const tenantPackage  = packages.find(p => p.name === subscription?.package)
+  const tenantPackage  = packagesData?.map?.[subscription?.package] || null
   const baseMaxStaff   = tenantPackage?.maxStaff ?? null
   const bonusPerBranch = tenantPackage?.staffPerExtraBranch ?? 0
   const paidAddons     = licenseSummary?.paidAddonCount ?? 0
