@@ -126,6 +126,11 @@ export default function TAStaffPage() {
 
   const handleSave = async () => {
     if (!validateForm()) return
+    // Konversi field number dari raw string (lihat onChange di input)
+    // ke number aktual & clamp ke range yang diterima backend zod schema.
+    // Pakai raw string supaya user bebas backspace/edit decimal.
+    const commissionNum = Math.max(0, Math.min(1, Number(form.commissionRate) || 0))
+    const baseSalaryNum = Math.max(0, Math.min(1_000_000_000, parseInt(String(form.baseSalary), 10) || 0))
     try {
       if (editStaff) {
         // Saat edit, jangan kirim email (untuk hindari bentrok unique) kecuali memang berubah.
@@ -133,7 +138,7 @@ export default function TAStaffPage() {
         // komisi) supaya komisi atas layanan yang dia kerjakan tetap dihitung.
         const isBarber = form.role === 'kasir' ? !!form.isBarber : false
         const salaryType = form.role === 'kasir' ? (isBarber ? 'hybrid' : 'fixed') : form.salaryType
-        const patch = { name: form.name, role: form.role, branchId: form.branchId, commissionRate: form.commissionRate, salaryType, baseSalary: form.baseSalary, isBarber, photo: form.photo || null }
+        const patch = { name: form.name, role: form.role, branchId: form.branchId, commissionRate: commissionNum, salaryType, baseSalary: baseSalaryNum, isBarber, photo: form.photo || null }
         if (form.email && form.email !== editStaff.email) patch.email = form.email
         await updateUser.mutateAsync({ id: editStaff.id, ...patch, tenantId: user.tenantId })
         toast.success(t('tenantAdmin.staff.staffUpdated'))
@@ -147,11 +152,11 @@ export default function TAStaffPage() {
           tenantId: user.tenantId,
           photo: form.photo || undefined,
           ...(form.role === 'barber'
-            ? { commissionRate: form.commissionRate, salaryType: form.salaryType, baseSalary: form.baseSalary }
+            ? { commissionRate: commissionNum, salaryType: form.salaryType, baseSalary: baseSalaryNum }
             : form.role === 'kasir'
               ? form.isBarber
-                ? { salaryType: 'hybrid', baseSalary: form.baseSalary, isBarber: true, commissionRate: form.commissionRate }
-                : { salaryType: 'fixed', baseSalary: form.baseSalary, isBarber: false }
+                ? { salaryType: 'hybrid', baseSalary: baseSalaryNum, isBarber: true, commissionRate: commissionNum }
+                : { salaryType: 'fixed', baseSalary: baseSalaryNum, isBarber: false }
               : {}),
         })
         toast.success(t('tenantAdmin.staff.staffAdded'))
@@ -518,7 +523,7 @@ export default function TAStaffPage() {
                       label={t('tenantAdmin.staff.commissionRateLabel')}
                       type="number" step="0.01" min="0" max="1"
                       value={form.commissionRate}
-                      onChange={e => setForm(f => ({ ...f, commissionRate: parseFloat(e.target.value) || 0 }))}
+                      onChange={e => setForm(f => ({ ...f, commissionRate: e.target.value }))}
                       hint={t('tenantAdmin.staff.commissionExample')}
                     />
                   )}
@@ -527,7 +532,7 @@ export default function TAStaffPage() {
                       label={t('tenantAdmin.staff.baseSalaryLabel')}
                       type="number" min="0" step="50000"
                       value={form.baseSalary}
-                      onChange={e => setForm(f => ({ ...f, baseSalary: parseInt(e.target.value, 10) || 0 }))}
+                      onChange={e => setForm(f => ({ ...f, baseSalary: e.target.value }))}
                       hint={t('tenantAdmin.staff.baseSalaryHintFixed')}
                     />
                   )}
@@ -539,7 +544,7 @@ export default function TAStaffPage() {
                     label={t('tenantAdmin.staff.baseSalaryLabel')}
                     type="number" min="0" step="50000"
                     value={form.baseSalary}
-                    onChange={e => setForm(f => ({ ...f, baseSalary: parseInt(e.target.value, 10) || 0 }))}
+                    onChange={e => setForm(f => ({ ...f, baseSalary: e.target.value }))}
                     hint={t('tenantAdmin.staff.baseSalaryHintKasir')}
                   />
 
@@ -566,7 +571,7 @@ export default function TAStaffPage() {
                       label={t('tenantAdmin.staff.barberCommissionLabel')}
                       type="number" step="0.01" min="0" max="1"
                       value={form.commissionRate}
-                      onChange={e => setForm(f => ({ ...f, commissionRate: parseFloat(e.target.value) || 0 }))}
+                      onChange={e => setForm(f => ({ ...f, commissionRate: e.target.value }))}
                       hint={t('tenantAdmin.staff.barberCommissionHint')}
                     />
                   )}
