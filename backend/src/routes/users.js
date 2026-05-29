@@ -70,6 +70,10 @@ const createUserSchema = z.object({
 
 const updateUserSchema = createUserSchema.partial().omit({ password: true }).extend({
   password: z.string().min(6).optional(),
+  // photo: null = hapus foto, string = ganti, undefined = tak diubah. Frontend
+  // kirim null saat user remove. createUserSchema.photo = string().optional()
+  // (tak terima null) — di-override di sini supaya update bisa hapus foto.
+  photo: z.string().nullable().optional(),
 });
 
 // Reset password — `password` opsional: kalau diisi, admin menentukan sendiri;

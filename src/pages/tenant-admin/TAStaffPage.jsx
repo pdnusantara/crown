@@ -138,6 +138,9 @@ export default function TAStaffPage() {
         // komisi) supaya komisi atas layanan yang dia kerjakan tetap dihitung.
         const isBarber = form.role === 'kasir' ? !!form.isBarber : false
         const salaryType = form.role === 'kasir' ? (isBarber ? 'hybrid' : 'fixed') : form.salaryType
+        // photo: null = hapus foto, string = ganti, undefined = tak diubah.
+        // Kirim null kalau user kosongkan (PhotoPicker remove). Backend update
+        // schema menerima nullable supaya "hapus foto" bisa di-persist.
         const patch = { name: form.name, role: form.role, branchId: form.branchId, commissionRate: commissionNum, salaryType, baseSalary: baseSalaryNum, isBarber, photo: form.photo || null }
         if (form.email && form.email !== editStaff.email) patch.email = form.email
         await updateUser.mutateAsync({ id: editStaff.id, ...patch, tenantId: user.tenantId })
