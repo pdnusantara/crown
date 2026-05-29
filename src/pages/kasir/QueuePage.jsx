@@ -556,8 +556,8 @@ export default function QueuePage() {
             </select>
           </div>
           <div className="flex gap-3 pt-2">
-            <Button variant="outline" fullWidth onClick={() => setShowModal(false)}>Batal</Button>
-            <Button fullWidth onClick={handleAddWalkIn}>Tambah Antrian</Button>
+            <Button variant="outline" fullWidth onClick={() => setShowModal(false)} disabled={addToQueueM.isPending}>Batal</Button>
+            <Button fullWidth onClick={handleAddWalkIn} loading={addToQueueM.isPending} disabled={addToQueueM.isPending}>Tambah Antrian</Button>
           </div>
         </div>
       </Modal>
