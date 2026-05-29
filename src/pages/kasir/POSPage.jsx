@@ -669,6 +669,14 @@ function POSPageInner() {
       ? Math.min(100, Math.round(raw))
       : Math.min(Math.round(raw), subtotal)
     posStore.setDiscount(discountInput.type, value)
+    // Diskon manual & voucher berbagi SATU slot diskon → manual menggantikan
+    // voucher. Bersihkan state voucher supaya kodenya tidak ikut terkirim &
+    // "termakan" (usedCount naik di backend) padahal diskon yang dipakai manual.
+    if (appliedVoucher || posStore.voucherCode) {
+      setAppliedVoucher(null)
+      setPendingVoucherId(null)
+      posStore.setVoucherCode(null)
+    }
     setDiscountInput(prev => ({ ...prev, value: String(value) }))
     toast.success(t('pos.discountApplied'))
   }
@@ -1047,6 +1055,7 @@ function POSPageInner() {
         </div>
 
         {discountTab === 'manual' ? (
+          <>
           <div className="flex gap-2 flex-wrap">
             <select
               value={discountInput.type}
@@ -1072,6 +1081,24 @@ function POSPageInner() {
               </button>
             </div>
           </div>
+          {!appliedVoucher && posStore.discountValue > 0 && (
+            <div className="flex items-center justify-between mt-2 px-2.5 py-1.5 bg-brand/5 border border-brand/20 rounded-lg text-xs">
+              <span className="text-muted">
+                {t('pos.discountActive', 'Diskon aktif')}:{' '}
+                <span className="font-semibold text-brand">
+                  {posStore.discountType === 'percentage' ? `${posStore.discountValue}%` : formatRupiah(posStore.discountValue)}
+                </span>
+              </span>
+              <button
+                onClick={() => { posStore.setDiscount('percentage', 0); setDiscountInput({ type: 'percentage', value: '' }) }}
+                className="text-muted hover:text-red-400 inline-flex items-center gap-1 flex-shrink-0"
+                aria-label={t('pos.removeDiscount', 'Hapus diskon')}
+              >
+                <X size={12} /> {t('common.remove', 'Hapus')}
+              </button>
+            </div>
+          )}
+          </>
         ) : (
           <div>
             {appliedVoucher ? (
