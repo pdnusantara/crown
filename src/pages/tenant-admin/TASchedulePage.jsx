@@ -684,20 +684,42 @@ function TASchedulePageInner() {
             <span className="hidden sm:inline">Absensi</span>
           </Link>
           <LiveBadge className="hidden sm:inline-flex" />
-          {branches.length > 1 && (
-            <select
-              value={branchFilter}
-              onChange={e => setBranchFilter(e.target.value)}
-              className="bg-dark-card border border-dark-border text-off-white rounded-xl px-3 py-2 text-xs sm:text-sm outline-none focus:border-brand/60 cursor-pointer max-w-[160px]"
-              aria-label={t('tenantAdmin.schedule.branchFilterAria')}
-            >
-              <option value="all">{t('tenantAdmin.schedule.branchAll')}</option>
-              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
-          )}
           <Button variant="secondary" size="sm" onClick={() => refetch()} icon={RefreshCw} loading={isFetching && !isLoading} aria-label={t('tenantAdmin.schedule.refresh')} />
         </div>
       </div>
+
+      {/* Branch context tabs — pindah dari pojok header (mudah ke-skip) ke
+          baris dedicated supaya tenant_admin multi-cabang langsung tau filter
+          yang aktif. Count staff per cabang ikut ditampilkan. Disembunyikan
+          kalau tenant cuma 1 cabang (tidak ada gunanya filter). */}
+      {branches.length > 1 && (
+        <div className="flex items-center gap-2 overflow-x-auto -mx-1 px-1 pb-1">
+          {[{ id: 'all', name: t('tenantAdmin.schedule.branchAll'), count: allUsers.length }, ...branches.map(b => ({
+            id: b.id,
+            name: b.name,
+            code: b.code,
+            count: allUsers.filter(u => u.branchId === b.id).length,
+          }))].map((opt) => {
+            const selected = branchFilter === opt.id
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setBranchFilter(opt.id)}
+                className={`flex-shrink-0 inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border text-sm font-medium transition-all ${
+                  selected
+                    ? 'bg-brand/15 border-brand/40 text-brand ring-2 ring-brand/15'
+                    : 'bg-dark-card border-dark-border text-muted hover:text-off-white hover:border-brand/30'
+                }`}
+              >
+                <span>{opt.name}</span>
+                {opt.code && <span className="text-[10px] font-mono opacity-60">/{opt.code}</span>}
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${selected ? 'bg-brand/20' : 'bg-dark-surface'}`}>{opt.count}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {/* Week nav + actions */}
       <div className="flex items-center justify-between flex-wrap gap-2">
