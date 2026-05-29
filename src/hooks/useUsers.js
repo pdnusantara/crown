@@ -1,9 +1,26 @@
+import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../lib/api.js'
+import { getSocket } from '../lib/socket.js'
 
 export function useUsers(filters = {}) {
   // `enabled` adalah opsi gating, bukan parameter API.
-  const { enabled, ...params } = filters
+  // Default limit 1000 supaya tenant >20 staf tidak ke-cut (backend default 20).
+  const { enabled, limit = 1000, ...rest } = filters
+  const params = { ...rest, limit }
+  const qc = useQueryClient()
+
+  // Realtime: invalidate saat ada perubahan staf dari sesi lain (tenant_admin
+  // tambah/edit/hapus/reset, atau super-admin lintas-tenant). Backend emit ke
+  // tenantRoom. Pakai key utama 'users' supaya semua variasi filter ke-refresh.
+  useEffect(() => {
+    if (enabled === false) return
+    const socket = getSocket()
+    const onChange = () => qc.invalidateQueries({ queryKey: ['users'] })
+    socket.on('staff:changed', onChange)
+    return () => socket.off('staff:changed', onChange)
+  }, [enabled, qc])
+
   return useQuery({
     queryKey: ['users', params],
     queryFn: async () => {
@@ -18,7 +35,13 @@ export function useUsers(filters = {}) {
 export function useCreateUser() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data) => api.post('/users', data).then(r => r.data.data),
+    // Surface meta (mis. addonInvoice saat hire over kuota) ke caller via
+    // `_meta`. Default hook lama drop seluruh response selain `data` — page
+    // tidak tahu tagihan baru sudah dibuat.
+    mutationFn: (data) => api.post('/users', data).then(r => ({
+      ...r.data.data,
+      _meta: r.data.meta || null,
+    })),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
   })
 }

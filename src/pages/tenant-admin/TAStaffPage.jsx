@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react'
-import { useTranslation } from 'react-i18next'
+import { useTranslation, Trans } from 'react-i18next'
 import { motion } from 'framer-motion'
-import { Plus, Edit2, Trash2, Star, Search, Mail, KeyRound, Copy, Check, AlertTriangle, Camera, X, Eye, EyeOff, RefreshCw, Users } from 'lucide-react'
+import { Plus, Edit2, Trash2, Star, Search, Mail, KeyRound, Copy, Check, AlertTriangle, Camera, X, Eye, EyeOff, RefreshCw, Users, UserPlus } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useResetUserPassword } from '../../hooks/useUsers.js'
 import { useBranches, useBranchLicenseSummary } from '../../hooks/useBranches.js'
@@ -16,12 +16,8 @@ import Modal from '../../components/ui/Modal.jsx'
 import Input from '../../components/ui/Input.jsx'
 import Select from '../../components/ui/Select.jsx'
 import Avatar from '../../components/ui/Avatar.jsx'
+import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx'
 
-const ROLES = [
-  { value: 'barber', label: 'Barber' },
-  { value: 'kasir', label: 'Kasir' },
-  { value: 'manager', label: 'Manager' },
-]
 
 // Charset tanpa karakter ambigu (0/O, 1/l/I) — gampang dibacakan ke staf.
 function genPassword(len = 10) {
@@ -47,12 +43,19 @@ export default function TAStaffPage() {
   // { email, tempPassword, name, mode: 'created' | 'reset', custom? } | null
   const [credentials, setCredentials] = useState(null)
   const [resetTarget, setResetTarget] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
   // Reset password — admin boleh menentukan password sendiri (kosong = otomatis)
   const [customPw, setCustomPw] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [pwError, setPwError] = useState('')
 
-  const { data: allStaff = [], isLoading: isLoadingStaff } = useUsers({ tenantId: user?.tenantId })
+  const ROLES = [
+    { value: 'barber',  label: t('tenantAdmin.staff.roleBarber') },
+    { value: 'kasir',   label: t('tenantAdmin.staff.roleKasir') },
+    { value: 'manager', label: t('tenantAdmin.staff.roleManager') },
+  ]
+
+  const { data: allStaff = [], isLoading: isLoadingStaff, isError, refetch } = useUsers({ tenantId: user?.tenantId })
   const { data: branches = [] } = useBranches(user?.tenantId)
   const { data: licenseSummary } = useBranchLicenseSummary(user?.tenantId)
   const { data: subscription } = useSubscription(user?.tenantId)
@@ -153,6 +156,12 @@ export default function TAStaffPage() {
         })
         toast.success(t('tenantAdmin.staff.staffAdded'))
         setShowModal(false)
+        // Heads-up: kalau backend buat invoice staff_addon (hire di atas kuota),
+        // beri tahu admin agar tidak kaget melihat tagihan di /admin/billing.
+        const addonInvoice = created?._meta?.addonInvoice
+        if (addonInvoice?.amount) {
+          toast.info(t('tenantAdmin.staff.addonInvoiceCreated', { amount: formatRupiah(addonInvoice.amount) }))
+        }
         if (created?.tempPassword) {
           setCredentials({
             mode: 'created',
@@ -167,10 +176,12 @@ export default function TAStaffPage() {
     }
   }
 
-  const handleDelete = async (member) => {
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
     try {
-      await deleteUser.mutateAsync(member.id)
+      await deleteUser.mutateAsync(deleteTarget.id)
       toast.success(t('tenantAdmin.staff.staffDeleted'))
+      setDeleteTarget(null)
     } catch {
       toast.error(t('tenantAdmin.staff.deleteFailed'))
     }
@@ -194,7 +205,7 @@ export default function TAStaffPage() {
   const handleResetPassword = async (member) => {
     const pw = customPw.trim()
     if (pw && pw.length < 6) {
-      setPwError('Password minimal 6 karakter')
+      setPwError(t('tenantAdmin.staff.newPasswordTooShort'))
       return
     }
     try {
@@ -208,7 +219,7 @@ export default function TAStaffPage() {
         custom: data.custom,
       })
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal mereset password')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.staff.resetPasswordFailed'))
     }
   }
 
@@ -237,27 +248,56 @@ export default function TAStaffPage() {
               </span>
             )}
           </div>
-          {/* Breakdown bonus — info kuota tenant kalau ada bonus cabang aktif */}
+          {/* Breakdown bonus — info kuota tenant kalau ada bonus cabang aktif.
+              Trans + b tag dipakai supaya bagian bold ikut highlight tema. */}
           {bonusStaff > 0 && (
             <p className="text-[11px] text-muted mt-1 leading-snug">
-              Kuota = <b className="text-off-white">{baseMaxStaff}</b> (paket {subscription?.package})
-              {' + '}<b className="text-brand">{bonusStaff}</b> bonus ({paidAddons} cabang add-on × {bonusPerBranch}/cabang)
+              <Trans
+                i18nKey="tenantAdmin.staff.kuotaInfo"
+                values={{ base: baseMaxStaff, pkg: subscription?.package, bonus: bonusStaff, count: paidAddons, per: bonusPerBranch }}
+                components={{ b: <b className="text-off-white" /> }}
+              />
             </p>
           )}
           {/* Warning kalau over atau mendekati. Add-on info muncul kalau super-
               admin sudah set staffAddonPrice > 0; kalau 0 (soft launch) cuma
               info "naik paket" tanpa angka. */}
           {overQuota && (
-            <p className="text-xs text-red-300 mt-2 max-w-md">
-              {staffAddonPrice > 0
-                ? <>Anda kena tambahan biaya <b className="text-off-white">{formatRupiah(staffAddonPrice)}/{staffAddonType === 'monthly' ? 'bln' : 'staf'}</b> untuk {staffUsed - staffQuota} staf di atas kuota paket {subscription?.package}{bonusStaff > 0 && ' (sudah termasuk bonus cabang)'}. Tambah cabang lagi untuk dapat {bonusPerBranch > 0 ? `+${bonusPerBranch} staf bonus` : 'kuota lebih'}, atau upgrade paket.</>
-                : <>Anda melebihi kuota paket <b className="text-off-white">{subscription?.package}</b> ({staffUsed}/{staffQuota}). Pertimbangkan upgrade ke paket lebih besar.</>}
+            <p className="text-xs text-red-400 mt-2 max-w-md">
+              {staffAddonPrice > 0 ? (
+                <Trans
+                  i18nKey="tenantAdmin.staff.overQuotaAddon"
+                  values={{
+                    price: formatRupiah(staffAddonPrice),
+                    unit:  staffAddonType === 'monthly' ? 'bln' : 'staf',
+                    over:  staffUsed - staffQuota,
+                    pkg:   subscription?.package,
+                    perInfo: bonusPerBranch > 0
+                      ? t('tenantAdmin.staff.perBranchBonus', { n: bonusPerBranch })
+                      : t('tenantAdmin.staff.perBranchBonusNone'),
+                  }}
+                  components={{ b: <b className="text-off-white" /> }}
+                />
+              ) : (
+                <Trans
+                  i18nKey="tenantAdmin.staff.overQuotaUpgrade"
+                  values={{ pkg: subscription?.package, used: staffUsed, quota: staffQuota }}
+                  components={{ b: <b className="text-off-white" /> }}
+                />
+              )}
             </p>
           )}
           {nearQuota && !overQuota && staffAddonPrice > 0 && (
-            <p className="text-xs text-amber-300 mt-2 max-w-md">
-              Kuota staf hampir habis. Staf ke-{staffQuota + 1} dst akan kena <b className="text-off-white">{formatRupiah(staffAddonPrice)}/{staffAddonType === 'monthly' ? 'bln' : 'staf'}</b>.
-              {bonusPerBranch > 0 && <> Atau tambah cabang untuk dapat +{bonusPerBranch} staf bonus.</>}
+            <p className="text-xs text-amber-400 mt-2 max-w-md">
+              <Trans
+                i18nKey="tenantAdmin.staff.nearQuotaInfo"
+                values={{
+                  next:  staffQuota + 1,
+                  price: formatRupiah(staffAddonPrice),
+                  unit:  staffAddonType === 'monthly' ? 'bln' : 'staf',
+                }}
+                components={{ b: <b className="text-off-white" /> }}
+              />
             </p>
           )}
         </div>
@@ -296,8 +336,41 @@ export default function TAStaffPage() {
         </div>
       )}
 
+      {/* Error state */}
+      {!isLoading && isError && (
+        <Card className="p-8 text-center">
+          <AlertTriangle className="w-10 h-10 text-red-400 mx-auto mb-2" />
+          <p className="text-off-white font-medium">{t('tenantAdmin.staff.errorTitle')}</p>
+          <Button variant="outline" className="mt-4" onClick={() => refetch()}>
+            <RefreshCw className="w-4 h-4" /> {t('tenantAdmin.staff.errorRetry')}
+          </Button>
+        </Card>
+      )}
+
+      {/* Empty state — bedakan "belum ada staf sama sekali" vs "filter zero match" */}
+      {!isLoading && !isError && filtered.length === 0 && (
+        <Card className="p-10 text-center">
+          <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-brand/10 flex items-center justify-center">
+            <UserPlus className="w-7 h-7 text-brand" />
+          </div>
+          <h3 className="text-off-white font-display text-lg font-semibold mb-1">
+            {allStaff.length === 0
+              ? t('tenantAdmin.staff.emptyTitle')
+              : t('tenantAdmin.staff.emptyFilteredTitle')}
+          </h3>
+          <p className="text-muted text-sm max-w-sm mx-auto">
+            {allStaff.length === 0
+              ? t('tenantAdmin.staff.emptyDescription')
+              : t('tenantAdmin.staff.emptyFilteredDescription')}
+          </p>
+          {allStaff.length === 0 && (
+            <Button icon={Plus} onClick={openAdd} className="mt-4">{t('tenantAdmin.staff.addStaff')}</Button>
+          )}
+        </Card>
+      )}
+
       {/* Staff grid */}
-      {!isLoading && (
+      {!isLoading && !isError && filtered.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map((member, i) => (
             <motion.div key={member.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
@@ -319,15 +392,26 @@ export default function TAStaffPage() {
                         <button
                           onClick={() => openReset(member)}
                           className="p-2 rounded-lg text-muted hover:text-amber-400 active:text-amber-400 hover:bg-dark-surface transition-colors"
-                          title="Reset password"
-                          aria-label={`Reset password ${member.name}`}
+                          title={t('tenantAdmin.staff.resetPasswordTooltip')}
+                          aria-label={`${t('tenantAdmin.staff.resetPasswordTooltip')} ${member.name}`}
                         >
                           <KeyRound className="w-4 h-4" />
                         </button>
-                        <button onClick={() => openEdit(member)} className="p-2 rounded-lg text-muted hover:text-blue-400 active:text-blue-400 hover:bg-dark-surface transition-colors" title="Edit" aria-label={`Edit ${member.name}`}>
+                        <button
+                          onClick={() => openEdit(member)}
+                          className="p-2 rounded-lg text-muted hover:text-blue-400 active:text-blue-400 hover:bg-dark-surface transition-colors"
+                          title={t('tenantAdmin.staff.editTooltip')}
+                          aria-label={`${t('tenantAdmin.staff.editTooltip')} ${member.name}`}
+                        >
                           <Edit2 className="w-4 h-4" />
                         </button>
-                        <button onClick={() => handleDelete(member)} className="p-2 rounded-lg text-muted hover:text-red-400 active:text-red-400 hover:bg-dark-surface transition-colors" title="Hapus" aria-label={`Hapus ${member.name}`}>
+                        <button
+                          onClick={() => setDeleteTarget(member)}
+                          disabled={deleteUser.isPending}
+                          className="p-2 rounded-lg text-muted hover:text-red-400 active:text-red-400 hover:bg-dark-surface transition-colors disabled:opacity-50"
+                          title={t('tenantAdmin.staff.deleteTooltip')}
+                          aria-label={`${t('tenantAdmin.staff.deleteTooltip')} ${member.name}`}
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -387,13 +471,13 @@ export default function TAStaffPage() {
             error={formError.name}
           />
           <Input
-            label="Email Login"
+            label={t('tenantAdmin.staff.emailLoginLabel')}
             type="email"
             value={form.email}
             onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-            placeholder="staf@contoh.com"
+            placeholder={t('tenantAdmin.staff.emailLoginPlaceholder')}
             error={formError.email}
-            hint={editStaff ? 'Mengubah email akan mengubah login staf.' : 'Staf akan login dengan email ini. Password akan dibuat otomatis dan ditampilkan setelah simpan.'}
+            hint={editStaff ? t('tenantAdmin.staff.emailLoginHintEdit') : t('tenantAdmin.staff.emailLoginHintNew')}
           />
           <Select
             label={t('tenantAdmin.staff.role')}
@@ -419,13 +503,13 @@ export default function TAStaffPage() {
               {form.role === 'barber' ? (
                 <>
                   <Select
-                    label="Skema Gaji"
+                    label={t('tenantAdmin.staff.salaryScheme')}
                     value={form.salaryType}
                     onChange={e => setForm(f => ({ ...f, salaryType: e.target.value }))}
                     options={[
-                      { value: 'commission', label: 'Komisi (% omzet)' },
-                      { value: 'fixed',      label: 'Gaji Pokok (tetap)' },
-                      { value: 'hybrid',     label: 'Pokok + Komisi' },
+                      { value: 'commission', label: t('tenantAdmin.staff.salarySchemeCommission') },
+                      { value: 'fixed',      label: t('tenantAdmin.staff.salarySchemeFixed') },
+                      { value: 'hybrid',     label: t('tenantAdmin.staff.salarySchemeHybrid') },
                     ]}
                     placeholder=""
                   />
@@ -435,16 +519,16 @@ export default function TAStaffPage() {
                       type="number" step="0.01" min="0" max="1"
                       value={form.commissionRate}
                       onChange={e => setForm(f => ({ ...f, commissionRate: parseFloat(e.target.value) || 0 }))}
-                      hint="Contoh 0.35 = 35% dari omzet barber."
+                      hint={t('tenantAdmin.staff.commissionExample')}
                     />
                   )}
                   {(form.salaryType === 'fixed' || form.salaryType === 'hybrid') && (
                     <Input
-                      label="Gaji Pokok per Bulan (Rp)"
+                      label={t('tenantAdmin.staff.baseSalaryLabel')}
                       type="number" min="0" step="50000"
                       value={form.baseSalary}
                       onChange={e => setForm(f => ({ ...f, baseSalary: parseInt(e.target.value, 10) || 0 }))}
-                      hint="Dibayar tetap tiap bulan, tak tergantung omzet."
+                      hint={t('tenantAdmin.staff.baseSalaryHintFixed')}
                     />
                   )}
                 </>
@@ -452,11 +536,11 @@ export default function TAStaffPage() {
                 // Kasir: gaji pokok + opsi merangkap sebagai barber (toko kecil).
                 <>
                   <Input
-                    label="Gaji Pokok per Bulan (Rp)"
+                    label={t('tenantAdmin.staff.baseSalaryLabel')}
                     type="number" min="0" step="50000"
                     value={form.baseSalary}
                     onChange={e => setForm(f => ({ ...f, baseSalary: parseInt(e.target.value, 10) || 0 }))}
-                    hint="Kasir digaji pokok tetap tiap bulan."
+                    hint={t('tenantAdmin.staff.baseSalaryHintKasir')}
                   />
 
                   <label className="flex items-start gap-3 cursor-pointer select-none pt-1">
@@ -472,18 +556,18 @@ export default function TAStaffPage() {
                       <span className={`absolute top-1/2 left-0.5 -translate-y-1/2 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${form.isBarber ? 'translate-x-5' : 'translate-x-0'}`} />
                     </button>
                     <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium text-off-white">Juga seorang barber</span>
-                      <span className="block text-xs text-muted leading-snug">Untuk toko kecil — kasir ini ikut memotong. Namanya akan muncul di pilihan barber saat transaksi, dan komisi serta rating-nya tercatat.</span>
+                      <span className="block text-sm font-medium text-off-white">{t('tenantAdmin.staff.isBarberToggle')}</span>
+                      <span className="block text-xs text-muted leading-snug">{t('tenantAdmin.staff.isBarberHint')}</span>
                     </span>
                   </label>
 
                   {form.isBarber && (
                     <Input
-                      label="Komisi Barber"
+                      label={t('tenantAdmin.staff.barberCommissionLabel')}
                       type="number" step="0.01" min="0" max="1"
                       value={form.commissionRate}
                       onChange={e => setForm(f => ({ ...f, commissionRate: parseFloat(e.target.value) || 0 }))}
-                      hint="Contoh 0.35 = 35% dari layanan yang dia kerjakan (di luar gaji pokok)."
+                      hint={t('tenantAdmin.staff.barberCommissionHint')}
                     />
                   )}
                 </>
@@ -498,7 +582,7 @@ export default function TAStaffPage() {
               disabled={createUser.isPending || updateUser.isPending}
             >
               {(createUser.isPending || updateUser.isPending)
-                ? 'Menyimpan...'
+                ? t('tenantAdmin.staff.saving')
                 : (editStaff ? t('common.save') : t('common.add'))}
             </Button>
           </div>
@@ -509,16 +593,14 @@ export default function TAStaffPage() {
       <Modal
         isOpen={!!resetTarget}
         onClose={closeReset}
-        title="Reset Password Staf"
+        title={t('tenantAdmin.staff.resetPasswordTitle')}
       >
         <div className="space-y-4">
           <div className="flex items-start gap-3 p-3.5 bg-amber-400/10 border border-amber-400/20 rounded-xl">
             <AlertTriangle size={16} className="text-amber-400 mt-0.5 flex-shrink-0" />
             <div className="text-sm">
-              <p className="text-amber-200 font-medium mb-1">Password lama akan langsung tidak berlaku</p>
-              <p className="text-muted text-xs leading-relaxed">
-                Begitu di-reset, staf langsung di-logout dari semua perangkat. Anda bisa menentukan password sendiri di bawah, atau biarkan kosong agar dibuat otomatis. Password ditampilkan <span className="text-amber-300 font-semibold">satu kali</span> di layar berikut — catat sebelum menutup.
-              </p>
+              <p className="text-amber-200 font-medium mb-1">{t('tenantAdmin.staff.resetPasswordWarning')}</p>
+              <p className="text-muted text-xs leading-relaxed">{t('tenantAdmin.staff.resetPasswordWarningDetail')}</p>
             </div>
           </div>
           {resetTarget && (
@@ -530,13 +612,13 @@ export default function TAStaffPage() {
 
           {/* Password kustom — opsional */}
           <div>
-            <label className="block text-sm font-medium text-muted mb-1.5">Password baru</label>
+            <label className="block text-sm font-medium text-muted mb-1.5">{t('tenantAdmin.staff.newPasswordLabel')}</label>
             <div className="relative">
               <input
                 type={showPw ? 'text' : 'password'}
                 value={customPw}
                 onChange={e => { setCustomPw(e.target.value); setPwError('') }}
-                placeholder="Kosongkan untuk dibuat otomatis"
+                placeholder={t('tenantAdmin.staff.newPasswordPlaceholder')}
                 autoComplete="new-password"
                 disabled={resetPassword.isPending}
                 className={`w-full bg-dark-surface text-off-white placeholder-muted rounded-xl px-4 py-2.5 pr-[5.25rem] text-sm font-mono outline-none transition-all border focus:ring-2 focus:ring-brand/15 ${
@@ -547,7 +629,7 @@ export default function TAStaffPage() {
                 <button
                   type="button"
                   onClick={() => setShowPw(s => !s)}
-                  aria-label={showPw ? 'Sembunyikan password' : 'Tampilkan password'}
+                  aria-label={showPw ? t('tenantAdmin.staff.hidePassword') : t('tenantAdmin.staff.showPassword')}
                   className="p-2 rounded-lg text-muted hover:text-brand transition-colors"
                 >
                   {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -555,8 +637,8 @@ export default function TAStaffPage() {
                 <button
                   type="button"
                   onClick={() => { setCustomPw(genPassword()); setShowPw(true); setPwError('') }}
-                  aria-label="Buat password acak"
-                  title="Buat acak"
+                  aria-label={t('tenantAdmin.staff.generateRandom')}
+                  title={t('tenantAdmin.staff.generateRandom')}
                   className="p-2 rounded-lg text-muted hover:text-brand transition-colors"
                 >
                   <RefreshCw size={15} />
@@ -565,7 +647,7 @@ export default function TAStaffPage() {
             </div>
             {pwError
               ? <p className="mt-1.5 text-xs text-red-400">{pwError}</p>
-              : <p className="mt-1.5 text-xs text-muted">Minimal 6 karakter. Kosongkan agar sistem yang membuat.</p>}
+              : <p className="mt-1.5 text-xs text-muted">{t('tenantAdmin.staff.newPasswordHint')}</p>}
           </div>
 
           <div className="flex gap-3">
@@ -575,7 +657,7 @@ export default function TAStaffPage() {
               onClick={closeReset}
               disabled={resetPassword.isPending}
             >
-              Batal
+              {t('common.cancel')}
             </Button>
             <Button
               fullWidth
@@ -583,7 +665,7 @@ export default function TAStaffPage() {
               onClick={() => handleResetPassword(resetTarget)}
               disabled={resetPassword.isPending}
             >
-              {resetPassword.isPending ? 'Memproses...' : 'Reset Password'}
+              {resetPassword.isPending ? t('tenantAdmin.staff.resetPasswordProcessing') : t('tenantAdmin.staff.resetPasswordButton')}
             </Button>
           </div>
         </div>
@@ -593,6 +675,24 @@ export default function TAStaffPage() {
       <CredentialsModal
         credentials={credentials}
         onClose={() => setCredentials(null)}
+      />
+
+      {/* Konfirmasi delete — staf soft-delete (tetap di laporan, tak bisa login) */}
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title={t('tenantAdmin.staff.deleteConfirmTitle')}
+        description={
+          <Trans
+            i18nKey="tenantAdmin.staff.deleteConfirmMessage"
+            values={{ name: deleteTarget?.name || '' }}
+            components={{ b: <b className="text-off-white" /> }}
+          />
+        }
+        confirmText={t('tenantAdmin.staff.deleteConfirmAction')}
+        cancelText={t('common.cancel')}
+        variant="danger"
+        onConfirm={confirmDelete}
+        onClose={() => setDeleteTarget(null)}
       />
     </div>
   )
@@ -618,6 +718,8 @@ function resizeImageToBase64(file, maxSize = 256) {
 }
 
 function PhotoPicker({ value, name, onChange }) {
+  const { t } = useTranslation()
+  const toast = useToast()
   const inputRef = useRef(null)
   const [imgError, setImgError] = useState(false)
 
@@ -625,7 +727,7 @@ function PhotoPicker({ value, name, onChange }) {
     const file = e.target.files?.[0]
     if (!file) return
     if (file.size > 5 * 1024 * 1024) {
-      alert('Ukuran file maksimal 5MB')
+      toast.error(t('tenantAdmin.staff.fileTooLarge'))
       return
     }
     const base64 = await resizeImageToBase64(file)
@@ -639,11 +741,11 @@ function PhotoPicker({ value, name, onChange }) {
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <p className="text-xs text-muted self-start">Foto Profil</p>
+      <p className="text-xs text-muted self-start">{t('tenantAdmin.staff.photoLabel')}</p>
       <div className="relative group cursor-pointer" onClick={() => inputRef.current?.click()}>
         <div className="w-20 h-20 rounded-full overflow-hidden ring-2 ring-dark-border group-hover:ring-brand/50 transition-all">
           {value && !imgError ? (
-            <img src={value} alt="foto" className="w-full h-full object-cover" onError={() => setImgError(true)} />
+            <img src={value} alt={t('tenantAdmin.staff.photoLabel')} className="w-full h-full object-cover" onError={() => setImgError(true)} />
           ) : (
             <div className={`w-full h-full flex items-center justify-center text-xl font-semibold text-white bg-gradient-to-br ${gradient}`}>
               {initials}
@@ -660,7 +762,7 @@ function PhotoPicker({ value, name, onChange }) {
           onClick={() => inputRef.current?.click()}
           className="text-xs text-brand hover:underline"
         >
-          {value ? 'Ganti foto' : 'Upload foto'}
+          {value ? t('tenantAdmin.staff.changePhoto') : t('tenantAdmin.staff.uploadPhoto')}
         </button>
         {value && (
           <button
@@ -668,7 +770,7 @@ function PhotoPicker({ value, name, onChange }) {
             onClick={() => { onChange(''); setImgError(false) }}
             className="text-xs text-muted hover:text-red-400 flex items-center gap-1"
           >
-            <X className="w-3 h-3" /> Hapus
+            <X className="w-3 h-3" /> {t('common.delete')}
           </button>
         )}
       </div>
@@ -681,6 +783,7 @@ function PhotoPicker({ value, name, onChange }) {
 // setelah create staf baru atau setelah reset password. Setelah ditutup, nilai
 // password tidak bisa diambil kembali — admin harus mencatatnya.
 function CredentialsModal({ credentials, onClose }) {
+  const { t } = useTranslation()
   const [copied, setCopied] = useState(null) // 'email' | 'password' | 'both' | null
 
   if (!credentials) return null
@@ -696,23 +799,23 @@ function CredentialsModal({ credentials, onClose }) {
   }
 
   const both = `Email: ${credentials.email}\nPassword: ${credentials.tempPassword}`
-  const title = credentials.mode === 'reset' ? 'Password Baru Berhasil Dibuat' : 'Akun Staf Berhasil Dibuat'
+  const title = credentials.mode === 'reset'
+    ? t('tenantAdmin.staff.passwordResetTitle')
+    : t('tenantAdmin.staff.createdTitle')
 
   return (
     <Modal isOpen onClose={onClose} title={title} size="md">
       <div className="space-y-4">
         <div className="flex items-start gap-3 p-3.5 bg-amber-400/10 border border-amber-400/20 rounded-xl">
           <AlertTriangle size={16} className="text-amber-400 mt-0.5 flex-shrink-0" />
-          <p className="text-xs text-amber-200 leading-relaxed">
-            Password ini hanya ditampilkan <span className="font-semibold text-amber-300">sekali</span>. Catat atau salin sekarang dan berikan ke staf yang bersangkutan. Setelah modal ini ditutup, sistem tidak menyimpannya dalam bentuk yang bisa dilihat lagi.
-          </p>
+          <p className="text-xs text-amber-200 leading-relaxed">{t('tenantAdmin.staff.credentialsWarning')}</p>
         </div>
 
         <div className="p-4 bg-dark-card rounded-2xl border border-dark-border space-y-3">
           <p className="text-sm text-off-white font-medium">{credentials.name}</p>
 
           <div>
-            <p className="text-xs text-muted mb-1">Email login</p>
+            <p className="text-xs text-muted mb-1">{t('tenantAdmin.staff.emailLoginLabel')}</p>
             <div className="flex items-center gap-2">
               <code className="flex-1 px-3 py-2 bg-dark-surface rounded-xl text-sm text-off-white font-mono break-all">
                 {credentials.email}
@@ -721,7 +824,8 @@ function CredentialsModal({ credentials, onClose }) {
                 type="button"
                 onClick={() => copy(credentials.email, 'email')}
                 className="p-2 rounded-xl border border-dark-border text-muted hover:text-brand hover:border-brand/30 transition-colors"
-                title="Salin email"
+                title={t('tenantAdmin.staff.copyEmail')}
+                aria-label={t('tenantAdmin.staff.copyEmail')}
               >
                 {copied === 'email' ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
               </button>
@@ -729,7 +833,11 @@ function CredentialsModal({ credentials, onClose }) {
           </div>
 
           <div>
-            <p className="text-xs text-muted mb-1">{credentials.custom ? 'Password baru' : 'Password sementara'}</p>
+            <p className="text-xs text-muted mb-1">
+              {credentials.custom
+                ? t('tenantAdmin.staff.newPasswordCustomLabel')
+                : t('tenantAdmin.staff.tempPasswordLabel')}
+            </p>
             <div className="flex items-center gap-2">
               <code className="flex-1 px-3 py-2 bg-dark-surface rounded-xl text-sm text-brand font-mono tracking-wider select-all break-all">
                 {credentials.tempPassword}
@@ -738,7 +846,8 @@ function CredentialsModal({ credentials, onClose }) {
                 type="button"
                 onClick={() => copy(credentials.tempPassword, 'password')}
                 className="p-2 rounded-xl border border-dark-border text-muted hover:text-brand hover:border-brand/30 transition-colors"
-                title="Salin password"
+                title={t('tenantAdmin.staff.copyPassword')}
+                aria-label={t('tenantAdmin.staff.copyPassword')}
               >
                 {copied === 'password' ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
               </button>
@@ -751,11 +860,11 @@ function CredentialsModal({ credentials, onClose }) {
             className="w-full flex items-center justify-center gap-2 px-4 py-2 mt-1 rounded-xl border border-brand/30 bg-brand/10 text-brand text-sm font-medium hover:bg-brand/15 transition-colors"
           >
             {copied === 'both' ? <Check size={14} /> : <Copy size={14} />}
-            {copied === 'both' ? 'Tersalin' : 'Salin keduanya'}
+            {copied === 'both' ? t('tenantAdmin.staff.copied') : t('tenantAdmin.staff.copyBoth')}
           </button>
         </div>
 
-        <Button fullWidth onClick={onClose}>Sudah saya catat</Button>
+        <Button fullWidth onClick={onClose}>{t('tenantAdmin.staff.noted')}</Button>
       </div>
     </Modal>
   )

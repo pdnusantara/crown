@@ -7,6 +7,15 @@ const { authenticate, requireRole } = require('../middleware/auth');
 const { parsePagination, paginatedResponse } = require('../utils/pagination');
 const { recordAudit } = require('../utils/auditLog');
 const { buildAddonCycleFilter } = require('../utils/branchLicense');
+const { getIO, tenantRoom } = require('../config/socket');
+
+// Realtime: kasir/barber lain ikut dapat update saat admin tambah/edit/hapus
+// staf. Ke tenantRoom (semua user tenant) — tidak ke 'support' karena info
+// internal tenant. Fail-silent kalau socket belum siap.
+function emitStaffChanged(tenantId, payload) {
+  if (!tenantId) return;
+  try { getIO().to(tenantRoom(tenantId)).emit('staff:changed', payload); } catch (_) {}
+}
 
 // Charset menghindari karakter ambigu (0/O, 1/l/I) supaya gampang dibacakan
 // admin ke staf via telepon/WA.
@@ -234,6 +243,7 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin'), async
       severity: 'info',
       tenantId: user.tenantId,
     });
+    emitStaffChanged(user.tenantId, { id: user.id, action: 'create' });
     res.status(201).json({
       success: true,
       data: { ...user, tempPassword: plaintextPassword, passwordGenerated: generated },
@@ -287,6 +297,7 @@ router.put('/:id', authenticate, requireRole('super_admin', 'tenant_admin'), asy
       severity: passwordChanged ? 'warning' : 'info',
       tenantId: user.tenantId,
     });
+    emitStaffChanged(user.tenantId, { id: user.id, action: 'update' });
     res.json({ success: true, data: user });
   } catch (err) {
     next(err);
@@ -337,6 +348,7 @@ router.post('/:id/reset-password', authenticate, requireRole('super_admin', 'ten
       severity: 'warning',
       tenantId: existing.tenantId,
     });
+    emitStaffChanged(existing.tenantId, { id: existing.id, action: 'password_reset' });
     res.json({
       success: true,
       data: {
@@ -374,6 +386,7 @@ router.delete('/:id', authenticate, requireRole('super_admin', 'tenant_admin'), 
       severity: 'warning',
       tenantId: existing.tenantId,
     });
+    emitStaffChanged(existing.tenantId, { id: existing.id, action: 'delete' });
     res.json({ success: true, data: { message: 'User deleted successfully' } });
   } catch (err) {
     next(err);
