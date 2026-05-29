@@ -823,31 +823,38 @@ function TASchedulePageInner() {
         </div>
       </div>
 
-      {/* Search + KPIs */}
+      {/* Search + KPIs.
+          2026-05-29 fix: role-filter tabs sebelumnya ditaruh DI DALAM <label>
+          search. Klik tab → label propagate click ke input → focus jump &
+          potensi double-event di sebagian browser ("tertulis dobel"). Sekarang
+          search & role-filter dipisah jadi 2 elemen di-flex row. */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <label className="col-span-1 sm:col-span-1 flex items-center gap-2 bg-dark-surface border border-dark-border rounded-xl px-3 py-2 focus-within:border-brand/60 transition-colors min-w-0">
-          <Search aria-hidden="true" className="w-4 h-4 text-muted flex-shrink-0" />
-          <input
-            type="text"
-            inputMode="search"
-            role="searchbox"
-            value={staffSearch}
-            onChange={e => setStaffSearch(e.target.value)}
-            placeholder={t('tenantAdmin.schedule.searchBarbers')}
-            aria-label={t('tenantAdmin.schedule.searchBarbers')}
-            className="flex-1 min-w-0 appearance-none bg-transparent border-0 text-off-white placeholder-muted text-sm outline-none [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none"
-          />
-          {staffSearch && (
-            <button
-              type="button"
-              onClick={() => setStaffSearch('')}
-              aria-label={t('tenantAdmin.schedule.clearSearch')}
-              className="flex-shrink-0 -mr-1 p-1 rounded-md text-muted hover:text-off-white hover:bg-dark-card transition-colors"
-            >
-              <X size={14} />
-            </button>
-          )}
-          {/* Pemilih peran — segmented control compact */}
+        <div className="col-span-1 sm:col-span-1 flex flex-wrap items-center gap-2 min-w-0">
+          <label className="flex-1 min-w-[140px] flex items-center gap-2 bg-dark-surface border border-dark-border rounded-xl px-3 py-2 focus-within:border-brand/60 transition-colors">
+            <Search aria-hidden="true" className="w-4 h-4 text-muted flex-shrink-0" />
+            <input
+              type="text"
+              inputMode="search"
+              role="searchbox"
+              value={staffSearch}
+              onChange={e => setStaffSearch(e.target.value)}
+              placeholder={t('tenantAdmin.schedule.searchBarbers')}
+              aria-label={t('tenantAdmin.schedule.searchBarbers')}
+              className="flex-1 min-w-0 appearance-none bg-transparent border-0 text-off-white placeholder-muted text-sm outline-none [&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none"
+            />
+            {staffSearch && (
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); setStaffSearch('') }}
+                aria-label={t('tenantAdmin.schedule.clearSearch')}
+                className="flex-shrink-0 -mr-1 p-1 rounded-md text-muted hover:text-off-white hover:bg-dark-card transition-colors"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </label>
+          {/* Pemilih peran — segmented control, di LUAR label search supaya
+              klik tidak propagate ke input. */}
           <div className="flex-shrink-0 inline-flex rounded-lg border border-dark-border overflow-hidden" role="tablist" aria-label="Filter peran">
             {[
               { id: 'all',    label: 'Semua' },
@@ -860,7 +867,7 @@ function TASchedulePageInner() {
                 role="tab"
                 aria-selected={roleFilter === opt.id}
                 onClick={() => setRoleFilter(opt.id)}
-                className={`px-2 py-1 text-[11px] font-medium transition-colors ${
+                className={`px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
                   roleFilter === opt.id
                     ? 'bg-brand text-dark'
                     : 'text-muted hover:text-off-white hover:bg-dark-card'
@@ -870,7 +877,7 @@ function TASchedulePageInner() {
               </button>
             ))}
           </div>
-        </label>
+        </div>
         {/* KPI cards — full di desktop, inline mini di mobile supaya tidak
             memakan 2 baris kartu besar yang menyumbat layar. */}
         <div className="hidden sm:grid grid-cols-2 gap-3 col-span-1 sm:col-span-2">
