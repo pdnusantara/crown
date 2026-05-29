@@ -7,7 +7,7 @@ import {
   LayoutGrid, List as ListIcon, Eraser, ArrowDownAZ, Users, Clock,
   Fingerprint, Sliders, Save, RotateCcw,
   CheckCircle2, Circle, UserCircle, ListChecks, CalendarClock,
-  Lock, Unlock,
+  Lock, Unlock, Moon,
 } from 'lucide-react'
 import { startOfWeek, addDays, format, addWeeks, subWeeks } from 'date-fns'
 import { id as idLocale, enUS as enLocale } from 'date-fns/locale'
@@ -1042,6 +1042,17 @@ function TASchedulePageInner() {
                           .filter(([k]) => k.startsWith(`${dateKey}|`))
                           .flatMap(([, list]) => list)
                           .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''))
+                      // Staf libur per pola mingguan utk hari ini — tampilkan
+                      // sebagai chip "Libur" supaya admin tau kolom kosong itu
+                      // bukan "lupa diisi", melainkan staf memang off (mis.
+                      // semua libur di hari Minggu).
+                      const dow = day.getDay()
+                      const dayOff = (dayClosure.allClosed || bulkMode) ? [] : allUsers.filter(u => {
+                        if (branchFilter && branchFilter !== 'all' && u.branchId !== branchFilter) return false
+                        if (roleFilter !== 'all' && u.role !== roleFilter) return false
+                        const ws = wsLookup[u.id]?.[dow]
+                        return !!ws?.isDayOff
+                      })
                       const isDropHover = dropHover === dateKey && !!draggedId
                       return (
                         <div
@@ -1122,6 +1133,19 @@ function TASchedulePageInner() {
                               <Lock className="w-3 h-3 mx-auto mb-1" /> Cabang tutup
                             </div>
                           )}
+                          {dayOff.length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-dark-border/30 space-y-0.5">
+                              <div className="text-[9px] uppercase tracking-wide text-muted/60 flex items-center gap-1">
+                                <Moon className="w-2.5 h-2.5" /> Libur ({dayOff.length})
+                              </div>
+                              {dayOff.map(u => (
+                                <div key={u.id} className="text-[10px] text-muted/70 flex items-center gap-1 px-1">
+                                  <span className="inline-block w-3 text-center font-bold opacity-60">{u.role === 'kasir' ? 'K' : 'B'}</span>
+                                  <span className="truncate">{u.name}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )
                     })}
@@ -1181,6 +1205,12 @@ function TASchedulePageInner() {
                 const daySch = [...weekSchedules]
                   .filter(s => s.date === dateStr)
                   .sort((a, b) => a.startTime.localeCompare(b.startTime))
+                const dow = day.getDay()
+                const dayOff = (dayCs.allClosed || bulkMode) ? [] : allUsers.filter(u => {
+                  if (branchFilter && branchFilter !== 'all' && u.branchId !== branchFilter) return false
+                  if (roleFilter !== 'all' && u.role !== roleFilter) return false
+                  return !!wsLookup[u.id]?.[dow]?.isDayOff
+                })
                 return (
                   <Card className={`p-4 ${dayCs.allClosed ? 'border-red-500/30 bg-red-500/[0.03]' : ''}`}>
                     <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
@@ -1286,6 +1316,21 @@ function TASchedulePageInner() {
                             </div>
                           )
                         })}
+                      </div>
+                    )}
+                    {dayOff.length > 0 && (
+                      <div className="mt-4 pt-3 border-t border-dark-border/40">
+                        <div className="text-[11px] uppercase tracking-wide text-muted/70 flex items-center gap-1.5 mb-2">
+                          <Moon className="w-3 h-3" /> Libur per pola mingguan ({dayOff.length})
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {dayOff.map(u => (
+                            <span key={u.id} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-dark-card border border-dark-border text-[11px] text-muted">
+                              <span className="font-bold opacity-70">{u.role === 'kasir' ? 'K' : 'B'}</span>
+                              {u.name}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </Card>
