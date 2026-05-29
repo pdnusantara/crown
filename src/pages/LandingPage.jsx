@@ -481,7 +481,7 @@ function HeroSection({ hero, stats, trustItems, isAuthenticated, homePath }) {
   const showRealCount = hero.showStats !== false && tenantCount >= 10
 
   return (
-    <section className="relative pt-32 pb-16 lg:pt-40 lg:pb-24">
+    <section className="relative pt-28 pb-12 sm:pt-32 sm:pb-16 lg:pt-40 lg:pb-24">
       {/* Latar dekoratif — glow brand lembut + tekstur titik halus */}
       <div className="absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[820px] h-[420px] rounded-full bg-[#6366F1]/12 blur-[120px]" />
@@ -601,7 +601,7 @@ function HeroSection({ hero, stats, trustItems, isAuthenticated, homePath }) {
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.35 }}
-        className="max-w-5xl mx-auto px-6 mt-16"
+        className="max-w-5xl mx-auto px-5 sm:px-6 mt-10 sm:mt-16"
       >
         <div className="relative">
           <div className="absolute -inset-4 bg-gradient-to-tr from-[#6366F1]/25 via-transparent to-[#A5A2FF]/30 rounded-[2.5rem] blur-2xl" />
@@ -619,7 +619,7 @@ function StatsSection({ ctx }) {
   if (!stats) return null
   return (
     <section className="border-y border-[#D5D8E8] bg-white">
-      <div className="max-w-5xl mx-auto px-6 py-12 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+      <div className="max-w-5xl mx-auto px-6 py-10 sm:py-12 grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 text-center">
         {[
           { label: 'Tenant aktif',        value: stats.tenantCount,      suffix: '+', icon: 'Building2' },
           { label: 'Cabang terkelola',    value: stats.branchCount,      suffix: '+', icon: 'MapPin' },
@@ -665,7 +665,7 @@ function FeaturesSection({ ctx }) {
   const showcase = indexed.filter((x) => x.f.image)   // fitur dgn screenshot → showcase besar
   const compact  = indexed.filter((x) => !x.f.image)  // sisanya → grid ikon rapi
   return (
-    <section id="fitur" className="py-24 px-6">
+    <section id="fitur" className="py-14 sm:py-24 px-6">
       <div className="max-w-6xl mx-auto">
         <SectionHeading {...sections.features} />
 
@@ -749,7 +749,7 @@ function FeaturesSection({ ctx }) {
 function StepsSection({ ctx }) {
   const { steps, sections } = ctx
   return (
-    <section className="py-24 px-6 bg-[#EEEEF5]">
+    <section className="py-14 sm:py-24 px-6 bg-[#EEEEF5]">
       <div className="max-w-5xl mx-auto">
         <SectionHeading {...sections.steps} />
         <div className={`grid gap-5 mt-14 ${steps.length === 2 ? 'md:grid-cols-2' : steps.length >= 4 ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-3'}`}>
@@ -780,7 +780,7 @@ function StepsSection({ ctx }) {
 function PricingSection({ ctx }) {
   const { packages, isLoading, sections } = ctx
   return (
-    <section id="harga" className="py-24 px-6">
+    <section id="harga" className="py-14 sm:py-24 px-6">
       <div className="max-w-6xl mx-auto">
         <SectionHeading {...sections.pricing} />
 
@@ -888,7 +888,7 @@ function TestimonialsSection({ ctx }) {
   // saat loading tampilkan skeleton supaya tidak ada layout shift.
   if (!isLoading && testimonials.length === 0) return null
   return (
-    <section className="py-24 px-6 bg-[#EEEEF5]">
+    <section className="py-14 sm:py-24 px-6 bg-[#EEEEF5]">
       <div className="max-w-6xl mx-auto">
         <SectionHeading {...sections.testimonials} />
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 mt-14">
@@ -939,7 +939,7 @@ function FaqSection({ ctx }) {
   const { faqs, isLoading, sections } = ctx
   if (!isLoading && faqs.length === 0) return null
   return (
-    <section className="py-24 px-6">
+    <section className="py-14 sm:py-24 px-6">
       <div className="max-w-3xl mx-auto">
         <SectionHeading {...sections.faq} />
         <div className="space-y-3 mt-12">
@@ -957,7 +957,7 @@ function FaqSection({ ctx }) {
 function ClosingCtaSection({ ctx }) {
   const { closing, waHref } = ctx
   return (
-    <section className="py-20 px-6">
+    <section className="py-14 sm:py-20 px-6">
       <motion.div
         initial={{ opacity: 0, scale: 0.97 }}
         whileInView={{ opacity: 1, scale: 1 }}
@@ -1020,7 +1020,7 @@ function GallerySection({ block }) {
   const items = Array.isArray(cfg.items) ? cfg.items.filter(it => it && it.url) : []
   if (items.length === 0) return null
   return (
-    <section className="py-24 px-6">
+    <section className="py-14 sm:py-24 px-6">
       <div className="max-w-6xl mx-auto">
         <BlockHeading kicker={cfg.kicker} title={cfg.title} subtitle={cfg.subtitle} />
         <div className={`grid sm:grid-cols-2 lg:grid-cols-3 gap-4 ${(cfg.title || cfg.kicker) ? 'mt-12' : ''}`}>
@@ -1048,7 +1048,7 @@ function VideoSection({ block }) {
   const embed = toEmbedUrl(cfg.url)
   if (!embed) return null
   return (
-    <section className="py-24 px-6 bg-[#EEEEF5]">
+    <section className="py-14 sm:py-24 px-6 bg-[#EEEEF5]">
       <div className="max-w-4xl mx-auto">
         <BlockHeading kicker={cfg.kicker} title={cfg.title} subtitle={cfg.subtitle} />
         <div className={`relative aspect-video rounded-2xl overflow-hidden border border-[#D5D8E8] bg-black ${(cfg.title || cfg.kicker) ? 'mt-12' : ''}`}>
@@ -1070,7 +1070,7 @@ function LogoStripSection({ block }) {
   const logos = Array.isArray(cfg.logos) ? cfg.logos.filter(l => l && l.url) : []
   if (logos.length === 0) return null
   return (
-    <section className="py-16 px-6 border-y border-[#D5D8E8] bg-white">
+    <section className="py-12 sm:py-16 px-6 border-y border-[#D5D8E8] bg-white">
       <div className="max-w-6xl mx-auto">
         {cfg.title && (
           <p className="text-center text-xs font-bold uppercase tracking-[0.18em] text-[#4F46E5] mb-8">{cfg.title}</p>
@@ -1096,7 +1096,7 @@ function BannerSection({ block }) {
   const cfg = block.config || {}
   if (!cfg.heading && !cfg.image) return null
   return (
-    <section className="py-20 px-6">
+    <section className="py-14 sm:py-20 px-6">
       <div className="max-w-5xl mx-auto relative rounded-3xl overflow-hidden border border-[#D5D8E8] bg-[#1E1B2E]">
         {cfg.image && (
           <img src={cfg.image} alt="" className="absolute inset-0 w-full h-full object-cover opacity-35" />
@@ -1122,7 +1122,7 @@ function RichTextSection({ block }) {
   const cfg = block.config || {}
   if (!cfg.heading && !cfg.body) return null
   return (
-    <section className="py-24 px-6">
+    <section className="py-14 sm:py-24 px-6">
       <div className="max-w-3xl mx-auto text-center">
         {cfg.kicker && (
           <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#4F46E5]">
@@ -1490,7 +1490,7 @@ function DashboardMock() {
   ]
 
   return (
-    <div className="relative aspect-[16/10] bg-[#F4F4FA] flex flex-col overflow-hidden">
+    <div className="relative aspect-square sm:aspect-[16/10] bg-[#F4F4FA] flex flex-col overflow-hidden">
       {/* Browser chrome */}
       <div className="flex items-center justify-between px-4 sm:px-5 py-2.5 bg-white border-b border-[#D5D8E8]">
         <div className="flex items-center gap-2 min-w-0">
