@@ -707,26 +707,35 @@ function FeaturesSection({ ctx }) {
 
         {/* Fitur tanpa gambar → grid ikon bernomor (tampilan lama yang bersih) */}
         {compact.length > 0 && (
-          <div className={`grid sm:grid-cols-2 lg:grid-cols-3 gap-px rounded-2xl overflow-hidden border border-[#D5D8E8] bg-[#D5D8E8] ${showcase.length > 0 ? 'mt-16' : 'mt-14'}`}>
-            {compact.map(({ f, i }) => {
+          <div className={`grid sm:grid-cols-2 lg:grid-cols-3 gap-4 ${showcase.length > 0 ? 'mt-16' : 'mt-14'}`}>
+            {compact.map(({ f, i }, pos) => {
               const Icon = getIcon(f.icon)
+              const big = pos === 0   // tile pertama → bento besar (2 kolom di lg) beraksen brand
               return (
                 <motion.div
                   key={`cp-${i}`}
                   initial={{ opacity: 0, y: 24 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: '-60px' }}
-                  transition={{ delay: 0.05 }}
-                  className="group relative bg-white p-7 hover:bg-[#FAFAFD] transition-colors"
+                  transition={{ delay: (pos % 3) * 0.06 }}
+                  whileHover={{ y: -4 }}
+                  className={`group relative rounded-2xl border p-7 transition-colors ${
+                    big
+                      ? 'sm:col-span-2 lg:col-span-2 bg-gradient-to-br from-[#6366F1] to-[#4F46E5] border-[#4F46E5] overflow-hidden'
+                      : 'bg-white border-[#D5D8E8] hover:border-[#C7CBE0]'
+                  }`}
                 >
-                  <span className="font-display text-sm font-semibold text-[#6366F1]">
+                  {big && <div className="absolute -right-10 -top-10 w-44 h-44 rounded-full bg-white/10 blur-2xl pointer-events-none" />}
+                  <span className={`relative font-display text-sm font-semibold ${big ? 'text-white/70' : 'text-[#6366F1]'}`}>
                     {String(i + 1).padStart(2, '0')}
                   </span>
-                  <div className="w-11 h-11 rounded-xl bg-[#E8EAF5] border border-[#C7CBE0] flex items-center justify-center mt-3 mb-4 group-hover:bg-[#6366F1] transition-colors">
-                    <Icon size={19} className="text-[#4F46E5] group-hover:text-[#1E1B2E] transition-colors" />
+                  <div className={`relative w-11 h-11 rounded-xl flex items-center justify-center mt-3 mb-4 transition-colors ${
+                    big ? 'bg-white/15 border border-white/25' : 'bg-[#E8EAF5] border border-[#C7CBE0] group-hover:bg-[#6366F1]'
+                  }`}>
+                    <Icon size={19} className={big ? 'text-white' : 'text-[#4F46E5] group-hover:text-[#1E1B2E] transition-colors'} />
                   </div>
-                  <h3 className="font-display text-xl font-semibold text-[#1E1B2E] mb-1.5">{f.title}</h3>
-                  <p className="text-sm text-[#56548A] leading-relaxed">{f.desc}</p>
+                  <h3 className={`relative font-display font-semibold mb-1.5 ${big ? 'text-2xl text-white' : 'text-xl text-[#1E1B2E]'}`}>{f.title}</h3>
+                  <p className={`relative text-sm leading-relaxed ${big ? 'text-white/85 sm:max-w-md' : 'text-[#56548A]'}`}>{f.desc}</p>
                 </motion.div>
               )
             })}
@@ -751,7 +760,8 @@ function StepsSection({ ctx }) {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
-              className="relative bg-white rounded-2xl border border-[#D5D8E8] p-7"
+              whileHover={{ y: -4 }}
+              className="relative bg-white rounded-2xl border border-[#D5D8E8] p-7 hover:border-[#C7CBE0] hover:shadow-[0_20px_44px_-24px_rgba(28,26,23,0.35)]"
             >
               <span className="font-display text-5xl font-bold text-[#C7CBE0]">{i + 1}</span>
               <h3 className="font-display text-lg font-semibold text-[#1E1B2E] mt-2 mb-1.5">{s.title}</h3>
@@ -792,6 +802,7 @@ function PricingSection({ ctx }) {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.08 }}
+                  whileHover={{ y: -6 }}
                   className={`relative rounded-2xl p-7 flex flex-col ${
                     featured
                       ? 'bg-[#1E1B2E] text-[#D5D8E8] shadow-[0_30px_60px_-25px_rgba(28,26,23,0.6)] md:-mt-4 md:mb-4'
@@ -852,6 +863,10 @@ function PricingSection({ ctx }) {
                   >
                     Pilih {p.name} <Lucide.ArrowRight size={14} />
                   </Link>
+                  <p className={`mt-3 text-center text-[11px] inline-flex w-full items-center justify-center gap-1.5 ${featured ? 'text-[#A5A2C8]' : 'text-[#7C7AA8]'}`}>
+                    <Lucide.Check size={12} className={featured ? 'text-[#A5A2FF]' : 'text-[#6366F1]'} strokeWidth={3} />
+                    Gratis 14 hari · tanpa kartu kredit
+                  </p>
                 </motion.div>
               )
             })}
@@ -888,7 +903,8 @@ function TestimonialsSection({ ctx }) {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: (i % 3) * 0.08 }}
-                className="bg-white rounded-2xl border border-[#D5D8E8] p-6 flex flex-col"
+                whileHover={{ y: -4 }}
+                className="bg-white rounded-2xl border border-[#D5D8E8] p-6 flex flex-col hover:border-[#C7CBE0] hover:shadow-[0_20px_44px_-24px_rgba(28,26,23,0.35)]"
               >
                 <div className="flex items-center gap-0.5 mb-3 text-[#6366F1]">
                   {Array.from({ length: t.rating || 5 }).map((_, idx) => (
@@ -1389,6 +1405,46 @@ function Sparkline({ data, w = 46, h = 16 }) {
   )
 }
 
+// Toast notifikasi "hidup" di atas mockup — berganti tiap beberapa detik supaya
+// pengunjung langsung merasa aplikasinya jalan real-time (booking, bayar, rating).
+function LiveToast() {
+  const items = [
+    { Icon: Lucide.CalendarDays, tint: '#4F46E5', bg: '#E8EAF5', title: 'Booking baru masuk', sub: 'Andi · potong + keramas · 14:30' },
+    { Icon: Lucide.Wallet,       tint: '#059669', bg: '#DCFCE7', title: 'Pembayaran diterima', sub: 'Rp 85.000 · QRIS' },
+    { Icon: Lucide.Star,         tint: '#C2410C', bg: '#FFEDD5', title: 'Rating baru ⭐ 5,0', sub: '“Cepet & rapi, mantap!”' },
+  ]
+  const [idx, setIdx] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setIdx((i) => (i + 1) % items.length), 2800)
+    return () => clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const cur = items[idx]
+  const Icon = cur.Icon
+  return (
+    <div className="absolute bottom-3 right-3 z-20 w-[185px] sm:w-[215px] pointer-events-none">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={idx}
+          initial={{ opacity: 0, y: 14, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -10, scale: 0.96 }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
+          className="flex items-center gap-2.5 rounded-xl border border-[#D5D8E8] bg-white/95 backdrop-blur px-3 py-2 shadow-[0_16px_40px_-16px_rgba(28,26,23,0.45)]"
+        >
+          <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: cur.bg }}>
+            <Icon size={14} style={{ color: cur.tint }} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-[#1E1B2E] leading-tight truncate">{cur.title}</p>
+            <p className="text-[9px] text-[#7C7AA8] leading-tight truncate mt-0.5">{cur.sub}</p>
+          </div>
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  )
+}
+
 function DashboardMock() {
   // ── Data dummy untuk grafik pendapatan 7 hari (skala 0-100) ──
   const series = [42, 58, 49, 73, 64, 86, 98]
@@ -1434,7 +1490,7 @@ function DashboardMock() {
   ]
 
   return (
-    <div className="aspect-[16/10] bg-[#F4F4FA] flex flex-col overflow-hidden">
+    <div className="relative aspect-[16/10] bg-[#F4F4FA] flex flex-col overflow-hidden">
       {/* Browser chrome */}
       <div className="flex items-center justify-between px-4 sm:px-5 py-2.5 bg-white border-b border-[#D5D8E8]">
         <div className="flex items-center gap-2 min-w-0">
@@ -1600,6 +1656,8 @@ function DashboardMock() {
           </div>
         </main>
       </div>
+
+      <LiveToast />
     </div>
   )
 }
