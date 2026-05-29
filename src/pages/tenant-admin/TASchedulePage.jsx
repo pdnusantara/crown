@@ -970,20 +970,22 @@ function TASchedulePageInner() {
               </span>
             </div>
           )}
-          {/* Calendar / List view */}
+          {/* Calendar / List view — 2026-05-29 grid TIME_SLOTS dibuang (terlalu
+              banyak kotak kosong utk barbershop yg shift-nya cuma 1-2 per hari).
+              Diganti 1 kolom per hari, chip shift di-stack berdasar startTime.
+              Drop target = kolom hari, bukan cell jam. */}
           {viewMode === 'calendar' && !isMobile ? (
             <div className="bg-dark-surface border border-dark-border rounded-2xl overflow-hidden">
               <div className="overflow-x-auto">
                 <div style={{ minWidth: '700px' }}>
                   {/* Header */}
-                  <div className="grid border-b border-dark-border" style={{ gridTemplateColumns: '80px repeat(7, 1fr)' }}>
-                    <div className="p-3 text-xs text-muted" />
+                  <div className="grid border-b border-dark-border" style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}>
                     {weekDays.map((day, i) => {
                       const dateStr = format(day, 'yyyy-MM-dd')
                       const isToday = dateStr === format(new Date(), 'yyyy-MM-dd')
                       const cs = closureStatusForDate(dateStr)
                       return (
-                        <div key={i} className={`p-2 text-center text-xs font-medium border-l border-dark-border relative ${
+                        <div key={i} className={`p-2 text-center text-xs font-medium border-l border-dark-border first:border-l-0 relative ${
                           cs.allClosed ? 'bg-red-500/10' : cs.partial ? 'bg-amber-500/5' : ''
                         } ${isToday ? 'text-brand' : 'text-muted'}`}>
                           <div>{DAY_NAMES[i]}</div>
@@ -1025,51 +1027,105 @@ function TASchedulePageInner() {
                     })}
                   </div>
 
-                  {/* Time rows */}
-                  {TIME_SLOTS.map(slot => (
-                    <div key={slot} className="grid border-b border-dark-border/50" style={{ gridTemplateColumns: '80px repeat(7, 1fr)' }}>
-                      <div className="p-2 text-xs text-muted flex items-start justify-center pt-2">{slot}</div>
-                      {weekDays.map((day, di) => {
-                        const cellScheds = getScheduleForCell(day, slot)
-                        const dateKey = format(day, 'yyyy-MM-dd')
-                        const dayClosure = closureStatusForDate(dateKey)
-                        const cellGhosts = bulkMode || dayClosure.allClosed ? [] : (ghostMap[`${dateKey}|${slot}`] || [])
-                        const isDropHover = dropHover === dateKey && !!draggedId
-                        return (
-                          <div
-                            key={di}
-                            onClick={() => !dayClosure.allClosed && handleCellClick(day, slot)}
-                            onDragOver={(e) => !dayClosure.allClosed && handleDragOver(e, dateKey)}
-                            onDragLeave={() => dropHover === dateKey && setDropHover(null)}
-                            onDrop={(e) => !dayClosure.allClosed && handleDrop(e, day)}
-                            className={`min-h-[56px] border-l border-dark-border/50 p-1 transition-colors relative ${
-                              dayClosure.allClosed
-                                ? 'bg-red-500/[0.04] cursor-not-allowed'
-                                : bulkMode ? '' : 'cursor-pointer'
-                            } ${isDropHover ? 'bg-brand/15 ring-2 ring-brand/40 ring-inset' : (dayClosure.allClosed ? '' : 'hover:bg-dark-card/30')}`}
-                          >
-                            {cellScheds.map(sch => <ChipSchedule key={sch.id} sch={sch} dense />)}
-                            {cellGhosts.map((g) => (
-                              <button
-                                key={`ghost-${g.staffId}`}
-                                type="button"
-                                onClick={(e) => handleGhostClick(e, day, g)}
-                                title={`Pola mingguan ${g.name} (${g.role}): ${g.startTime}–${g.endTime}. Klik untuk tambahkan sebagai shift khusus.`}
-                                className="block w-full text-xs px-1.5 py-1 mb-0.5 rounded border border-dashed border-dark-border/70 bg-dark-card/20 text-muted italic opacity-70 hover:opacity-100 hover:border-brand/40 hover:text-brand transition-all truncate text-left"
+                  {/* Body — 1 kolom per hari, chip shift di-stack */}
+                  <div className="grid" style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}>
+                    {weekDays.map((day, di) => {
+                      const dateKey = format(day, 'yyyy-MM-dd')
+                      const dayClosure = closureStatusForDate(dateKey)
+                      // Sort schedule by startTime asc — shift pagi di atas.
+                      const dayScheds = weekSchedules
+                        .filter(s => s.date === dateKey)
+                        .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''))
+                      // Flatten ghosts utk hari ini (semua time-slot bucket).
+                      const dayGhosts = bulkMode || dayClosure.allClosed ? [] :
+                        Object.entries(ghostMap)
+                          .filter(([k]) => k.startsWith(`${dateKey}|`))
+                          .flatMap(([, list]) => list)
+                          .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''))
+                      const isDropHover = dropHover === dateKey && !!draggedId
+                      return (
+                        <div
+                          key={di}
+                          onDragOver={(e) => !dayClosure.allClosed && handleDragOver(e, dateKey)}
+                          onDragLeave={() => dropHover === dateKey && setDropHover(null)}
+                          onDrop={(e) => !dayClosure.allClosed && handleDrop(e, day)}
+                          className={`min-h-[180px] border-l border-dark-border/50 first:border-l-0 p-2 space-y-1 transition-colors ${
+                            dayClosure.allClosed ? 'bg-red-500/[0.04]' : ''
+                          } ${isDropHover ? 'bg-brand/15 ring-2 ring-brand/40 ring-inset' : ''}`}
+                        >
+                          {dayScheds.map(sch => {
+                            const staffMember = allUsers.find(s => s.id === sch.staffId)
+                            const color = getBarberColor(sch.staffId)
+                            const isDragging = draggedId === sch.id
+                            const isSelected = selected.has(sch.id)
+                            const hideByFilter = !filteredVisible(sch)
+                            return (
+                              <div
+                                key={sch.id}
+                                draggable={!bulkMode}
+                                onDragStart={(e) => { if (bulkMode) return; e.stopPropagation(); handleDragStart(e, sch) }}
+                                onDragEnd={handleDragEnd}
+                                onClick={(e) => handleScheduleClick(e, sch)}
+                                title={bulkMode ? '' : t('tenantAdmin.schedule.dragHint')}
+                                className={`relative rounded border px-2 py-1.5 text-[11px] leading-tight ${color}
+                                  ${bulkMode ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'}
+                                  ${isDragging ? 'opacity-40' : ''}
+                                  ${hideByFilter ? 'opacity-30' : ''}
+                                  ${isSelected ? 'ring-2 ring-brand ring-offset-1 ring-offset-dark-surface' : 'hover:opacity-80'}
+                                  transition-all`}
                               >
-                                <span className="truncate">
-                                  <span className="inline-block w-3 text-center text-[9px] font-bold mr-1 opacity-70 not-italic">
-                                    {g.role === 'kasir' ? 'K' : 'B'}
+                                {bulkMode && (
+                                  <span className="absolute -top-1 -left-1 w-4 h-4 rounded-full bg-dark-surface border border-dark-border flex items-center justify-center">
+                                    {isSelected ? <CheckSquare size={12} className="text-brand" /> : <Square size={12} className="text-muted" />}
                                   </span>
-                                  {g.name} · {g.startTime}–{g.endTime}
+                                )}
+                                <div className="flex items-center gap-1 font-semibold truncate">
+                                  <span className="inline-block w-3 text-center text-[9px] font-bold opacity-70" aria-label={staffMember?.role}>
+                                    {staffMember?.role === 'kasir' ? 'K' : 'B'}
+                                  </span>
+                                  <span className="truncate">{staffMember?.name || '?'}</span>
+                                </div>
+                                <div className="tabular-nums opacity-80 mt-0.5">
+                                  {sch.startTime}–{sch.endTime}
+                                </div>
+                              </div>
+                            )
+                          })}
+                          {dayGhosts.map((g) => (
+                            <button
+                              key={`ghost-${g.staffId}`}
+                              type="button"
+                              onClick={(e) => handleGhostClick(e, day, g)}
+                              title={`Pola mingguan ${g.name} (${g.role}): ${g.startTime}–${g.endTime}. Klik untuk tambahkan sebagai shift khusus.`}
+                              className="block w-full text-[11px] px-2 py-1.5 rounded border border-dashed border-dark-border/70 bg-dark-card/20 text-muted italic opacity-70 hover:opacity-100 hover:border-brand/40 hover:text-brand transition-all text-left"
+                            >
+                              <div className="flex items-center gap-1 font-semibold truncate not-italic">
+                                <span className="inline-block w-3 text-center text-[9px] font-bold opacity-70">
+                                  {g.role === 'kasir' ? 'K' : 'B'}
                                 </span>
-                              </button>
-                            ))}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  ))}
+                                <span className="truncate">{g.name}</span>
+                              </div>
+                              <div className="tabular-nums opacity-80 mt-0.5 not-italic">{g.startTime}–{g.endTime}</div>
+                            </button>
+                          ))}
+                          {!dayClosure.allClosed && !bulkMode && (
+                            <button
+                              type="button"
+                              onClick={() => handleCellClick(day, TIME_SLOTS[0])}
+                              className="w-full mt-1 py-1.5 rounded border border-dashed border-dark-border/50 text-[10px] text-muted/60 hover:text-brand hover:border-brand/40 transition-all"
+                            >
+                              + Tambah
+                            </button>
+                          )}
+                          {dayClosure.allClosed && dayScheds.length === 0 && (
+                            <div className="text-center text-[10px] text-red-300/60 mt-3">
+                              <Lock className="w-3 h-3 mx-auto mb-1" /> Cabang tutup
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
 
                   {isLoading && (
                     <div className="px-4 py-3 border-t border-dark-border/40 space-y-2">
