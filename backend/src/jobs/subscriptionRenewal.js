@@ -112,6 +112,110 @@ async function tryCreateDuitkuOrder(sub) {
   }
 }
 
+// Hitung periode "next cycle" untuk label invoice add-on. Cycle berikutnya
+// dimulai dari endDate sekarang; pakai bulan+tahun endDate sebagai patokan
+// (bulan ini = bulan terakhir cycle aktif → invoice berikutnya untuk bulan
+// setelah endDate).
+function nextCycleLabel(sub) {
+  const cycle = sub.billingCycle || 'monthly';
+  const start = new Date(sub.endDate);
+  if (cycle === 'annual') {
+    return `${start.getFullYear() + 1}`;
+  }
+  // Bulan setelah endDate
+  start.setMonth(start.getMonth() + 1);
+  return start.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+}
+
+// Generate invoice add-on aggregate untuk cycle berikutnya. Idempotent — skip
+// kalau invoice dengan label cycle yang sama sudah ada. Dipanggil di D-3
+// (mirror pre-create Duitku order untuk subscription).
+async function generateRecurringAddonInvoices(sub, log) {
+  const pkg = await prisma.package.findUnique({
+    where: { name: sub.package },
+    select: {
+      maxBranches: true, branchAddonPrice: true, branchAddonType: true,
+      maxStaff: true, staffPerExtraBranch: true, staffAddonPrice: true, staffAddonType: true,
+    },
+  });
+  if (!pkg) return { branchInvoice: null, staffInvoice: null };
+
+  const cycleLabel = nextCycleLabel(sub);
+  const created = { branchInvoice: null, staffInvoice: null };
+
+  // ── BRANCH ADD-ON ────────────────────────────────────────────────────────
+  if (pkg.branchAddonType === 'monthly' && pkg.branchAddonPrice > 0) {
+    const branchCount = await prisma.branch.count({
+      where: { tenantId: sub.tenantId, deletedAt: null },
+    });
+    const extraBranches = Math.max(0, branchCount - pkg.maxBranches);
+
+    if (extraBranches > 0) {
+      const period = `Cabang Tambahan (${extraBranches}) — ${cycleLabel}`;
+      const existing = await prisma.invoice.findFirst({
+        where: { subscriptionId: sub.id, type: 'branch_addon', period },
+      });
+      if (!existing) {
+        created.branchInvoice = await prisma.invoice.create({
+          data: {
+            subscriptionId: sub.id,
+            period,
+            quantity: extraBranches,
+            amount: extraBranches * pkg.branchAddonPrice,
+            type: 'branch_addon',
+            status: 'pending',
+          },
+        });
+        log(`addon: created branch_addon tenant=${sub.tenantId} qty=${extraBranches} period="${period}"`);
+      }
+    }
+  }
+
+  // ── STAFF ADD-ON ─────────────────────────────────────────────────────────
+  if (pkg.staffAddonType === 'monthly' && pkg.staffAddonPrice > 0) {
+    // Effective max staff dihitung BERDASARKAN cabang add-on yang lisensinya
+    // masih aktif di cycle berjalan (sama dengan POST /users supaya konsisten).
+    const { buildAddonCycleFilter } = require('../utils/branchLicense');
+    const [staffCount, paidBranchAgg] = await Promise.all([
+      prisma.user.count({ where: { tenantId: sub.tenantId, deletedAt: null } }),
+      prisma.invoice.aggregate({
+        where: {
+          subscriptionId: sub.id,
+          type: 'branch_addon',
+          status: 'paid',
+          ...buildAddonCycleFilter(sub),
+        },
+        _sum: { quantity: true },
+      }),
+    ]);
+    const paidBranchAddons = paidBranchAgg._sum.quantity || 0;
+    const effectiveMaxStaff = pkg.maxStaff + paidBranchAddons * (pkg.staffPerExtraBranch || 0);
+    const extraStaff = Math.max(0, staffCount - effectiveMaxStaff);
+
+    if (extraStaff > 0) {
+      const period = `Staf Tambahan (${extraStaff}) — ${cycleLabel}`;
+      const existing = await prisma.invoice.findFirst({
+        where: { subscriptionId: sub.id, type: 'staff_addon', period },
+      });
+      if (!existing) {
+        created.staffInvoice = await prisma.invoice.create({
+          data: {
+            subscriptionId: sub.id,
+            period,
+            quantity: extraStaff,
+            amount: extraStaff * pkg.staffAddonPrice,
+            type: 'staff_addon',
+            status: 'pending',
+          },
+        });
+        log(`addon: created staff_addon tenant=${sub.tenantId} qty=${extraStaff} period="${period}"`);
+      }
+    }
+  }
+
+  return created;
+}
+
 async function tryWASend(tenantId, text) {
   try {
     const wa = require('../services/whatsappService');
@@ -185,6 +289,21 @@ async function runRenewalJob() {
         if (!(await hasPendingOrPaidOrderRecently(sub.id))) {
           paymentUrl = await tryCreateDuitkuOrder(sub);
           if (paymentUrl) log(`D-3: created order tenant=${sub.tenantId}`);
+        }
+      }
+
+      // D-3: generate aggregate add-on invoices untuk cycle berikutnya
+      // (idempotent — skip kalau sudah ada). Dijalankan di D-3 saja supaya
+      // reminder D-7 tidak duplicate. Pakai try/catch supaya satu tenant
+      // gagal tidak menghentikan job.
+      if (days === 3) {
+        try {
+          const addonResult = await generateRecurringAddonInvoices(sub, log);
+          if (addonResult.branchInvoice || addonResult.staffInvoice) {
+            log(`D-3: addon invoices tenant=${sub.tenantId} branch=${addonResult.branchInvoice?.id || '-'} staff=${addonResult.staffInvoice?.id || '-'}`);
+          }
+        } catch (err) {
+          console.error(`[RenewalJob] addon invoice error tenant=${sub.tenantId}:`, err.message);
         }
       }
 

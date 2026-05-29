@@ -6,6 +6,7 @@ const prisma = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { parsePagination, paginatedResponse } = require('../utils/pagination');
 const { recordAudit } = require('../utils/auditLog');
+const { buildAddonCycleFilter } = require('../utils/branchLicense');
 
 // Charset menghindari karakter ambigu (0/O, 1/l/I) supaya gampang dibacakan
 // admin ke staf via telepon/WA.
@@ -182,7 +183,7 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin'), async
       if (body.tenantId) {
         const subscription = await tx.subscription.findUnique({
           where: { tenantId: body.tenantId },
-          select: { id: true, package: true },
+          select: { id: true, package: true, billingCycle: true, endDate: true },
         });
         if (subscription) {
           const pkg = await tx.package.findUnique({
@@ -190,9 +191,18 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin'), async
             select: { maxStaff: true, staffPerExtraBranch: true, staffAddonPrice: true, staffAddonType: true },
           });
           if (pkg && pkg.staffAddonPrice > 0) {
-            const paidBranchAddons = await tx.invoice.count({
-              where: { subscriptionId: subscription.id, type: 'branch_addon', status: 'paid' },
+            // Bonus staf hanya untuk cabang add-on yang lisensinya masih aktif
+            // di cycle berjalan (SUM quantity, bukan COUNT cumulative).
+            const paidBranchAgg = await tx.invoice.aggregate({
+              where: {
+                subscriptionId: subscription.id,
+                type: 'branch_addon',
+                status: 'paid',
+                ...buildAddonCycleFilter(subscription),
+              },
+              _sum: { quantity: true },
             });
+            const paidBranchAddons = paidBranchAgg._sum.quantity || 0;
             const effectiveMaxStaff = (pkg.maxStaff || 0) + (paidBranchAddons * (pkg.staffPerExtraBranch || 0));
             // existingCount + 1 = total setelah create. Kalau melebihi quota → addon.
             if ((existingCount + 1) > effectiveMaxStaff) {

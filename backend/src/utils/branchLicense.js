@@ -1,14 +1,39 @@
 const prisma = require('../config/database');
 
 /**
+ * Menghitung cycle window untuk subscription (dipakai oleh license check
+ * agar add-on yang lewat masa berlaku tidak terus diakui).
+ *
+ * Window: [endDate - cycleDuration - 7d buffer, +∞). Buffer 7 hari menutup
+ * skenario "bayar duluan" — invoice utk cycle berikutnya kadang dibayar
+ * sebelum cycle saat ini berakhir.
+ *
+ * Catatan: invoice tanpa `paidAt` (legacy / data lama) ikut dihitung supaya
+ * tenant existing tidak tiba-tiba kehilangan lisensi.
+ */
+function buildAddonCycleFilter(subscription) {
+  const cycleMonths = subscription.billingCycle === 'annual' ? 12 : 1;
+  const windowStart = new Date(subscription.endDate);
+  windowStart.setMonth(windowStart.getMonth() - cycleMonths);
+  windowStart.setDate(windowStart.getDate() - 7);
+  return {
+    OR: [
+      { paidAt: { gte: windowStart } },
+      { paidAt: null },
+    ],
+  };
+}
+
+/**
  * Mengembalikan status lisensi semua cabang aktif milik tenant.
  *
  * Aturan:
  * - Tanpa subscription → semua cabang dianggap licensed (tidak ada batas).
  * - Cabang diurutkan createdAt asc; `maxBranches` pertama selalu lisensi
  *   bawaan paket (gratis).
- * - Sisanya licensed sebanyak invoice `branch_addon` yang sudah `paid`;
- *   cabang yang belum tertutup invoice paid → unlicensed.
+ * - Sisanya licensed sebanyak SUM(quantity) invoice `branch_addon` paid yang
+ *   masih dalam cycle window berjalan (lihat buildAddonCycleFilter). Quantity
+ *   dipakai untuk invoice aggregate (1 invoice dapat menanggung N cabang).
  * - Kalau paket menetapkan `branchAddonPrice = 0` (cabang ekstra gratis),
  *   tidak ada invoice yang dibuat di POST /branches → semua cabang licensed.
  *
@@ -48,7 +73,7 @@ async function getBranchLicenseStatus(tenantId) {
   const [subscription, branches] = await Promise.all([
     prisma.subscription.findUnique({
       where: { tenantId },
-      select: { id: true, package: true },
+      select: { id: true, package: true, billingCycle: true, endDate: true },
     }),
     prisma.branch.findMany({
       where: { tenantId, deletedAt: null },
@@ -90,18 +115,29 @@ async function getBranchLicenseStatus(tenantId) {
     };
   }
 
-  const [paidAddonCount, pendingAddonCount] = await Promise.all([
-    prisma.invoice.count({
-      where: { subscriptionId: subscription.id, type: 'branch_addon', status: 'paid' },
+  const cycleFilter = buildAddonCycleFilter(subscription);
+  const [paidAddonAgg, pendingAddonAgg] = await Promise.all([
+    prisma.invoice.aggregate({
+      where: {
+        subscriptionId: subscription.id,
+        type: 'branch_addon',
+        status: 'paid',
+        ...cycleFilter,
+      },
+      _sum: { quantity: true },
     }),
-    prisma.invoice.count({
+    prisma.invoice.aggregate({
       where: {
         subscriptionId: subscription.id,
         type: 'branch_addon',
         status: { not: 'paid' },
       },
+      _sum: { quantity: true },
     }),
   ]);
+
+  const paidAddonCount = paidAddonAgg._sum.quantity || 0;
+  const pendingAddonCount = pendingAddonAgg._sum.quantity || 0;
 
   const licensedQuota = maxBranches + paidAddonCount;
   const licensed = new Set();
@@ -143,4 +179,4 @@ async function isBranchLicensed(tenantId, branchId) {
   return !status.unlicensed.has(branchId);
 }
 
-module.exports = { getBranchLicenseStatus, isBranchLicensed };
+module.exports = { getBranchLicenseStatus, isBranchLicensed, buildAddonCycleFilter };

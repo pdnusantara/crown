@@ -547,6 +547,11 @@ model Invoice {
   billingCycle   BillingCycle?
   type           String        @default("subscription")
   status         String        @default("pending")
+  // Jumlah unit yang ditagih dalam 1 invoice. Default 1 (kompatibel data lama
+  // dan invoice subscription). Untuk invoice add-on aggregate, mis. 3 cabang
+  // ekstra dalam 1 invoice → quantity=3, amount = 3 × addonPrice. Dipakai
+  // license counting (SUM quantity, bukan COUNT).
+  quantity       Int           @default(1)
   paidAt         DateTime?
   createdAt      DateTime      @default(now())
   subscription   Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
