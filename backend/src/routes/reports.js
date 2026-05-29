@@ -283,7 +283,7 @@ router.get('/barbers', authenticate, requireRole('super_admin', 'tenant_admin'),
     const barberIds = barberStats.map((b) => b.barberId).filter(Boolean);
     const barbers = await prisma.user.findMany({
       where: { id: { in: barberIds } },
-      select: { id: true, name: true, phone: true, commissionRate: true, salaryType: true, baseSalary: true },
+      select: { id: true, name: true, phone: true, branchId: true, commissionRate: true, salaryType: true, baseSalary: true },
     });
     const barberMap = {};
     barbers.forEach((b) => { barberMap[b.id] = b; });
@@ -306,6 +306,7 @@ router.get('/barbers', authenticate, requireRole('super_admin', 'tenant_admin'),
       return {
         barberId: stat.barberId,
         barberName: b.name || 'Unknown',
+        branchId: b.branchId || null,
         revenue,
         servicesCount: stat._count.id,
         // Rate, skema & komisi per barber — dipakai laporan & fitur "Gaji Barber".

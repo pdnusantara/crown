@@ -234,9 +234,15 @@ function LeaderboardRow({ barber, index, maxRevenue, branchName }) {
           <Avatar src={barber.photo} name={barber.barberName || barber.name} size="sm" />
           <div className="min-w-0">
             <p className="font-medium text-off-white text-sm truncate">{barber.barberName || barber.name}</p>
-            {barber.averageRating && (
-              <p className="text-xs text-muted">⭐ {barber.averageRating.toFixed(1)}</p>
-            )}
+            <div className="flex items-center gap-1.5 text-xs text-muted truncate">
+              {barber.averageRating != null && <span>⭐ {barber.averageRating.toFixed(1)}</span>}
+              {branchName && branchName !== '—' && (
+                <span className="md:hidden inline-flex items-center gap-1 truncate">
+                  {barber.averageRating != null && <span className="opacity-40">·</span>}
+                  <span className="truncate">{branchName}</span>
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </td>
@@ -285,7 +291,10 @@ export default function TADashboard() {
   const { data: todayRaw,  isLoading: loadingToday } = useReportSummary(tenantId)
   const { data: yestRaw                             } = useYesterdayStats(tenantId)
   const { data: dailyData  = []                     } = useDailyReport(tenantId, 7)
-  const { data: barberReport = []                   } = useBarberReport(tenantId)
+  // Leaderboard dilabeli "Hari Ini" → minta rentang hari ini (backend default
+  // 30 hari). Konsisten dgn KPI today & label. buildDateRange resolve TZ tenant.
+  const todayISO = new Date().toISOString().split('T')[0]
+  const { data: barberReport = []                   } = useBarberReport(tenantId, { startDate: todayISO, endDate: todayISO })
   const { data: serviceReport = []                  } = useServiceReport(tenantId)
   const barberRatingEnabled = useIsFeatureEnabled(tenantId, 'barber_rating')
   const attendanceEnabled = useIsFeatureEnabled(tenantId, 'attendance')
