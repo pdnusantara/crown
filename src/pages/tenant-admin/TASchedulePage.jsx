@@ -842,7 +842,7 @@ function TASchedulePageInner() {
           search & role-filter dipisah jadi 2 elemen di-flex row. */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="col-span-1 sm:col-span-1 flex flex-wrap items-center gap-2 min-w-0">
-          <label className="flex-1 min-w-[140px] flex items-center gap-2 bg-dark-surface border border-dark-border rounded-xl px-3 py-2 focus-within:border-brand/60 transition-colors">
+          <label className="w-full sm:flex-1 sm:w-auto sm:min-w-[140px] flex items-center gap-2 bg-dark-surface border border-dark-border rounded-xl px-3 py-2.5 sm:py-2 focus-within:border-brand/60 transition-colors">
             <Search aria-hidden="true" className="w-4 h-4 text-muted flex-shrink-0" />
             <input
               type="text"
@@ -867,7 +867,7 @@ function TASchedulePageInner() {
           </label>
           {/* Pemilih peran — segmented control, di LUAR label search supaya
               klik tidak propagate ke input. */}
-          <div className="flex-shrink-0 inline-flex rounded-lg border border-dark-border overflow-hidden" role="tablist" aria-label="Filter peran">
+          <div className="w-full sm:w-auto sm:flex-shrink-0 flex sm:inline-flex rounded-lg border border-dark-border overflow-hidden divide-x divide-dark-border" role="tablist" aria-label="Filter peran">
             {[
               { id: 'all',    label: 'Semua' },
               { id: 'kasir',  label: 'Kasir' },
@@ -879,7 +879,7 @@ function TASchedulePageInner() {
                 role="tab"
                 aria-selected={roleFilter === opt.id}
                 onClick={() => setRoleFilter(opt.id)}
-                className={`px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
+                className={`flex-1 sm:flex-none px-2.5 py-2 sm:py-1.5 text-xs sm:text-[11px] font-medium transition-colors ${
                   roleFilter === opt.id
                     ? 'bg-brand text-dark'
                     : 'text-muted hover:text-off-white hover:bg-dark-card'
