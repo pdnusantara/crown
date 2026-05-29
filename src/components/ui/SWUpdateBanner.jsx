@@ -24,8 +24,8 @@ export default function SWUpdateBanner() {
 
   return (
     <div className="fixed bottom-4 right-4 z-[110] max-w-sm">
-      <div className="glass border border-emerald-400/30 bg-emerald-500/10 rounded-xl px-4 py-3 shadow-xl flex items-start gap-3">
-        <RefreshCw className="w-5 h-5 text-emerald-300 flex-shrink-0 mt-0.5" />
+      <div className="glass border border-brand/30 bg-brand/10 rounded-xl px-4 py-3 shadow-xl flex items-start gap-3">
+        <RefreshCw className="w-5 h-5 text-brand-light flex-shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-off-white">
             {t('appUpdate.title')}
@@ -37,7 +37,7 @@ export default function SWUpdateBanner() {
             <button
               type="button"
               onClick={reload}
-              className="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/40 text-emerald-200 text-xs font-medium transition-colors"
+              className="px-3 py-1.5 rounded-lg bg-brand/20 hover:bg-brand/30 border border-brand/40 text-brand-light text-xs font-medium transition-colors"
             >
               {t('appUpdate.reload')}
             </button>
