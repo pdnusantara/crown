@@ -659,17 +659,20 @@ function TASchedulePageInner() {
 
   return (
     <div className="space-y-5 sm:space-y-6">
-      {/* Header */}
+      {/* Header — versi compact: subtitle disembunyikan di mobile supaya
+          tidak menyumbat layar kecil. Tombol Atur Preset/Absensi/Bulk juga
+          disembunyikan utk mobile (jarang dipakai di lapangan; tetap ada
+          di desktop). */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div className="min-w-0">
           <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white truncate">Jadwal Kerja Mingguan</h1>
-          <p className="text-muted text-xs sm:text-sm mt-1">Rencana shift kasir &amp; barber per tanggal. Pola jam dasar diatur di <Link to="/admin/attendance?tab=jadwal" className="text-brand hover:underline">Pola Mingguan</Link>.</p>
+          <p className="hidden sm:block text-muted text-xs sm:text-sm mt-1">Rencana shift kasir &amp; barber per tanggal. Pola jam dasar diatur di <Link to="/admin/attendance?tab=jadwal" className="text-brand hover:underline">Pola Mingguan</Link>.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
             onClick={() => setShowPresetEditor(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs sm:text-sm text-muted hover:text-brand hover:border-brand/40 transition-all"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs sm:text-sm text-muted hover:text-brand hover:border-brand/40 transition-all"
             title="Atur preset jam shift"
           >
             <Sliders className="w-4 h-4" />
@@ -677,7 +680,7 @@ function TASchedulePageInner() {
           </button>
           <Link
             to="/admin/attendance"
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs sm:text-sm text-muted hover:text-brand hover:border-brand/40 transition-all"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs sm:text-sm text-muted hover:text-brand hover:border-brand/40 transition-all"
             title="Halaman Absensi & Jadwal Mingguan"
           >
             <Fingerprint className="w-4 h-4" />
@@ -747,8 +750,8 @@ function TASchedulePageInner() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* View toggle */}
-          <div className="inline-flex rounded-xl border border-dark-border p-0.5 bg-dark-card">
+          {/* View toggle — mobile auto pakai list, tidak perlu pilih */}
+          <div className="hidden sm:inline-flex rounded-xl border border-dark-border p-0.5 bg-dark-card">
             <button
               onClick={() => setViewMode('calendar')}
               aria-pressed={viewMode === 'calendar'}
@@ -770,6 +773,8 @@ function TASchedulePageInner() {
               <span className="hidden sm:inline">{t('tenantAdmin.schedule.listView')}</span>
             </button>
           </div>
+          {/* Copy/Export/Bulk/Clear — heavy desktop ops, sembunyikan di mobile.
+              Tetap dapat diakses dari desktop / tablet ≥640px. */}
           <Button
             variant="secondary"
             size="sm"
@@ -778,6 +783,7 @@ function TASchedulePageInner() {
             loading={copyWeekMut.isPending}
             title={t('tenantAdmin.schedule.copyLastWeekTitle')}
             aria-label={t('tenantAdmin.schedule.copyLastWeek')}
+            className="hidden sm:inline-flex"
           >
             <span className="hidden md:inline">{t('tenantAdmin.schedule.copyLastWeek')}</span>
           </Button>
@@ -788,6 +794,7 @@ function TASchedulePageInner() {
             onClick={handleExportCsv}
             disabled={!weekSchedules.length}
             aria-label={t('tenantAdmin.schedule.exportCsv')}
+            className="hidden sm:inline-flex"
           >
             <span className="hidden md:inline">{t('tenantAdmin.schedule.exportCsv')}</span>
           </Button>
@@ -798,6 +805,7 @@ function TASchedulePageInner() {
             onClick={() => setBulkMode(v => !v)}
             aria-pressed={bulkMode}
             aria-label={bulkMode ? t('tenantAdmin.schedule.bulkExit') : t('tenantAdmin.schedule.bulkSelectMode')}
+            className="hidden sm:inline-flex"
           >
             <span className="hidden md:inline">{bulkMode ? t('tenantAdmin.schedule.bulkExit') : t('tenantAdmin.schedule.bulkSelectMode')}</span>
           </Button>
@@ -808,6 +816,7 @@ function TASchedulePageInner() {
             onClick={() => setConfirmClear(true)}
             disabled={!weekSchedules.length}
             aria-label={t('tenantAdmin.schedule.clearWeek')}
+            className="hidden sm:inline-flex"
           >
             <span className="hidden lg:inline">{t('tenantAdmin.schedule.clearWeek')}</span>
           </Button>
@@ -862,7 +871,9 @@ function TASchedulePageInner() {
             ))}
           </div>
         </label>
-        <div className="grid grid-cols-2 gap-3 col-span-1 sm:col-span-2">
+        {/* KPI cards — full di desktop, inline mini di mobile supaya tidak
+            memakan 2 baris kartu besar yang menyumbat layar. */}
+        <div className="hidden sm:grid grid-cols-2 gap-3 col-span-1 sm:col-span-2">
           <Card className="p-3 flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
               <CalendarDays size={16} />
@@ -882,6 +893,20 @@ function TASchedulePageInner() {
             </div>
           </Card>
         </div>
+      </div>
+
+      {/* Inline mini stats utk mobile saja — ringkas, satu baris. */}
+      <div className="sm:hidden flex items-center gap-4 text-xs text-muted -mt-1">
+        <span className="inline-flex items-center gap-1.5">
+          <CalendarDays size={12} className="text-brand" />
+          <span className="font-semibold text-off-white tabular-nums">{weekSchedules.length}</span>
+          {t('tenantAdmin.schedule.totalSchedules').toLowerCase()}
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <Clock size={12} className="text-cyan-300" />
+          <span className="font-semibold text-off-white tabular-nums">{totalHours}</span>
+          {t('tenantAdmin.schedule.totalHours').toLowerCase()}
+        </span>
       </div>
 
       {/* Bulk actions bar */}
@@ -917,9 +942,10 @@ function TASchedulePageInner() {
         </Card>
       ) : (
         <>
-          {/* Legend — barber colors with search filter */}
+          {/* Legend — barber colors. Disembunyikan di mobile (list view tampil
+              avatar berwarna di tiap card, jadi legend redundant). */}
           {staff.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
+            <div className="hidden sm:flex flex-wrap gap-2">
               {staff.map(s => (
                 <div key={s.id} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs ${getBarberColor(s.id)}`}>
                   <div className="w-2 h-2 rounded-full bg-current" />
@@ -945,7 +971,7 @@ function TASchedulePageInner() {
             </div>
           )}
           {/* Calendar / List view */}
-          {viewMode === 'calendar' ? (
+          {viewMode === 'calendar' && !isMobile ? (
             <div className="bg-dark-surface border border-dark-border rounded-2xl overflow-hidden">
               <div className="overflow-x-auto">
                 <div style={{ minWidth: '700px' }}>
