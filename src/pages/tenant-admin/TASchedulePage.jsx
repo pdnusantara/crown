@@ -69,6 +69,9 @@ function csvEscape(v) {
   return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 
+// Filter peran sadar-barber: kasir yang merangkap barber (isBarber=true) tetap cocok di tab "Barber".
+const matchesRoleFilter = (u, rf) => rf === 'all' || u?.role === rf || (rf === 'barber' && !!u?.isBarber)
+
 function TASchedulePageInner() {
   const { t, i18n } = useTranslation()
   const dateLocale = i18n.language?.startsWith('en') ? enLocale : idLocale
@@ -83,8 +86,17 @@ function TASchedulePageInner() {
   const { data: barberUsers = [] } = useUsers({ role: 'barber', isActive: true })
   const { data: kasirUsers  = [] } = useUsers({ role: 'kasir',  isActive: true })
   const allUsers = useMemo(() => {
-    const merged = [...barberUsers, ...kasirUsers]
-    return merged.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+    // Dedupe by id: kasir yang merangkap barber bisa muncul di kedua query
+    // (backend memperluas query barber jadi role=barber ATAU isBarber=true).
+    // Simpan satu salinan, gabungkan flag isBarber (OR) agar tetap dianggap barber.
+    const byId = new Map()
+    for (const u of [...barberUsers, ...kasirUsers]) {
+      if (!u?.id) continue
+      const existing = byId.get(u.id)
+      if (existing) existing.isBarber = !!existing.isBarber || !!u.isBarber
+      else byId.set(u.id, { ...u })
+    }
+    return [...byId.values()].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
   }, [barberUsers, kasirUsers])
   const [roleFilter, setRoleFilter] = useState('all') // all | kasir | barber
   const { data: branches = [] } = useBranches(user?.tenantId)
@@ -229,7 +241,7 @@ function TASchedulePageInner() {
   const staff = useMemo(() => {
     // Backend already scopes by tenant + isActive=true; filter by role + search.
     let arr = allUsers
-    if (roleFilter !== 'all') arr = arr.filter((s) => s.role === roleFilter)
+    arr = arr.filter((s) => matchesRoleFilter(s, roleFilter))
     if (searchDeb) arr = arr.filter((s) => s.name?.toLowerCase().includes(searchDeb))
     return arr
   }, [allUsers, searchDeb, roleFilter])
@@ -278,7 +290,7 @@ function TASchedulePageInner() {
       for (const u of allUsers) {
         if (taken.has(u.id)) continue
         if (!passesBranchFilter(u)) continue
-        if (roleFilter !== 'all' && u.role !== roleFilter) continue
+        if (!matchesRoleFilter(u, roleFilter)) continue
         const ws = wsLookup[u.id]?.[dow]
         if (!ws || ws.isDayOff) continue
         const startH = parseInt((ws.startTime || '08:00').split(':')[0])
@@ -608,7 +620,7 @@ function TASchedulePageInner() {
 
   const filteredVisible = (sch) => {
     const u = allUsers.find((x) => x.id === sch.staffId)
-    if (roleFilter !== 'all' && u?.role !== roleFilter) return false
+    if (!matchesRoleFilter(u, roleFilter)) return false
     if (!searchDeb) return true
     return (u?.name || '').toLowerCase().includes(searchDeb)
   }
@@ -1056,7 +1068,7 @@ function TASchedulePageInner() {
                       const dow = day.getDay()
                       const dayOff = (dayClosure.allClosed || bulkMode) ? [] : allUsers.filter(u => {
                         if (branchFilter && branchFilter !== 'all' && u.branchId !== branchFilter) return false
-                        if (roleFilter !== 'all' && u.role !== roleFilter) return false
+                        if (!matchesRoleFilter(u, roleFilter)) return false
                         const ws = wsLookup[u.id]?.[dow]
                         return !!ws?.isDayOff
                       })
@@ -1215,7 +1227,7 @@ function TASchedulePageInner() {
                 const dow = day.getDay()
                 const dayOff = (dayCs.allClosed || bulkMode) ? [] : allUsers.filter(u => {
                   if (branchFilter && branchFilter !== 'all' && u.branchId !== branchFilter) return false
-                  if (roleFilter !== 'all' && u.role !== roleFilter) return false
+                  if (!matchesRoleFilter(u, roleFilter)) return false
                   return !!wsLookup[u.id]?.[dow]?.isDayOff
                 })
                 return (
