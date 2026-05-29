@@ -664,7 +664,11 @@
       "overQuotaUpgrade": "You exceed the <b>{{pkg}}</b> plan quota ({{used}}/{{quota}}). Consider upgrading to a larger plan.",
       "nearQuotaInfo": "Staff quota almost full. Staff #{{next}} onward will incur <b>{{price}}/{{unit}}</b>.",
       "perBranchBonus": "+{{n}} bonus staff",
-      "perBranchBonusNone": "more quota"
+      "perBranchBonusNone": "more quota",
+      "roleBarberDesc": "Cuts and styles hair. Earns % commission per service.",
+      "roleKasirDesc": "POS operator. Fixed monthly salary, optionally also cuts.",
+      "branchUnlicensed": "Branch not licensed",
+      "branchUnlicensedHint": "Pay the branch add-on invoice in Billing before assigning staff here."
     },
     "services": {
       "title": "Services",

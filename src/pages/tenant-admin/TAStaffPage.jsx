@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react'
 import { useTranslation, Trans } from 'react-i18next'
 import { motion } from 'framer-motion'
-import { Plus, Edit2, Trash2, Star, Search, Mail, KeyRound, Copy, Check, AlertTriangle, Camera, X, Eye, EyeOff, RefreshCw, Users, UserPlus } from 'lucide-react'
+import { Plus, Edit2, Trash2, Star, Search, Mail, KeyRound, Copy, Check, AlertTriangle, Camera, X, Eye, EyeOff, RefreshCw, Users, UserPlus, Scissors, Receipt, MapPin, ShieldAlert } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useResetUserPassword } from '../../hooks/useUsers.js'
 import { useBranches, useBranchLicenseSummary } from '../../hooks/useBranches.js'
@@ -49,10 +49,24 @@ export default function TAStaffPage() {
   const [showPw, setShowPw] = useState(false)
   const [pwError, setPwError] = useState('')
 
-  const ROLES = [
-    { value: 'barber',  label: t('tenantAdmin.staff.roleBarber') },
-    { value: 'kasir',   label: t('tenantAdmin.staff.roleKasir') },
-    { value: 'manager', label: t('tenantAdmin.staff.roleManager') },
+  // Role picker — schema backend hanya menerima 'barber' & 'kasir' utk
+  // tenant_admin (super_admin/tenant_admin/customer/affiliate diblokir di
+  // POST /users). Manager dihapus 2026-05-29: tidak ada di Role enum Prisma
+  // → save selalu validation fail. Pakai card-picker dgn ikon + deskripsi
+  // singkat supaya owner tau perbedaannya saat onboarding.
+  const ROLE_CARDS = [
+    {
+      value: 'barber',
+      label: t('tenantAdmin.staff.roleBarber'),
+      desc:  t('tenantAdmin.staff.roleBarberDesc'),
+      icon:  Scissors,
+    },
+    {
+      value: 'kasir',
+      label: t('tenantAdmin.staff.roleKasir'),
+      desc:  t('tenantAdmin.staff.roleKasirDesc'),
+      icon:  Receipt,
+    },
   ]
 
   const { data: allStaff = [], isLoading: isLoadingStaff, isError, refetch } = useUsers({ tenantId: user?.tenantId })
@@ -487,24 +501,52 @@ export default function TAStaffPage() {
             error={formError.email}
             hint={editStaff ? t('tenantAdmin.staff.emailLoginHintEdit') : t('tenantAdmin.staff.emailLoginHintNew')}
           />
-          <Select
-            label={t('tenantAdmin.staff.role')}
-            value={form.role}
-            onChange={e => setForm(f => ({
-              ...f,
-              role: e.target.value,
-              // Kasir tak punya omzet pribadi → skemanya selalu gaji pokok.
-              salaryType: e.target.value === 'kasir' ? 'fixed' : f.salaryType,
-            }))}
-            options={ROLES}
-            placeholder=""
-          />
-          <Select
-            label={t('tenantAdmin.staff.branch')}
+          {/* Role card picker — pilih sekali klik, jelas peran apa. */}
+          <div>
+            <label className="block text-sm font-medium text-muted mb-1.5">{t('tenantAdmin.staff.role')}</label>
+            <div className="grid grid-cols-2 gap-2">
+              {ROLE_CARDS.map(({ value, label, desc, icon: Icon }) => {
+                const selected = form.role === value
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setForm(f => ({
+                      ...f,
+                      role: value,
+                      // Kasir tak punya omzet pribadi → skemanya selalu gaji pokok.
+                      salaryType: value === 'kasir' ? 'fixed' : f.salaryType,
+                    }))}
+                    className={`text-left p-3 rounded-xl border transition-all ${
+                      selected
+                        ? 'bg-brand/10 border-brand/40 ring-2 ring-brand/15'
+                        : 'bg-dark-surface border-dark-border hover:border-brand/30'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${selected ? 'bg-brand/20 text-brand' : 'bg-dark-card text-muted'}`}>
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <span className={`text-sm font-semibold ${selected ? 'text-brand' : 'text-off-white'}`}>{label}</span>
+                    </div>
+                    <p className="text-[11px] text-muted mt-1.5 leading-snug">{desc}</p>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Branch picker — tampilkan kode + alamat singkat + indikator lisensi.
+              Cabang unlicensed di-disable supaya staf tidak nyangkut di slot
+              yang belum dibayar (transaksi-nya tetap akan ditolak BranchLicenseGate). */}
+          <BranchPicker
+            branches={branches}
+            unlicensedIds={licenseSummary?.unlicensedBranchIds || []}
             value={form.branchId}
-            onChange={e => setForm(f => ({ ...f, branchId: e.target.value }))}
-            options={branches.map(b => ({ value: b.id, label: b.name }))}
+            onChange={(branchId) => setForm(f => ({ ...f, branchId }))}
             error={formError.branchId}
+            label={t('tenantAdmin.staff.branch')}
+            t={t}
           />
           {(form.role === 'barber' || form.role === 'kasir') && (
             <div className="space-y-3 p-3 rounded-xl bg-dark-surface border border-dark-border">
@@ -875,5 +917,68 @@ function CredentialsModal({ credentials, onClose }) {
         <Button fullWidth onClick={onClose}>{t('tenantAdmin.staff.noted')}</Button>
       </div>
     </Modal>
+  )
+}
+
+// Branch picker dengan kode + alamat + indikator lisensi. Cabang unlicensed
+// di-disable supaya tenant_admin tidak nempel staf ke slot yang belum dibayar
+// (akhirnya stuck di BranchLicenseGate). Tetap ditampilkan dgn pesan supaya
+// jelas kenapa tidak bisa dipilih.
+function BranchPicker({ branches, unlicensedIds, value, onChange, error, label, t }) {
+  const unlicensedSet = new Set(unlicensedIds)
+  // Urutkan: cabang berlisensi dulu, lalu unlicensed.
+  const sorted = [...branches].sort((a, b) => {
+    const ua = unlicensedSet.has(a.id) ? 1 : 0
+    const ub = unlicensedSet.has(b.id) ? 1 : 0
+    if (ua !== ub) return ua - ub
+    return (a.name || '').localeCompare(b.name || '')
+  })
+  return (
+    <div>
+      <label className="block text-sm font-medium text-muted mb-1.5">{label}</label>
+      <div className="space-y-1.5">
+        {sorted.map((b) => {
+          const selected   = value === b.id
+          const unlicensed = unlicensedSet.has(b.id)
+          return (
+            <button
+              key={b.id}
+              type="button"
+              onClick={() => !unlicensed && onChange(b.id)}
+              disabled={unlicensed}
+              className={`w-full text-left p-3 rounded-xl border transition-all flex items-center gap-3 ${
+                unlicensed
+                  ? 'bg-dark-surface/40 border-dark-border opacity-60 cursor-not-allowed'
+                  : selected
+                  ? 'bg-brand/10 border-brand/40 ring-2 ring-brand/15'
+                  : 'bg-dark-surface border-dark-border hover:border-brand/30'
+              }`}
+            >
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                unlicensed ? 'bg-amber-500/10 text-amber-400' :
+                selected   ? 'bg-brand/20 text-brand' : 'bg-dark-card text-muted'
+              }`}>
+                {unlicensed ? <ShieldAlert className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`text-sm font-semibold ${selected ? 'text-brand' : 'text-off-white'}`}>{b.name}</span>
+                  {b.code && (
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-dark-card text-muted">/{b.code}</span>
+                  )}
+                </div>
+                {b.address && (
+                  <p className="text-[11px] text-muted truncate mt-0.5">{b.address}</p>
+                )}
+                {unlicensed && (
+                  <p className="text-[11px] text-amber-400 mt-0.5">{t('tenantAdmin.staff.branchUnlicensed')} — {t('tenantAdmin.staff.branchUnlicensedHint')}</p>
+                )}
+              </div>
+            </button>
+          )
+        })}
+      </div>
+      {error && <p className="text-xs text-red-400 mt-1.5">{error}</p>}
+    </div>
   )
 }

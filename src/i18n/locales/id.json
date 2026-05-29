@@ -664,7 +664,11 @@
       "overQuotaUpgrade": "Anda melebihi kuota paket <b>{{pkg}}</b> ({{used}}/{{quota}}). Pertimbangkan upgrade ke paket lebih besar.",
       "nearQuotaInfo": "Kuota staf hampir habis. Staf ke-{{next}} dst akan kena <b>{{price}}/{{unit}}</b>.",
       "perBranchBonus": "+{{n}} staf bonus",
-      "perBranchBonusNone": "kuota lebih"
+      "perBranchBonusNone": "kuota lebih",
+      "roleBarberDesc": "Pemotong/penata rambut. Dapat komisi % per layanan.",
+      "roleKasirDesc": "Operator POS & kasir. Gaji pokok bulanan, opsional ikut potong.",
+      "branchUnlicensed": "Cabang belum berlisensi",
+      "branchUnlicensedHint": "Lunasi tagihan add-on cabang dulu di Billing sebelum menempatkan staf ke sini."
     },
     "services": {
       "title": "Layanan",
