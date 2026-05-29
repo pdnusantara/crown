@@ -291,10 +291,9 @@ export default function TADashboard() {
   const { data: todayRaw,  isLoading: loadingToday } = useReportSummary(tenantId)
   const { data: yestRaw                             } = useYesterdayStats(tenantId)
   const { data: dailyData  = []                     } = useDailyReport(tenantId, 7)
-  // Leaderboard dilabeli "Hari Ini" → minta rentang hari ini (backend default
-  // 30 hari). Konsisten dgn KPI today & label. buildDateRange resolve TZ tenant.
-  const todayISO = new Date().toISOString().split('T')[0]
-  const { data: barberReport = []                   } = useBarberReport(tenantId, { startDate: todayISO, endDate: todayISO })
+  // Leaderboard pakai rentang default backend = 30 hari terakhir (lebih
+  // representatif & tak kosong di pagi hari). Label disesuaikan jadi "30 Hari".
+  const { data: barberReport = []                   } = useBarberReport(tenantId)
   const { data: serviceReport = []                  } = useServiceReport(tenantId)
   const barberRatingEnabled = useIsFeatureEnabled(tenantId, 'barber_rating')
   const attendanceEnabled = useIsFeatureEnabled(tenantId, 'attendance')
