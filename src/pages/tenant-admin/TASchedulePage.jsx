@@ -708,7 +708,7 @@ function TASchedulePageInner() {
           yang aktif. Count staff per cabang ikut ditampilkan. Disembunyikan
           kalau tenant cuma 1 cabang (tidak ada gunanya filter). */}
       {branches.length > 1 && (
-        <div className="flex items-center gap-2 overflow-x-auto -mx-1 px-1 pb-1">
+        <div className="flex flex-wrap items-center gap-2">
           {[{ id: 'all', name: t('tenantAdmin.schedule.branchAll'), count: allUsers.length }, ...branches.map(b => ({
             id: b.id,
             name: b.name,
@@ -721,14 +721,14 @@ function TASchedulePageInner() {
                 key={opt.id}
                 type="button"
                 onClick={() => setBranchFilter(opt.id)}
-                className={`flex-shrink-0 inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border text-sm font-medium transition-all ${
+                className={`flex-shrink-0 inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border text-[13px] sm:text-sm font-medium transition-all ${
                   selected
                     ? 'bg-brand/15 border-brand/40 text-brand ring-2 ring-brand/15'
                     : 'bg-dark-card border-dark-border text-muted hover:text-off-white hover:border-brand/30'
                 }`}
               >
-                <span>{opt.name}</span>
-                {opt.code && <span className="text-[10px] font-mono opacity-60">/{opt.code}</span>}
+                <span className="max-w-[140px] truncate">{opt.name}</span>
+                {opt.code && <span className="hidden sm:inline text-[10px] font-mono opacity-60">/{opt.code}</span>}
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${selected ? 'bg-brand/20' : 'bg-dark-surface'}`}>{opt.count}</span>
               </button>
             )
