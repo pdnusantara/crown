@@ -1384,8 +1384,12 @@ function Footer({ text, logo, contact = {}, siteName = 'SembaPOS' }) {
           </ul>
         </div>
       </div>
-      <div className="max-w-6xl mx-auto mt-10 pt-6 border-t border-white/10 text-[12px] text-[#7C7AA8]">
-        © {new Date().getFullYear()} {siteName}. Dibuat untuk barbershop Indonesia.
+      <div className="max-w-6xl mx-auto mt-10 pt-6 border-t border-white/10 text-[12px] text-[#7C7AA8] flex flex-col sm:flex-row items-center justify-between gap-3 text-center">
+        <span>© {new Date().getFullYear()} {siteName}. Dibuat untuk barbershop Indonesia.</span>
+        <div className="flex items-center gap-4">
+          <Link to="/syarat-ketentuan" className="hover:text-[#6366F1] transition-colors">Syarat &amp; Ketentuan</Link>
+          <Link to="/kebijakan-privasi" className="hover:text-[#6366F1] transition-colors">Kebijakan Privasi</Link>
+        </div>
       </div>
     </footer>
   )

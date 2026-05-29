@@ -417,7 +417,11 @@ export default function RegisterPage() {
                     className="mt-0.5 accent-brand w-4 h-4 flex-shrink-0"
                   />
                   <span className="text-xs text-muted leading-relaxed">
-                    Saya setuju dengan syarat layanan {PLATFORM_NAME} dan paham bahwa langganan akan otomatis berakhir setelah 14 hari trial bila tidak dibayar.
+                    Saya setuju dengan{' '}
+                    <a href="/syarat-ketentuan" target="_blank" rel="noopener noreferrer" className="text-brand font-medium hover:underline">Syarat &amp; Ketentuan</a>{' '}
+                    dan{' '}
+                    <a href="/kebijakan-privasi" target="_blank" rel="noopener noreferrer" className="text-brand font-medium hover:underline">Kebijakan Privasi</a>{' '}
+                    {PLATFORM_NAME}, dan paham bahwa langganan akan otomatis berakhir setelah 14 hari trial bila tidak dibayar.
                   </span>
                 </label>
 

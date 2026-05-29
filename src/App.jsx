@@ -22,6 +22,7 @@ import { queryClient } from './lib/queryClient.js'
 const Login         = lazy(() => import('./pages/Login.jsx'))
 const LandingPage   = lazy(() => import('./pages/LandingPage.jsx'))
 const RegisterPage  = lazy(() => import('./pages/RegisterPage.jsx'))
+const LegalPage     = lazy(() => import('./pages/LegalPage.jsx'))
 
 const SAPackagesPage     = lazy(() => import('./pages/super-admin/SAPackagesPage.jsx'))
 const SADashboard        = lazy(() => import('./pages/super-admin/SADashboard.jsx'))
@@ -279,6 +280,8 @@ export default function App() {
           <Routes>
           <Route path="/login"    element={<Login />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/syarat-ketentuan" element={<LegalPage />} />
+          <Route path="/kebijakan-privasi" element={<LegalPage />} />
 
           {/* Super Admin */}
           <Route
