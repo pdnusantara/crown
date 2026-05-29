@@ -292,7 +292,9 @@
     "removeCustomer": "Remove customer",
     "noPhone": "No phone",
     "viewCart": "Cart ({{count}})",
-    "itemsInCart": "{{count}} item(s)"
+    "itemsInCart": "{{count}} item(s)",
+    "noCustomersAtBranch": "No customers at this branch yet",
+    "searchAcrossBranches": "Type a name or phone number to search customers from other branches"
   },
   "queue": {
     "title": "Queue",

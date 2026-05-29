@@ -17,6 +17,7 @@ import Modal from '../../components/ui/Modal.jsx'
 import Input from '../../components/ui/Input.jsx'
 import { formatRupiah } from '../../utils/format.js'
 import { formatDateInTz } from '../../utils/timezone.js'
+import { useProvinces, useRegencies } from '../../hooks/useWilayah.js'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -76,7 +77,7 @@ export default function TABranchesPage() {
   const [showDelModal,  setShowDelModal]  = useState(null)
   const [editBranch,    setEditBranch]    = useState(null)
   const [pendingForm,   setPendingForm]   = useState(null)
-  const [form, setForm] = useState({ name: '', code: '', address: '', phone: '', openTime: '09:00', closeTime: '21:00' })
+  const [form, setForm] = useState({ name: '', code: '', address: '', phone: '', openTime: '09:00', closeTime: '21:00', wilayah: null })
 
   const { data: branches = [], isLoading, isError, refetch, isFetching } = useBranches(tenantId)
   const { data: sub }                       = useSubscription(tenantId)
@@ -111,13 +112,21 @@ export default function TABranchesPage() {
       return
     }
     setEditBranch(null)
-    setForm({ name: '', code: '', address: '', phone: '', openTime: '09:00', closeTime: '21:00' })
+    setForm({ name: '', code: '', address: '', phone: '', openTime: '09:00', closeTime: '21:00', wilayah: null })
     setShowFormModal(true)
   }
 
   const openEdit = (branch) => {
     setEditBranch(branch)
-    setForm({ name: branch.name, code: branch.code || '', address: branch.address || '', phone: branch.phone || '', openTime: branch.openTime || '09:00', closeTime: branch.closeTime || '21:00' })
+    setForm({
+      name: branch.name,
+      code: branch.code || '',
+      address: branch.address || '',
+      phone: branch.phone || '',
+      openTime: branch.openTime || '09:00',
+      closeTime: branch.closeTime || '21:00',
+      wilayah: branch.wilayah || null,
+    })
     setShowFormModal(true)
   }
 
@@ -528,6 +537,16 @@ export default function TABranchesPage() {
             <Input label="Jam Buka" type="time" value={form.openTime} onChange={e => setForm(f => ({ ...f, openTime: e.target.value }))} />
             <Input label="Jam Tutup" type="time" value={form.closeTime} onChange={e => setForm(f => ({ ...f, closeTime: e.target.value }))} />
           </div>
+
+          {/* Wilayah BPS per cabang — opsional; kalau kosong fallback ke
+              Tenant.wilayah. Dipakai POS sebagai default kecamatan/desa
+              pelanggan baru di cabang ini (mis. cabang Jakarta tidak salah
+              pilih kecamatan Jawa Barat). */}
+          <BranchWilayahFields
+            value={form.wilayah}
+            onChange={(wilayah) => setForm(f => ({ ...f, wilayah }))}
+          />
+
           <div className="flex gap-3 pt-2">
             <Button variant="outline" fullWidth onClick={() => setShowFormModal(false)}>Batal</Button>
             <Button fullWidth onClick={handleSave} disabled={createBranch.isPending || updateBranch.isPending}>
@@ -612,6 +631,48 @@ export default function TABranchesPage() {
           </div>
         </div>
       </Modal>
+    </div>
+  )
+}
+
+// Provinsi + Kabupaten BPS picker untuk per-cabang wilayah. Dipakai di edit
+// branch modal. Output value-nya null saat kabupaten dikosongkan supaya
+// backend fallback ke Tenant.wilayah.
+function BranchWilayahFields({ value, onChange }) {
+  const { data: provinces = [] } = useProvinces()
+  const { data: regencies = [] } = useRegencies(value?.provinsiId)
+
+  const pickProv = (id) => {
+    const p = provinces.find(x => x.id === id)
+    if (!id) return onChange(null)
+    onChange({ provinsiId: id, provinsi: p?.name || '', kabupatenId: null, kabupaten: null })
+  }
+  const pickKab = (id) => {
+    const k = regencies.find(x => x.id === id)
+    onChange({ ...value, kabupatenId: id || null, kabupaten: k?.name || null })
+  }
+
+  const selectCls = 'w-full appearance-none bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60 disabled:opacity-40 transition-colors'
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-muted">Wilayah Cabang (opsional) — default kecamatan/desa pelanggan di POS</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div>
+          <label className="block text-xs font-medium text-muted mb-1.5">Provinsi</label>
+          <select className={selectCls} value={value?.provinsiId || ''} onChange={e => pickProv(e.target.value)}>
+            <option value="">— Pakai default tenant —</option>
+            {provinces.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-muted mb-1.5">Kabupaten / Kota</label>
+          <select className={selectCls} value={value?.kabupatenId || ''} disabled={!value?.provinsiId} onChange={e => pickKab(e.target.value)}>
+            <option value="">{value?.provinsiId ? 'Pilih kabupaten / kota' : 'Pilih provinsi dulu'}</option>
+            {regencies.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+          </select>
+        </div>
+      </div>
     </div>
   )
 }

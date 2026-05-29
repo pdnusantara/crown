@@ -503,10 +503,15 @@ function POSPageInner() {
 
   // Server-side customer search — hanya fetch saat modal pelanggan terbuka
   // supaya tidak ada request idle yang sia-sia di latar belakang.
+  // Default: filter ke pelanggan yg pernah transaksi DI CABANG INI (cabang baru
+  // tidak lihat pelanggan cabang lama sebagai noise). Saat kasir ketik nama,
+  // search tenant-wide supaya pelanggan loyal lintas-cabang tetap ketemu.
   const { data: customerPage, isFetching: customersFetching } = useCustomers({
     page: 1, limit: 20,
     enabled: showCustomerModal,
-    ...(customerSearchDeb ? { search: customerSearchDeb } : {}),
+    ...(customerSearchDeb
+      ? { search: customerSearchDeb }
+      : (currentBranch?.id ? { branchId: currentBranch.id } : {})),
   })
   const customers = customerPage?.data || customerPage || []
 
@@ -769,13 +774,16 @@ function POSPageInner() {
   const handleAddNewCustomer = async () => {
     if (!newCustomerForm.name || !newCustomerForm.phone) return toast.error(t('pos.fillNameAndPhone'))
     try {
-      // Gabung wilayah toko (provinsi+kabupaten) + pilihan kasir (kecamatan+desa)
-      // jadi address lengkap. Hanya disertakan kalau kecamatan dipilih.
+      // Gabung wilayah cabang (atau fallback tenant) + pilihan kasir
+      // (kecamatan+desa) jadi address lengkap. Hanya disertakan kalau
+      // kecamatan dipilih.
+      const bw = currentBranch?.wilayah
       const tw = user?.tenant?.wilayah
-      const address = (tw?.kabupatenId && newCustWilayah.kecamatanId)
+      const parent = (bw?.kabupatenId ? bw : tw) || null
+      const address = (parent?.kabupatenId && newCustWilayah.kecamatanId)
         ? {
-            provinsiId: tw.provinsiId, provinsi: tw.provinsi,
-            kabupatenId: tw.kabupatenId, kabupaten: tw.kabupaten,
+            provinsiId: parent.provinsiId, provinsi: parent.provinsi,
+            kabupatenId: parent.kabupatenId, kabupaten: parent.kabupaten,
             ...newCustWilayah,
           }
         : undefined
@@ -1714,7 +1722,16 @@ function POSPageInner() {
             ) : customers.length === 0 ? (
               <div className="flex flex-col items-center justify-center text-center py-8 text-muted">
                 <User size={28} className="mb-2 opacity-50" />
-                <p className="text-xs">{t('pos.noCustomersFound')}</p>
+                <p className="text-xs">
+                  {customerSearchDeb
+                    ? t('pos.noCustomersFound')
+                    : t('pos.noCustomersAtBranch')}
+                </p>
+                {!customerSearchDeb && (
+                  <p className="text-[11px] mt-1 max-w-[18rem] leading-snug">
+                    {t('pos.searchAcrossBranches')}
+                  </p>
+                )}
               </div>
             ) : (
               customers.map(c => {
@@ -1760,9 +1777,9 @@ function POSPageInner() {
                   onChange={e => setNewCustomerForm(f => ({ ...f, phone: e.target.value }))}
                   placeholder={t('pos.customerPhonePlaceholder')}
                 />
-                {user?.tenant?.wilayah?.kabupatenId && (
+                {(currentBranch?.wilayah?.kabupatenId || user?.tenant?.wilayah?.kabupatenId) && (
                   <WilayahPicker
-                    kabupatenId={user.tenant.wilayah.kabupatenId}
+                    kabupatenId={currentBranch?.wilayah?.kabupatenId || user.tenant.wilayah.kabupatenId}
                     value={newCustWilayah}
                     onChange={setNewCustWilayah}
                   />

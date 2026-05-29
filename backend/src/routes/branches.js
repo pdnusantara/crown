@@ -47,12 +47,23 @@ const branchSelect = {
   longitude: true,
   attendanceRadius: true,
   closedDates: true,
+  wilayah: true,
   isActive: true,
   createdAt: true,
   tenant: { select: { id: true, name: true } },
   // Hitung hanya staf aktif (belum di-soft-delete) supaya angka "Staf" akurat.
   _count: { select: { users: { where: { deletedAt: null } } } },
 };
+
+// Wilayah BPS shape: {provinsi+kabupaten}. Semua optional supaya tenant_admin
+// bisa kosongkan (fallback ke Tenant.wilayah). Kalau salah satu dari kabupatenId
+// atau provinsiId diisi, BPS code di-validasi format dasarnya.
+const wilayahSchema = z.object({
+  provinsiId:  z.string().regex(/^\d{2}$/).nullable().optional(),
+  provinsi:    z.string().nullable().optional(),
+  kabupatenId: z.string().regex(/^\d{4}$/).nullable().optional(),
+  kabupaten:   z.string().nullable().optional(),
+}).nullable().optional();
 
 // Kode cabang: huruf kecil/angka/tanda hubung, 2-24 char. Tidak boleh berupa
 // CUID (20+ char alfanumerik tanpa dash) supaya tidak ambigu dengan id.
@@ -76,6 +87,7 @@ const createBranchSchema = z.object({
   latitude:  z.number().min(-90).max(90).nullable().optional(),
   longitude: z.number().min(-180).max(180).nullable().optional(),
   attendanceRadius: z.number().int().min(10).max(5000).optional(),
+  wilayah: wilayahSchema,
   isActive: z.boolean().optional(),
 });
 

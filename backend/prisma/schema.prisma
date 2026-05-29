@@ -252,6 +252,12 @@ model Branch {
   // Tanggal-tanggal cabang tutup (libur Lebaran, cuti bersama, dst).
   // Array of {date: "YYYY-MM-DD", note?: string}. Maks 365 entri.
   closedDates      Json?
+  // Wilayah BPS per-cabang (provinsi+kabupaten) — dipakai WilayahPicker di
+  // POS/booking sebagai default kecamatan/desa untuk pelanggan baru. Bila null,
+  // fallback ke Tenant.wilayah. Shape sama: {provinsiId, provinsi, kabupatenId,
+  // kabupaten}. Cabang di provinsi berbeda dgn HQ (mis. Jakarta vs HQ Kuningan)
+  // pakai field ini supaya pelanggan barunya tidak terdaftar di JABAR.
+  wilayah          Json?
   isActive         Boolean       @default(true)
   deletedAt        DateTime?
   createdAt        DateTime      @default(now())

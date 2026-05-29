@@ -292,7 +292,9 @@
     "removeCustomer": "Hapus pelanggan",
     "noPhone": "Tanpa nomor",
     "viewCart": "Keranjang ({{count}})",
-    "itemsInCart": "{{count}} item"
+    "itemsInCart": "{{count}} item",
+    "noCustomersAtBranch": "Belum ada pelanggan di cabang ini",
+    "searchAcrossBranches": "Ketik nama atau no. HP untuk cari pelanggan dari cabang lain"
   },
   "queue": {
     "title": "Antrian",

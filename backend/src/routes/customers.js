@@ -61,7 +61,7 @@ const updateCustomerSchema = createCustomerSchema.partial().omit({ tenantId: tru
 router.get('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir'), async (req, res, next) => {
   try {
     const { page, limit, skip } = parsePagination(req.query);
-    const { search, provinsi, segment, gender, sortBy, sortDir, dormantDays, birthMonth } = req.query;
+    const { search, provinsi, segment, gender, sortBy, sortDir, dormantDays, birthMonth, branchId } = req.query;
 
     const where = { deletedAt: null };
 
@@ -69,6 +69,19 @@ router.get('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir'
       where.tenantId = req.user.tenantId;
     } else if (req.query.tenantId) {
       where.tenantId = req.query.tenantId;
+    }
+
+    // Branch filter — pelanggan yang pernah bertransaksi di cabang ini. Dipakai
+    // POS supaya default list cabang baru tidak nampak pelanggan cabang lama
+    // (tetap searchable tenant-wide bila kasir ketik nama; lihat POSPage).
+    // Skip kalau search aktif — kasir mau cari lintas-cabang utk loyalty.
+    if (branchId && !search && where.tenantId) {
+      const rows = await prisma.transaction.groupBy({
+        by: ['customerId'],
+        where: { tenantId: where.tenantId, branchId, customerId: { not: null } },
+      });
+      const ids = rows.map(r => r.customerId).filter(Boolean);
+      where.id = { in: ids.length ? ids : ['__none__'] };
     }
 
     if (search) {
