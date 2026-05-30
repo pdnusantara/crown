@@ -294,8 +294,6 @@ function LeaderboardCard({ barber, index, branchName }) {
               <span className="truncate">{branchName}</span>
             </>
           )}
-          <span className="opacity-40 shrink-0">·</span>
-          <span className="shrink-0">{barber.servicesCount || barber.todayTxns || 0} layanan</span>
         </div>
       </div>
       <span className="font-semibold text-brand text-sm whitespace-nowrap tabular-nums shrink-0">
