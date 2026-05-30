@@ -24,7 +24,7 @@ function useFonts() {
     const link = document.createElement('link')
     link.id = FONT_LINK_ID
     link.rel = 'stylesheet'
-    link.href = 'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap'
+    link.href = 'https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;600;700;800;900&family=Hanken+Grotesk:wght@400;500;600;700&display=swap'
     document.head.append(pre1, pre2, link)
   }, [])
 }
@@ -502,8 +502,8 @@ const CSS = `
   --ink:#0E0E1A; --ink-soft:#3A3950; --mute:#6B6A82;
   --indigo:#6366F1; --indigo-deep:#4F46E5; --mint:#10B981; --gold:#C9A84C;
   --canvas:#F4F4FB; --paper:#FFFFFF; --line:#E4E4F0;
-  --display:'Bricolage Grotesque', ui-sans-serif, sans-serif;
-  --body:'Plus Jakarta Sans', ui-sans-serif, sans-serif;
+  --display:'Schibsted Grotesk', ui-sans-serif, sans-serif;
+  --body:'Hanken Grotesk', ui-sans-serif, sans-serif;
   position:relative; min-height:100vh; background:var(--canvas);
   color:var(--ink); font-family:var(--body); overflow-x:clip;
   -webkit-font-smoothing:antialiased;
