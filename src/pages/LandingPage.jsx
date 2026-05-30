@@ -709,6 +709,38 @@ function BrowserFrame({ src, alt }) {
   )
 }
 
+// Bingkai "browser" berisi VIDEO (rekaman layar produk milik user).
+// autoPlay + loop + muted + playsInline → jalan otomatis tanpa kontrol, ringan.
+function VideoFrame({ src, poster }) {
+  return (
+    <div className="rounded-2xl border border-[#D5D8E8] bg-white shadow-[0_24px_60px_-28px_rgba(28,26,23,0.4)] overflow-hidden">
+      <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-[#E8EAF5] bg-[#F4F4FA]">
+        <span className="w-2.5 h-2.5 rounded-full bg-[#E0573E]/70" />
+        <span className="w-2.5 h-2.5 rounded-full bg-[#E0A23E]/70" />
+        <span className="w-2.5 h-2.5 rounded-full bg-[#3FB950]/70" />
+      </div>
+      <div className="aspect-[16/10] bg-[#0E0E1A]">
+        <video
+          src={src}
+          poster={poster || undefined}
+          autoPlay loop muted playsInline preload="metadata"
+          className="w-full h-full object-cover"
+        />
+      </div>
+    </div>
+  )
+}
+
+// Pilih media fitur: VIDEO (bila ada) → screenshot gambar → demo animasi.
+// Untuk ganti ke video sendiri: set `feature.video` (URL .mp4/.webm) via editor
+// landing / data /api/landing.
+function FeatureMedia({ feature }) {
+  const video = feature.video || feature.videoUrl
+  if (video) return <VideoFrame src={video} poster={feature.image} />
+  if (feature.image) return <BrowserFrame src={feature.image} alt={feature.title} />
+  return <FeatureDemo icon={feature.icon} />
+}
+
 function FeaturesSection({ ctx }) {
   const { features, sections, animatedMocks } = ctx
   const indexed  = features.map((f, i) => ({ f, i }))
@@ -745,7 +777,7 @@ function FeaturesSection({ ctx }) {
                     <p className="text-[#56548A] leading-relaxed sm:text-lg">{f.desc}</p>
                   </div>
                   <div className={mediaRight ? 'lg:order-2' : 'lg:order-1'}>
-                    <FeatureDemo icon={f.icon} />
+                    <FeatureMedia feature={f} />
                   </div>
                 </motion.div>
               )
