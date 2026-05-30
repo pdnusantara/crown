@@ -267,6 +267,44 @@ function LeaderboardRow({ barber, index, maxRevenue, branchName }) {
   )
 }
 
+// ── Leaderboard card (mobile) ────────────────────────────────────────────────
+// Tabel leaderboard kepotong di HP (overflow-x-auto → kolom omzet ter-scroll
+// keluar layar). Di mobile pakai kartu: nama truncate, omzet shrink-0 jadi
+// selalu tampil utuh di kanan.
+function LeaderboardCard({ barber, index, branchName }) {
+  const medals = ['🥇', '🥈', '🥉']
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -16 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.06, duration: 0.3 }}
+      className="flex items-center gap-2.5 py-3"
+    >
+      <span className={`w-6 shrink-0 text-center font-bold text-base ${index === 0 ? 'text-brand' : index === 2 ? 'text-amber-700' : 'text-muted'}`}>
+        {index < 3 ? medals[index] : index + 1}
+      </span>
+      <Avatar src={barber.photo} name={barber.barberName || barber.name} size="sm" />
+      <div className="min-w-0 flex-1">
+        <p className="font-medium text-off-white text-sm truncate">{barber.barberName || barber.name}</p>
+        <div className="flex items-center gap-1.5 text-xs text-muted">
+          {barber.averageRating != null && <span className="shrink-0">⭐ {barber.averageRating.toFixed(1)}</span>}
+          {branchName && branchName !== '—' && (
+            <>
+              {barber.averageRating != null && <span className="opacity-40 shrink-0">·</span>}
+              <span className="truncate">{branchName}</span>
+            </>
+          )}
+          <span className="opacity-40 shrink-0">·</span>
+          <span className="shrink-0">{barber.servicesCount || barber.todayTxns || 0} layanan</span>
+        </div>
+      </div>
+      <span className="font-semibold text-brand text-sm whitespace-nowrap tabular-nums shrink-0">
+        Rp <AnimNum value={barber.revenue || 0} />
+      </span>
+    </motion.div>
+  )
+}
+
 // ── Chart tooltip ─────────────────────────────────────────────────────────────
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
@@ -521,7 +559,8 @@ export default function TADashboard() {
               <h3 className="font-semibold text-off-white">{t('tenantAdmin.dashboard.leaderboardToday')}</h3>
             </div>
           </CardHeader>
-          <div className="overflow-x-auto">
+          {/* Desktop: tabel */}
+          <div className="overflow-x-auto hidden md:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-dark-border text-xs text-muted">
@@ -550,6 +589,23 @@ export default function TADashboard() {
                 ))}
               </tbody>
             </table>
+          </div>
+          {/* Mobile: kartu (cegah kolom omzet kepotong saat tabel di-scroll) */}
+          <div className="md:hidden px-3 pb-2">
+            {topBarbers.length === 0 ? (
+              <p className="py-8 text-center text-muted text-sm">{t('tenantAdmin.dashboard.noBarberData')}</p>
+            ) : (
+              <div className="divide-y divide-dark-border/50">
+                {topBarbers.map((barber, i) => (
+                  <LeaderboardCard
+                    key={barber.barberId || i}
+                    barber={barber}
+                    index={i}
+                    branchName={tenantBranches.find(b => b.id === barber.branchId)?.name || '—'}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </Card>
       </motion.div>
