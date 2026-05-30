@@ -34,12 +34,18 @@ wait_for_health() {
   local delay="$3"
   local i
   for ((i = 1; i <= tries; i++)); do
-    if curl -fsS "$url" >/dev/null; then
+    # 2>&1 ke /dev/null: selama jendela reload backend, percobaan pertama WAJAR
+    # gagal (port belum listen). Tanpa ini, stderr "curl: (7) Failed to connect"
+    # bocor ke log dan terlihat seperti deploy gagal padahal retry berikutnya
+    # sukses. Error sungguhan tetap dilaporkan via pesan di bawah + exit 1.
+    if curl -fsS "$url" >/dev/null 2>&1; then
+      [[ $i -gt 1 ]] && echo "   backend siap (percobaan ke-${i})"
       return 0
     fi
+    [[ $i -eq 1 ]] && echo "   menunggu backend siap (retry tiap ${delay}s, maks ${tries}×)…"
     sleep "$delay"
   done
-  echo "Healthcheck failed for ${url} after ${tries} attempts"
+  echo "Healthcheck GAGAL untuk ${url} setelah ${tries} percobaan"
   return 1
 }
 
