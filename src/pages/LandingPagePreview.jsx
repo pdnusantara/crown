@@ -60,6 +60,9 @@ export default function LandingPagePreview() {
       <Hero />
       <Marquee />
       <Bento />
+      <Pricing />
+      <Testimonials />
+      <Faq />
       <Closer />
       <FooterMini />
     </div>
@@ -303,12 +306,12 @@ function Bento() {
   )
 }
 
-function SectionHead({ kicker, title }) {
+function SectionHead({ kicker, title, center }) {
   return (
     <motion.div
       initial={{ y: 20, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }}
       viewport={{ once: true }} transition={{ duration: 0.6, ease }}
-      className="sec-head"
+      className={`sec-head${center ? ' sec-head-center' : ''}`}
     >
       <span className="kicker"><i /> {kicker}</span>
       <h2 className="display">{title}</h2>
@@ -336,6 +339,147 @@ function Closer() {
           </div>
         </motion.div>
       </div>
+    </section>
+  )
+}
+
+/* ── Pricing ──────────────────────────────────────────────────────────────── */
+const PLANS = [
+  {
+    name: 'Basic', price: 99000, tag: 'Pas buat barbershop yang baru mulai rapi-rapi.',
+    inherit: null,
+    lines: ['Kasir & transaksi tanpa batas', 'Booking + antrian online', 'Data pelanggan & layanan', 'Laporan omzet harian', '1 cabang'],
+  },
+  {
+    name: 'Pro', price: 199000, tag: 'Buat toko yang sudah ramai dan pengin tumbuh lebih cepat.',
+    inherit: 'Basic', featured: true,
+    lines: ['Struk & konfirmasi via WhatsApp', 'Komisi barber otomatis', 'Loyalti & poin pelanggan', 'Sampai 3 cabang', 'Laporan performa barber'],
+  },
+  {
+    name: 'Enterprise', price: 399000, tag: 'Skala besar, banyak cabang, semua fitur kebuka.',
+    inherit: 'Pro',
+    lines: ['Cabang tanpa batas', 'Absensi & GPS staf', 'Backup data terjadwal', 'Dukungan prioritas', 'Semua fitur kebuka'],
+  },
+]
+
+function Pricing() {
+  return (
+    <section id="harga" className="price-wrap">
+      <SectionHead kicker="Paket Harga" title={<>Harga jelas, <span className="hl hl-mint">tanpa</span> kejutan.</>} center />
+      <p className="sec-sub">Mulai gratis 14 hari. Bayar cuma kalau toko makin ramai — bisa naik paket kapan saja.</p>
+      <div className="plans">
+        {PLANS.map((p, i) => {
+          const annual = Math.round((p.price * 12 * 0.83) / 1000) * 1000
+          return (
+            <motion.div
+              key={p.name}
+              initial={{ y: 30, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }}
+              viewport={{ once: true, margin: '-60px' }}
+              transition={{ duration: 0.6, ease, delay: i * 0.08 }}
+              className={`plan ${p.featured ? 'plan-feat' : ''}`}
+            >
+              {p.featured && <span className="plan-ribbon"><Star size={11} fill="currentColor" /> Paling banyak dipilih</span>}
+              <h3 className="display plan-name">{p.name}</h3>
+              <p className="plan-tag">{p.tag}</p>
+              <div className="plan-price">
+                <b className="display">Rp{(p.price / 1000).toLocaleString('id-ID')}rb</b>
+                <span>/bulan</span>
+              </div>
+              <p className="plan-annual">Tahunan Rp{(annual / 1000).toLocaleString('id-ID')}rb — hemat 17%</p>
+              <div className="plan-div" />
+              {p.inherit && <p className="plan-inherit">Semua di paket {p.inherit}, plus:</p>}
+              <ul className="plan-lines">
+                {p.lines.map((l) => (
+                  <li key={l}><span className="tick"><Check size={11} strokeWidth={3.2} /></span>{l}</li>
+                ))}
+              </ul>
+              <a className={`btn lg plan-cta ${p.featured ? 'btn-indigo' : 'btn-ink'}`} href="#">Pilih {p.name} <ArrowRight size={16} /></a>
+              <p className="plan-foot"><Check size={12} strokeWidth={3} /> Gratis 14 hari · tanpa kartu kredit</p>
+            </motion.div>
+          )
+        })}
+      </div>
+      <p className="price-note"><Sparkles size={14} /> Semua paket sudah termasuk SSL, keamanan data, update gratis & dukungan tim kami.</p>
+    </section>
+  )
+}
+
+/* ── Testimonials ─────────────────────────────────────────────────────────── */
+const TESTI = [
+  { m: 'Dulu tutup buku bisa sejam, sekarang 5 menit kelar. Barber juga seneng komisinya kebaca jelas tiap hari.', n: 'Reza Maulana', r: 'Owner', b: 'Kapten Barber, Bekasi', t: 4 },
+  { m: 'Pelanggan booking sendiri lewat link, antrean jadi rapi banget. Nggak ada lagi drama rebutan giliran pas rame.', n: 'Dimas Prayoga', r: 'Owner', b: 'Gentlemen Cut, Depok', t: 3 },
+  { m: 'Punya 4 cabang, sekarang semua kepantau dari HP. Tahu cabang mana paling cuan tanpa harus keliling.', n: 'Bayu Saputra', r: 'Pemilik', b: 'Pangkas Bro, Bandung', t: 5 },
+]
+
+function Testimonials() {
+  return (
+    <section id="cerita" className="testi-wrap">
+      <div className="testi-inner">
+        <SectionHead kicker="Cerita Owner" title={<>Mereka pindah dari buku catatan —<br /><span className="hl hl-gold">dan</span> nggak mau balik lagi.</>} />
+        <div className="testi-grid">
+          {TESTI.map((t, i) => (
+            <motion.figure
+              key={t.n}
+              initial={{ y: 28, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }}
+              viewport={{ once: true, margin: '-50px' }}
+              transition={{ duration: 0.6, ease, delay: i * 0.1 }}
+              className="testi"
+            >
+              <div className="testi-stars">{Array.from({ length: 5 }).map((_, k) => <Star key={k} size={14} fill="currentColor" />)}</div>
+              <blockquote>“{t.m}”</blockquote>
+              <figcaption>
+                <span className="testi-av" style={{ background: ['#6366F1', '#10B981', '#C9A84C'][i % 3] }}>{t.n[0]}</span>
+                <span className="testi-who"><b>{t.n}</b><small>{t.r} · {t.b}</small></span>
+              </figcaption>
+            </motion.figure>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ── FAQ ──────────────────────────────────────────────────────────────────── */
+const FAQS = [
+  { q: 'Perlu install aplikasi atau alat khusus?', a: 'Nggak. SembaPOS jalan langsung di browser HP, tablet, atau komputer. Cukup buka, login, langsung pakai. Mau cetak struk pun bisa lewat printer Bluetooth biasa.' },
+  { q: 'Data toko saya aman?', a: 'Aman. Semua data dienkripsi, di-backup otomatis, dan tiap orang (owner/kasir/barber) punya akses sesuai perannya. Datamu nggak bisa dilihat toko lain.' },
+  { q: 'Ribet nggak buat pindah dari catatan manual?', a: 'Gampang banget. Daftar cuma semenit, ada checklist panduan, dan toko bisa jalan hari itu juga. Kalau bingung, tim kami bantu lewat WhatsApp.' },
+  { q: 'Kalau punya banyak cabang gimana?', a: 'Bisa. Pantau semua cabang dari satu dashboard, lengkap dengan perbandingan omzet per cabang. Mulai paket Pro untuk 3 cabang, atau Enterprise untuk tanpa batas.' },
+  { q: 'Bisa berhenti kapan saja?', a: 'Bisa, tanpa penalti. Coba dulu gratis 14 hari tanpa kartu kredit. Lanjut cuma kalau kamu merasa terbantu.' },
+]
+
+function Faq() {
+  const [open, setOpen] = useState(0)
+  return (
+    <section className="faq-wrap">
+      <SectionHead kicker="Tanya Jawab" title={<>Masih ragu? <span className="hl hl-indigo">Wajar</span> kok.</>} center />
+      <div className="faq-list">
+        {FAQS.map((f, i) => {
+          const isOpen = open === i
+          return (
+            <motion.div
+              key={i}
+              initial={{ y: 16, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }}
+              viewport={{ once: true }} transition={{ duration: 0.5, ease, delay: i * 0.04 }}
+              className={`faq ${isOpen ? 'faq-open' : ''}`}
+            >
+              <button className="faq-q" onClick={() => setOpen(isOpen ? -1 : i)}>
+                <span className="display">{f.q}</span>
+                <span className="faq-sign">{isOpen ? '−' : '+'}</span>
+              </button>
+              <motion.div
+                initial={false}
+                animate={{ height: isOpen ? 'auto' : 0, opacity: isOpen ? 1 : 0 }}
+                transition={{ duration: 0.32, ease }}
+                className="faq-a-wrap"
+              >
+                <p className="faq-a">{f.a}</p>
+              </motion.div>
+            </motion.div>
+          )
+        })}
+      </div>
+      <p className="faq-help">Belum nemu jawabannya? <a href="#">Chat tim kami via WhatsApp →</a></p>
     </section>
   )
 }
@@ -550,4 +694,73 @@ const CSS = `
 .foot{position:relative; z-index:2; max-width:1180px; margin:0 auto; padding:26px 24px 50px;
   display:flex; align-items:center; justify-content:space-between; gap:16px; color:var(--mute); font-size:13px; flex-wrap:wrap;}
 .foot-brand{display:inline-flex; align-items:center; gap:9px; font-family:var(--display); font-weight:800; font-size:16px; color:var(--ink);}
+
+/* section head variants */
+.sec-head-center{text-align:center; margin-left:auto; margin-right:auto;}
+.sec-head-center .kicker{justify-content:center;}
+.sec-sub{text-align:center; max-width:38em; margin:14px auto 0; color:var(--ink-soft); font-size:16px; line-height:1.55;}
+
+/* pricing */
+.price-wrap{position:relative; z-index:2; max-width:1180px; margin:0 auto; padding:30px 24px 92px;}
+.plans{display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:44px; align-items:start;}
+.plan{position:relative; background:var(--paper); border:1px solid var(--line); border-radius:22px; padding:28px; display:flex; flex-direction:column; transition:transform .25s, box-shadow .25s;}
+.plan:hover{transform:translateY(-5px); box-shadow:0 32px 64px -32px #1e1b4e44;}
+.plan-feat{background:radial-gradient(130% 130% at 50% 0%, #2c2858 0%, #0E0E1A 72%); border-color:#2c2858; color:#cfceea; box-shadow:0 36px 70px -30px #1e1b4e88;}
+@media(min-width:841px){.plan-feat{margin-top:-16px; margin-bottom:-16px; padding-top:40px; padding-bottom:40px;}}
+.plan-ribbon{position:absolute; top:-12px; left:50%; transform:translateX(-50%); display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; background:var(--indigo); color:#fff; padding:5px 13px; border-radius:999px; white-space:nowrap; box-shadow:0 10px 22px -8px #6366f1cc;}
+.plan-name{font-size:22px; font-weight:800;}
+.plan-feat .plan-name{color:#fff;}
+.plan-tag{font-size:13px; color:var(--mute); margin-top:6px; min-height:38px; line-height:1.45;}
+.plan-feat .plan-tag{color:#a5a2c8;}
+.plan-price{display:flex; align-items:flex-end; gap:7px; margin-top:16px;}
+.plan-price b{font-size:38px; font-weight:800; line-height:1;}
+.plan-feat .plan-price b{color:#fff;}
+.plan-price span{font-size:13px; color:var(--mute); padding-bottom:3px;}
+.plan-annual{font-size:12px; color:var(--indigo-deep); font-weight:600; margin-top:7px;}
+.plan-feat .plan-annual{color:#a5a2ff;}
+.plan-div{height:1px; background:var(--line); margin:22px 0;}
+.plan-feat .plan-div{background:#ffffff14;}
+.plan-inherit{font-size:12px; font-weight:700; color:var(--indigo-deep); margin-bottom:12px;}
+.plan-feat .plan-inherit{color:#a5a2ff;}
+.plan-lines{list-style:none; padding:0; margin:0 0 24px; display:flex; flex-direction:column; gap:12px; flex:1;}
+.plan-lines li{display:flex; align-items:flex-start; gap:10px; font-size:13.5px; color:var(--ink-soft); line-height:1.4;}
+.plan-feat .plan-lines li{color:#cfceea;}
+.tick{margin-top:1px; flex:none; width:17px;height:17px;border-radius:50%; display:grid; place-items:center; background:#e8eaf5; color:var(--indigo-deep);}
+.plan-feat .tick{background:var(--indigo); color:#fff;}
+.plan-cta{width:100%; justify-content:center;}
+.plan-foot{display:inline-flex; align-items:center; justify-content:center; gap:6px; width:100%; margin-top:12px; font-size:11px; color:var(--mute);}
+.plan-feat .plan-foot{color:#a5a2c8;}
+.price-note{display:flex; align-items:center; justify-content:center; gap:8px; margin-top:40px; font-size:13px; color:var(--mute); text-align:center;}
+.price-note svg{color:var(--gold); flex:none;}
+@media(max-width:840px){.plans{grid-template-columns:1fr; max-width:400px; margin-left:auto; margin-right:auto;}}
+
+/* testimonials */
+.testi-wrap{position:relative; z-index:2; background:#ECECF6; padding:84px 0; margin-top:10px;}
+.testi-inner{max-width:1180px; margin:0 auto; padding:0 24px;}
+.testi-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:40px; align-items:start;}
+.testi{background:#fff; border:1px solid var(--line); border-radius:20px; padding:24px; display:flex; flex-direction:column;
+  box-shadow:0 20px 44px -30px #1e1b4e3a; transition:transform .25s, box-shadow .25s;}
+.testi:hover{transform:translateY(-4px); box-shadow:0 28px 54px -28px #1e1b4e4a;}
+.testi-stars{display:flex; gap:2px; margin-bottom:13px; color:var(--gold);}
+.testi-stars svg{fill:var(--gold);}
+.testi blockquote{font-size:15.5px; line-height:1.6; color:var(--ink); margin:0; flex:1; font-weight:500;}
+.testi figcaption{display:flex; align-items:center; gap:11px; margin-top:18px; padding-top:16px; border-top:1px solid var(--line);}
+.testi-av{width:38px;height:38px;border-radius:50%; display:grid; place-items:center; color:#fff; font-weight:700; font-family:var(--display); font-size:15px; flex:none;}
+.testi-who{display:flex; flex-direction:column; min-width:0;}
+.testi-who b{font-size:13.5px;}
+.testi-who small{font-size:12px; color:var(--mute);}
+@media(max-width:840px){.testi-grid{grid-template-columns:1fr; max-width:440px; margin-left:auto; margin-right:auto;}}
+
+/* faq */
+.faq-wrap{position:relative; z-index:2; max-width:760px; margin:0 auto; padding:88px 24px 92px;}
+.faq-list{margin-top:38px; display:flex; flex-direction:column; gap:12px;}
+.faq{background:var(--paper); border:1px solid var(--line); border-radius:16px; overflow:hidden; transition:border-color .2s, box-shadow .25s;}
+.faq-open{border-color:#cfd0ee; box-shadow:0 18px 40px -28px #1e1b4e40;}
+.faq-q{width:100%; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px 20px;
+  background:none; border:none; cursor:pointer; text-align:left; font-size:15.5px; font-weight:700; color:var(--ink); font-family:var(--display);}
+.faq-sign{font-size:24px; color:var(--indigo); line-height:1; flex:none; font-family:var(--body); font-weight:400;}
+.faq-a-wrap{overflow:hidden;}
+.faq-a{padding:0 20px 20px; font-size:14.5px; line-height:1.62; color:var(--ink-soft); margin:0;}
+.faq-help{text-align:center; margin-top:30px; font-size:14px; color:var(--mute);}
+.faq-help a{color:var(--indigo); font-weight:600;}
 `
