@@ -1,6 +1,7 @@
 const { ZodError } = require('zod');
 const { Prisma } = require('@prisma/client');
 const prisma = require('../config/database');
+const { notifyError } = require('../services/telegramService');
 
 // Redaksi field sensitif sebelum body/query request disimpan ke ErrorLog —
 // tanpa ini, 500 di /auth/* menyimpan password plaintext (& token) ke tabel
@@ -99,6 +100,18 @@ function errorHandler(err, req, res, next) {
         metadata:   { query: redactSensitive(req.query), body: redactSensitive(req.body) },
       },
     }).catch(() => {}); // never throw from within error handler
+    // Push alert ke grup Telegram — throttle/dedupe/rate-cap ditangani di dalam
+    // service (crash loop tak akan spam), fire-and-forget supaya tak menunda
+    // respons & tak pernah throw dari error handler. Frontend JS error sudah
+    // lewat POST /error-logs; ini melengkapi sisi backend 5xx yang sebelumnya
+    // hanya tercatat diam-diam ke tabel ErrorLog tanpa notifikasi.
+    notifyError({
+      level:    'error',
+      type:     'api_error',
+      message:  err.message || 'Internal server error',
+      path:     req.path,
+      tenantId: req.user?.tenantId || null,
+    }).catch(() => {});
   }
 
   res.status(statusCode).json({ success: false, error: message });

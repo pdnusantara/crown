@@ -221,6 +221,8 @@ const ERROR_TYPE_LABEL = {
   payment_error: 'Pembayaran',
   system_error:  'Sistem',
   auth_error:    'Auth',
+  unhandled_rejection: 'Promise tak tertangani',
+  uncaught_exception:  'Exception tak tertangani',
 };
 
 // Normalisasi pesan jadi signature: potong panjang, kecilkan huruf, dan ganti

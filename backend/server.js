@@ -11,7 +11,9 @@ const routes = require('./src/routes/index');
 const errorHandler = require('./src/middleware/errorHandler');
 const tenantResolver = require('./src/middleware/tenantResolver');
 const { resolveBranchAliasMiddleware } = require('./src/utils/branchResolver');
-const { initSocket } = require('./src/config/socket');
+const { initSocket, getIO } = require('./src/config/socket');
+const prisma = require('./src/config/database');
+const { notifyError } = require('./src/services/telegramService');
 const { initRenewalJob } = require('./src/jobs/subscriptionRenewal');
 const { initVisitReminderJob } = require('./src/jobs/visitReminder');
 const { initAttendanceFinalizeJob } = require('./src/jobs/attendanceFinalize');
@@ -174,6 +176,61 @@ httpServer.listen(PORT, () => {
   initRatingLinkDispatchJob();
   initBookingAutoCheckinJob();
   initRegistrationSummaryJob();
+});
+
+// ── Graceful shutdown ──────────────────────────────────────────────────────
+// PM2/Docker mengirim SIGTERM saat reload/deploy. Tanpa drain, koneksi in-flight
+// (mis. callback Duitku, simpan transaksi) bisa terputus di tengah jalan.
+// Urutan: berhenti terima koneksi baru → tutup Socket.io → $disconnect Prisma.
+// Timer paksa-keluar mencegah koneksi yang menggantung memblok restart selamanya.
+let shuttingDown = false;
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[shutdown] ${signal} diterima — menutup server dengan rapi...`);
+
+  const forceTimer = setTimeout(() => {
+    console.error('[shutdown] timeout 10s — keluar paksa');
+    process.exit(1);
+  }, 10000);
+  forceTimer.unref();
+
+  try {
+    const io = getIO();
+    if (io) await new Promise((resolve) => io.close(() => resolve()));
+    await new Promise((resolve) => httpServer.close(() => resolve()));
+    await prisma.$disconnect();
+    clearTimeout(forceTimer);
+    console.log('[shutdown] selesai — keluar bersih');
+    process.exit(0);
+  } catch (err) {
+    console.error('[shutdown] error saat menutup:', err);
+    process.exit(1);
+  }
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
+// Jaring pengaman untuk error yang lolos: catat + alert Telegram, lalu (untuk
+// uncaughtException) shutdown karena state proses sudah tak terjamin.
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason);
+  notifyError({
+    level: 'error',
+    type: 'unhandled_rejection',
+    message: String(reason?.message || reason || 'unhandledRejection'),
+  }).catch(() => {});
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[uncaughtException]', err);
+  notifyError({
+    level: 'error',
+    type: 'uncaught_exception',
+    message: err?.message || 'uncaughtException',
+  }).catch(() => {});
+  shutdown('uncaughtException');
 });
 
 module.exports = app;
