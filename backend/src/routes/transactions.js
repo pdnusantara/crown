@@ -89,6 +89,10 @@ router.get('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir'
     }
 
     if (branchId) where.branchId = branchId;
+    // Kasir terkunci ke cabangnya — override param klien (cegah daftar transaksi
+    // tercampur antar-cabang saat branchId tak terkirim & cegah intip cabang
+    // lain). Samakan dgn bookings/shifts/ratings.
+    if (req.user.role === 'kasir' && req.user.branchId) where.branchId = req.user.branchId;
     if (customerId) where.customerId = customerId;
     if (status) where.status = status;
     if (shiftId) where.shiftId = shiftId;
@@ -165,6 +169,9 @@ router.get('/summary', authenticate, requireRole('super_admin', 'tenant_admin', 
     }
     if (req.user.role === 'customer') where.customerId = req.user.id;
     if (branchId) where.branchId = branchId;
+    // Kasir terkunci ke cabangnya (samakan dgn GET / & bookings/shifts) supaya
+    // kartu statistik tak menghitung transaksi cabang lain.
+    if (req.user.role === 'kasir' && req.user.branchId) where.branchId = req.user.branchId;
     if (paymentMethod) where.paymentMethod = paymentMethod;
     if (barberId) where.items = { some: { barberId } };
 
@@ -249,6 +256,10 @@ router.get('/:id', authenticate, requireRole('super_admin', 'tenant_admin', 'kas
     if (!transaction) return res.status(404).json({ success: false, error: 'Transaction not found' });
 
     if (req.user.role !== 'super_admin' && transaction.tenantId !== req.user.tenantId) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+    // Kasir hanya boleh buka detail transaksi cabangnya sendiri.
+    if (req.user.role === 'kasir' && req.user.branchId && transaction.branchId !== req.user.branchId) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 

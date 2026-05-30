@@ -98,6 +98,12 @@ router.get('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir'
     }
 
     if (branchId) where.branchId = branchId;
+    // Kasir & barber terkunci ke cabangnya — cegah antrian tercampur antar-cabang
+    // saat branchId tak terkirim (mutasi sudah dijaga queueBranchGuard). Samakan
+    // dgn users.js / transactions / bookings / shifts.
+    if ((req.user.role === 'kasir' || req.user.role === 'barber') && req.user.branchId) {
+      where.branchId = req.user.branchId;
+    }
     if (status) where.status = status;
 
     if (date) {
