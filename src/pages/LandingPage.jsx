@@ -215,7 +215,7 @@ function normalizeWa(input) {
   return digits
 }
 
-export default function LandingPage() {
+export default function LandingPage({ heroLayout } = {}) {
   const { data, isLoading } = useLanding()
   const { user, isAuthenticated } = useAuthStore()
 
@@ -413,6 +413,7 @@ export default function LandingPage() {
         trustItems={trustItems}
         isAuthenticated={isAuthenticated}
         homePath={homePath}
+        layout={heroLayout}
       />
 
       {layout.filter(b => b && b.visible !== false).map(b => {
@@ -470,18 +471,140 @@ export default function LandingPage() {
 
 // ── Blok core ────────────────────────────────────────────────────────────────
 
-function HeroSection({ hero, stats, trustItems, isAuthenticated, homePath }) {
+function HeroSection({ hero, stats, trustItems, isAuthenticated, homePath, layout }) {
   const { scrollYProgress } = useScroll()
   const heroY = useTransform(scrollYProgress, [0, 0.3], [0, -60])
   const heroBadge = hero.heroBadge || 'Baru'
+  // layout 'split' → mockup berdampingan di kanan judul (top-aligned).
+  const split = layout === 'split'
 
   // Bukti sosial — pakai jumlah tenant nyata bila statistik diaktifkan & sudah
   // cukup banyak; di bawah ambang tampilkan klaim umum supaya tetap meyakinkan.
   const tenantCount = stats?.tenantCount || 0
   const showRealCount = hero.showStats !== false && tenantCount >= 10
 
+  // Kelas perataan: di mode split, mobile tetap center, ≥lg jadi rata kiri.
+  const alignText = split ? 'text-center lg:text-left' : 'text-center'
+  const alignRow  = split ? 'justify-center lg:justify-start' : 'justify-center'
+  const alignBox  = split ? 'mx-auto lg:mx-0' : 'mx-auto'
+
+  const copy = (
+    <div className={alignText}>
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="inline-flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full bg-white border border-[#C7CBE0] text-[#4F46E5] text-xs font-semibold shadow-[0_4px_16px_-8px_rgba(99,102,241,0.5)]"
+      >
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#6366F1] text-[#1E1B2E]">
+          <Lucide.Sparkles size={11} /> {heroBadge}
+        </span>
+        {hero.brandTagline || 'Dipercaya barbershop di seluruh Indonesia'}
+      </motion.div>
+
+      <motion.h1
+        initial={{ opacity: 0, y: 22 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.06 }}
+        className={`font-display text-4xl leading-[1.12] sm:text-6xl sm:leading-[1.08] ${split ? 'lg:text-[3.4rem] lg:leading-[1.05]' : 'lg:text-7xl'} font-bold text-[#1E1B2E] tracking-tight mt-7`}
+      >
+        {renderHeroTitle(hero.heroTitle || 'Kelola barbershop, tanpa ribet.')}
+      </motion.h1>
+
+      <motion.p
+        initial={{ opacity: 0, y: 22 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.14 }}
+        className={`text-base sm:text-lg text-[#56548A] max-w-xl ${alignBox} mt-6`}
+      >
+        {hero.heroSubtitle || 'Kasir, antrian, booking online, sampai laporan pemilik — semua jadi satu aplikasi. Tinggal pakai, langsung jalan hari ini juga.'}
+      </motion.p>
+
+      <motion.div
+        initial={{ opacity: 0, y: 22 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.22 }}
+        className={`flex flex-wrap items-center gap-3 mt-9 ${alignRow}`}
+      >
+        <Link
+          to={isAuthenticated ? homePath : '/register'}
+          onClick={() => { if (!isAuthenticated) trackPixel('Lead') }}
+          className="btn-brand group"
+        >
+          {isAuthenticated ? 'Buka Dashboard' : (hero.heroCtaLabel || 'Coba Gratis 14 Hari')}
+          <Lucide.ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+        </Link>
+        <a href="#fitur" className="btn-ghost">
+          <Lucide.Play size={13} className="text-[#4F46E5]" /> Lihat Fitur
+        </a>
+      </motion.div>
+
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.4 }}
+        className={`text-[13px] text-[#7C7AA8] mt-6 flex flex-wrap items-center gap-x-2 gap-y-1 ${alignRow}`}
+      >
+        {trustItems.map((item, i) => (
+          <React.Fragment key={i}>
+            {i > 0 && <span className="text-[#D5D8E8]">·</span>}
+            <span className="inline-flex items-center gap-1">
+              <Lucide.Check size={13} className="text-[#6366F1]" /> {item}
+            </span>
+          </React.Fragment>
+        ))}
+      </motion.p>
+
+      {/* Bukti sosial — kluster avatar + rating bintang + jumlah pengguna */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className={`mt-7 flex items-center gap-3 ${alignRow}`}
+      >
+        <div className="flex -space-x-2.5">
+          {['A', 'R', 'B', 'S'].map((c) => (
+            <div
+              key={c}
+              className="w-8 h-8 rounded-full border-2 border-[#F4F4FA] flex items-center justify-center text-[11px] font-bold text-[#1E1B2E] bg-gradient-to-br from-[#A5A2FF] to-[#4F46E5]"
+            >
+              {c}
+            </div>
+          ))}
+          <div className="w-8 h-8 rounded-full border-2 border-[#F4F4FA] flex items-center justify-center text-[11px] font-bold text-[#4F46E5] bg-[#E8EAF5]">
+            +
+          </div>
+        </div>
+        <div className="text-left">
+          <div className="flex items-center gap-0.5 text-[#6366F1]">
+            {[0, 1, 2, 3, 4].map(i => <Lucide.Star key={i} size={12} fill="currentColor" />)}
+          </div>
+          <p className="text-[12.5px] text-[#56548A] leading-tight mt-0.5">
+            {showRealCount
+              ? <>Dipercaya <strong className="font-semibold text-[#1E1B2E]">{tenantCount.toLocaleString('id-ID')}+</strong> barbershop di Indonesia</>
+              : 'Dibuat khusus untuk barbershop Indonesia'}
+          </p>
+        </div>
+      </motion.div>
+    </div>
+  )
+
+  const showcase = (
+    <motion.div
+      initial={{ opacity: 0, y: split ? 30 : 50 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.8, delay: 0.35 }}
+      className="relative"
+    >
+      <div className="absolute -inset-4 bg-gradient-to-tr from-[#6366F1]/25 via-transparent to-[#A5A2FF]/30 rounded-[2.5rem] blur-2xl" />
+      <div className="relative rounded-2xl border border-[#D5D8E8] bg-white shadow-[0_30px_70px_-30px_rgba(28,26,23,0.35)] overflow-hidden">
+        <DashboardMock />
+      </div>
+    </motion.div>
+  )
+
   return (
-    <section className="relative pt-28 pb-12 sm:pt-32 sm:pb-16 lg:pt-40 lg:pb-24">
+    <section className={`relative pt-28 pb-12 sm:pt-32 sm:pb-16 ${split ? 'lg:pt-36 lg:pb-24' : 'lg:pt-40 lg:pb-24'}`}>
       {/* Latar dekoratif — glow brand lembut + tekstur titik halus */}
       <div className="absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[820px] h-[420px] rounded-full bg-[#6366F1]/12 blur-[120px]" />
@@ -497,119 +620,21 @@ function HeroSection({ hero, stats, trustItems, isAuthenticated, homePath }) {
         />
       </div>
 
-      <motion.div style={{ y: heroY }} className="max-w-3xl mx-auto px-6 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="inline-flex items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full bg-white border border-[#C7CBE0] text-[#4F46E5] text-xs font-semibold shadow-[0_4px_16px_-8px_rgba(99,102,241,0.5)]"
-        >
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#6366F1] text-[#1E1B2E]">
-            <Lucide.Sparkles size={11} /> {heroBadge}
-          </span>
-          {hero.brandTagline || 'Dipercaya barbershop di seluruh Indonesia'}
+      {split ? (
+        <motion.div style={{ y: heroY }} className="max-w-6xl mx-auto px-6 grid lg:grid-cols-2 gap-12 lg:gap-14 items-center">
+          {copy}
+          {showcase}
         </motion.div>
-
-        <motion.h1
-          initial={{ opacity: 0, y: 22 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.06 }}
-          className="font-display text-4xl leading-[1.12] sm:text-6xl sm:leading-[1.08] lg:text-7xl font-bold text-[#1E1B2E] tracking-tight mt-7"
-        >
-          {renderHeroTitle(hero.heroTitle || 'Kelola barbershop, tanpa ribet.')}
-        </motion.h1>
-
-        <motion.p
-          initial={{ opacity: 0, y: 22 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.14 }}
-          className="text-base sm:text-lg text-[#56548A] max-w-xl mx-auto mt-6"
-        >
-          {hero.heroSubtitle || 'Kasir, antrian, booking online, sampai laporan pemilik — semua jadi satu aplikasi. Tinggal pakai, langsung jalan hari ini juga.'}
-        </motion.p>
-
-        <motion.div
-          initial={{ opacity: 0, y: 22 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.22 }}
-          className="flex flex-wrap items-center justify-center gap-3 mt-9"
-        >
-          <Link
-            to={isAuthenticated ? homePath : '/register'}
-            onClick={() => { if (!isAuthenticated) trackPixel('Lead') }}
-            className="btn-brand group"
-          >
-            {isAuthenticated ? 'Buka Dashboard' : (hero.heroCtaLabel || 'Coba Gratis 14 Hari')}
-            <Lucide.ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-          </Link>
-          <a href="#fitur" className="btn-ghost">
-            <Lucide.Play size={13} className="text-[#4F46E5]" /> Lihat Fitur
-          </a>
-        </motion.div>
-
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="text-[13px] text-[#7C7AA8] mt-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-1"
-        >
-          {trustItems.map((item, i) => (
-            <React.Fragment key={i}>
-              {i > 0 && <span className="text-[#D5D8E8]">·</span>}
-              <span className="inline-flex items-center gap-1">
-                <Lucide.Check size={13} className="text-[#6366F1]" /> {item}
-              </span>
-            </React.Fragment>
-          ))}
-        </motion.p>
-
-        {/* Bukti sosial — kluster avatar + rating bintang + jumlah pengguna */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="mt-7 flex items-center justify-center gap-3"
-        >
-          <div className="flex -space-x-2.5">
-            {['A', 'R', 'B', 'S'].map((c) => (
-              <div
-                key={c}
-                className="w-8 h-8 rounded-full border-2 border-[#F4F4FA] flex items-center justify-center text-[11px] font-bold text-[#1E1B2E] bg-gradient-to-br from-[#A5A2FF] to-[#4F46E5]"
-              >
-                {c}
-              </div>
-            ))}
-            <div className="w-8 h-8 rounded-full border-2 border-[#F4F4FA] flex items-center justify-center text-[11px] font-bold text-[#4F46E5] bg-[#E8EAF5]">
-              +
-            </div>
+      ) : (
+        <>
+          <motion.div style={{ y: heroY }} className="max-w-3xl mx-auto px-6">
+            {copy}
+          </motion.div>
+          <div className="max-w-5xl mx-auto px-5 sm:px-6 mt-10 sm:mt-16">
+            {showcase}
           </div>
-          <div className="text-left">
-            <div className="flex items-center gap-0.5 text-[#6366F1]">
-              {[0, 1, 2, 3, 4].map(i => <Lucide.Star key={i} size={12} fill="currentColor" />)}
-            </div>
-            <p className="text-[12.5px] text-[#56548A] leading-tight mt-0.5">
-              {showRealCount
-                ? <>Dipercaya <strong className="font-semibold text-[#1E1B2E]">{tenantCount.toLocaleString('id-ID')}+</strong> barbershop di Indonesia</>
-                : 'Dibuat khusus untuk barbershop Indonesia'}
-            </p>
-          </div>
-        </motion.div>
-      </motion.div>
-
-      {/* Showcase dashboard */}
-      <motion.div
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, delay: 0.35 }}
-        className="max-w-5xl mx-auto px-5 sm:px-6 mt-10 sm:mt-16"
-      >
-        <div className="relative">
-          <div className="absolute -inset-4 bg-gradient-to-tr from-[#6366F1]/25 via-transparent to-[#A5A2FF]/30 rounded-[2.5rem] blur-2xl" />
-          <div className="relative rounded-2xl border border-[#D5D8E8] bg-white shadow-[0_30px_70px_-30px_rgba(28,26,23,0.35)] overflow-hidden">
-            <DashboardMock />
-          </div>
-        </div>
-      </motion.div>
+        </>
+      )}
     </section>
   )
 }

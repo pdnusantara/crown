@@ -285,6 +285,8 @@ export default function App() {
           {/* Pratinjau redesign landing — publik, tak tertaut. Tukar ke '/' bila disetujui. */}
           <Route path="/preview-landing" element={<LandingPagePreview />} />
           <Route path="/preview-landing-b" element={<LandingPagePreviewB />} />
+          {/* Pratinjau hero dua-kolom (mockup berdampingan judul). Landing live tetap default. */}
+          <Route path="/preview-hero" element={<LandingPage heroLayout="split" />} />
           <Route path="/syarat-ketentuan" element={<LegalPage />} />
           <Route path="/kebijakan-privasi" element={<LegalPage />} />
 
