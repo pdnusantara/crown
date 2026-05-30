@@ -48,6 +48,9 @@ export function useAffiliateStats() {
 }
 
 export function useAffiliate(id) {
+  // Halaman detail ikut realtime — invalidate ['affiliates'] (prefix) menjangkau
+  // ['affiliates', id, ...] juga, jadi tab referrals/komisi/payout ikut segar.
+  useAffiliateRealtime()
   return useQuery({
     queryKey: ['affiliates', id],
     queryFn: () => api.get(`/affiliates/${id}`).then(r => r.data.data),

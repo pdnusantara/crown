@@ -65,7 +65,7 @@ export default function SAAffiliatesPage() {
   }, [filterStatus, debounced])
 
   const { data: stats, isLoading: statsLoading } = useAffiliateStats()
-  const { data: page, isLoading, isFetching, refetch } = useAffiliates(params)
+  const { data: page, isLoading, isError, isFetching, refetch } = useAffiliates(params)
   const create = useCreateAffiliate()
   const approve = useApproveAffiliate()
   const suspend = useSuspendAffiliate()
@@ -169,6 +169,13 @@ export default function SAAffiliatesPage() {
         <div className="grid md:grid-cols-2 gap-4">
           {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-32 bg-dark-card rounded-2xl animate-pulse" />)}
         </div>
+      ) : isError ? (
+        <Card className="p-12 text-center">
+          <AlertCircle size={32} className="mx-auto mb-3 text-amber-400" />
+          <p className="text-off-white font-medium">Gagal memuat daftar affiliate</p>
+          <p className="text-muted text-sm mt-1">Periksa koneksi lalu coba lagi.</p>
+          <Button variant="secondary" size="sm" icon={RefreshCw} className="mt-4" onClick={() => refetch()}>Coba Lagi</Button>
+        </Card>
       ) : items.length === 0 ? (
         <Card className="p-12 text-center text-muted">
           <Users size={32} className="mx-auto mb-3 opacity-30" />
