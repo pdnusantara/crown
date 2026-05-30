@@ -82,8 +82,15 @@ function buildWhereClause(req, tenantId) {
     }
   }
 
-  // Role-based scoping. Barber hanya bisa lihat sendiri.
+  // Role-based scoping.
+  // - Barber: hanya rating dirinya sendiri.
+  // - Kasir: hanya rating CABANG dia (samakan dgn shopRatings) supaya halaman
+  //   /kasir/ratings tidak mencampur rating antar-cabang & tak bocor lintas
+  //   cabang. branchId null → '__none__' agar tak match apa pun (aman).
+  //   Override ini SETELAH req.query.branchId di atas → kasir tak bisa intip
+  //   cabang lain lewat query param.
   if (req.user.role === 'barber') where.barberId = req.user.id;
+  else if (req.user.role === 'kasir') where.branchId = req.user.branchId || '__none__';
 
   return where;
 }
