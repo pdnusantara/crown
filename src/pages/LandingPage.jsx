@@ -900,6 +900,19 @@ function StepsSection({ ctx }) {
             </motion.div>
           ))}
         </div>
+        {/* Gambar opsional — banner di bawah langkah, tidak menutupi teks */}
+        {sections.steps?.image && (
+          <motion.div
+            initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-60px' }} transition={{ duration: 0.6 }}
+            className="mt-12 sm:mt-14"
+          >
+            <img
+              src={sections.steps.image} alt="" loading="lazy"
+              className={`w-full rounded-2xl border shadow-[0_30px_70px_-34px_rgba(28,26,23,0.55)] ${dark ? 'border-[#2a2a45]' : 'border-[#D5D8E8]'}`}
+            />
+          </motion.div>
+        )}
       </div>
     </section>
   )
@@ -1117,6 +1130,13 @@ function ClosingCtaSection({ ctx }) {
               </a>
             )}
           </div>
+          {/* Gambar opsional — di bawah tombol, tidak menutupi teks */}
+          {closing.image && (
+            <img
+              src={closing.image} alt="" loading="lazy"
+              className="mt-10 w-full max-w-2xl mx-auto rounded-2xl border border-white/10 shadow-[0_30px_70px_-34px_rgba(0,0,0,0.6)]"
+            />
+          )}
         </div>
       </motion.div>
     </section>

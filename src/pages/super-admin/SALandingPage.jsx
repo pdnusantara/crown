@@ -1180,6 +1180,7 @@ function ContentEditor() {
           title:    closing.title.trim(),
           subtitle: closing.subtitle.trim(),
           ctaLabel: closing.ctaLabel.trim(),
+          image:    (closing.image || '').trim() || undefined,
         },
         footerText: footerText.trim(),
         contactPhone:   contact.contactPhone.trim(),
@@ -1213,6 +1214,14 @@ function ContentEditor() {
                   onChange={e => setSection(key, 'subtitle', e.target.value)}
                 />
               </div>
+              {key === 'steps' && (
+                <ImageUploadField
+                  label="Gambar section (opsional)"
+                  value={sections[key].image || ''}
+                  onChange={url => setSection(key, 'image', url)}
+                  hint="Tampil sebagai banner di bawah 3 langkah — tidak menutupi teks. Rasio lebar disarankan (mis. 1600×600)."
+                />
+              )}
             </div>
           ))}
         </CardBody>
@@ -1266,6 +1275,12 @@ function ContentEditor() {
             />
           </div>
           <Input label="Label tombol" placeholder="Daftar Sekarang" value={closing.ctaLabel} onChange={e => setClosing(c => ({ ...c, ctaLabel: e.target.value }))} />
+          <ImageUploadField
+            label="Gambar CTA (opsional)"
+            value={closing.image || ''}
+            onChange={url => setClosing(c => ({ ...c, image: url }))}
+            hint="Tampil di bawah tombol — tidak menutupi teks."
+          />
         </CardBody>
       </Card>
 

@@ -195,6 +195,7 @@ const sectionHeadingSchema = z.object({
   kicker:   z.string().max(80),
   title:    z.string().max(160),
   subtitle: z.string().max(400),
+  image:    z.string().max(500).optional(),  // gambar opsional (dipakai section "Cara Mulai")
 });
 
 const heroUpdateSchema = z.object({
@@ -226,6 +227,7 @@ const heroUpdateSchema = z.object({
     title:    z.string().max(160),
     subtitle: z.string().max(400),
     ctaLabel: z.string().max(50),
+    image:    z.string().max(500).optional(),  // gambar opsional di CTA penutup
   }).optional(),
   metaPixelId:  z.string().regex(/^\d*$/, 'Pixel ID hanya boleh berisi angka').max(20).optional(),
   seoTitle:       z.string().max(120).optional(),
