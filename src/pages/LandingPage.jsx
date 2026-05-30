@@ -472,66 +472,6 @@ export default function LandingPage({ heroLayout } = {}) {
 
 // ── Blok core ────────────────────────────────────────────────────────────────
 
-// Mockup HP — ditumpuk di sudut mockup desktop pada hero (mode split) untuk
-// menegaskan aplikasi jalan di web DAN mobile.
-function PhoneMock() {
-  return (
-    <div className="w-[140px] sm:w-[168px] rounded-[1.9rem] bg-[#1E1B2E] p-[5px] shadow-[0_28px_60px_-24px_rgba(28,26,23,0.6)] ring-1 ring-black/5">
-      <div className="relative rounded-[1.55rem] bg-white overflow-hidden">
-        {/* notch */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-4 bg-[#1E1B2E] rounded-b-xl z-10" />
-        <div className="px-3 pt-6 pb-3">
-          {/* header */}
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#6366F1] to-[#4F46E5] flex items-center justify-center">
-              <Lucide.Scissors size={11} className="text-white" />
-            </div>
-            <div className="leading-tight">
-              <p className="text-[9px] font-bold text-[#1E1B2E]">Barberque</p>
-              <p className="text-[7px] text-[#9c9ab8]">Kemang</p>
-            </div>
-            <span className="ml-auto text-[7px] font-bold text-[#10B981] inline-flex items-center gap-0.5">● Live</span>
-          </div>
-          {/* omzet card */}
-          <div className="mt-3 rounded-xl bg-gradient-to-br from-[#6366F1] to-[#4F46E5] p-2.5 text-white">
-            <p className="text-[7.5px] opacity-80 uppercase tracking-wide">Omzet hari ini</p>
-            <p className="font-display text-base font-bold leading-tight mt-0.5">Rp4,8jt</p>
-            <p className="text-[8px] text-[#A7F3D0] font-semibold mt-0.5">▲ 12% vs kemarin</p>
-          </div>
-          {/* mini stats */}
-          <div className="mt-2 grid grid-cols-2 gap-1.5">
-            <div className="rounded-lg bg-[#F4F4FA] border border-[#E8EAF5] p-1.5">
-              <p className="text-[7px] text-[#9c9ab8] uppercase">Antrean</p>
-              <p className="font-display text-xs font-bold text-[#1E1B2E]">6</p>
-            </div>
-            <div className="rounded-lg bg-[#F4F4FA] border border-[#E8EAF5] p-1.5">
-              <p className="text-[7px] text-[#9c9ab8] uppercase">Booking</p>
-              <p className="font-display text-xs font-bold text-[#1E1B2E]">14</p>
-            </div>
-          </div>
-          {/* antrean list */}
-          <div className="mt-2 space-y-1">
-            {[['Rizky', '#10B981'], ['Dimas', '#C9A84C']].map(([n, c]) => (
-              <div key={n} className="flex items-center gap-1.5 rounded-lg bg-white border border-[#E8EAF5] px-2 py-1">
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: c }} />
-                <span className="text-[8.5px] font-semibold text-[#1E1B2E]">{n}</span>
-                <span className="ml-auto text-[7.5px] text-[#9c9ab8]">memotong</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        {/* bottom nav */}
-        <div className="flex items-center justify-around px-3 py-2 border-t border-[#E8EAF5] bg-[#FAFAFD]">
-          {['CreditCard', 'CalendarDays', 'Users', 'BarChart3'].map((ic, i) => {
-            const I = getIcon(ic)
-            return <I key={ic} size={12} className={i === 0 ? 'text-[#4F46E5]' : 'text-[#C7CBE0]'} />
-          })}
-        </div>
-      </div>
-    </div>
-  )
-}
-
 function HeroSection({ hero, stats, trustItems, isAuthenticated, homePath, layout }) {
   const { scrollYProgress } = useScroll()
   const heroY = useTransform(scrollYProgress, [0, 0.3], [0, -60])
@@ -656,23 +596,12 @@ function HeroSection({ hero, stats, trustItems, isAuthenticated, homePath, layou
       initial={{ opacity: 0, y: split ? 30 : 50 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8, delay: 0.35 }}
-      className={`relative ${split ? 'mb-12 lg:mb-6' : ''}`}
+      className="relative"
     >
       <div className={`absolute -inset-4 rounded-[2.5rem] blur-2xl ${split ? 'bg-gradient-to-tr from-[#6366F1]/30 via-[#10B981]/14 to-[#A5A2FF]/35' : 'bg-gradient-to-tr from-[#6366F1]/25 via-transparent to-[#A5A2FF]/30'}`} />
       <div className="relative rounded-2xl border border-[#D5D8E8] bg-white shadow-[0_30px_70px_-30px_rgba(28,26,23,0.35)] overflow-hidden">
         <DashboardMock />
       </div>
-      {/* Mockup HP — menumpuk di sudut, menegaskan web + mobile */}
-      {split && (
-        <motion.div
-          initial={{ opacity: 0, y: 24, x: -12 }}
-          animate={{ opacity: 1, y: 0, x: 0 }}
-          transition={{ duration: 0.7, delay: 0.6 }}
-          className="absolute -bottom-8 -left-2 sm:-left-8 z-20"
-        >
-          <PhoneMock />
-        </motion.div>
-      )}
     </motion.div>
   )
 
@@ -736,7 +665,7 @@ function StatsSection({ ctx }) {
   const { stats, animatedMocks: dark } = ctx
   if (!stats) return null
   return (
-    <section className={dark ? 'border-y border-[#23233a] bg-[#0E0E1A]' : 'border-y border-[#D5D8E8] bg-white'}>
+    <section className={dark ? 'border-t-2 border-t-[#C9A84C]/50 border-b border-b-[#23233a] bg-[#0E0E1A]' : 'border-y border-[#D5D8E8] bg-white'}>
       <div className="max-w-5xl mx-auto px-6 py-10 sm:py-12 grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 text-center">
         {[
           { label: 'Tenant aktif',        value: stats.tenantCount,      suffix: '+', icon: 'Building2' },
@@ -747,8 +676,8 @@ function StatsSection({ ctx }) {
           const Icon = getIcon(s.icon)
           return (
             <motion.div key={s.label} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-              <Icon size={18} className={`mx-auto mb-2 ${dark ? 'text-[#A5A2FF]' : 'text-[#6366F1]'}`} />
-              <p className={`font-display text-3xl md:text-4xl font-bold ${dark ? 'text-white' : 'text-[#1E1B2E]'}`}>
+              <Icon size={18} className={`mx-auto mb-2 ${dark ? 'text-[#C9A84C]' : 'text-[#6366F1]'}`} />
+              <p className={`font-display text-3xl md:text-4xl font-bold ${dark ? 'text-[#E3C674]' : 'text-[#1E1B2E]'}`}>
                 <CountUp to={s.value} suffix={s.suffix} />
               </p>
               <p className={`text-xs mt-1 ${dark ? 'text-[#A5A2C8]' : 'text-[#7C7AA8]'}`}>{s.label}</p>
@@ -924,14 +853,14 @@ function StepsSection({ ctx }) {
               transition={{ delay: i * 0.1 }}
               whileHover={{ y: -4 }}
               className={`relative rounded-2xl border p-7 ${dark
-                ? 'bg-[#16162a] border-[#2a2a45] hover:border-[#3a3a5c]'
+                ? 'bg-[#16162a] border-[#2a2a45] hover:border-[#C9A84C]/45'
                 : 'bg-white border-[#D5D8E8] hover:border-[#C7CBE0] hover:shadow-[0_20px_44px_-24px_rgba(28,26,23,0.35)]'}`}
             >
-              <span className={`font-display text-5xl font-bold ${dark ? 'text-white/15' : 'text-[#C7CBE0]'}`}>{i + 1}</span>
+              <span className={`font-display text-5xl font-bold ${dark ? 'text-[#C9A84C]/55' : 'text-[#C7CBE0]'}`}>{i + 1}</span>
               <h3 className={`font-display text-lg font-semibold mt-2 mb-1.5 ${dark ? 'text-white' : 'text-[#1E1B2E]'}`}>{s.title}</h3>
               <p className={`text-sm leading-relaxed ${dark ? 'text-[#A5A2C8]' : 'text-[#56548A]'}`}>{s.desc}</p>
               {i < steps.length - 1 && (
-                <Lucide.ArrowRight size={18} className={`hidden md:block absolute top-1/2 -right-4 -translate-y-1/2 z-10 ${dark ? 'text-[#A5A2FF]' : 'text-[#6366F1]'}`} />
+                <Lucide.ArrowRight size={18} className={`hidden md:block absolute top-1/2 -right-4 -translate-y-1/2 z-10 ${dark ? 'text-[#C9A84C]' : 'text-[#6366F1]'}`} />
               )}
             </motion.div>
           ))}
@@ -1384,9 +1313,9 @@ function SectionHeading({ kicker, title, subtitle, dark }) {
     <div className="text-center max-w-2xl mx-auto">
       <motion.p
         initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
-        className={`inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] ${dark ? 'text-[#A5A2FF]' : 'text-[#4F46E5]'}`}
+        className={`inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] ${dark ? 'text-[#D4B25E]' : 'text-[#4F46E5]'}`}
       >
-        <span className="w-5 h-px bg-[#6366F1]" /> {kicker} <span className="w-5 h-px bg-[#6366F1]" />
+        <span className={`w-5 h-px ${dark ? 'bg-[#C9A84C]' : 'bg-[#6366F1]'}`} /> {kicker} <span className={`w-5 h-px ${dark ? 'bg-[#C9A84C]' : 'bg-[#6366F1]'}`} />
       </motion.p>
       <motion.h2
         initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
