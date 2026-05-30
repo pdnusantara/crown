@@ -41,9 +41,9 @@ export function useReportSummary(tenantId, startDate, endDate, branchId) {
 }
 
 // Yesterday stats for trend comparison
-export function useYesterdayStats(tenantId) {
+export function useYesterdayStats(tenantId, branchId) {
   const yest = daysAgoStr(1)
-  return useReportSummary(tenantId, yest, yest)
+  return useReportSummary(tenantId, yest, yest, branchId)
 }
 
 export function useDailyReport(tenantId, days = 7, branchId) {

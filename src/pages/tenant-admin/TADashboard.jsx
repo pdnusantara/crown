@@ -286,18 +286,25 @@ export default function TADashboard() {
   const { user } = useAuthStore()
   const tenantId = user?.tenantId
 
+  // Filter cabang dashboard. '' = Semua Cabang (default; perilaku lama). Saat
+  // dipilih satu cabang, SEMUA angka (omzet, transaksi, tren, grafik 7 hari,
+  // leaderboard barber, laporan layanan, rating) ikut difilter ke cabang itu.
+  // Backend report sudah dukung branchId + validasi milik-tenant (resolveBranchId).
+  const [branchId, setBranchId] = useState('')
+  const bf = branchId || undefined
+
   const { data: tenantBranches = [], isLoading: loadingBranches } = useBranches(tenantId)
   const { data: tenantStaff   = []                               } = useUsers({ tenantId })
-  const { data: todayRaw,  isLoading: loadingToday } = useReportSummary(tenantId)
-  const { data: yestRaw                             } = useYesterdayStats(tenantId)
-  const { data: dailyData  = []                     } = useDailyReport(tenantId, 7)
+  const { data: todayRaw,  isLoading: loadingToday } = useReportSummary(tenantId, undefined, undefined, bf)
+  const { data: yestRaw                             } = useYesterdayStats(tenantId, bf)
+  const { data: dailyData  = []                     } = useDailyReport(tenantId, 7, bf)
   // Leaderboard pakai rentang default backend = 30 hari terakhir (lebih
   // representatif & tak kosong di pagi hari). Label disesuaikan jadi "30 Hari".
-  const { data: barberReport = []                   } = useBarberReport(tenantId)
-  const { data: serviceReport = []                  } = useServiceReport(tenantId)
+  const { data: barberReport = []                   } = useBarberReport(tenantId, bf ? { branchId: bf } : {})
+  const { data: serviceReport = []                  } = useServiceReport(tenantId, bf ? { branchId: bf } : {})
   const barberRatingEnabled = useIsFeatureEnabled(tenantId, 'barber_rating')
   const attendanceEnabled = useIsFeatureEnabled(tenantId, 'attendance')
-  const { data: ratingStats } = useBarberRatingStats({ days: 7 })
+  const { data: ratingStats } = useBarberRatingStats({ days: 7, branchId: bf })
 
   // ── Flatten summary data ─────────────────────────────────────────────────
   const today = todayRaw?.summary  ?? {}
@@ -356,9 +363,24 @@ export default function TADashboard() {
           </h1>
           <p className="text-sm text-muted mt-1">{t('tenantAdmin.dashboard.subtitle')}</p>
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-muted px-3 py-1.5 rounded-xl bg-dark-card border border-dark-border">
-          <Clock size={12} />
-          <span>Data diperbarui real-time</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          {tenantBranches.length > 1 && (
+            <select
+              value={branchId}
+              onChange={(e) => setBranchId(e.target.value)}
+              aria-label="Filter cabang"
+              className="bg-dark-card border border-dark-border text-off-white rounded-xl px-3 py-1.5 text-xs outline-none focus:border-brand/60 max-w-[180px]"
+            >
+              <option value="">Semua Cabang</option>
+              {tenantBranches.map(b => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          )}
+          <div className="flex items-center gap-1.5 text-xs text-muted px-3 py-1.5 rounded-xl bg-dark-card border border-dark-border">
+            <Clock size={12} />
+            <span>Data diperbarui real-time</span>
+          </div>
         </div>
       </motion.div>
 
