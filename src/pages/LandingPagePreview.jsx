@@ -50,10 +50,8 @@ export default function LandingPagePreview() {
 
       {/* ── Decorative atmosphere ─────────────────────────────────────────── */}
       <div className="bg-atmos" aria-hidden>
-        <div className="glow glow-a" />
-        <div className="glow glow-b" />
-        <div className="pole" />
-        <div className="grain" />
+        <div className="dots" />
+        <div className="rule-top" />
       </div>
 
       <Nav />
@@ -108,15 +106,14 @@ function Hero() {
       <div className="hero-grid">
         {/* Left — message */}
         <div className="hero-copy">
-          <motion.div {...rise(0.05)} className="badge">
-            <span className="ping"><span /></span>
-            POS yang ngerti barbershop
+          <motion.div {...rise(0.05)} className="eyebrow">
+            <span className="eyebrow-bar" /> Sistem kasir &amp; booking barbershop
           </motion.div>
 
           <motion.h1 {...rise(0.12)} className="display headline">
-            Antrean <em className="hl hl-indigo">rapi</em>,<br />
-            kasir <em className="hl hl-mint">ngebut</em>,<br />
-            cuan <em className="hl hl-gold">kebaca</em>.
+            Antrean rapi,<br />
+            kasir ngebut,<br />
+            cuan <span className="mark">kebaca</span>.
           </motion.h1>
 
           <motion.p {...rise(0.2)} className="lede">
@@ -131,16 +128,10 @@ function Hero() {
             <a className="btn btn-line lg" href="#harga">Lihat harga</a>
           </motion.div>
 
-          <motion.div {...rise(0.36)} className="trust">
-            <div className="avatars">
-              {['#6366F1', '#10B981', '#C9A84C', '#4F46E5'].map((c, i) => (
-                <span key={i} style={{ background: c, zIndex: 4 - i }} />
-              ))}
-            </div>
-            <div className="trust-txt">
-              <div className="stars"><Star size={13} /><Star size={13} /><Star size={13} /><Star size={13} /><Star size={13} /></div>
-              <span><b>500+</b> barbershop sudah pindah dari buku catatan</span>
-            </div>
+          <motion.div {...rise(0.36)} className="figs">
+            <div className="fig"><b>500+</b><span>barbershop aktif</span></div>
+            <div className="fig"><b>4,9<i>★</i></b><span>rata-rata penilaian</span></div>
+            <div className="fig"><b>12rb</b><span>potongan / hari</span></div>
           </motion.div>
         </div>
 
@@ -154,35 +145,14 @@ function Hero() {
 function HeroStage() {
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.94, y: 30 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ duration: 0.9, ease, delay: 0.25 }}
+      initial={{ opacity: 0, y: 28 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.85, ease, delay: 0.25 }}
       className="stage"
     >
-      <div className="stage-tilt">
-        <DashboardCard />
-
-        {/* Floating live cards */}
-        <motion.div
-          className="float float-book"
-          initial={{ opacity: 0, x: 30, y: 10 }}
-          animate={{ opacity: 1, x: 0, y: [0, -8, 0] }}
-          transition={{ x: { delay: 0.9, duration: 0.6, ease }, opacity: { delay: 0.9, duration: 0.6 }, y: { delay: 1.6, duration: 4.5, repeat: Infinity, ease: 'easeInOut' } }}
-        >
-          <span className="fi fi-indigo"><CalendarClock size={16} /></span>
-          <div><b>Booking baru</b><small>Andi · potong + cukur · 16.00</small></div>
-        </motion.div>
-
-        <motion.div
-          className="float float-wa"
-          initial={{ opacity: 0, x: -30, y: -10 }}
-          animate={{ opacity: 1, x: 0, y: [0, 9, 0] }}
-          transition={{ x: { delay: 1.15, duration: 0.6, ease }, opacity: { delay: 1.15, duration: 0.6 }, y: { delay: 1.9, duration: 5.2, repeat: Infinity, ease: 'easeInOut' } }}
-        >
-          <span className="fi fi-mint"><MessageCircle size={16} /></span>
-          <div><b>Struk terkirim</b><small>via WhatsApp ke pelanggan ✓</small></div>
-        </motion.div>
-      </div>
+      <span className="stage-panel" aria-hidden />
+      <DashboardCard />
+      <p className="stage-cap"><b>Dasbor pemilik.</b> Pantau omzet & antrean semua cabang, langsung dari HP.</p>
     </motion.div>
   )
 }
@@ -289,7 +259,10 @@ function Bento() {
             transition={{ duration: 0.6, ease, delay: (i % 3) * 0.08 }}
             className={`tile tile-${f.k} acc-${f.accent}`}
           >
-            <span className="tile-icon"><f.icon size={20} strokeWidth={2.2} /></span>
+            <div className="tile-top">
+              <span className="tile-icon"><f.icon size={20} strokeWidth={2.2} /></span>
+              <span className="tile-no">{String(i + 1).padStart(2, '0')}</span>
+            </div>
             <h3 className="display">{f.title}</h3>
             <p>{f.desc}</p>
             {f.k === 'big' && (
@@ -512,24 +485,22 @@ const CSS = `
 .semba-preview .display{font-family:var(--display); letter-spacing:-0.02em;}
 .semba-preview a{text-decoration:none; color:inherit;}
 
-/* atmosphere */
+/* atmosphere — crisp & editorial, ZERO blur (blur glow = ciri AI) */
 .bg-atmos{position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:0;}
-.glow{position:absolute; border-radius:50%; filter:blur(90px); opacity:.5;}
-.glow-a{width:560px;height:560px; top:-180px; right:-120px; background:radial-gradient(circle, #6366F133, transparent 70%);}
-.glow-b{width:480px;height:480px; top:420px; left:-160px; background:radial-gradient(circle, #10B98126, transparent 70%);}
-.pole{position:absolute; top:-120px; right:8%; width:120px; height:1100px; transform:rotate(24deg);
-  background:repeating-linear-gradient(45deg, #6366F114 0 14px, #10B98112 14px 28px, transparent 28px 56px);
-  opacity:.6; mask-image:linear-gradient(to bottom, transparent, #000 18%, #000 70%, transparent);}
-.grain{position:absolute; inset:0; opacity:.04; mix-blend-mode:multiply;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+.dots{position:absolute; inset:0;
+  background-image:radial-gradient(#1e1b4e10 1px, transparent 1.5px);
+  background-size:23px 23px;
+  mask-image:linear-gradient(to bottom, #000 0, #000 560px, transparent 820px);}
+.rule-top{position:absolute; top:0; left:0; right:0; height:4px;
+  background:linear-gradient(90deg, var(--indigo) 0 33%, var(--mint) 33% 66%, var(--gold) 66% 100%);}
 
 /* shared atoms */
 .btn{display:inline-flex; align-items:center; gap:8px; font-weight:700; font-family:var(--body);
   border-radius:999px; padding:11px 20px; font-size:14px; cursor:pointer; transition:transform .15s, box-shadow .2s, background .2s; white-space:nowrap;}
 .btn:active{transform:translateY(1px) scale(.99);}
 .btn.lg{padding:15px 26px; font-size:15.5px;}
-.btn-indigo{background:var(--indigo); color:#fff; box-shadow:0 12px 30px -10px #6366F1aa;}
-.btn-indigo:hover{background:var(--indigo-deep); box-shadow:0 18px 40px -12px #6366F1cc; transform:translateY(-1px);}
+.btn-indigo{background:var(--indigo); color:#fff;}
+.btn-indigo:hover{background:var(--indigo-deep);}
 .btn-ink{background:var(--ink); color:#fff;}
 .btn-ink:hover{transform:translateY(-1px);}
 .btn-line{background:transparent; color:var(--ink); border:1.5px solid var(--line);}
@@ -552,6 +523,23 @@ const CSS = `
 .hl-indigo{color:var(--indigo);}
 .hl-mint{color:var(--mint);}
 .hl-gold{color:var(--gold);}
+/* highlighter-marker — kesan ditandai tangan, bukan gradient generik */
+.mark{display:inline-block; position:relative; color:var(--ink); z-index:0;}
+.mark::after{content:''; position:absolute; left:-3px; right:-3px; bottom:.07em; height:.30em;
+  background:var(--mint); opacity:.34; border-radius:3px; transform:rotate(-1.4deg); z-index:-1;}
+
+/* eyebrow editorial */
+.eyebrow{display:inline-flex; align-items:center; gap:11px; font-size:11.5px; font-weight:700;
+  text-transform:uppercase; letter-spacing:.16em; color:var(--ink-soft);}
+.eyebrow-bar{width:26px; height:2px; background:var(--ink); flex:none;}
+
+/* editorial figures (ganti avatar-cluster + bintang) */
+.figs{display:flex; align-items:stretch; margin-top:34px;}
+.fig{padding-right:24px; margin-right:24px; border-right:1px solid var(--line);}
+.fig:last-child{border-right:none; margin-right:0; padding-right:0;}
+.fig b{display:block; font-family:var(--display); font-size:27px; font-weight:800; letter-spacing:-0.03em; line-height:1;}
+.fig b i{font-style:normal; color:var(--gold); font-size:18px;}
+.fig span{font-size:12px; color:var(--mute); margin-top:5px; display:block;}
 
 /* nav */
 .nav{position:relative; z-index:5; max-width:1180px; margin:0 auto; padding:22px 24px;
@@ -586,13 +574,14 @@ const CSS = `
 .stars{display:flex; gap:1px; color:var(--gold); margin-bottom:2px;}
 .stars svg{fill:var(--gold);}
 
-/* hero stage */
-.stage{position:relative; perspective:1600px;}
-.stage-tilt{position:relative; transform:rotateY(-9deg) rotateX(3deg) rotate(1deg);}
-@media(max-width:960px){.stage-tilt{transform:none;} }
+/* hero stage — kartu jujur di atas blok warna (editorial), tanpa kartu mengambang */
+.stage{position:relative; margin-top:6px;}
+.stage-panel{position:absolute; top:22px; left:22px; right:-14px; bottom:46px; border-radius:20px; background:var(--ink); z-index:0;}
+.stage-cap{position:relative; z-index:2; margin:18px 2px 0; font-size:13px; color:var(--mute); line-height:1.5; max-width:30em;}
+.stage-cap b{color:var(--ink); font-weight:700;}
 
 .dash{position:relative; z-index:2; background:var(--paper); border:1px solid var(--line);
-  border-radius:22px; padding:18px; box-shadow:0 40px 80px -34px #1e1b4e55, 0 8px 24px -12px #0002;}
+  border-radius:20px; padding:18px; box-shadow:0 24px 50px -34px #1e1b4e44;}
 .dash-top{display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;}
 .dash-id{display:flex; align-items:center; gap:10px;}
 .dash-logo{display:grid; place-items:center; width:34px;height:34px;border-radius:10px; color:#fff;
@@ -626,19 +615,6 @@ const CSS = `
 .lead-track span{display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,var(--indigo),var(--mint));}
 .lead-val{font-size:12px; font-family:var(--display); font-weight:700; width:42px; text-align:right;}
 
-.float{position:absolute; display:flex; align-items:center; gap:11px; background:#fff;
-  border:1px solid var(--line); border-radius:14px; padding:11px 14px; z-index:3;
-  box-shadow:0 22px 44px -20px #1e1b4e66;}
-.float div{line-height:1.25;}
-.float b{display:block; font-size:12.5px; font-family:var(--display);}
-.float small{font-size:11px; color:var(--mute);}
-.fi{display:grid; place-items:center; width:30px;height:30px;border-radius:9px; color:#fff; flex:none;}
-.fi-indigo{background:linear-gradient(135deg,var(--indigo),var(--indigo-deep));}
-.fi-mint{background:linear-gradient(135deg,var(--mint),#0c9b6e);}
-.float-book{top:-22px; right:-26px;}
-.float-wa{bottom:34px; left:-40px;}
-@media(max-width:520px){.float-book{right:-6px; top:-16px;} .float-wa{left:-6px;} }
-
 /* marquee */
 .marquee{position:relative; z-index:2; margin-top:46px; padding:16px 0; background:var(--ink); color:#fff; overflow:hidden;
   border-top:1px solid #ffffff10; border-bottom:1px solid #ffffff10;}
@@ -669,6 +645,8 @@ const CSS = `
 .tile-tall p{flex:1;}
 @media(max-width:840px){.tile-big{grid-column:span 2;} .tile-tall{grid-row:span 1;} }
 @media(max-width:560px){.tile-big,.tile-tall{grid-column:span 1;} }
+.tile-top{display:flex; align-items:center; justify-content:space-between;}
+.tile-no{font-family:var(--display); font-size:13px; font-weight:800; letter-spacing:.06em; color:#cdd0ea;}
 .tile-icon{display:grid; place-items:center; width:46px;height:46px; border-radius:13px; color:#fff;}
 .acc-indigo .tile-icon{background:linear-gradient(135deg,var(--indigo),var(--indigo-deep));}
 .acc-mint .tile-icon{background:linear-gradient(135deg,var(--mint),#0c9b6e);}
