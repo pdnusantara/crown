@@ -22,6 +22,7 @@ import { queryClient } from './lib/queryClient.js'
 const Login         = lazy(() => import('./pages/Login.jsx'))
 const LandingPage   = lazy(() => import('./pages/LandingPage.jsx'))
 const LandingPagePreview = lazy(() => import('./pages/LandingPagePreview.jsx'))
+const LandingPagePreviewB = lazy(() => import('./pages/LandingPagePreviewB.jsx'))
 const RegisterPage  = lazy(() => import('./pages/RegisterPage.jsx'))
 const LegalPage     = lazy(() => import('./pages/LegalPage.jsx'))
 
@@ -283,6 +284,7 @@ export default function App() {
           <Route path="/register" element={<RegisterPage />} />
           {/* Pratinjau redesign landing — publik, tak tertaut. Tukar ke '/' bila disetujui. */}
           <Route path="/preview-landing" element={<LandingPagePreview />} />
+          <Route path="/preview-landing-b" element={<LandingPagePreviewB />} />
           <Route path="/syarat-ketentuan" element={<LegalPage />} />
           <Route path="/kebijakan-privasi" element={<LegalPage />} />
 
