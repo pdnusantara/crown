@@ -216,7 +216,10 @@ function normalizeWa(input) {
   return digits
 }
 
-export default function LandingPage({ heroLayout } = {}) {
+// Default 'split' = tampilan baru jadi landing UTAMA (hero dua-kolom, demo fitur
+// beranimasi, blok hitam-emas, gradasi konversi). Lewatkan heroLayout="centered"
+// untuk memaksa tampilan lama bila perlu.
+export default function LandingPage({ heroLayout = 'split' } = {}) {
   const { data, isLoading } = useLanding()
   const { user, isAuthenticated } = useAuthStore()
 
