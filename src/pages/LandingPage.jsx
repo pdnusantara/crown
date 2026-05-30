@@ -530,6 +530,7 @@ function HeroSection({ hero, stats, trustItems, isAuthenticated, homePath, layou
           to={isAuthenticated ? homePath : '/register'}
           onClick={() => { if (!isAuthenticated) trackPixel('Lead') }}
           className="btn-brand group"
+          style={split ? { background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 55%, #4338CA 100%)', boxShadow: '0 16px 38px -10px rgba(99,102,241,0.6)' } : undefined}
         >
           {isAuthenticated ? 'Buka Dashboard' : (hero.heroCtaLabel || 'Coba Gratis 14 Hari')}
           <Lucide.ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
@@ -549,7 +550,7 @@ function HeroSection({ hero, stats, trustItems, isAuthenticated, homePath, layou
           <React.Fragment key={i}>
             {i > 0 && <span className="text-[#D5D8E8]">·</span>}
             <span className="inline-flex items-center gap-1">
-              <Lucide.Check size={13} className="text-[#6366F1]" /> {item}
+              <Lucide.Check size={13} className={split ? 'text-[#10B981]' : 'text-[#6366F1]'} /> {item}
             </span>
           </React.Fragment>
         ))}
@@ -596,7 +597,7 @@ function HeroSection({ hero, stats, trustItems, isAuthenticated, homePath, layou
       transition={{ duration: 0.8, delay: 0.35 }}
       className="relative"
     >
-      <div className="absolute -inset-4 bg-gradient-to-tr from-[#6366F1]/25 via-transparent to-[#A5A2FF]/30 rounded-[2.5rem] blur-2xl" />
+      <div className={`absolute -inset-4 rounded-[2.5rem] blur-2xl ${split ? 'bg-gradient-to-tr from-[#6366F1]/30 via-[#10B981]/14 to-[#A5A2FF]/35' : 'bg-gradient-to-tr from-[#6366F1]/25 via-transparent to-[#A5A2FF]/30'}`} />
       <div className="relative rounded-2xl border border-[#D5D8E8] bg-white shadow-[0_30px_70px_-30px_rgba(28,26,23,0.35)] overflow-hidden">
         <DashboardMock />
       </div>
@@ -605,20 +606,40 @@ function HeroSection({ hero, stats, trustItems, isAuthenticated, homePath, layou
 
   return (
     <section className={`relative pt-28 pb-12 sm:pt-32 sm:pb-16 ${split ? 'lg:pt-36 lg:pb-24' : 'lg:pt-40 lg:pb-24'}`}>
-      {/* Latar dekoratif — glow brand lembut + tekstur titik halus */}
-      <div className="absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[820px] h-[420px] rounded-full bg-[#6366F1]/12 blur-[120px]" />
-        <div className="absolute top-48 -right-20 w-72 h-72 rounded-full bg-[#A5A2FF]/20 blur-[100px]" />
-        <div
-          className="absolute inset-0 opacity-[0.5]"
-          style={{
-            backgroundImage: 'radial-gradient(#6366F126 1px, transparent 1px)',
-            backgroundSize: '26px 26px',
-            maskImage: 'linear-gradient(to bottom, black, transparent 70%)',
-            WebkitMaskImage: 'linear-gradient(to bottom, black, transparent 70%)',
-          }}
-        />
-      </div>
+      {/* Latar dekoratif — glow brand + tekstur titik halus */}
+      {split ? (
+        // Versi konversi: gradient mesh kaya (indigo + mint + whisper emas) supaya
+        // terasa hidup & premium, dengan wash atas yang menuntun mata ke judul+CTA.
+        <div className="absolute inset-0 -z-10 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-b from-[#ECEEFF] via-[#F4F4FA] to-[#F4F4FA]" />
+          <div className="absolute -top-32 left-[16%] w-[680px] h-[460px] rounded-full bg-[#6366F1]/18 blur-[130px]" />
+          <div className="absolute top-24 -right-24 w-[440px] h-[440px] rounded-full bg-[#10B981]/14 blur-[120px]" />
+          <div className="absolute top-[30rem] -left-24 w-96 h-96 rounded-full bg-[#C9A84C]/12 blur-[130px]" />
+          <div
+            className="absolute inset-0 opacity-60"
+            style={{
+              backgroundImage: 'radial-gradient(#6366F124 1px, transparent 1px)',
+              backgroundSize: '26px 26px',
+              maskImage: 'linear-gradient(to bottom, black, transparent 72%)',
+              WebkitMaskImage: 'linear-gradient(to bottom, black, transparent 72%)',
+            }}
+          />
+        </div>
+      ) : (
+        <div className="absolute inset-0 -z-10 overflow-hidden">
+          <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[820px] h-[420px] rounded-full bg-[#6366F1]/12 blur-[120px]" />
+          <div className="absolute top-48 -right-20 w-72 h-72 rounded-full bg-[#A5A2FF]/20 blur-[100px]" />
+          <div
+            className="absolute inset-0 opacity-[0.5]"
+            style={{
+              backgroundImage: 'radial-gradient(#6366F126 1px, transparent 1px)',
+              backgroundSize: '26px 26px',
+              maskImage: 'linear-gradient(to bottom, black, transparent 70%)',
+              WebkitMaskImage: 'linear-gradient(to bottom, black, transparent 70%)',
+            }}
+          />
+        </div>
+      )}
 
       {split ? (
         <motion.div style={{ y: heroY }} className="max-w-6xl mx-auto px-6 grid lg:grid-cols-2 gap-12 lg:gap-14 items-center">
