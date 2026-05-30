@@ -873,10 +873,19 @@ function FeaturesSection({ ctx }) {
 }
 
 function StepsSection({ ctx }) {
-  const { steps, sections, animatedMocks: dark } = ctx
+  const { steps, sections, animatedMocks } = ctx
+  const bgImage = sections.steps?.image
+  const dark = animatedMocks || !!bgImage   // teks terang bila gelap ATAU ada gambar latar
   return (
-    <section className={`py-14 sm:py-24 px-6 ${dark ? 'bg-[#0E0E1A]' : 'bg-[#EEEEF5]'}`}>
-      <div className="max-w-5xl mx-auto">
+    <section className={`relative overflow-hidden py-14 sm:py-24 px-6 ${dark ? 'bg-[#0E0E1A]' : 'bg-[#EEEEF5]'}`}>
+      {bgImage && (
+        <>
+          <img src={bgImage} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover" />
+          {/* lapisan gelap di atas gambar agar tulisan tetap terbaca */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0E0E1A]/90 via-[#0E0E1A]/82 to-[#0E0E1A]/92" />
+        </>
+      )}
+      <div className="relative max-w-5xl mx-auto">
         <SectionHeading {...sections.steps} dark={dark} />
         <div className={`grid gap-5 mt-14 ${steps.length === 2 ? 'md:grid-cols-2' : steps.length >= 4 ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-3'}`}>
           {steps.map((s, i) => (
@@ -900,19 +909,6 @@ function StepsSection({ ctx }) {
             </motion.div>
           ))}
         </div>
-        {/* Gambar opsional — banner di bawah langkah, tidak menutupi teks */}
-        {sections.steps?.image && (
-          <motion.div
-            initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-60px' }} transition={{ duration: 0.6 }}
-            className="mt-12 sm:mt-14"
-          >
-            <img
-              src={sections.steps.image} alt="" loading="lazy"
-              className={`w-full rounded-2xl border shadow-[0_30px_70px_-34px_rgba(28,26,23,0.55)] ${dark ? 'border-[#2a2a45]' : 'border-[#D5D8E8]'}`}
-            />
-          </motion.div>
-        )}
       </div>
     </section>
   )
@@ -1105,10 +1101,17 @@ function ClosingCtaSection({ ctx }) {
         viewport={{ once: true }}
         className="max-w-4xl mx-auto text-center rounded-3xl bg-[#1E1B2E] px-8 py-14 lg:py-16 relative overflow-hidden"
       >
-        <div className="absolute inset-0 -z-0 opacity-60" style={{
+        {closing.image && (
+          <>
+            <img src={closing.image} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover" />
+            {/* lapisan gelap agar tulisan tetap terbaca */}
+            <div className="absolute inset-0 bg-[#1E1B2E]/82" />
+          </>
+        )}
+        <div className="absolute inset-0 opacity-60" style={{
           backgroundImage: 'radial-gradient(circle at 18% 30%, rgba(99,102,241,0.35), transparent 45%), radial-gradient(circle at 85% 80%, rgba(232,200,117,0.22), transparent 45%)',
         }} />
-        <div className="relative">
+        <div className="relative z-10">
           <Lucide.Scissors className="text-[#6366F1] mx-auto mb-4" size={30} />
           <h2 className="font-display text-3xl lg:text-[2.6rem] font-bold text-white leading-tight">
             {closing.title}
@@ -1130,13 +1133,6 @@ function ClosingCtaSection({ ctx }) {
               </a>
             )}
           </div>
-          {/* Gambar opsional — di bawah tombol, tidak menutupi teks */}
-          {closing.image && (
-            <img
-              src={closing.image} alt="" loading="lazy"
-              className="mt-10 w-full max-w-2xl mx-auto rounded-2xl border border-white/10 shadow-[0_30px_70px_-34px_rgba(0,0,0,0.6)]"
-            />
-          )}
         </div>
       </motion.div>
     </section>

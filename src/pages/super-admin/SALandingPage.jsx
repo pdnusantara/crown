@@ -1219,7 +1219,7 @@ function ContentEditor() {
                   label="Gambar section (opsional)"
                   value={sections[key].image || ''}
                   onChange={url => setSection(key, 'image', url)}
-                  hint="Tampil sebagai banner di bawah 3 langkah — tidak menutupi teks. Rasio lebar disarankan (mis. 1600×600)."
+                  hint="Tampil sebagai LATAR (background) section di belakang 3 langkah — teks tetap terbaca (ada lapisan gelap di atas gambar). Gambar landscape/lebar paling pas (mis. 1600×900)."
                 />
               )}
             </div>
@@ -1279,7 +1279,7 @@ function ContentEditor() {
             label="Gambar CTA (opsional)"
             value={closing.image || ''}
             onChange={url => setClosing(c => ({ ...c, image: url }))}
-            hint="Tampil di bawah tombol — tidak menutupi teks."
+            hint="Tampil sebagai LATAR (background) panel CTA di belakang teks — tetap terbaca (ada lapisan gelap di atas gambar)."
           />
         </CardBody>
       </Card>
