@@ -357,6 +357,10 @@ export default function App() {
                 <Route path="shift-closing" element={<ShiftClosingPage />} />
                 <Route path="attendance"    element={<StaffAttendancePage />} />
                 <Route path="ratings"       element={<KasirRatingsPage />} />
+                {/* Komisi: hanya bermakna utk kasir yg merangkap barber (isBarber).
+                    Menu disembunyikan utk kasir biasa; halaman tampil 0 bila dibuka
+                    manual (data komisi diri sendiri, tak ada kebocoran). */}
+                <Route path="commission"    element={<BarberCommission />} />
                 <Route path="bantuan"       element={<KasirHelpPage />} />
                 <Route index element={<Navigate to="pos" replace />} />
               </Route>

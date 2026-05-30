@@ -83,6 +83,11 @@ const navConfig = {
       { section: 'Manajemen',   labelKey: 'nav.shiftClose',   icon: Wallet,        path: `/${slug}/kasir/shift-closing` },
       { section: 'Manajemen',   labelKey: 'nav.attendance',   icon: Fingerprint,   path: `/${slug}/kasir/attendance`, flag: 'attendance' },
       { section: 'Manajemen',   labelKey: 'nav.ratings',      icon: Star,          path: `/${slug}/kasir/ratings` },
+      // Komisi: hanya utk kasir yg merangkap barber (isBarber) — dia menghasilkan
+      // komisi saat memotong rambut, jadi boleh lihat ringkasannya sendiri.
+      ...(user?.isBarber
+        ? [{ section: 'Manajemen', labelKey: 'nav.commission', icon: TrendingUp, path: `/${slug}/kasir/commission` }]
+        : []),
       { section: 'Manajemen',   labelKey: 'nav.help',         icon: LifeBuoy,      path: `/${slug}/kasir/bantuan` },
     ]
   },

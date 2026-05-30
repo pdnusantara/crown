@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useThemeStore } from '../../store/themeStore.js'
+import { getBranchSlug } from '../../utils/branchSlug.js'
 import { useTransactions, fetchAllTransactions } from '../../hooks/useTransactions.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import Card from '../../components/ui/Card.jsx'
@@ -428,11 +429,15 @@ export default function BarberCommission() {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/barber/dashboard')}
+            onClick={() => navigate(
+              user?.role === 'barber'
+                ? '/barber/dashboard'
+                : `/${getBranchSlug(user)}/kasir/pos`
+            )}
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-dark-card/60 border border-dark-border text-muted text-xs font-medium hover:text-off-white hover:border-brand/40 transition-colors"
           >
             <ArrowRight className="w-4 h-4 rotate-180" />
-            <span className="hidden sm:inline">Dashboard</span>
+            <span className="hidden sm:inline">{user?.role === 'barber' ? 'Dashboard' : 'Kasir'}</span>
           </button>
         </div>
       </div>
