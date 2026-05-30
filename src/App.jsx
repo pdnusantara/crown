@@ -21,6 +21,7 @@ import { queryClient } from './lib/queryClient.js'
 // ── Lazy-loaded pages ───────────────────────────────────────────────────────
 const Login         = lazy(() => import('./pages/Login.jsx'))
 const LandingPage   = lazy(() => import('./pages/LandingPage.jsx'))
+const LandingPagePreview = lazy(() => import('./pages/LandingPagePreview.jsx'))
 const RegisterPage  = lazy(() => import('./pages/RegisterPage.jsx'))
 const LegalPage     = lazy(() => import('./pages/LegalPage.jsx'))
 
@@ -280,6 +281,8 @@ export default function App() {
           <Routes>
           <Route path="/login"    element={<Login />} />
           <Route path="/register" element={<RegisterPage />} />
+          {/* Pratinjau redesign landing — publik, tak tertaut. Tukar ke '/' bila disetujui. */}
+          <Route path="/preview-landing" element={<LandingPagePreview />} />
           <Route path="/syarat-ketentuan" element={<LegalPage />} />
           <Route path="/kebijakan-privasi" element={<LegalPage />} />
 
