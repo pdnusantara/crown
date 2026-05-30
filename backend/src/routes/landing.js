@@ -313,7 +313,7 @@ const uploadImage = multer({
       cb(null, `${crypto.randomUUID()}${ext}`);
     },
   }),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  limits: { fileSize: 12 * 1024 * 1024 }, // 12 MB — cukup utk gambar AI res-tinggi
   fileFilter: (req, file, cb) => {
     if (ALLOWED_IMAGE_MIME.includes(file.mimetype)) cb(null, true);
     else cb(new Error('Format gambar harus JPG, PNG, WebP, atau GIF'));
@@ -323,7 +323,7 @@ const uploadImage = multer({
 router.post('/upload', authenticate, requireRole('super_admin'), (req, res) => {
   uploadImage(req, res, (err) => {
     if (err) {
-      const msg = err.code === 'LIMIT_FILE_SIZE' ? 'Ukuran gambar maksimal 5 MB' : err.message;
+      const msg = err.code === 'LIMIT_FILE_SIZE' ? 'Ukuran gambar maksimal 12 MB' : err.message;
       return res.status(400).json({ success: false, error: msg });
     }
     if (!req.file) return res.status(400).json({ success: false, error: 'File gambar wajib diunggah (field "image")' });
