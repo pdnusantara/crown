@@ -643,7 +643,7 @@ function HeroSection({ hero, stats, trustItems, isAuthenticated, homePath, layou
       )}
 
       {split ? (
-        <motion.div style={{ y: heroY }} className="max-w-6xl mx-auto px-6 grid lg:grid-cols-2 gap-12 lg:gap-14 items-center">
+        <motion.div style={{ y: heroY }} className="max-w-[78rem] mx-auto px-6 grid lg:grid-cols-[1fr_1.22fr] gap-12 lg:gap-16 items-center">
           {copy}
           {showcase}
         </motion.div>
