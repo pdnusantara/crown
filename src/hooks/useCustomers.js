@@ -17,6 +17,11 @@ function useCustomerRealtime(tenantId) {
     const invalidate = () => {
       qc.invalidateQueries({ queryKey: ['customers', tenantId] })
       qc.invalidateQueries({ queryKey: ['customers', 'stats', tenantId] })
+      // Detail drawer & ledger pakai key 2-segmen berbeda ('detail'/'point-history'),
+      // jadi invalidate ['customers', tenantId] di atas TIDAK menjangkaunya. Tanpa
+      // ini, drawer yang sedang terbuka tak ikut tersegarkan saat ada event WS.
+      qc.invalidateQueries({ queryKey: ['customers', 'detail'] })
+      qc.invalidateQueries({ queryKey: ['customers', 'point-history'] })
     }
     socket.on('customer:created', invalidate)
     socket.on('customer:updated', invalidate)
@@ -95,13 +100,15 @@ export function useCustomerStats() {
   // One-time cleanup cache lama (v1 + v2) di localStorage — sebelumnya kita
   // simpan stats di sana sebagai initialData, tapi itu bikin "flash stale"
   // (user lihat angka kunjungan sebelumnya selama 1-2 detik). Sekarang andalkan
-  // React Query cache + skeleton loader saja.
-  if (typeof window !== 'undefined' && tenantId) {
+  // React Query cache + skeleton loader saja. Dijalankan di efek (bukan badan
+  // render) supaya render tetap murni & tak menyentuh storage tiap re-render.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !tenantId) return
     try {
       window.localStorage.removeItem(`customer-stats:${tenantId}`)
       window.localStorage.removeItem(`customer-stats-v2:${tenantId}`)
     } catch {}
-  }
+  }, [tenantId])
 
   return useQuery({
     queryKey: ['customers', 'stats', tenantId],

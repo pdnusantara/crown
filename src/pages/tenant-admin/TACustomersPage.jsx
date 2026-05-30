@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Plus, Star, Edit2, Trash2, MapPin, Users, X, Phone, Mail,
   Calendar, ChevronLeft, ChevronRight, Download, RefreshCw, Award,
-  TrendingUp, Activity, Clock, Crown, Sparkles, Filter, Cake, ShoppingBag,
-  Wallet, ArrowRight, BadgeCheck, AlertTriangle, HeartCrack, Info,
+  Activity, Clock, Crown, Sparkles, Filter, Cake, ShoppingBag,
+  BadgeCheck, AlertTriangle, HeartCrack, Info,
 } from 'lucide-react'
 import {
   useCustomers, useCustomer, useCustomerStats,
@@ -23,7 +23,7 @@ import Input from '../../components/ui/Input.jsx'
 import Avatar from '../../components/ui/Avatar.jsx'
 import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx'
 import { formatRupiah, formatRupiahShort, formatDate, formatDateTime } from '../../utils/format.js'
-import { format, parseISO, formatDistanceToNow } from 'date-fns'
+import { parseISO, formatDistanceToNow } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
 
 const PAGE_SIZE = 20
@@ -207,7 +207,7 @@ function CustomerMobileCard({ customer, onOpen, onEdit, onDelete, selected, onTo
               {customer.visitCount || 0}× kunjungan
             </span>
             {province && (
-              <span className="inline-flex items-center gap-0.5 text-[10px] text-muted/70 truncate max-w-[100px]">
+              <span className="inline-flex items-center gap-0.5 text-[10px] text-muted truncate max-w-[100px]">
                 <MapPin className="w-2.5 h-2.5" /> {province}
               </span>
             )}
@@ -346,7 +346,7 @@ const POINT_TYPE_STYLE = {
   earn:   { bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', text: 'text-emerald-300', label: 'Earn' },
   adjust: { bg: 'bg-amber-500/10',   border: 'border-amber-500/30',   text: 'text-amber-300',   label: 'Adjust' },
   redeem: { bg: 'bg-red-500/10',     border: 'border-red-500/30',     text: 'text-red-300',     label: 'Redeem' },
-  expire: { bg: 'bg-gray-500/10',    border: 'border-gray-500/30',    text: 'text-gray-300',    label: 'Expire' },
+  expire: { bg: 'bg-dark-card/50',   border: 'border-dark-border',    text: 'text-muted',       label: 'Expire' },
 }
 
 // ─── Adjust Points Modal — wajib alasan ────────────────────────────────────
@@ -410,7 +410,7 @@ function AdjustPointsModal({ open, onClose, customer, presetDelta, onConfirm, lo
             {delta !== 0 && (
               <p className="text-[11px] text-muted mt-1.5">
                 Saldo setelah: <span className="text-brand font-semibold tabular-nums">{Math.max(0, (customer.loyaltyPoints || 0) + delta).toLocaleString('id-ID')}</span> poin
-                {customer.loyaltyPoints + delta < 0 && (
+                {(customer.loyaltyPoints || 0) + delta < 0 && (
                   <span className="text-amber-400 ml-1.5">(akan ditahan di 0)</span>
                 )}
               </p>
@@ -460,8 +460,8 @@ function AdjustPointsModal({ open, onClose, customer, presetDelta, onConfirm, lo
 
 // ─── Customer Detail Drawer ─────────────────────────────────────────────────
 function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
-  const { data: customer, isLoading } = useCustomer(customerId)
-  const { data: historyData, isLoading: historyLoading } = usePointHistory(customerId, { limit: 50 })
+  const { data: customer, isLoading, isError, refetch } = useCustomer(customerId)
+  const { data: historyData, isLoading: historyLoading, isError: historyError } = usePointHistory(customerId, { limit: 50 })
   const updateLoyalty = useUpdateLoyalty()
   const toast = useToast()
   const [adjustPreset, setAdjustPreset] = useState(null) // null | number
@@ -488,9 +488,18 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
 
   return (
     <Modal isOpen={open} onClose={onClose} size="lg" title="Detail Pelanggan">
-      {isLoading || !customer ? (
+      {isLoading ? (
         <div className="space-y-3">
           {[...Array(4)].map((_, i) => <div key={i} className="h-16 rounded-xl bg-dark-card/60 animate-pulse" />)}
+        </div>
+      ) : isError || !customer ? (
+        <div className="text-center py-12">
+          <AlertTriangle className="w-10 h-10 text-amber-400 mx-auto mb-3" />
+          <p className="text-sm text-off-white font-medium">Gagal memuat detail pelanggan</p>
+          <p className="text-xs text-muted mt-1">Periksa koneksi lalu coba lagi.</p>
+          <Button variant="secondary" size="sm" className="mt-4" onClick={() => refetch()}>
+            <RefreshCw className="w-3.5 h-3.5" /> Coba Lagi
+          </Button>
         </div>
       ) : (
         <div className="space-y-5">
@@ -518,7 +527,7 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
                 {customer.birthDate && (
                   <span className="inline-flex items-center gap-1.5">
                     <Cake className="w-3.5 h-3.5 shrink-0" />
-                    {format(parseISO(customer.birthDate), 'd MMM yyyy', { locale: idLocale })}
+                    {formatDate(customer.birthDate)}
                   </span>
                 )}
                 <span className="inline-flex items-center gap-1.5">
@@ -637,7 +646,7 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
             <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2 inline-flex items-center gap-2">
               <Activity className="w-3.5 h-3.5" /> Riwayat Pergerakan Poin
               {historyData?.items?.length > 0 && (
-                <span className="text-muted/70 normal-case font-normal">
+                <span className="text-muted normal-case font-normal">
                   ({historyData.items.length}{historyData.meta?.hasMore ? '+' : ''})
                 </span>
               )}
@@ -646,6 +655,10 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
               <div className="space-y-1.5">
                 {[0,1,2].map(i => <div key={i} className="h-10 rounded-lg bg-dark-card/60 animate-pulse" />)}
               </div>
+            ) : historyError ? (
+              <p className="text-sm text-amber-400 text-center py-6 bg-dark-card/30 rounded-xl border border-dashed border-dark-border inline-flex items-center justify-center gap-2 w-full">
+                <AlertTriangle className="w-4 h-4 shrink-0" /> Gagal memuat riwayat poin
+              </p>
             ) : !historyData?.items?.length ? (
               <p className="text-sm text-muted text-center py-6 bg-dark-card/30 rounded-xl border border-dashed border-dark-border">
                 Belum ada pergerakan poin
@@ -706,7 +719,7 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
           <div>
             <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2 inline-flex items-center gap-2">
               <ShoppingBag className="w-3.5 h-3.5" /> Transaksi Terbaru
-              <span className="text-muted/70 normal-case font-normal">(maks 20)</span>
+              <span className="text-muted normal-case font-normal">(maks 20)</span>
             </p>
             {(customer.transactions || []).length === 0 ? (
               <p className="text-sm text-muted text-center py-6">Belum ada transaksi</p>
@@ -991,6 +1004,11 @@ export default function TACustomersPage() {
     avgLoyalty: 0, avgVisits: 0, withEmail: 0, withAddress: 0, byProvince: [],
     thresholds: DEFAULT_THRESHOLDS,
   }
+  const statsLoading = statsQuery.isLoading
+  // Saat stats belum siap (loading/error), tile angka tampil skeleton/"—" —
+  // bukan "0" yang menyesatkan. byProvince/thresholds tetap pakai default aman.
+  const statReady = !!statsQuery.data
+  const tileVal = (v) => (statReady ? v : null)
 
   // Daftar provinsi dari stats endpoint (server-side aggregate, bukan dari current page).
   // Fallback ke derive dari current items kalau byProvince belum tersedia.
@@ -1180,7 +1198,8 @@ export default function TACustomersPage() {
         <StatTile
           icon={Users}
           label="Total"
-          value={stats.total}
+          value={tileVal(stats.total)}
+          loading={statsLoading}
           accent="gold"
           hint={stats.total > 0 ? `Avg ${stats.avgVisits || 0}× / orang` : 'Belum ada pelanggan'}
           onClick={() => { setSegment(''); setPage(1) }}
@@ -1190,7 +1209,8 @@ export default function TACustomersPage() {
         <StatTile
           icon={Crown}
           label="VIP"
-          value={stats.vip || 0}
+          value={tileVal(stats.vip)}
+          loading={statsLoading}
           accent="gold"
           hint="≥10 kunjungan, aktif"
           onClick={() => setSegment(s => s === 'vip' ? '' : 'vip')}
@@ -1200,7 +1220,8 @@ export default function TACustomersPage() {
         <StatTile
           icon={BadgeCheck}
           label="Loyal"
-          value={stats.loyal || 0}
+          value={tileVal(stats.loyal)}
+          loading={statsLoading}
           accent="blue"
           hint="3–9 kunjungan, aktif"
           onClick={() => setSegment(s => s === 'loyal' ? '' : 'loyal')}
@@ -1210,7 +1231,8 @@ export default function TACustomersPage() {
         <StatTile
           icon={Sparkles}
           label="Baru"
-          value={stats.new || 0}
+          value={tileVal(stats.new)}
+          loading={statsLoading}
           accent="green"
           hint="1–2 kunjungan, aktif"
           onClick={() => setSegment(s => s === 'new' ? '' : 'new')}
@@ -1220,7 +1242,8 @@ export default function TACustomersPage() {
         <StatTile
           icon={Activity}
           label="Belum Tx"
-          value={stats.never || stats.inactive || 0}
+          value={tileVal(stats.never ?? stats.inactive)}
+          loading={statsLoading}
           accent="rose"
           hint="0 kunjungan"
           onClick={() => setSegment(s => s === 'never' ? '' : 'never')}
