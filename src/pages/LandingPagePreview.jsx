@@ -122,13 +122,17 @@ function Hero() {
           </motion.p>
 
           <motion.div {...rise(0.28)} className="cta-row">
-            <a className="btn btn-indigo lg" href="#">
-              Mulai gratis 14 hari <ArrowRight size={18} />
+            <a className="btn btn-indigo lg cta-primary" href="#">
+              Mulai gratis 14 hari <ArrowRight size={18} className="cta-arrow" />
             </a>
-            <a className="btn btn-line lg" href="#harga">Lihat harga</a>
+            <a className="link-cta" href="#harga">Lihat harga <ArrowRight size={15} /></a>
           </motion.div>
 
-          <motion.div {...rise(0.36)} className="figs">
+          <motion.p {...rise(0.33)} className="reassure">
+            <Check size={13} strokeWidth={3} /> Tanpa kartu kredit · siap pakai dalam 5 menit
+          </motion.p>
+
+          <motion.div {...rise(0.4)} className="figs">
             <div className="fig"><b>500+</b><span>barbershop aktif</span></div>
             <div className="fig"><b>4,9<i>★</i></b><span>rata-rata penilaian</span></div>
             <div className="fig"><b>12rb</b><span>potongan / hari</span></div>
@@ -150,8 +154,10 @@ function HeroStage() {
       transition={{ duration: 0.85, ease, delay: 0.25 }}
       className="stage"
     >
-      <span className="stage-panel" aria-hidden />
-      <DashboardCard />
+      <div className="stage-frame">
+        <span className="stage-panel" aria-hidden />
+        <DashboardCard />
+      </div>
       <p className="stage-cap"><b>Dasbor pemilik.</b> Pantau omzet & antrean semua cabang, langsung dari HP.</p>
     </motion.div>
   )
@@ -161,6 +167,11 @@ function DashboardCard() {
   const bars = [38, 52, 44, 70, 58, 86, 64]
   return (
     <div className="dash">
+      <div className="chrome">
+        <span className="chrome-dots"><i /><i /><i /></span>
+        <span className="chrome-url">barberque.sembapos.com</span>
+      </div>
+      <div className="dash-body">
       <div className="dash-top">
         <div className="dash-id">
           <span className="dash-logo"><Scissors size={13} /></span>
@@ -215,6 +226,7 @@ function DashboardCard() {
             <b className="lead-val">{v}</b>
           </div>
         ))}
+      </div>
       </div>
     </div>
   )
@@ -557,12 +569,20 @@ const CSS = `
 @media(max-width:860px){.nav-links{display:none;} }
 
 /* hero */
-.hero{position:relative; z-index:2; max-width:1180px; margin:0 auto; padding:46px 24px 30px;}
-.hero-grid{display:grid; grid-template-columns:1.05fr .95fr; gap:40px; align-items:center;}
+.hero{position:relative; z-index:2; max-width:1180px; margin:0 auto; padding:56px 24px 44px;}
+.hero-grid{display:grid; grid-template-columns:1.06fr .94fr; gap:clamp(40px,5vw,64px); align-items:center;}
 @media(max-width:960px){.hero-grid{grid-template-columns:1fr; gap:48px;} }
-.headline{font-size:clamp(40px, 6.4vw, 78px); font-weight:800; line-height:.98; margin:20px 0 0;}
-.lede{font-size:clamp(16px,2.1vw,19px); line-height:1.6; color:var(--ink-soft); max-width:30em; margin:22px 0 0;}
-.cta-row{display:flex; gap:14px; margin-top:30px; flex-wrap:wrap;}
+.headline{font-size:clamp(43px, 6.8vw, 84px); font-weight:800; line-height:.95; letter-spacing:-0.035em; margin:22px 0 0;}
+.lede{font-size:clamp(16px,2.1vw,19px); line-height:1.62; color:var(--ink-soft); max-width:29em; margin:24px 0 0;}
+.cta-row{display:flex; align-items:center; gap:18px; margin-top:32px; flex-wrap:wrap;}
+.cta-primary .cta-arrow{transition:transform .2s;}
+.cta-primary:hover .cta-arrow{transform:translateX(3px);}
+.link-cta{display:inline-flex; align-items:center; gap:6px; font-weight:700; font-size:15px; color:var(--ink);}
+.link-cta svg{transition:transform .2s;}
+.link-cta:hover{color:var(--indigo);}
+.link-cta:hover svg{transform:translateX(3px);}
+.reassure{display:inline-flex; align-items:center; gap:7px; margin-top:16px; font-size:13px; color:var(--mute);}
+.reassure svg{color:var(--mint); flex:none;}
 .cta-row.center{justify-content:center;}
 .trust{display:flex; align-items:center; gap:14px; margin-top:30px;}
 .avatars{display:flex;}
@@ -576,12 +596,21 @@ const CSS = `
 
 /* hero stage — kartu jujur di atas blok warna (editorial), tanpa kartu mengambang */
 .stage{position:relative; margin-top:6px;}
-.stage-panel{position:absolute; top:22px; left:22px; right:-14px; bottom:46px; border-radius:20px; background:var(--ink); z-index:0;}
-.stage-cap{position:relative; z-index:2; margin:18px 2px 0; font-size:13px; color:var(--mute); line-height:1.5; max-width:30em;}
+.stage-frame{position:relative;}
+.stage-panel{position:absolute; top:18px; left:18px; right:-14px; bottom:-14px; border-radius:20px;
+  background:var(--ink); z-index:0;
+  background-image:repeating-linear-gradient(45deg, #ffffff0a 0 10px, transparent 10px 20px);}
+.stage-cap{position:relative; z-index:2; margin:26px 2px 0 4px; font-size:13px; color:var(--mute); line-height:1.5; max-width:30em;}
 .stage-cap b{color:var(--ink); font-weight:700;}
 
 .dash{position:relative; z-index:2; background:var(--paper); border:1px solid var(--line);
-  border-radius:20px; padding:18px; box-shadow:0 24px 50px -34px #1e1b4e44;}
+  border-radius:20px; overflow:hidden; box-shadow:0 28px 56px -34px #1e1b4e4d;}
+.chrome{display:flex; align-items:center; gap:12px; padding:11px 15px; border-bottom:1px solid var(--line); background:#fafaff;}
+.chrome-dots{display:flex; gap:6px; flex:none;}
+.chrome-dots i{width:9px;height:9px;border-radius:50%; background:#d8d9ec;}
+.chrome-url{flex:1; text-align:center; font-size:11px; color:var(--mute); background:#fff; border:1px solid var(--line);
+  border-radius:7px; padding:4px 10px; max-width:240px; margin:0 auto;}
+.dash-body{padding:16px;}
 .dash-top{display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;}
 .dash-id{display:flex; align-items:center; gap:10px;}
 .dash-logo{display:grid; place-items:center; width:34px;height:34px;border-radius:10px; color:#fff;
