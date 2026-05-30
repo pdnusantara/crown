@@ -12,6 +12,7 @@ import { useLanding } from '../hooks/useLanding.js'
 import { useAuthStore } from '../store/authStore.js'
 import { initMetaPixel, trackPixel } from '../lib/metaPixel.js'
 import { formatRupiah } from '../utils/format.js'
+import { FeatureDemo, FeatureDemoStyles } from '../components/FeatureDemos.jsx'
 
 // ── Catatan tema ────────────────────────────────────────────────────────────
 // Landing publik SELALU terang — memakai warna eksplisit (bukan class tema
@@ -401,7 +402,7 @@ export default function LandingPage({ heroLayout } = {}) {
                  : user?.role === 'tenant_admin' ? '/admin/dashboard' : '/'
 
   // Konteks bersama untuk komponen blok core.
-  const ctx = { hero, features, steps, sections, packages, testimonials, faqs, stats, isLoading, closing, waHref }
+  const ctx = { hero, features, steps, sections, packages, testimonials, faqs, stats, isLoading, closing, waHref, animatedMocks: heroLayout === 'split' }
 
   return (
     <div className="min-h-screen bg-[#F4F4FA] text-[#3F3D5C] font-body overflow-x-hidden antialiased">
@@ -706,8 +707,52 @@ function BrowserFrame({ src, alt }) {
 }
 
 function FeaturesSection({ ctx }) {
-  const { features, sections } = ctx
+  const { features, sections, animatedMocks } = ctx
   const indexed  = features.map((f, i) => ({ f, i }))
+
+  // Mode preview: SEMUA fitur tampil sebagai blok bergantian kiri-kanan dengan
+  // mini-demo BERANIMASI (terasa seperti video). Live default tetap screenshot/grid.
+  if (animatedMocks) {
+    return (
+      <section id="fitur" className="py-14 sm:py-24 px-6">
+        <FeatureDemoStyles />
+        <div className="max-w-6xl mx-auto">
+          <SectionHeading {...sections.features} />
+          <div className="space-y-16 sm:space-y-24 mt-14">
+            {indexed.map(({ f, i }, pos) => {
+              const Icon = getIcon(f.icon)
+              const mediaRight = pos % 2 === 1
+              return (
+                <motion.div
+                  key={`fa-${i}`}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-80px' }}
+                  transition={{ duration: 0.5 }}
+                  className="grid lg:grid-cols-2 gap-8 lg:gap-14 items-center"
+                >
+                  <div className={mediaRight ? 'lg:order-1' : 'lg:order-2'}>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-11 h-11 rounded-xl bg-[#E8EAF5] border border-[#C7CBE0] flex items-center justify-center">
+                        <Icon size={19} className="text-[#4F46E5]" />
+                      </div>
+                      <span className="font-display text-sm font-semibold text-[#6366F1]">{String(i + 1).padStart(2, '0')}</span>
+                    </div>
+                    <h3 className="font-display text-2xl sm:text-3xl font-semibold text-[#1E1B2E] mb-3 leading-tight">{f.title}</h3>
+                    <p className="text-[#56548A] leading-relaxed sm:text-lg">{f.desc}</p>
+                  </div>
+                  <div className={mediaRight ? 'lg:order-2' : 'lg:order-1'}>
+                    <FeatureDemo icon={f.icon} />
+                  </div>
+                </motion.div>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
   const showcase = indexed.filter((x) => x.f.image)   // fitur dgn screenshot → showcase besar
   const compact  = indexed.filter((x) => !x.f.image)  // sisanya → grid ikon rapi
   return (
