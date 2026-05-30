@@ -441,6 +441,60 @@ function ImageUploadField({ label, hint, value, accept = 'image/png,image/jpeg,i
   )
 }
 
+// ── Video upload field ────────────────────────────────────────────────────
+// Unggah video fitur (rekaman layar) ke /landing/upload-video. Bila diisi,
+// landing menampilkan video ini menggantikan demo animasi.
+function VideoUploadField({ label, hint, value, onChange }) {
+  const toast = useToast()
+  const [uploading, setUploading] = useState(false)
+
+  async function handleUpload(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('video', file)
+      const res = await api.post('/landing/upload-video', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      onChange(res.data?.data?.url || '')
+      toast.success('Video diunggah — jangan lupa simpan')
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal mengunggah video')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div>
+      <label className="text-xs text-muted block mb-1.5">{label}</label>
+      <div className="flex items-center gap-3">
+        <div className="w-14 h-14 rounded-lg bg-dark-surface border border-dark-border flex items-center justify-center overflow-hidden flex-shrink-0">
+          {value
+            ? <video src={value} muted loop autoPlay playsInline className="w-full h-full object-cover" />
+            : <Upload size={18} className="text-muted" />}
+        </div>
+        <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-dark-surface border border-dark-border text-sm cursor-pointer hover:border-brand/40 transition-colors">
+          <Upload size={13} /> {uploading ? 'Mengunggah…' : 'Unggah video'}
+          <input type="file" accept="video/mp4,video/webm,video/quicktime" className="hidden" onChange={handleUpload} disabled={uploading} />
+        </label>
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20"
+            title="Hapus video"
+          >
+            <Trash2 size={14} />
+          </button>
+        )}
+      </div>
+      {hint && <p className="text-[11px] text-muted mt-1.5">{hint}</p>}
+    </div>
+  )
+}
+
 // ── Katalog fitur on-brand ───────────────────────────────────────────────
 // Diturunkan langsung dari Brand Guidelines SembaPOS (20 fitur berflag + sorotan
 // fitur selalu-aktif). Tujuannya: super-admin bisa menyusun "Fitur Unggulan"
@@ -813,6 +867,12 @@ function HeroEditor() {
                 accept="image/png,image/jpeg,image/webp"
                 onChange={url => updateFeature(i, 'image', url)}
                 hint="Screenshot/foto fitur — tampil sebagai banner di atas kartu fitur di landing. Disarankan rasio ~16:10 (mis. 1200×750). Kosongkan untuk pakai ikon saja."
+              />
+              <VideoUploadField
+                label="Video fitur (opsional)"
+                value={f.video || ''}
+                onChange={url => updateFeature(i, 'video', url)}
+                hint="Rekaman layar fitur (MP4/WebM, maks 30 MB, rasio ~16:10). Jalan otomatis (loop, tanpa suara). PRIORITAS: video > gambar > demo animasi. Kosongkan untuk pakai demo animasi bawaan."
               />
             </div>
           ))}

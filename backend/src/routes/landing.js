@@ -214,6 +214,7 @@ const heroUpdateSchema = z.object({
     title: z.string().max(120),
     desc:  z.string().max(400),
     image: z.string().max(500).optional(),  // URL screenshot/foto opsional per fitur
+    video: z.string().max(500).optional(),  // URL video opsional per fitur (diunggah)
   })).optional(),
   trustItems:   z.array(z.string().max(60)).max(6).optional(),
   steps:        z.array(z.object({
@@ -324,6 +325,36 @@ router.post('/upload', authenticate, requireRole('super_admin'), (req, res) => {
       return res.status(400).json({ success: false, error: msg });
     }
     if (!req.file) return res.status(400).json({ success: false, error: 'File gambar wajib diunggah (field "image")' });
+    res.json({ success: true, data: { url: `/api/uploads/landing/${req.file.filename}` } });
+  });
+});
+
+// ── Video upload: POST /api/landing/upload-video ──────────────────────────────
+// Untuk mockup fitur format video (rekaman layar). Disimpan di disk yg sama,
+// disajikan via /api/uploads. Maks 30 MB; MP4/WebM/MOV.
+const ALLOWED_VIDEO_MIME = ['video/mp4', 'video/webm', 'video/quicktime'];
+const uploadVideo = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+    filename:    (req, file, cb) => {
+      const ext = { 'video/mp4': '.mp4', 'video/webm': '.webm', 'video/quicktime': '.mov' }[file.mimetype] || '.mp4';
+      cb(null, `${crypto.randomUUID()}${ext}`);
+    },
+  }),
+  limits: { fileSize: 30 * 1024 * 1024 }, // 30 MB
+  fileFilter: (req, file, cb) => {
+    if (ALLOWED_VIDEO_MIME.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Format video harus MP4, WebM, atau MOV'));
+  },
+}).single('video');
+
+router.post('/upload-video', authenticate, requireRole('super_admin'), (req, res) => {
+  uploadVideo(req, res, (err) => {
+    if (err) {
+      const msg = err.code === 'LIMIT_FILE_SIZE' ? 'Ukuran video maksimal 30 MB' : err.message;
+      return res.status(400).json({ success: false, error: msg });
+    }
+    if (!req.file) return res.status(400).json({ success: false, error: 'File video wajib diunggah (field "video")' });
     res.json({ success: true, data: { url: `/api/uploads/landing/${req.file.filename}` } });
   });
 });
