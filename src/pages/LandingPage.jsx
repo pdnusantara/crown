@@ -662,10 +662,10 @@ function HeroSection({ hero, stats, trustItems, isAuthenticated, homePath, layou
 }
 
 function StatsSection({ ctx }) {
-  const { stats } = ctx
+  const { stats, animatedMocks: dark } = ctx
   if (!stats) return null
   return (
-    <section className="border-y border-[#D5D8E8] bg-white">
+    <section className={dark ? 'border-y border-[#23233a] bg-[#0E0E1A]' : 'border-y border-[#D5D8E8] bg-white'}>
       <div className="max-w-5xl mx-auto px-6 py-10 sm:py-12 grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 text-center">
         {[
           { label: 'Tenant aktif',        value: stats.tenantCount,      suffix: '+', icon: 'Building2' },
@@ -676,11 +676,11 @@ function StatsSection({ ctx }) {
           const Icon = getIcon(s.icon)
           return (
             <motion.div key={s.label} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-              <Icon size={18} className="text-[#6366F1] mx-auto mb-2" />
-              <p className="font-display text-3xl md:text-4xl font-bold text-[#1E1B2E]">
+              <Icon size={18} className={`mx-auto mb-2 ${dark ? 'text-[#A5A2FF]' : 'text-[#6366F1]'}`} />
+              <p className={`font-display text-3xl md:text-4xl font-bold ${dark ? 'text-white' : 'text-[#1E1B2E]'}`}>
                 <CountUp to={s.value} suffix={s.suffix} />
               </p>
-              <p className="text-xs text-[#7C7AA8] mt-1">{s.label}</p>
+              <p className={`text-xs mt-1 ${dark ? 'text-[#A5A2C8]' : 'text-[#7C7AA8]'}`}>{s.label}</p>
             </motion.div>
           )
         })}
@@ -838,11 +838,11 @@ function FeaturesSection({ ctx }) {
 }
 
 function StepsSection({ ctx }) {
-  const { steps, sections } = ctx
+  const { steps, sections, animatedMocks: dark } = ctx
   return (
-    <section className="py-14 sm:py-24 px-6 bg-[#EEEEF5]">
+    <section className={`py-14 sm:py-24 px-6 ${dark ? 'bg-[#0E0E1A]' : 'bg-[#EEEEF5]'}`}>
       <div className="max-w-5xl mx-auto">
-        <SectionHeading {...sections.steps} />
+        <SectionHeading {...sections.steps} dark={dark} />
         <div className={`grid gap-5 mt-14 ${steps.length === 2 ? 'md:grid-cols-2' : steps.length >= 4 ? 'md:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-3'}`}>
           {steps.map((s, i) => (
             <motion.div
@@ -852,13 +852,15 @@ function StepsSection({ ctx }) {
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
               whileHover={{ y: -4 }}
-              className="relative bg-white rounded-2xl border border-[#D5D8E8] p-7 hover:border-[#C7CBE0] hover:shadow-[0_20px_44px_-24px_rgba(28,26,23,0.35)]"
+              className={`relative rounded-2xl border p-7 ${dark
+                ? 'bg-[#16162a] border-[#2a2a45] hover:border-[#3a3a5c]'
+                : 'bg-white border-[#D5D8E8] hover:border-[#C7CBE0] hover:shadow-[0_20px_44px_-24px_rgba(28,26,23,0.35)]'}`}
             >
-              <span className="font-display text-5xl font-bold text-[#C7CBE0]">{i + 1}</span>
-              <h3 className="font-display text-lg font-semibold text-[#1E1B2E] mt-2 mb-1.5">{s.title}</h3>
-              <p className="text-sm text-[#56548A] leading-relaxed">{s.desc}</p>
+              <span className={`font-display text-5xl font-bold ${dark ? 'text-white/15' : 'text-[#C7CBE0]'}`}>{i + 1}</span>
+              <h3 className={`font-display text-lg font-semibold mt-2 mb-1.5 ${dark ? 'text-white' : 'text-[#1E1B2E]'}`}>{s.title}</h3>
+              <p className={`text-sm leading-relaxed ${dark ? 'text-[#A5A2C8]' : 'text-[#56548A]'}`}>{s.desc}</p>
               {i < steps.length - 1 && (
-                <Lucide.ArrowRight size={18} className="hidden md:block absolute top-1/2 -right-4 -translate-y-1/2 text-[#6366F1] z-10" />
+                <Lucide.ArrowRight size={18} className={`hidden md:block absolute top-1/2 -right-4 -translate-y-1/2 z-10 ${dark ? 'text-[#A5A2FF]' : 'text-[#6366F1]'}`} />
               )}
             </motion.div>
           ))}
@@ -1306,18 +1308,18 @@ function Nav({ isAuthed, userRole, logo, siteName = 'SembaPOS' }) {
   )
 }
 
-function SectionHeading({ kicker, title, subtitle }) {
+function SectionHeading({ kicker, title, subtitle, dark }) {
   return (
     <div className="text-center max-w-2xl mx-auto">
       <motion.p
         initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
-        className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#4F46E5]"
+        className={`inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] ${dark ? 'text-[#A5A2FF]' : 'text-[#4F46E5]'}`}
       >
         <span className="w-5 h-px bg-[#6366F1]" /> {kicker} <span className="w-5 h-px bg-[#6366F1]" />
       </motion.p>
       <motion.h2
         initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-        className="font-display text-3xl lg:text-[2.6rem] font-bold text-[#1E1B2E] mt-3 leading-tight"
+        className={`font-display text-3xl lg:text-[2.6rem] font-bold mt-3 leading-tight ${dark ? 'text-white' : 'text-[#1E1B2E]'}`}
       >
         {title}
       </motion.h2>
@@ -1325,7 +1327,7 @@ function SectionHeading({ kicker, title, subtitle }) {
         <motion.p
           initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
           transition={{ delay: 0.08 }}
-          className="text-[#56548A] mt-3"
+          className={`mt-3 ${dark ? 'text-[#A5A2C8]' : 'text-[#56548A]'}`}
         >
           {subtitle}
         </motion.p>
