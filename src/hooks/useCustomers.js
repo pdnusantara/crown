@@ -93,7 +93,7 @@ export function useCustomer(id) {
   })
 }
 
-export function useCustomerStats() {
+export function useCustomerStats({ branchId = null, branchStrict = false } = {}) {
   const { user } = useAuthStore()
   const tenantId = user?.tenantId
 
@@ -110,10 +110,15 @@ export function useCustomerStats() {
     } catch {}
   }, [tenantId])
 
+  // Saat branchStrict (halaman kasir), tile statistik ikut dibatasi ke cabang
+  // aktif supaya angkanya konsisten dengan daftar. branchId masuk queryKey agar
+  // cache antar-cabang tidak tertukar.
+  const scoped = branchStrict && branchId ? { branchId, branchStrict: 1 } : {}
+
   return useQuery({
-    queryKey: ['customers', 'stats', tenantId],
+    queryKey: ['customers', 'stats', tenantId, branchStrict ? branchId : null],
     queryFn: async () => {
-      const res = await api.get('/customers/stats', { params: { tenantId } })
+      const res = await api.get('/customers/stats', { params: { tenantId, ...scoped } })
       return res.data?.data || null
     },
     enabled: !!tenantId,

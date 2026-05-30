@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Plus, Star, Edit2, Trash2, MapPin, Users, X, Phone, Mail,
@@ -14,6 +14,8 @@ import {
 } from '../../hooks/useCustomers.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import { useAuthStore } from '../../store/authStore.js'
+import { useBranches } from '../../hooks/useBranches.js'
+import { matchesBranch } from '../../utils/branchSlug.js'
 import { WilayahSelect } from '../../components/WilayahSelect.jsx'
 import Card from '../../components/ui/Card.jsx'
 import Badge, { getSegmentBadge, getStatusBadge } from '../../components/ui/Badge.jsx'
@@ -947,6 +949,21 @@ function CustomerFormModal({ open, onClose, editing, onSave, saving }) {
 export default function TACustomersPage() {
   const toast = useToast()
   const [params, setParams] = useSearchParams()
+  const { user } = useAuthStore()
+  const { branchId: urlBranchSlug } = useParams()
+  const { data: branches = [] } = useBranches(user?.tenantId)
+
+  // Halaman dipakai admin (lihat SEMUA cabang) DAN kasir/barber (terkunci ke
+  // cabang aktif supaya data antar-cabang tak tercampur). Staff scope = bukan
+  // admin/owner. Cabang aktif diambil dari slug URL (sumber kebenaran konteks,
+  // mis. /jakarta/kasir/customers), fallback ke branch milik user. Saat aktif,
+  // daftar + pencarian + tile statistik semuanya dibatasi ke cabang ini.
+  const isStaffScope = !!user && user.role !== 'tenant_admin' && user.role !== 'super_admin'
+  const scopedBranch =
+    branches.find(b => matchesBranch(urlBranchSlug, b)) ||
+    branches.find(b => b.id === user?.branchId) ||
+    null
+  const branchScopeId = isStaffScope ? (scopedBranch?.id || user?.branchId || null) : null
 
   const [search, setSearch]         = useState(params.get('q') || '')
   const [segment, setSegment]       = useState(params.get('seg') || '')
@@ -990,14 +1007,16 @@ export default function TACustomersPage() {
     if (gender)             f.gender = gender
     if (dormantDays > 0)    f.dormantDays = dormantDays
     if (birthMonthFilter)   f.birthMonth = birthMonthFilter
+    // Kasir/barber: kunci daftar + pencarian ke cabang aktif (anti-campur).
+    if (branchScopeId) { f.branchId = branchScopeId; f.branchStrict = 1 }
     return f
-  }, [page, sortConfig.sortBy, sortConfig.sortDir, debouncedSearch, segment, provinsi, gender, dormantDays, birthMonthFilter])
+  }, [page, sortConfig.sortBy, sortConfig.sortDir, debouncedSearch, segment, provinsi, gender, dormantDays, birthMonthFilter, branchScopeId])
 
   const customersQuery = useCustomers(queryFilters)
   const items = customersQuery.customers
   const totalItems = customersQuery.total
   const totalPages = customersQuery.totalPages || Math.max(1, Math.ceil(totalItems / PAGE_SIZE))
-  const statsQuery = useCustomerStats()
+  const statsQuery = useCustomerStats(branchScopeId ? { branchId: branchScopeId, branchStrict: true } : undefined)
   const stats = statsQuery.data || {
     total: 0, vip: 0, loyal: 0, new: 0, atRisk: 0, lost: 0, never: 0,
     regular: 0, inactive: 0, // backward compat
@@ -1022,7 +1041,6 @@ export default function TACustomersPage() {
   // Halaman ini dipakai oleh tenant_admin DAN kasir. Kasir tak punya akses
   // backend untuk delete/bulk-delete/export, jadi UI tombol-tombol itu
   // disembunyikan untuk role kasir (defense-in-depth: backend juga 403).
-  const { user } = useAuthStore()
   const canManage = user?.role !== 'kasir'
 
   // Mutations
@@ -1165,11 +1183,17 @@ export default function TACustomersPage() {
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
-          <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white inline-flex items-center gap-2">
+          <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white inline-flex items-center gap-2 flex-wrap">
             <Users className="w-5 h-5 text-brand" /> Pelanggan
+            {branchScopeId && scopedBranch?.name && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-brand bg-brand/10 border border-brand/30 rounded-full px-2 py-0.5">
+                <MapPin className="w-3 h-3" /> {scopedBranch.name}
+              </span>
+            )}
           </h1>
           <p className="text-muted text-xs sm:text-sm mt-1">
             {totalItems} pelanggan
+            {branchScopeId ? ' · cabang ini saja' : ''}
             {segment ? ` · ${SEGMENTS.find(s => s.id === segment)?.label || segment}` : ''}
             {provinsi ? ` · ${provinsi}` : ''}
             {dormantDays > 0 ? ` · Dormant ${dormantDays}+ hari` : ''}

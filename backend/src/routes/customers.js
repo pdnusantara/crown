@@ -62,6 +62,7 @@ router.get('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir'
   try {
     const { page, limit, skip } = parsePagination(req.query);
     const { search, provinsi, segment, gender, sortBy, sortDir, dormantDays, birthMonth, branchId } = req.query;
+    const branchStrict = req.query.branchStrict === '1' || req.query.branchStrict === 'true';
 
     const where = { deletedAt: null };
 
@@ -71,17 +72,23 @@ router.get('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir'
       where.tenantId = req.query.tenantId;
     }
 
-    // Branch filter — pelanggan yang pernah bertransaksi di cabang ini. Dipakai
-    // POS supaya default list cabang baru tidak nampak pelanggan cabang lama
-    // (tetap searchable tenant-wide bila kasir ketik nama; lihat POSPage).
-    // Skip kalau search aktif — kasir mau cari lintas-cabang utk loyalty.
-    if (branchId && !search && where.tenantId) {
+    // Kumpulan pembatasan berbasis-ID yang di-INTERSECT di akhir (branch,
+    // segment, dormant, ulang tahun) — disatukan di sini supaya kombinasi
+    // filter tidak saling menimpa where.id.
+    const idRestrictions = [];
+
+    // Branch scope — pelanggan yang pernah bertransaksi di cabang ini.
+    // - Non-strict (POS lookup lama): hanya saat TANPA search; kasir mengetik
+    //   nama → cari lintas-cabang utk loyalty.
+    // - Strict (halaman kasir, branchStrict=1): SELALU, termasuk saat search →
+    //   daftar & pencarian benar-benar terkunci ke cabang (anti-campur).
+    if (branchId && where.tenantId && (branchStrict || !search)) {
       const rows = await prisma.transaction.groupBy({
         by: ['customerId'],
         where: { tenantId: where.tenantId, branchId, customerId: { not: null } },
       });
       const ids = rows.map(r => r.customerId).filter(Boolean);
-      where.id = { in: ids.length ? ids : ['__none__'] };
+      idRestrictions.push(ids.length ? ids : ['__none__']);
     }
 
     if (search) {
@@ -131,13 +138,12 @@ router.get('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir'
           return cls === target;
         })
         .map(c => c.id);
-      where.id = { in: matchIds.length ? matchIds : ['__none__'] };
+      idRestrictions.push(matchIds.length ? matchIds : ['__none__']);
     }
 
     // Dormant filter: customer dengan visitCount > 0 tetapi transaksi terakhir
     // sudah > N hari. Untuk "Inactive" (belum pernah tx) gunakan segment.
     // Hitung ID dormant via groupBy(transaction).max(createdAt) di tenant ybs.
-    const idRestrictions = [];
     if (dormantDays && Number(dormantDays) > 0 && where.tenantId) {
       const days = Math.min(3650, Math.max(1, Number(dormantDays)));
       const threshold = new Date(Date.now() - days * 86400 * 1000);
@@ -268,7 +274,22 @@ router.get('/stats', authenticate, requireRole('super_admin', 'tenant_admin', 'k
       thresholds: SEGMENT_THRESHOLDS,
     } });
 
-    const where = { tenantId, deletedAt: null };
+    // Branch scope — samakan dengan list endpoint: bila halaman kasir mengirim
+    // branchStrict, tile statistik ikut dibatasi ke pelanggan cabang ini saja
+    // (kalau tidak, angka tile akan beda dengan daftar = membingungkan).
+    const branchId = req.query.branchId;
+    const branchStrict = req.query.branchStrict === '1' || req.query.branchStrict === 'true';
+    let branchScope = {};
+    if (branchId && branchStrict) {
+      const rows = await prisma.transaction.groupBy({
+        by: ['customerId'],
+        where: { tenantId, branchId, customerId: { not: null } },
+      });
+      const ids = rows.map(r => r.customerId).filter(Boolean);
+      branchScope = { id: { in: ids.length ? ids : ['__none__'] } };
+    }
+
+    const where = { tenantId, deletedAt: null, ...branchScope };
     const [allCustomers, avgAgg, withEmail, withAddress, addressRows, lastVisitRows] = await Promise.all([
       prisma.customer.findMany({
         where,
