@@ -1162,11 +1162,11 @@ function ClosingCtaSection({ ctx }) {
         {closing.image && (
           <>
             <img src={closing.image} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover" />
-            {/* Dua lapis agar teks tetap terbaca di atas gambar apa pun: tint
-                gelap rata + gradient yang menebal di tengah (tempat teks). */}
-            <div className="absolute inset-0 bg-[#1E1B2E]/85" />
+            {/* Tint tipis supaya gambar tetap jelas, ditambah scrim lembut di
+                tengah (tempat teks) — keterbacaan utama ditopang text-shadow. */}
+            <div className="absolute inset-0 bg-[#1E1B2E]/45" />
             <div className="absolute inset-0" style={{
-              background: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(20,18,32,0.75), transparent 75%)',
+              background: 'radial-gradient(ellipse 65% 55% at 50% 50%, rgba(20,18,32,0.5), transparent 78%)',
             }} />
           </>
         )}
@@ -1175,10 +1175,10 @@ function ClosingCtaSection({ ctx }) {
         }} />
         <div className="relative z-10">
           <Lucide.Scissors className="text-[#6366F1] mx-auto mb-4" size={30} />
-          <h2 className={`font-display text-3xl lg:text-[2.6rem] font-bold text-white leading-tight ${closing.image ? '[text-shadow:0_2px_12px_rgba(0,0,0,0.55)]' : ''}`}>
+          <h2 className={`font-display text-3xl lg:text-[2.6rem] font-bold text-white leading-tight ${closing.image ? '[text-shadow:0_2px_16px_rgba(0,0,0,0.85)]' : ''}`}>
             {closing.title}
           </h2>
-          <p className={`max-w-lg mx-auto mt-4 mb-8 ${closing.image ? 'text-white/90 [text-shadow:0_1px_8px_rgba(0,0,0,0.5)]' : 'text-[#A5A2C8]'}`}>
+          <p className={`max-w-lg mx-auto mt-4 mb-8 ${closing.image ? 'text-white [text-shadow:0_1px_12px_rgba(0,0,0,0.8)]' : 'text-[#A5A2C8]'}`}>
             {closing.subtitle}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
