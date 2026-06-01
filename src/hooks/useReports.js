@@ -71,7 +71,7 @@ export function useHeatmapReport(tenantId, { startDate, endDate, branchId } = {}
       const params = { tenantId, startDate, endDate }
       if (branchId) params.branchId = branchId
       const res = await api.get('/reports/heatmap', { params })
-      return res.data.data // matrix [12][7]
+      return { matrix: res.data.data, meta: res.data.meta || {} } // matrix [jam][7] + meta.hoursStart/hoursEnd
     },
     enabled: !!tenantId && !!enabled,
     staleTime: 30_000,

@@ -268,12 +268,26 @@ router.get('/heatmap', authenticate, requireRole('super_admin', 'tenant_admin'),
     if (tenantId) txWhere.tenantId = tenantId;
     if (branchId) txWhere.branchId = branchId;
 
-    const transactions = await prisma.transaction.findMany({
-      where: txWhere,
-      select: { createdAt: true },
-    });
-
-    const HOURS = 12; // 09:00..20:00
+    // Rentang jam mengikuti jam buka cabang. Pilih cabang → cabang itu; "semua"
+    // → gabungan (buka paling awal sampai tutup paling akhir). Fallback 09–20.
+    const branchWhere = { deletedAt: null, isActive: true };
+    if (tenantId) branchWhere.tenantId = tenantId;
+    if (branchId) branchWhere.id = branchId;
+    const branchRows = await prisma.branch.findMany({ where: branchWhere, select: { openTime: true, closeTime: true } });
+    const parseHM = (s) => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(s || '').trim()); if (!m) return null; const h = +m[1], mi = +m[2]; return (h >= 0 && h <= 23 && mi >= 0 && mi <= 59) ? h * 60 + mi : null; };
+    const opens = branchRows.map((b) => parseHM(b.openTime)).filter((v) => v != null);
+    const closes = branchRows.map((b) => parseHM(b.closeTime)).filter((v) => v != null);
+    let startHour = 9, endHour = 20; // default & fallback
+    if (opens.length && closes.length) {
+      const openMin = Math.min(...opens);
+      const closeMin = Math.max(...closes);
+      const sH = Math.floor(openMin / 60);
+      // closeTime = jam toko TUTUP. Slot terakhir = jam sebelum tutup bila menit 0
+      // (mis. tutup 21:00 → slot terakhir 20:00); bila ada menit → ikutkan jamnya.
+      const eH = (closeMin % 60 === 0) ? Math.floor(closeMin / 60) - 1 : Math.floor(closeMin / 60);
+      if (eH >= sH && eH <= 23 && sH >= 0) { startHour = sH; endHour = Math.min(eH, 23); }
+    }
+    const HOURS = endHour - startHour + 1;
     const DAYS = 7;   // Sen..Min (Mon..Sun)
     const dayIdx = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
     const data = Array.from({ length: HOURS }, () => Array(DAYS).fill(0));
@@ -285,11 +299,11 @@ router.get('/heatmap', authenticate, requireRole('super_admin', 'tenant_admin'),
       const wd = parts.find((p) => p.type === 'weekday')?.value;
       const h = parseInt(parts.find((p) => p.type === 'hour')?.value, 10);
       const di = dayIdx[wd];
-      const hi = h - 9; // jam 9 → index 0
+      const hi = h - startHour;
       if (di != null && hi >= 0 && hi < HOURS) { data[hi][di] += 1; counted += 1; }
     }
 
-    res.json({ success: true, data, meta: { timezone: tz, total: transactions.length, counted, hoursStart: 9, hoursEnd: 20 } });
+    res.json({ success: true, data, meta: { timezone: tz, total: transactions.length, counted, hoursStart: startHour, hoursEnd: endHour } });
   } catch (err) {
     next(err);
   }

@@ -369,10 +369,10 @@ export default function TAReportsPage() {
           <CardBody>
             {heatmapQ.isLoading ? (
               <Skeleton className="h-64" />
-            ) : (heatmapQ.data && heatmapQ.data.flat().some(v => v > 0)) ? (
+            ) : (heatmapQ.data?.matrix && heatmapQ.data.matrix.flat().some(v => v > 0)) ? (
               <>
-                <HeatmapChart data={heatmapQ.data} />
-                <p className="text-xs text-muted mt-3">Makin gelap = makin ramai. Rentang jam 09:00–20:00, zona waktu toko. Pakai ini untuk atur jumlah barber di jam ramai &amp; promo di jam sepi.</p>
+                <HeatmapChart data={heatmapQ.data.matrix} hoursStart={heatmapQ.data.meta?.hoursStart} hoursEnd={heatmapQ.data.meta?.hoursEnd} />
+                <p className="text-xs text-muted mt-3">Makin gelap = makin ramai. Rentang jam mengikuti jam buka cabang, zona waktu toko. Pakai ini untuk atur jumlah barber di jam ramai &amp; promo di jam sepi.</p>
               </>
             ) : (
               <p className="text-sm text-muted text-center py-8">Belum ada transaksi pada rentang ini.</p>
