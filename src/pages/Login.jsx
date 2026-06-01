@@ -67,7 +67,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-dark lg:grid lg:grid-cols-2">
+    <div className="min-h-screen bg-dark lg:grid lg:grid-cols-2 overflow-x-hidden">
       {/* ── Panel kiri: branding (desktop) ─────────────────────────────────── */}
       <div className="relative hidden lg:flex flex-col justify-between overflow-hidden p-12 text-white"
            style={{ background: 'linear-gradient(135deg,#4F46E5 0%,#6366F1 45%,#10B981 120%)' }}>
@@ -123,14 +123,14 @@ export default function Login() {
       </div>
 
       {/* ── Panel kanan: form ──────────────────────────────────────────────── */}
-      <div className="relative flex items-center justify-center p-4 sm:p-8 min-h-screen lg:min-h-0">
+      <div className="relative flex items-center justify-center p-4 sm:p-8 min-h-screen lg:min-h-0 w-full">
         {/* Dekorasi halus khusus mobile/tablet (saat panel kiri tersembunyi) */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none lg:hidden">
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-brand/10 rounded-full blur-3xl" />
           <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-brand/10 rounded-full blur-3xl" />
         </div>
 
-        <div className="w-full max-w-md relative z-10">
+        <div className="w-full max-w-md min-w-0 relative z-10">
           {/* Brand header — tampil di mobile (panel kiri tersembunyi) */}
           <motion.div
             initial={{ opacity: 0, y: -16 }}
