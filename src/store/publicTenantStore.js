@@ -24,7 +24,11 @@ export const usePublicTenantStore = create((set) => ({
       set({ status: 'no_tenant', slug: null })
       return
     }
-    set({ status: 'loading', slug })
+    // Tampilkan 'loading' HANYA saat muat pertama (status idle). Re-resolve latar
+    // (mis. dipanggil setelah simpan pengaturan via useUpdateMyTenant) tidak boleh
+    // membalik status ke 'loading' — itu memicu LoadingScreen di TenantGate yang
+    // me-remount seluruh app → tab/scroll ter-reset (terasa "lompat ke halaman lain").
+    set((s) => (s.status === 'idle' ? { status: 'loading', slug } : { slug }))
     try {
       const [resolveRes, infoRes] = await Promise.all([
         axios.get(`${BASE_URL}/tenants/resolve`, { headers: { 'X-Tenant-Slug': slug } }),
@@ -48,7 +52,9 @@ export const usePublicTenantStore = create((set) => ({
         slug,
       })
     } catch {
-      set({ status: 'not_found', slug })
+      // Error transien saat re-resolve latar tak boleh melempar app yang sedang
+      // berjalan ke layar "Tenant Tidak Ditemukan" — pertahankan status baik.
+      set((s) => (s.status === 'found' || s.status === 'suspended' ? {} : { status: 'not_found', slug }))
     }
   },
 }))
