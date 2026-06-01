@@ -60,7 +60,7 @@ const SEGMENT_META = {
   loyal:  { key: 'pos.segLoyal',  cls: 'text-blue-300 bg-blue-400/10 border-blue-400/30' },
   new:    { key: 'pos.segNew',    cls: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/30' },
   atRisk: { key: 'pos.segAtRisk', cls: 'text-amber-300 bg-amber-500/10 border-amber-500/30' },
-  lost:   { key: 'pos.segLost',   cls: 'text-red-300 bg-red-500/10 border-red-500/30' },
+  lost:   { key: 'pos.segLost',   cls: 'text-red-400 bg-red-500/10 border-red-500/30' },
   never:  { key: 'pos.segNever',  cls: 'text-muted bg-dark-surface border-dark-border' },
 }
 
@@ -1618,7 +1618,7 @@ function POSPageInner() {
 
               <div className="border-t border-dashed border-gray-300 my-2" />
               <p className="text-center text-xs text-gray-400">{t('pos.receiptThanksLong')}</p>
-              <p className="text-center text-xs text-gray-300 mt-0.5">{t('pos.poweredBy')}</p>
+              <p className="text-center text-xs text-gray-400 mt-0.5">{t('pos.poweredBy')}</p>
 
               {/* QR rating — tampil di layar (dalam preview struk) & ikut tercetak.
                   Kanal mandiri tanpa WhatsApp; berguna juga untuk walk-in tanpa HP. */}

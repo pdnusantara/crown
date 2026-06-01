@@ -1018,7 +1018,7 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
 
             <div className="border-t border-dashed border-gray-300 my-2" />
             <p className="text-center text-xs text-gray-400">Terima kasih sudah berkunjung!</p>
-            <p className="text-center text-xs text-gray-300 mt-0.5">Powered by SembaPos</p>
+            <p className="text-center text-xs text-gray-400 mt-0.5">Powered by SembaPos</p>
           </div>
 
           {/* Header */}
