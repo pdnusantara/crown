@@ -8,8 +8,13 @@ const { recordAudit } = require('../utils/auditLog');
 const { seedTenantFlags } = require('../services/featureFlagSync');
 const { normalizePhone } = require('../services/customerService');
 
+// Email dinormalkan (trim + lowercase) supaya login & cek duplikat tidak
+// bergantung pada besar-kecil huruf. Lookup ke DB tetap case-insensitive untuk
+// mengakomodasi akun lama yang terlanjur tersimpan mixed-case.
+const normalizedEmail = z.string().email().transform(e => e.trim().toLowerCase());
+
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: normalizedEmail,
   password: z.string().min(1),
 });
 
@@ -25,7 +30,7 @@ const registerSchema = z.object({
   businessName: z.string().min(2).max(200),
   slug:         z.string().min(2).max(40).regex(slugRegex, 'Slug hanya boleh huruf kecil, angka, dan tanda hubung'),
   ownerName:    z.string().min(2).max(150),
-  email:        z.string().email(),
+  email:        normalizedEmail,
   phone:        z.string().min(8).max(20),
   password:     z.string().min(8, 'Password minimal 8 karakter').max(72),
   packageName:  z.enum(['Basic', 'Pro', 'Enterprise']).default('Basic'),
@@ -125,8 +130,8 @@ router.post('/register', async (req, res, next) => {
     const phoneOptions = phoneVariants(body.phone);
 
     const [emailExists, tenantEmailExists, slugExists, phoneTenantExists, phoneOwnerExists] = await Promise.all([
-      prisma.user.findUnique({ where: { email: body.email }, select: { id: true } }),
-      prisma.tenant.findUnique({ where: { email: body.email }, select: { id: true } }),
+      prisma.user.findFirst({ where: { email: { equals: body.email, mode: 'insensitive' } }, select: { id: true } }),
+      prisma.tenant.findFirst({ where: { email: { equals: body.email, mode: 'insensitive' } }, select: { id: true } }),
       prisma.tenant.findFirst({ where: { slug, deletedAt: null }, select: { id: true } }),
       // Nomor HP wajib unik lintas tenant aktif (1 nomor = 1 akun owner).
       // Tenant yang sudah dihapus (deletedAt) tidak menghalangi pakai-ulang.
@@ -299,8 +304,11 @@ router.post('/login', async (req, res, next) => {
   try {
     const { email, password } = loginSchema.parse(req.body);
 
-    const user = await prisma.user.findUnique({
-      where: { email },
+    // Case-insensitive: email input sudah di-lowercase oleh schema, tapi data
+    // lama bisa tersimpan mixed-case — cocokkan tanpa peduli besar-kecil huruf.
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+      orderBy: { createdAt: 'asc' },
       select: {
         id: true,
         email: true,

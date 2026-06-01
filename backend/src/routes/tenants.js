@@ -67,8 +67,9 @@ const slugSchema = z.string().min(2).regex(/^[a-z0-9-]+$/, 'Slug may contain onl
 const createTenantSchema = z.object({
   name: z.string().min(1).max(255),
   slug: slugSchema,
-  email: z.string().email().optional(),
-  ownerEmail: z.string().email().optional(),
+  // Lowercase+trim agar seragam dengan login yang case-insensitive.
+  email: z.string().email().transform(e => e.trim().toLowerCase()).optional(),
+  ownerEmail: z.string().email().transform(e => e.trim().toLowerCase()).optional(),
   ownerName: z.string().min(1).optional(),
   ownerPassword: z.string().min(8).optional(),
   phone: z.string().optional(),
@@ -222,14 +223,14 @@ router.post('/', authenticate, requireRole('super_admin'), async (req, res, next
       where: {
         deletedAt: null,
         OR: [
-          { email: primaryEmail },
+          { email: { equals: primaryEmail, mode: 'insensitive' } },
           body.slug ? { slug: body.slug } : undefined,
         ].filter(Boolean),
       },
       select: { id: true, email: true, slug: true },
     });
     if (conflict) {
-      const field = conflict.email === primaryEmail ? 'email' : 'slug';
+      const field = conflict.email?.toLowerCase() === primaryEmail?.toLowerCase() ? 'email' : 'slug';
       return res.status(409).json({ success: false, error: `Tenant with this ${field} already exists` });
     }
 
@@ -691,8 +692,11 @@ router.post('/:id/reset-password', authenticate, requireRole('super_admin'), asy
       ? newPassword
       : Array.from({ length: 12 }, () => CHARSET[Math.floor(Math.random() * CHARSET.length)]).join('');
 
+    // orderBy createdAt asc → selalu pilih owner asli (tenant_admin tertua) bila
+    // tenant punya >1 admin, supaya reset deterministik & tak salah akun.
     const owner = await prisma.user.findFirst({
       where: { tenantId: req.params.id, role: 'tenant_admin', isActive: true },
+      orderBy: { createdAt: 'asc' },
       select: { id: true, email: true },
     });
     if (!owner) return res.status(404).json({ success: false, error: 'Owner user not found for this tenant' });

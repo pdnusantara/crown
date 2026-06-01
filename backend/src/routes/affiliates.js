@@ -80,7 +80,7 @@ const affiliateSelect = {
 
 const createSchema = z.object({
   name:           z.string().min(2).max(150),
-  email:          z.string().email(),
+  email:          z.string().email().transform(e => e.trim().toLowerCase()),
   phone:          z.string().min(8).max(20),
   password:       z.string().min(8).max(72),
   commissionRate: z.number().min(0).max(1).optional(), // 0..1 (mis. 0.10 = 10%)
@@ -217,8 +217,8 @@ router.post('/', authenticate, requireRole('super_admin'), async (req, res, next
   try {
     const body = createSchema.parse(req.body);
     const [emailUser, emailTenant] = await Promise.all([
-      prisma.user.findUnique({ where: { email: body.email }, select: { id: true } }),
-      prisma.tenant.findUnique({ where: { email: body.email }, select: { id: true } }),
+      prisma.user.findFirst({ where: { email: { equals: body.email, mode: 'insensitive' } }, select: { id: true } }),
+      prisma.tenant.findFirst({ where: { email: { equals: body.email, mode: 'insensitive' } }, select: { id: true } }),
     ]);
     if (emailUser || emailTenant) {
       return res.status(409).json({ success: false, error: 'Email sudah terdaftar' });

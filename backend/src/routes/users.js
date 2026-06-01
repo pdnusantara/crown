@@ -51,7 +51,9 @@ const userSelect = {
 };
 
 const createUserSchema = z.object({
-  email: z.string().email(),
+  // Email dinormalkan lowercase+trim — login bersifat case-insensitive, jadi
+  // simpan seragam agar tak ada akun "kembar" beda huruf besar/kecil.
+  email: z.string().email().transform(e => e.trim().toLowerCase()),
   // Password opsional — kalau tidak dikirim, server generate otomatis dan
   // mengembalikannya satu kali di response (lihat POST handler).
   password: z.string().min(6).optional(),

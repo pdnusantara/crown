@@ -63,7 +63,7 @@ router.get('/affiliate-code/:code', async (req, res) => {
 const _z = require('zod');
 const affiliateRegisterSchema = _z.object({
   name:     _z.string().min(2).max(150),
-  email:    _z.string().email(),
+  email:    _z.string().email().transform(e => e.trim().toLowerCase()),
   phone:    _z.string().min(8).max(20),
   password: _z.string().min(8).max(72),
   bio:      _z.string().max(500).optional(),
@@ -77,8 +77,8 @@ router.post('/affiliate-register', async (req, res, next) => {
     const crypto = require('crypto');
 
     const [emailUser, emailTenant] = await Promise.all([
-      prisma.user.findUnique({ where: { email: body.email }, select: { id: true } }),
-      prisma.tenant.findUnique({ where: { email: body.email }, select: { id: true } }),
+      prisma.user.findFirst({ where: { email: { equals: body.email, mode: 'insensitive' } }, select: { id: true } }),
+      prisma.tenant.findFirst({ where: { email: { equals: body.email, mode: 'insensitive' } }, select: { id: true } }),
     ]);
     if (emailUser || emailTenant) {
       return res.status(409).json({ success: false, error: 'Email sudah terdaftar' });
