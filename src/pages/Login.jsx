@@ -122,7 +122,7 @@ export default function Login() {
             <div className="flex items-start gap-2 bg-brand/10 border border-brand/30 rounded-xl p-3 mb-4 text-off-white text-xs leading-relaxed">
               <Building2 size={14} className="mt-0.5 flex-shrink-0 text-brand" />
               <p>
-                Login tenant <span className="font-semibold">{tenantName}</span>. Super-admin tidak bisa login dari subdomain ini.
+                Login tenant <span className="font-semibold">{tenantName}</span>.
               </p>
             </div>
           )}
