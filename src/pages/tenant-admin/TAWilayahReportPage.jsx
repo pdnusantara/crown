@@ -12,6 +12,8 @@ import {
 import { formatDistanceToNow } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
 import { useAuthStore } from '../../store/authStore.js'
+import { useIsFeatureEnabled } from '../../hooks/useFeatureFlags.js'
+import { Link } from 'react-router-dom'
 import api from '../../lib/api.js'
 import { useWilayahReport } from '../../hooks/useWilayahReport.js'
 import { useProvinces, useRegencies } from '../../hooks/useWilayah.js'
@@ -495,7 +497,37 @@ function EmptyData({ kabupaten }) {
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
+// Wrapper feature-gate: Laporan Wilayah = fitur Pro+ (flag `wilayah_report`).
+// Akses langsung via URL pada paket tanpa fitur ini → layar "belum aktif",
+// bukan kebocoran fitur. Inner di-render hanya saat flag aktif (rule-of-hooks aman).
 export default function TAWilayahReportPage() {
+  const { user } = useAuthStore()
+  const enabled = useIsFeatureEnabled(user?.tenantId, 'wilayah_report')
+  if (!enabled) {
+    return (
+      <div className="max-w-lg mx-auto mt-10 px-4">
+        <Card>
+          <CardBody className="text-center py-10">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-brand/10 border border-brand/20 mb-4">
+              <MapPin className="w-7 h-7 text-brand" />
+            </div>
+            <h2 className="font-display text-xl font-semibold text-off-white mb-2">Laporan Wilayah belum aktif</h2>
+            <p className="text-sm text-muted leading-relaxed max-w-sm mx-auto">
+              Analisis kunjungan & omzet per kecamatan/kelurahan tersedia di paket yang lebih tinggi.
+              Upgrade paket untuk membuka fitur ini.
+            </p>
+            <Link to="/admin/billing" className="inline-flex mt-5">
+              <Button>Lihat Paket & Upgrade</Button>
+            </Link>
+          </CardBody>
+        </Card>
+      </div>
+    )
+  }
+  return <WilayahReportInner />
+}
+
+function WilayahReportInner() {
   const { user } = useAuthStore()
   const toast = useToast()
   const chart = useChartTheme()

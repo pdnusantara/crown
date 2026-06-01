@@ -60,8 +60,11 @@ const navConfig = {
     { section: 'Operasional', labelKey: 'nav.expenses',   icon: Wallet,          path: '/admin/expenses' },
 
     { section: 'Laporan',     labelKey: 'nav.reports',        icon: BarChart3,  path: '/admin/reports' },
-    { section: 'Laporan',     labelKey: 'nav.comparison',     icon: GitCompare, path: '/admin/comparison' },
-    { section: 'Laporan',     labelKey: 'nav.wilayahReport',  icon: MapPin,     path: '/admin/wilayah-report' },
+    // Perbandingan Cabang hanya relevan bila tenant punya >=2 cabang (cabang =
+    // add-on, bisa di paket mana pun). Disembunyikan utk single-branch spt Basic.
+    { section: 'Laporan',     labelKey: 'nav.comparison',     icon: GitCompare, path: '/admin/comparison', minBranches: 2 },
+    // Laporan Wilayah = fitur analitik berbayar (Pro+). Gate via flag paket.
+    { section: 'Laporan',     labelKey: 'nav.wilayahReport',  icon: MapPin,     path: '/admin/wilayah-report', flag: 'wilayah_report' },
     { section: 'Laporan',     labelKey: 'nav.ratings',        icon: Star,       path: '/admin/ratings' },
 
     { section: 'Komunikasi',  labelKey: 'nav.whatsappLogs',   icon: MessageCircle, path: '/admin/whatsapp-logs', flag: 'whatsapp_logs' },
@@ -184,7 +187,11 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
     const config = navConfig[user.role]
     if (!config) return []
     const items = typeof config === 'function' ? config(user) : config
-    return items.filter((i) => !i.flag || enabledFlags.includes(i.flag))
+    return items.filter((i) => {
+      if (i.flag && !enabledFlags.includes(i.flag)) return false
+      if (i.minBranches && branches.length < i.minBranches) return false
+      return true
+    })
   }
 
   const navItems = getNavItems()
