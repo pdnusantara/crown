@@ -53,7 +53,7 @@ const JSON_KEYS = ['features', 'trustItems', 'steps', 'sections', 'closingCta'];
 // kontennya dari sumber lama (hero/sections/testimoni/dll); blok "free" bisa
 // banyak instance dengan konten inline di `config`.
 const LAYOUT_KEY = 'landing_layout';
-const ORDERABLE_CORE_TYPES = ['stats', 'features', 'steps', 'pricing', 'testimonials', 'faq', 'closingCta'];
+const ORDERABLE_CORE_TYPES = ['stats', 'features', 'steps', 'roi', 'pricing', 'testimonials', 'faq', 'closingCta'];
 const FREE_BLOCK_TYPES = ['gallery', 'video', 'logoStrip', 'banner', 'richText'];
 const ALL_BLOCK_TYPES = [...ORDERABLE_CORE_TYPES, ...FREE_BLOCK_TYPES];
 

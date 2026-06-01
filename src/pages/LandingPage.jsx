@@ -84,6 +84,7 @@ const FALLBACK_STEPS = [
 const FALLBACK_SECTIONS = {
   features:     { kicker: 'Fitur Lengkap',  title: 'Semua yang barbershop kamu butuhin', subtitle: 'Nggak perlu spreadsheet atau aplikasi terpisah. Dari kasir sampai laporan pemilik, semua sudah satu paket.' },
   steps:        { kicker: 'Gampang Banget', title: 'Mulai cuma 3 langkah', subtitle: 'Dari daftar sampai toko jalan, bisa kelar hari ini juga. Beneran.' },
+  roi:          { kicker: 'Hitung Untungnya', title: 'Berapa yang bisa toko kamu hemat?', subtitle: 'Geser angkanya sesuai kondisi toko kamu. Lihat sendiri estimasi tambahan omzet & waktu yang bisa kamu hemat tiap bulan.' },
   pricing:      { kicker: 'Paket Harga',    title: 'Harga jelas, tanpa kejutan', subtitle: 'Mulai gratis 14 hari. Bayar cuma kalau toko kamu makin ramai — bisa naik paket kapan saja.' },
   testimonials: { kicker: 'Testimoni',      title: 'Kata para owner barbershop', subtitle: 'Mereka sudah pindah dari catatan manual ke SembaPOS — dan nggak mau balik lagi.' },
   faq:          { kicker: 'Tanya Jawab',    title: 'Masih ragu? Wajar kok', subtitle: 'Belum nemu jawabannya? Chat tim kami langsung lewat WhatsApp.' },
@@ -117,7 +118,7 @@ function upsertMeta(selector, content) {
 }
 
 // Urutan section default kalau /api/landing belum mengembalikan `layout`.
-const FALLBACK_LAYOUT = ['stats', 'features', 'steps', 'pricing', 'testimonials', 'faq', 'closingCta']
+const FALLBACK_LAYOUT = ['stats', 'features', 'steps', 'roi', 'pricing', 'testimonials', 'faq', 'closingCta']
   .map(t => ({ id: t, type: t, visible: true }))
 
 // Render judul hero — 2 kata terakhir ditonjolkan brand-italic (memenuhi
@@ -468,6 +469,14 @@ export default function LandingPage({ heroLayout = 'split' } = {}) {
         .btn-ghost{display:inline-flex;align-items:center;gap:.45rem;padding:.95rem 1.5rem;border-radius:.85rem;
           background:#fff;border:1px solid #C7CBE0;color:#1E1B2E;font-weight:600;font-size:.95rem;transition:all .2s}
         .btn-ghost:hover{border-color:#6366F1;background:#FAFAFD;color:#4F46E5}
+        .roi-range{-webkit-appearance:none;appearance:none;height:8px;border-radius:9999px;
+          background:#E4E6F2;cursor:pointer;outline:none}
+        .roi-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:22px;height:22px;
+          border-radius:9999px;background:#6366F1;border:3px solid #fff;
+          box-shadow:0 2px 8px -1px rgba(99,102,241,.55);cursor:pointer}
+        .roi-range::-moz-range-thumb{width:22px;height:22px;border-radius:9999px;background:#6366F1;
+          border:3px solid #fff;box-shadow:0 2px 8px -1px rgba(99,102,241,.55);cursor:pointer}
+        .roi-range:focus-visible{box-shadow:0 0 0 3px rgba(99,102,241,.25)}
       `}</style>
     </div>
   )
@@ -1290,11 +1299,140 @@ function RichTextSection({ block }) {
   )
 }
 
+// Kalkulator ROI interaktif — pengunjung menggeser kondisi tokonya dan melihat
+// estimasi tambahan omzet, kebocoran yang tercegah, & waktu admin yang dihemat.
+// Semua angka memakai asumsi KONSERVATIF dan diberi label "estimasi" — tujuannya
+// memberi gambaran, bukan janji. Pembanding biaya diambil dari paket termurah
+// yang benar-benar aktif (real-time), fallback Rp99.000 bila paket belum termuat.
+function RoiSection({ ctx }) {
+  const { sections, packages } = ctx
+
+  // Asumsi konservatif (bisa ditinjau): uplift kunjungan ulang dari loyalti +
+  // pengingat booking, dan omzet yang sebelumnya bocor karena tak tercatat.
+  const RETURN_UPLIFT = 0.06   // 6% omzet — pelanggan balik lebih sering
+  const LEAK_RECOVERED = 0.03  // 3% omzet — transaksi tunai yang tadinya lolos
+
+  const [custPerDay, setCustPerDay] = useState(25)
+  const [avgPrice, setAvgPrice]     = useState(45000)
+  const [openDays, setOpenDays]     = useState(26)
+
+  const monthlyRevenue = custPerDay * avgPrice * openDays
+  const upliftValue    = Math.round(monthlyRevenue * RETURN_UPLIFT)
+  const leakValue      = Math.round(monthlyRevenue * LEAK_RECOVERED)
+  const totalBenefit   = upliftValue + leakValue
+  // Waktu rekap/laporan manual yang dihemat — skala ringan dengan volume.
+  const hoursSaved     = Math.min(60, Math.round(8 + (custPerDay * openDays) / 90))
+
+  const cheapest = packages?.length
+    ? Math.min(...packages.map(p => Number(p.price) || Infinity).filter(Boolean))
+    : 99000
+  const planPrice = Number.isFinite(cheapest) && cheapest > 0 ? cheapest : 99000
+  const roiMultiple = planPrice > 0 ? Math.max(1, Math.round(totalBenefit / planPrice)) : 0
+
+  const inputs = [
+    { label: 'Pelanggan per hari', value: custPerDay, set: setCustPerDay, min: 5,    max: 150,    step: 1,    fmt: v => `${v} orang` },
+    { label: 'Rata-rata harga layanan', value: avgPrice, set: setAvgPrice, min: 15000, max: 200000, step: 5000, fmt: v => formatRupiah(v) },
+    { label: 'Hari buka per bulan', value: openDays, set: setOpenDays, min: 20,   max: 31,     step: 1,    fmt: v => `${v} hari` },
+  ]
+
+  const results = [
+    { icon: 'TrendingUp',     label: 'Tambahan omzet / bulan', value: formatRupiah(upliftValue), hint: 'dari pelanggan yang balik lebih sering' },
+    { icon: 'Wallet',         label: 'Kebocoran tercegah / bulan', value: formatRupiah(leakValue), hint: 'transaksi tunai kini tercatat rapi' },
+    { icon: 'CalendarClock',  label: 'Waktu admin dihemat', value: `±${hoursSaved} jam`, hint: 'laporan & rekap jalan otomatis' },
+  ]
+
+  return (
+    <section id="hitung-untung" className="py-14 sm:py-24 px-6">
+      <div className="max-w-6xl mx-auto">
+        <SectionHeading {...sections.roi} />
+
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="mt-12 grid lg:grid-cols-5 gap-6 items-stretch"
+        >
+          {/* Panel input — geser kondisi toko */}
+          <div className="lg:col-span-2 bg-white border border-[#D5D8E8] rounded-2xl p-7 shadow-[0_20px_45px_-30px_rgba(28,26,23,0.5)]">
+            <p className="text-sm font-bold text-[#1E1B2E] mb-6">Kondisi toko kamu</p>
+            <div className="space-y-7">
+              {inputs.map((f) => (
+                <div key={f.label}>
+                  <div className="flex items-baseline justify-between mb-2">
+                    <label className="text-sm text-[#56548A]">{f.label}</label>
+                    <span className="text-sm font-bold text-[#4F46E5] tabular-nums">{f.fmt(f.value)}</span>
+                  </div>
+                  <input
+                    type="range" min={f.min} max={f.max} step={f.step} value={f.value}
+                    onChange={(e) => f.set(Number(e.target.value))}
+                    aria-label={f.label}
+                    className="roi-range w-full"
+                    style={{ accentColor: '#6366F1' }}
+                  />
+                </div>
+              ))}
+            </div>
+            <p className="mt-6 text-xs text-[#8C89B4] leading-relaxed">
+              Estimasi memakai asumsi konservatif (kunjungan ulang +6%, kebocoran tercatat +3%). Hasil nyata tiap toko bisa berbeda.
+            </p>
+          </div>
+
+          {/* Panel hasil */}
+          <div className="lg:col-span-3 flex flex-col gap-5">
+            <div className="grid sm:grid-cols-3 gap-4">
+              {results.map((r, i) => {
+                const Icon = getIcon(r.icon)
+                return (
+                  <motion.div
+                    key={r.label}
+                    initial={{ opacity: 0, y: 16 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.08 }}
+                    className="bg-white border border-[#D5D8E8] rounded-2xl p-5 flex flex-col"
+                  >
+                    <span className="w-9 h-9 rounded-lg bg-[#EEF0FF] flex items-center justify-center mb-3">
+                      <Icon size={18} className="text-[#4F46E5]" />
+                    </span>
+                    <span className="font-display text-xl font-bold text-[#1E1B2E] tabular-nums leading-tight">{r.value}</span>
+                    <span className="text-xs font-semibold text-[#56548A] mt-1">{r.label}</span>
+                    <span className="text-[11px] text-[#8C89B4] mt-1 leading-snug">{r.hint}</span>
+                  </motion.div>
+                )
+              })}
+            </div>
+
+            {/* Banner kesimpulan — manfaat vs biaya langganan */}
+            <div className="flex-1 rounded-2xl bg-[#1E1B2E] text-white p-7 flex flex-col sm:flex-row sm:items-center gap-5 shadow-[0_30px_60px_-25px_rgba(28,26,23,0.6)]">
+              <div className="flex-1">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#D4B25E]">Estimasi manfaat per bulan</p>
+                <p className="font-display text-3xl sm:text-4xl font-bold mt-1 tabular-nums">{formatRupiah(totalBenefit)}</p>
+                <p className="text-sm text-[#A5A2C8] mt-2">
+                  Sekitar <span className="font-bold text-[#D4B25E]">{roiMultiple}×</span> lipat dari biaya langganan mulai {formatRupiah(planPrice)}/bulan.
+                </p>
+              </div>
+              <Link
+                to="/register"
+                onClick={() => trackPixel('Lead', { content_name: 'roi_calculator' })}
+                className="btn-brand whitespace-nowrap self-start sm:self-auto"
+              >
+                Coba Gratis 14 Hari <ArrowRight size={18} />
+              </Link>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  )
+}
+
 // Peta tipe blok → komponen. Dipakai renderer LandingPage untuk render `layout`.
 const BLOCK_REGISTRY = {
   stats:        StatsSection,
   features:     FeaturesSection,
   steps:        StepsSection,
+  roi:          RoiSection,
   pricing:      PricingSection,
   testimonials: TestimonialsSection,
   faq:          FaqSection,
