@@ -141,6 +141,8 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
   const { user, logout } = useAuthStore()
   const { getTenantById, getLowStockProducts } = useTenantStore()
   const { theme, toggleTheme } = useThemeStore()
+  // Toggle mode gelap hanya untuk super_admin — sisi tenant dikunci ke mode terang.
+  const showThemeToggle = user?.role === 'super_admin'
   const { getByTenant: getSubscription } = useSubscriptionStore()
   const navigate = useNavigate()
   const { data: errorStats } = useErrorLogStats(user?.role === 'super_admin')
@@ -374,18 +376,20 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
 
       {/* ── Bottom: subscription badge + theme/lang + user card ─────── */}
       <div className="flex-shrink-0 px-3 pb-3 pt-3 space-y-2 border-t border-white/8">
-        {/* Theme + Language — duduk berdampingan, kompak */}
+        {/* Theme (super_admin saja) + Language — kompak */}
         {!collapsed && (
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-white/8 bg-white/[0.04] text-indigo-300/80 hover:text-off-white hover:border-indigo-300/40 hover:bg-white/[0.08] transition-all text-xs font-medium"
-              title={theme === 'dark' ? 'Mode Terang' : 'Mode Gelap'}
-            >
-              {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-              <span className="hidden xl:inline">{theme === 'dark' ? 'Terang' : 'Gelap'}</span>
-            </button>
+          <div className={`grid ${showThemeToggle ? 'grid-cols-2' : 'grid-cols-1'} gap-2`}>
+            {showThemeToggle && (
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-white/8 bg-white/[0.04] text-indigo-300/80 hover:text-off-white hover:border-indigo-300/40 hover:bg-white/[0.08] transition-all text-xs font-medium"
+                title={theme === 'dark' ? 'Mode Terang' : 'Mode Gelap'}
+              >
+                {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+                <span className="hidden xl:inline">{theme === 'dark' ? 'Terang' : 'Gelap'}</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={toggleLang}
@@ -399,13 +403,15 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
         )}
         {collapsed && (
           <>
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="w-full flex justify-center p-2 rounded-lg text-indigo-300/80 hover:text-off-white hover:bg-white/8 transition-all"
-            >
-              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
+            {showThemeToggle && (
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="w-full flex justify-center p-2 rounded-lg text-indigo-300/80 hover:text-off-white hover:bg-white/8 transition-all"
+              >
+                {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
+            )}
             <button
               type="button"
               onClick={toggleLang}

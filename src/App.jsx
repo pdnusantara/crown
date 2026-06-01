@@ -220,16 +220,25 @@ function PublicTenantLoader({ children }) {
 }
 
 // ── Theme Applier ────────────────────────────────────────────────────────────
+// Mode gelap hanya untuk super_admin. Seluruh aplikasi tenant (admin/kasir/
+// barber/customer/affiliate) & layar sebelum login dipaksa mode TERANG —
+// dark mode dihapus dari sisi tenant atas keputusan produk 2026-06.
 function ThemeApplier() {
-  const { theme } = useThemeStore()
+  const { theme, setTheme } = useThemeStore()
+  const { user } = useAuthStore()
+  const forceLight = user?.role !== 'super_admin'
+
+  // Jaga konsistensi: komponen yang membaca themeStore.theme (mis. warna chart)
+  // ikut light saat dipaksa, tanpa perlu cek peran di tiap tempat.
+  useEffect(() => {
+    if (forceLight && theme !== 'light') setTheme('light')
+  }, [forceLight, theme, setTheme])
+
   useEffect(() => {
     const root = document.documentElement
-    if (theme === 'light') {
-      root.classList.add('light-mode')
-    } else {
-      root.classList.remove('light-mode')
-    }
-  }, [theme])
+    const effectiveLight = forceLight || theme === 'light'
+    root.classList.toggle('light-mode', effectiveLight)
+  }, [forceLight, theme])
   return null
 }
 

@@ -43,6 +43,8 @@
       html, body { background: #0E0E1A; color: #f5f5f5; }
       /* Landing (`/`) SELALU terang — matikan latar gelap di route landing. */
       html.is-landing, html.is-landing body { background: #F4F4FA; color: #1E1B2E; }
+      /* Sisi tenant kini selalu mode terang (dark mode hanya super_admin). */
+      html.light-mode, html.light-mode body { background: #F4F4FA; color: #1E1B2E; }
       /* Sticky nav offset untuk anchor scroll. */
       html { scroll-behavior: smooth; }
       [id] { scroll-margin-top: 80px; }
@@ -56,6 +58,16 @@
         document.documentElement.className += ' is-landing';
         var tc = document.querySelector('meta[name="theme-color"]');
         if (tc) tc.content = '#F4F4FA';
+      } else {
+        // Subdomain tenant (mis. termul.sembapos.com) → mode terang sejak awal
+        // supaya tidak ada kedip gelap; super_admin di domain utama tetap gelap.
+        var p = location.hostname.split('.');
+        var reserved = ['www','app','api','staging','admin','mail','localhost'];
+        if (p.length >= 3 && reserved.indexOf(p[0]) === -1) {
+          document.documentElement.classList.add('light-mode');
+          var tc2 = document.querySelector('meta[name="theme-color"]');
+          if (tc2) tc2.content = '#F4F4FA';
+        }
       }
     </script>
   </head>
