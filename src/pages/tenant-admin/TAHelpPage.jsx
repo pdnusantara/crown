@@ -62,6 +62,7 @@ const CATEGORIES = [
           'Untuk barber pilih skema gaji (Komisi / Pokok / Pokok + Komisi); untuk kasir isi gaji pokok bulanan.',
           'Bila kasir ini juga ikut memotong, aktifkan "Juga seorang barber" lalu isi komisinya — namanya akan muncul di pilihan barber saat transaksi dan komisi serta rating-nya tercatat.',
           'Bagikan kredensial — staf login lewat subdomain toko Anda.',
+          'Jika staf mengisi nomor HP-nya, di kartu staf akan muncul tombol WhatsApp & telepon — Anda bisa menghubungi staf langsung satu klik dari menu Staff.',
         ],
         to: '/admin/staff',
         toLabel: 'Buka Staff',
