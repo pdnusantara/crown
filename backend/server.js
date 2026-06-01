@@ -136,6 +136,21 @@ app.get('/api/health', (req, res) => {
   res.json({ success: true, data: { status: 'ok', timestamp: new Date().toISOString() } });
 });
 
+// ── Dokumentasi API (OpenAPI 3 + Swagger UI) ───────────────────────────────
+// Publik & tanpa konteks tenant — dipasang sebelum tenantResolver. Untuk tim
+// aplikasi Android: GET /api/docs (UI interaktif), GET /api/openapi.json (spec).
+// CSP global helmet dilepas khusus route ini agar aset Swagger UI termuat.
+{
+  const swaggerUi = require('swagger-ui-express');
+  const openapiSpec = require('./src/docs/openapi');
+  const relaxCsp = (req, res, next) => { res.removeHeader('Content-Security-Policy'); next(); };
+  app.get('/api/openapi.json', relaxCsp, (req, res) => res.json(openapiSpec));
+  app.use('/api/docs', relaxCsp, swaggerUi.serve, swaggerUi.setup(openapiSpec, {
+    customSiteTitle: 'SembaPOS API Docs',
+    swaggerOptions: { persistAuthorization: true, docExpansion: 'none', filter: true, tagsSorter: 'alpha' },
+  }));
+}
+
 // Resolve tenant from subdomain or X-Tenant-Slug header on every request
 app.use(tenantResolver);
 
