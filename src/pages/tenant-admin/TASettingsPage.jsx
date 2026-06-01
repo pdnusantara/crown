@@ -12,7 +12,7 @@ import Button from '../../components/ui/Button.jsx'
 import Input from '../../components/ui/Input.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import * as api from '../../lib/api.js'
-import { Settings, Bell, Shield, Palette, Download, Upload, FileText, MessageCircle, Send, QrCode, Smartphone, RefreshCw, PowerOff, CheckCircle2, XCircle, Loader2, AlertTriangle, Phone, ArrowUpRight, ChevronLeft, ChevronRight, X, Star } from 'lucide-react'
+import { Settings, Bell, Shield, Palette, Download, Upload, FileText, MessageCircle, Send, QrCode, Smartphone, RefreshCw, PowerOff, CheckCircle2, XCircle, Loader2, AlertTriangle, Phone, ArrowUpRight, ChevronLeft, ChevronRight, X, Star, Eye, EyeOff } from 'lucide-react'
 import { format, differenceInDays } from 'date-fns'
 import { formatDistanceToNow } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
@@ -45,6 +45,31 @@ export default function TASettingsPage() {
       toast.error(err?.response?.data?.error || 'Gagal memperbarui nama akun')
     } finally {
       setSavingAccount(false)
+    }
+  }
+
+  // Ganti password akun sendiri via PATCH /auth/me (currentPassword wajib).
+  // Tombol mata (showPwd) menampilkan teks yang sedang diketik — password lama
+  // tetap tak bisa dilihat (tersimpan sebagai hash).
+  const [pwdForm, setPwdForm] = useState({ current: '', next: '', confirm: '' })
+  const [showPwd, setShowPwd] = useState(false)
+  const [savingPwd, setSavingPwd] = useState(false)
+  const setPwdField = (k, v) => setPwdForm(f => ({ ...f, [k]: v }))
+  const handleChangePassword = async () => {
+    const { current, next, confirm } = pwdForm
+    if (!current || !next || !confirm) { toast.error(t('tenantAdmin.settings.pwdAllRequired')); return }
+    if (next.length < 6) { toast.error(t('tenantAdmin.settings.pwdTooShort')); return }
+    if (next !== confirm) { toast.error(t('tenantAdmin.settings.pwdMismatch')); return }
+    setSavingPwd(true)
+    try {
+      await updateProfile({ currentPassword: current, newPassword: next })
+      toast.success(t('tenantAdmin.settings.pwdChanged'))
+      setPwdForm({ current: '', next: '', confirm: '' })
+      setShowPwd(false)
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal mengubah password')
+    } finally {
+      setSavingPwd(false)
     }
   }
 
@@ -818,10 +843,41 @@ export default function TASettingsPage() {
               </div>
             </CardHeader>
             <CardBody className="space-y-4">
-              <Input label={t('tenantAdmin.settings.currentPassword')} type="password" placeholder="••••••••" />
-              <Input label={t('tenantAdmin.settings.newPassword')} type="password" placeholder="••••••••" />
-              <Input label={t('tenantAdmin.settings.confirmPassword')} type="password" placeholder="••••••••" />
-              <Button variant="secondary" fullWidth onClick={() => toast.info(t('tenantAdmin.settings.featureInDevelopment'))}>{t('tenantAdmin.settings.changePassword')}</Button>
+              <Input
+                label={t('tenantAdmin.settings.currentPassword')}
+                type={showPwd ? 'text' : 'password'}
+                placeholder="••••••••"
+                autoComplete="current-password"
+                value={pwdForm.current}
+                onChange={e => setPwdField('current', e.target.value)}
+              />
+              <Input
+                label={t('tenantAdmin.settings.newPassword')}
+                type={showPwd ? 'text' : 'password'}
+                placeholder="••••••••"
+                autoComplete="new-password"
+                value={pwdForm.next}
+                onChange={e => setPwdField('next', e.target.value)}
+              />
+              <Input
+                label={t('tenantAdmin.settings.confirmPassword')}
+                type={showPwd ? 'text' : 'password'}
+                placeholder="••••••••"
+                autoComplete="new-password"
+                value={pwdForm.confirm}
+                onChange={e => setPwdField('confirm', e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPwd(v => !v)}
+                className="flex items-center gap-1.5 text-xs text-muted hover:text-off-white transition-colors"
+              >
+                {showPwd ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                {showPwd ? t('tenantAdmin.settings.hidePassword') : t('tenantAdmin.settings.showPassword')}
+              </button>
+              <Button variant="secondary" fullWidth disabled={savingPwd} onClick={handleChangePassword}>
+                {savingPwd ? t('tenantAdmin.settings.changingPassword') : t('tenantAdmin.settings.changePassword')}
+              </Button>
             </CardBody>
           </Card>
 
