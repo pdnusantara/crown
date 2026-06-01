@@ -284,10 +284,26 @@ export default function LandingPage({ heroLayout = 'split' } = {}) {
   const [showStickyCta, setShowStickyCta] = useState(false)
   useEffect(() => {
     if (isPreview) return
+    // Scroll-depth: catat 25/50/75/100% sekali masing-masing → kelihatan di
+    // Meta Events mana pengunjung berhenti membaca (analitik funnel landing).
+    const milestones = [25, 50, 75, 100]
+    const fired = new Set()
     const onScroll = () => {
       const y = window.scrollY
       const nearBottom = window.innerHeight + y > document.documentElement.scrollHeight - 720
       setShowStickyCta(y > 620 && !nearBottom)
+
+      const doc = document.documentElement
+      const scrollable = doc.scrollHeight - window.innerHeight
+      if (scrollable > 0) {
+        const pct = ((y + window.innerHeight) / doc.scrollHeight) * 100
+        for (const m of milestones) {
+          if (pct >= m && !fired.has(m)) {
+            fired.add(m)
+            trackPixel('ScrollDepth', { percent: m })
+          }
+        }
+      }
     }
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
@@ -369,7 +385,21 @@ export default function LandingPage({ heroLayout = 'split' } = {}) {
         bestRating: '5',
       }
     }
-    const ld = { '@context': 'https://schema.org', '@graph': [org, app] }
+    // FAQPage — biar tanya-jawab tampil sebagai rich result accordion di Google.
+    // Hanya disertakan kalau ada FAQ nyata (question + answer terisi).
+    const graph = [org, app]
+    const faqList = (data?.faqs || []).filter(f => f?.question && f?.answer)
+    if (faqList.length > 0) {
+      graph.push({
+        '@type': 'FAQPage',
+        mainEntity: faqList.map(f => ({
+          '@type': 'Question',
+          name: f.question,
+          acceptedAnswer: { '@type': 'Answer', text: f.answer },
+        })),
+      })
+    }
+    const ld = { '@context': 'https://schema.org', '@graph': graph }
     let ldEl = document.getElementById('sembapos-jsonld')
     if (!ldEl) {
       ldEl = document.createElement('script')
@@ -925,8 +955,14 @@ function StepsSection({ ctx }) {
 
 function PricingSection({ ctx }) {
   const { packages, isLoading, sections } = ctx
+  // ViewContent — sinyal minat kuat: pengunjung sampai melihat daftar harga.
+  const priceRef = useRef(null)
+  const priceInView = useInView(priceRef, { once: true, margin: '-120px' })
+  useEffect(() => {
+    if (priceInView) trackPixel('ViewContent', { content_type: 'pricing' })
+  }, [priceInView])
   return (
-    <section id="harga" className="py-14 sm:py-24 px-6">
+    <section ref={priceRef} id="harga" className="py-14 sm:py-24 px-6">
       <div className="max-w-6xl mx-auto">
         <SectionHeading {...sections.pricing} />
 
