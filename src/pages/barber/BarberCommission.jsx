@@ -18,7 +18,7 @@ import { useToast } from '../../components/ui/Toast.jsx'
 import Card from '../../components/ui/Card.jsx'
 import Avatar from '../../components/ui/Avatar.jsx'
 import { formatRupiah, formatRupiahShort, formatDateTime } from '../../utils/format.js'
-import { format, subDays, startOfMonth, endOfMonth, parseISO, differenceInDays } from 'date-fns'
+import { format, subDays, parseISO, differenceInDays } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
 
 const PAGE_SIZE = 8
@@ -31,7 +31,6 @@ const PRESETS = [
   { id: 'today',     label: 'Hari Ini',     range: () => ({ start: todayISO(),               end: todayISO() }) },
   { id: 'yesterday', label: 'Kemarin',      range: () => ({ start: isoDay(subDays(new Date(), 1)), end: isoDay(subDays(new Date(), 1)) }) },
   { id: 'week',      label: '7 Hari',       range: () => ({ start: isoDay(subDays(new Date(), 6)),  end: todayISO() }) },
-  { id: 'month',     label: 'Bulan Ini',    range: () => ({ start: isoDay(startOfMonth(new Date())), end: todayISO() }) },
   { id: '30d',       label: '30 Hari',      range: () => ({ start: isoDay(subDays(new Date(), 29)), end: todayISO() }) },
 ]
 
