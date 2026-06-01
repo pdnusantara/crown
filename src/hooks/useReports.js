@@ -62,6 +62,22 @@ export function useDailyReport(tenantId, days = 7, branchId) {
   })
 }
 
+// Heatmap jam tersibuk (matriks [12 jam][7 hari]). Hanya fetch bila fitur
+// `heatmap` aktif (pass `enabled`) supaya paket tanpa fitur ini tak query.
+export function useHeatmapReport(tenantId, { startDate, endDate, branchId } = {}, enabled = true) {
+  return useQuery({
+    queryKey: ['reports', 'heatmap', tenantId, startDate, endDate, branchId || 'all'],
+    queryFn: async () => {
+      const params = { tenantId, startDate, endDate }
+      if (branchId) params.branchId = branchId
+      const res = await api.get('/reports/heatmap', { params })
+      return res.data.data // matrix [12][7]
+    },
+    enabled: !!tenantId && !!enabled,
+    staleTime: 30_000,
+  })
+}
+
 export function useBarberReport(tenantId, filters = {}) {
   return useQuery({
     queryKey: ['reports', 'barbers', tenantId, filters],

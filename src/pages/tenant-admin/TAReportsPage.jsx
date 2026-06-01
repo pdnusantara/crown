@@ -13,8 +13,10 @@ import { format, subDays } from 'date-fns'
 import { useAuthStore } from '../../store/authStore.js'
 import { useBranches } from '../../hooks/useBranches.js'
 import {
-  useReportSummary, useDailyReport, useBarberReport, useServiceReport,
+  useReportSummary, useDailyReport, useBarberReport, useServiceReport, useHeatmapReport,
 } from '../../hooks/useReports.js'
+import { useIsFeatureEnabled } from '../../hooks/useFeatureFlags.js'
+import HeatmapChart from '../../components/ui/HeatmapChart.jsx'
 import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Table from '../../components/ui/Table.jsx'
@@ -94,6 +96,9 @@ export default function TAReportsPage() {
   const dailyQ    = useDailyReport(tenantId, days, branchId || undefined)
   const barbersQ  = useBarberReport(tenantId, { startDate, endDate, ...(branchId ? { branchId } : {}) })
   const servicesQ = useServiceReport(tenantId, { startDate, endDate, ...(branchId ? { branchId } : {}) })
+  // Heatmap jam tersibuk — fitur paket `heatmap` (Pro+). Hanya fetch bila aktif.
+  const heatmapEnabled = useIsFeatureEnabled(tenantId, 'heatmap')
+  const heatmapQ = useHeatmapReport(tenantId, { startDate, endDate, branchId: branchId || undefined }, heatmapEnabled)
 
   const summary  = summaryQ.data
   const daily    = dailyQ.data || []
@@ -347,6 +352,30 @@ export default function TAReportsPage() {
                   <Line type="monotone" dataKey="revenue" stroke="#6366F1" strokeWidth={2.5} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
+            )}
+          </CardBody>
+        </Card>
+      )}
+
+      {/* Heatmap jam tersibuk — fitur paket `heatmap` (Pro+). */}
+      {heatmapEnabled && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <h3 className="font-semibold text-off-white">Jam Tersibuk</h3>
+              <span className="text-xs text-muted">Jumlah transaksi per jam &amp; hari</span>
+            </div>
+          </CardHeader>
+          <CardBody>
+            {heatmapQ.isLoading ? (
+              <Skeleton className="h-64" />
+            ) : (heatmapQ.data && heatmapQ.data.flat().some(v => v > 0)) ? (
+              <>
+                <HeatmapChart data={heatmapQ.data} />
+                <p className="text-xs text-muted mt-3">Makin gelap = makin ramai. Rentang jam 09:00–20:00, zona waktu toko. Pakai ini untuk atur jumlah barber di jam ramai &amp; promo di jam sepi.</p>
+              </>
+            ) : (
+              <p className="text-sm text-muted text-center py-8">Belum ada transaksi pada rentang ini.</p>
             )}
           </CardBody>
         </Card>

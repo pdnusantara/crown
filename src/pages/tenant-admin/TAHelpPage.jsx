@@ -170,7 +170,7 @@ const CATEGORIES = [
       {
         id: 'l-laporan',
         q: 'Laporan apa saja yang tersedia?',
-        a: 'Menu Laporan menyajikan omzet, jumlah transaksi, performa layanan, serta performa tiap barber lengkap dengan komisi riil yang mereka hasilkan. Bisa difilter per cabang dan periode, lalu diekspor ke CSV.',
+        a: 'Menu Laporan menyajikan omzet, jumlah transaksi, performa layanan, serta performa tiap barber lengkap dengan komisi riil yang mereka hasilkan. Bisa difilter per cabang dan periode, lalu diekspor ke CSV. Khusus paket yang punya fitur Heatmap, ada juga grafik "Jam Tersibuk" (transaksi per jam × hari) untuk membantu atur jadwal barber & promo.',
         to: '/admin/reports',
         toLabel: 'Buka Laporan',
       },

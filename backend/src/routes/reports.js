@@ -252,6 +252,49 @@ router.get('/daily', authenticate, requireRole('super_admin', 'tenant_admin'), a
   }
 });
 
+// Heatmap "jam tersibuk": matriks jumlah transaksi completed per JAM (09:00–20:00)
+// × HARI (Sen–Min), dihitung di zona waktu toko. Dipakai HeatmapChart di Laporan
+// (fitur paket `heatmap` — gating UI di frontend; data tetap tenant-scoped).
+// Bentuk data: data[hourIndex 0..11 = jam 9..20][dayIndex 0..6 = Sen..Min].
+router.get('/heatmap', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
+  try {
+    const tenantId = req.user.role === 'super_admin' ? req.query.tenantId : req.user.tenantId;
+    const branchId = await resolveBranchId(req.query.branchId, tenantId);
+    const tz = await resolveTenantTz(tenantId);
+    const startDate = req.query.startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const endDate = req.query.endDate || new Date().toISOString();
+
+    const txWhere = { status: 'completed', createdAt: buildDateRange(startDate, endDate, tz) };
+    if (tenantId) txWhere.tenantId = tenantId;
+    if (branchId) txWhere.branchId = branchId;
+
+    const transactions = await prisma.transaction.findMany({
+      where: txWhere,
+      select: { createdAt: true },
+    });
+
+    const HOURS = 12; // 09:00..20:00
+    const DAYS = 7;   // Sen..Min (Mon..Sun)
+    const dayIdx = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
+    const data = Array.from({ length: HOURS }, () => Array(DAYS).fill(0));
+    const fmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short', hour: '2-digit', hourCycle: 'h23' });
+
+    let counted = 0;
+    for (const tx of transactions) {
+      const parts = fmt.formatToParts(tx.createdAt);
+      const wd = parts.find((p) => p.type === 'weekday')?.value;
+      const h = parseInt(parts.find((p) => p.type === 'hour')?.value, 10);
+      const di = dayIdx[wd];
+      const hi = h - 9; // jam 9 → index 0
+      if (di != null && hi >= 0 && hi < HOURS) { data[hi][di] += 1; counted += 1; }
+    }
+
+    res.json({ success: true, data, meta: { timezone: tz, total: transactions.length, counted, hoursStart: 9, hoursEnd: 20 } });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/reports/barbers - barber performance report
 router.get('/barbers', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
   try {
