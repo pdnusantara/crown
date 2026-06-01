@@ -11,7 +11,7 @@ import { CSS } from '@dnd-kit/utilities'
 import {
   GripVertical, Eye, EyeOff, Edit3, Copy, Trash2, Plus, Save, Lock, Upload, Image as ImageIcon,
   BarChart3, LayoutGrid, ListChecks, Tag, MessageSquare, HelpCircle, Megaphone,
-  Images, Video, Building2, Type, ExternalLink, Monitor, Smartphone, RefreshCw, Calculator,
+  Images, Video, Building2, Type, ExternalLink, Monitor, Smartphone, RefreshCw, Calculator, Columns2,
 } from 'lucide-react'
 import api from '../../lib/api.js'
 import { useLanding, useUpdateLayout } from '../../hooks/useLanding.js'
@@ -28,6 +28,7 @@ const BLOCK_META = {
   stats:        { label: 'Statistik',      icon: BarChart3,     core: true },
   features:     { label: 'Fitur',          icon: LayoutGrid,    core: true },
   steps:        { label: 'Cara Mulai',     icon: ListChecks,    core: true },
+  compare:      { label: 'Perbandingan',   icon: Columns2,      core: true },
   roi:          { label: 'Kalkulator ROI', icon: Calculator,    core: true },
   pricing:      { label: 'Paket Harga',    icon: Tag,           core: true },
   testimonials: { label: 'Testimoni',      icon: MessageSquare, core: true },
@@ -51,6 +52,7 @@ const CORE_EDIT = {
   pricing:      { nav: '/super-admin/packages', note: 'Diatur di menu Paket Harga' },
   stats:        { note: 'Otomatis dari data — tanpa editor konten' },
   roi:          { note: 'Otomatis menghitung — pengunjung geser sendiri kondisi tokonya' },
+  compare:      { note: 'Daftar perbandingan bawaan — cara lama vs SembaPOS' },
 }
 
 const uid = () =>

@@ -6,7 +6,7 @@ import {
   CalendarDays, Check, ChevronDown, Circle, Code2, DatabaseBackup, Fingerprint,
   Flame, Gem, Gift, LayoutDashboard, ListOrdered, Lock, Mail, MapPin,
   MessageCircle, MessageSquare, Palette, Percent, Phone, Play, Receipt, Scissors,
-  ShieldCheck, Smartphone, Sparkles, Star, TicketPercent, TrendingUp, Users, Wallet,
+  ShieldCheck, Smartphone, Sparkles, Star, TicketPercent, TrendingUp, Users, Wallet, X,
 } from 'lucide-react'
 import { useLanding } from '../hooks/useLanding.js'
 import { useAuthStore } from '../store/authStore.js'
@@ -75,6 +75,18 @@ const FALLBACK_FEATURES = [
 // gagal/loading supaya landing tidak pernah tampil kosong.
 const FALLBACK_TRUST = ['Gratis 14 hari', 'Tanpa kartu kredit', 'Aktif langsung']
 
+// Baris perbandingan "cara lama vs SembaPOS" — dipakai CompareSection. Tiap baris:
+// aspek operasional toko, kondisi tanpa sistem, lalu kondisi dengan SembaPOS.
+const COMPARE_ROWS = [
+  { aspect: 'Rekap omzet',     before: 'Tulis tangan / Excel tiap malam, sering selisih',   after: 'Otomatis real-time, laporan langsung jadi' },
+  { aspect: 'Antrian',         before: 'Pelanggan rebutan, sering ribut giliran',           after: 'Papan antrian digital, giliran jelas & adil' },
+  { aspect: 'Booking',         before: 'Balas chat WA satu-satu, gampang kelewat',          after: 'Pelanggan booking sendiri 24 jam lewat link' },
+  { aspect: 'Komisi barber',   before: 'Hitung manual akhir bulan, rawan salah',           after: 'Terhitung otomatis tiap transaksi' },
+  { aspect: 'Pelanggan balik', before: 'Andalkan ingatan, tanpa data',                     after: 'Poin loyalti + pengingat WhatsApp otomatis' },
+  { aspect: 'Kebocoran kas',   before: 'Susah lacak transaksi yang hilang',                after: 'Semua tercatat & bisa diaudit per kasir' },
+  { aspect: 'Banyak cabang',   before: 'Telepon satu-satu buat tahu omzet',                after: 'Semua cabang dalam satu dashboard' },
+]
+
 const FALLBACK_STEPS = [
   { title: 'Daftar gratis',  desc: 'Bikin akun toko cuma semenit. Langsung dapat masa coba 14 hari, tanpa kartu kredit.' },
   { title: 'Atur toko kamu', desc: 'Tambah cabang, layanan, dan tim. Ada checklist panduan biar nggak ada yang kelewat.' },
@@ -84,6 +96,7 @@ const FALLBACK_STEPS = [
 const FALLBACK_SECTIONS = {
   features:     { kicker: 'Fitur Lengkap',  title: 'Semua yang barbershop kamu butuhin', subtitle: 'Nggak perlu spreadsheet atau aplikasi terpisah. Dari kasir sampai laporan pemilik, semua sudah satu paket.' },
   steps:        { kicker: 'Gampang Banget', title: 'Mulai cuma 3 langkah', subtitle: 'Dari daftar sampai toko jalan, bisa kelar hari ini juga. Beneran.' },
+  compare:      { kicker: 'Kenapa Pindah', title: 'Cara lama vs pakai SembaPOS', subtitle: 'Masih catat manual atau pakai Excel? Lihat bedanya kalau toko kamu jalan pakai satu sistem yang ngerti barbershop.' },
   roi:          { kicker: 'Hitung Untungnya', title: 'Berapa yang bisa toko kamu hemat?', subtitle: 'Geser angkanya sesuai kondisi toko kamu. Lihat sendiri estimasi tambahan omzet & waktu yang bisa kamu hemat tiap bulan.' },
   pricing:      { kicker: 'Paket Harga',    title: 'Harga jelas, tanpa kejutan', subtitle: 'Mulai gratis 14 hari. Bayar cuma kalau toko kamu makin ramai — bisa naik paket kapan saja.' },
   testimonials: { kicker: 'Testimoni',      title: 'Kata para owner barbershop', subtitle: 'Mereka sudah pindah dari catatan manual ke SembaPOS — dan nggak mau balik lagi.' },
@@ -118,7 +131,7 @@ function upsertMeta(selector, content) {
 }
 
 // Urutan section default kalau /api/landing belum mengembalikan `layout`.
-const FALLBACK_LAYOUT = ['stats', 'features', 'steps', 'roi', 'pricing', 'testimonials', 'faq', 'closingCta']
+const FALLBACK_LAYOUT = ['stats', 'features', 'steps', 'compare', 'roi', 'pricing', 'testimonials', 'faq', 'closingCta']
   .map(t => ({ id: t, type: t, visible: true }))
 
 // Render judul hero — 2 kata terakhir ditonjolkan brand-italic (memenuhi
@@ -1335,6 +1348,89 @@ function RichTextSection({ block }) {
   )
 }
 
+// Perbandingan "cara lama vs SembaPOS" — menjawab keberatan utama owner yang
+// masih pakai catatan manual / Excel. Dua kartu berdampingan (kiri: tanpa sistem,
+// kanan: dengan SembaPOS yang ditonjolkan). Baris sejajar mengikuti COMPARE_ROWS.
+function CompareSection({ ctx }) {
+  const { sections } = ctx
+  return (
+    <section id="perbandingan" className="py-14 sm:py-24 px-6 bg-[#EEEEF5]">
+      <div className="max-w-5xl mx-auto">
+        <SectionHeading {...sections.compare} />
+
+        <div className="mt-12 grid md:grid-cols-2 gap-5 items-stretch">
+          {/* Kartu: tanpa sistem */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+            transition={{ duration: 0.45 }}
+            className="rounded-2xl bg-white border border-[#D5D8E8] p-6 sm:p-7"
+          >
+            <div className="flex items-center gap-2.5 mb-5">
+              <span className="w-9 h-9 rounded-lg bg-[#FBE9E9] flex items-center justify-center">
+                <X size={18} className="text-[#D0584E]" />
+              </span>
+              <div>
+                <p className="font-display text-lg font-bold text-[#1E1B2E] leading-none">Cara lama</p>
+                <p className="text-xs text-[#8C89B4] mt-1">Excel, buku tulis, chat manual</p>
+              </div>
+            </div>
+            <ul className="space-y-3.5">
+              {COMPARE_ROWS.map((r) => (
+                <li key={r.aspect} className="flex gap-3">
+                  <X size={17} className="text-[#D0584E] flex-shrink-0 mt-0.5" />
+                  <span className="text-sm text-[#56548A] leading-snug">
+                    <span className="font-semibold text-[#1E1B2E]">{r.aspect}:</span> {r.before}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+
+          {/* Kartu: dengan SembaPOS (ditonjolkan) */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+            transition={{ duration: 0.45, delay: 0.1 }}
+            className="relative rounded-2xl bg-[#1E1B2E] text-[#D5D8E8] p-6 sm:p-7 shadow-[0_30px_60px_-25px_rgba(28,26,23,0.6)]"
+          >
+            <span className="absolute -top-3 right-5 text-[11px] font-bold uppercase tracking-wider bg-[#D4B25E] text-[#1E1B2E] px-3 py-1 rounded-full">
+              Lebih rapi
+            </span>
+            <div className="flex items-center gap-2.5 mb-5">
+              <span className="w-9 h-9 rounded-lg bg-[#10B981]/20 flex items-center justify-center">
+                <Check size={18} className="text-[#34D399]" />
+              </span>
+              <div>
+                <p className="font-display text-lg font-bold text-white leading-none">Pakai SembaPOS</p>
+                <p className="text-xs text-[#A5A2C8] mt-1">Satu aplikasi, semua otomatis</p>
+              </div>
+            </div>
+            <ul className="space-y-3.5">
+              {COMPARE_ROWS.map((r) => (
+                <li key={r.aspect} className="flex gap-3">
+                  <Check size={17} className="text-[#34D399] flex-shrink-0 mt-0.5" />
+                  <span className="text-sm text-[#A5A2C8] leading-snug">
+                    <span className="font-semibold text-white">{r.aspect}:</span> {r.after}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        </div>
+
+        <div className="mt-8 text-center">
+          <Link
+            to="/register"
+            onClick={() => trackPixel('Lead', { content_name: 'compare_section' })}
+            className="btn-brand"
+          >
+            Pindah ke cara yang rapi <ArrowRight size={18} />
+          </Link>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 // Kalkulator ROI interaktif — pengunjung menggeser kondisi tokonya dan melihat
 // estimasi tambahan omzet, kebocoran yang tercegah, & waktu admin yang dihemat.
 // Semua angka memakai asumsi KONSERVATIF dan diberi label "estimasi" — tujuannya
@@ -1468,6 +1564,7 @@ const BLOCK_REGISTRY = {
   stats:        StatsSection,
   features:     FeaturesSection,
   steps:        StepsSection,
+  compare:      CompareSection,
   roi:          RoiSection,
   pricing:      PricingSection,
   testimonials: TestimonialsSection,
