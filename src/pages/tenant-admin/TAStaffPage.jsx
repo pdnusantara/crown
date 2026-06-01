@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react'
 import { useTranslation, Trans } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Plus, Edit2, Trash2, Star, Search, Mail, KeyRound, Copy, Check, AlertTriangle, Camera, X, Eye, EyeOff, RefreshCw, Users, UserPlus, Scissors, Receipt, MapPin, ShieldAlert } from 'lucide-react'
+import { Plus, Edit2, Trash2, Star, Search, Mail, KeyRound, Copy, Check, AlertTriangle, Camera, X, Eye, EyeOff, RefreshCw, Users, UserPlus, Scissors, Receipt, MapPin, ShieldAlert, Lock, CreditCard } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useResetUserPassword } from '../../hooks/useUsers.js'
 import { useBranches, useBranchLicenseSummary } from '../../hooks/useBranches.js'
@@ -32,6 +33,7 @@ function genPassword(len = 10) {
 export default function TAStaffPage() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
+  const navigate = useNavigate()
   const toast = useToast()
   const [showModal, setShowModal] = useState(false)
   const [editStaff, setEditStaff] = useState(null)
@@ -408,6 +410,11 @@ export default function TAStaffPage() {
                           {member.role === 'kasir' && member.isBarber && (
                             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/30">+ Barber</span>
                           )}
+                          {member.lockedPendingAddon && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-400 border border-amber-400/30">
+                              <Lock className="w-2.5 h-2.5" /> {t('tenantAdmin.staff.lockedPendingAddon')}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <div className="flex gap-0.5 flex-shrink-0 -mr-1">
@@ -449,6 +456,18 @@ export default function TAStaffPage() {
                     <p className="text-xs text-muted mt-1">
                       {branches.find(b => b.id === member.branchId)?.name || '-'}
                     </p>
+
+                    {member.lockedPendingAddon && (
+                      <div className="mt-2 p-2 rounded-lg bg-amber-400/5 border border-amber-400/20">
+                        <p className="text-[11px] text-amber-300/90 leading-snug">{t('tenantAdmin.staff.lockedPendingAddonHint')}</p>
+                        <button
+                          onClick={() => navigate('/admin/billing')}
+                          className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-amber-400 hover:text-amber-300 transition-colors"
+                        >
+                          <CreditCard className="w-3.5 h-3.5" /> {t('tenantAdmin.staff.payToActivate')}
+                        </button>
+                      </div>
+                    )}
 
                     {(member.role === 'barber' || (member.role === 'kasir' && member.isBarber)) && (
                       <div className="flex items-center gap-3 mt-2">

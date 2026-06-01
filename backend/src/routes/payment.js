@@ -569,6 +569,13 @@ router.post('/callback', async (req, res) => {
               paidAt: now,
             },
           });
+          // Buka kunci staf yang menunggu pembayaran add-on ini → bisa login.
+          if (target.staffUserId) {
+            await prisma.user.updateMany({
+              where: { id: target.staffUserId, lockedPendingAddon: true },
+              data: { isActive: true, lockedPendingAddon: false },
+            });
+          }
         } else {
           await prisma.invoice.create({
             data: {

@@ -44,6 +44,7 @@ const userSelect = {
   tenantId: true,
   branchId: true,
   isActive: true,
+  lockedPendingAddon: true,
   createdAt: true,
   updatedAt: true,
   tenant: { select: { id: true, name: true } },
@@ -188,7 +189,7 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin'), async
         ? await tx.user.count({ where: { tenantId: body.tenantId, deletedAt: null } })
         : 0;
 
-      const createdUser = await tx.user.create({
+      let createdUser = await tx.user.create({
         data: { ...body, password: hashedPassword },
         select: userSelect,
       });
@@ -232,7 +233,16 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin'), async
                   amount: pkg.staffAddonPrice,
                   type: 'staff_addon',
                   status: 'pending',
+                  staffUserId: createdUser.id,
                 },
+              });
+              // Kunci staf sampai add-on dibayar: tak bisa login (isActive false)
+              // & ditandai lockedPendingAddon. Dibuka otomatis saat invoice lunas
+              // (lihat payment.js). Diaktifkan kembali via callback Duitku.
+              createdUser = await tx.user.update({
+                where: { id: createdUser.id },
+                data: { isActive: false, lockedPendingAddon: true },
+                select: userSelect,
               });
             }
           }
@@ -245,7 +255,7 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin'), async
     await recordAudit(req, {
       action: 'user.create',
       target: `user:${user.id}`,
-      detail: `Staf baru: ${user.name} (${user.role}, ${user.email})${addonInvoice ? ` — staff_addon Rp ${addonInvoice.amount.toLocaleString('id-ID')} pending` : ''}`,
+      detail: `Staf baru: ${user.name} (${user.role}, ${user.email})${addonInvoice ? ` — staff_addon Rp ${addonInvoice.amount.toLocaleString('id-ID')} pending, akun terkunci sampai dibayar` : ''}`,
       severity: 'info',
       tenantId: user.tenantId,
     });
@@ -271,6 +281,15 @@ router.put('/:id', authenticate, requireRole('super_admin', 'tenant_admin'), asy
     }
 
     const body = updateUserSchema.parse(req.body);
+
+    // Staf terkunci karena add-on belum dibayar tak boleh diaktifkan manual —
+    // cegah bypass pembayaran. Aktivasi hanya via pelunasan invoice (payment.js).
+    if (existing.lockedPendingAddon && body.isActive === true) {
+      return res.status(402).json({
+        success: false,
+        error: 'Staf ini terkunci sampai add-on dibayar. Selesaikan pembayaran untuk mengaktifkan.',
+      });
+    }
 
     // tenant_admin TIDAK boleh memindahkan user antar-tenant atau menaikkan ke
     // peran admin (cegah eskalasi hak akses & injeksi akun lintas-tenant).

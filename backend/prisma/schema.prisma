@@ -123,6 +123,10 @@ model User {
   tenantId       String?
   branchId       String?
   isActive       Boolean        @default(true)
+  // True bila staf dibuat di atas kuota paket & menunggu pembayaran add-on.
+  // Selama true, isActive dipaksa false (tak bisa login) sampai invoice
+  // staff_addon terkait lunas → keduanya direset saat pembayaran masuk.
+  lockedPendingAddon Boolean    @default(false)
   deletedAt      DateTime?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
@@ -560,6 +564,9 @@ model Invoice {
   quantity       Int           @default(1)
   paidAt         DateTime?
   createdAt      DateTime      @default(now())
+  // Untuk invoice staff_addon: staf yang dibuat terkunci menunggu pembayaran
+  // ini. Saat invoice lunas, user tsb diaktifkan otomatis. Null untuk tipe lain.
+  staffUserId    String?
   subscription   Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 }
 
