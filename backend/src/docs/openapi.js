@@ -5,7 +5,7 @@
 // Dipakai terutama oleh tim aplikasi Android: autentikasi pakai JWT (Bearer)
 // yang sama dengan web, konteks tenant via subdomain atau header X-Tenant-Slug.
 
-const endpoints = require('./endpoints');
+const endpoints = [...require('./endpoints'), ...require('./endpoints-admin')];
 
 const pkgVersion = (() => {
   try { return require('../../package.json').version || '1.0.0'; } catch { return '1.0.0'; }
@@ -34,6 +34,19 @@ const TAG_MAP = [
   ['/api/subscriptions', 'Subscriptions & Billing'],
   ['/api/payment', 'Payment'],
   ['/api/public', 'Public (Customer)'],
+  // Super-admin / platform
+  ['/api/tenants', 'Tenants (Super Admin)'],
+  ['/api/feature-flags', 'Feature Flags (Super Admin)'],
+  ['/api/whatsapp', 'WhatsApp'],
+  ['/api/telegram', 'Telegram (Super Admin)'],
+  ['/api/tickets', 'Support Tickets'],
+  ['/api/error-logs', 'Error Logs (Super Admin)'],
+  ['/api/broadcasts', 'Broadcasts'],
+  ['/api/landing', 'Landing CMS'],
+  ['/api/audit-logs', 'Audit Logs'],
+  ['/api/super-admin', 'Super Admin (Platform)'],
+  ['/api/affiliates', 'Affiliates (Super Admin)'],
+  ['/api/affiliate', 'Affiliate (Self)'],
 ];
 function tagFor(path) {
   const m = TAG_MAP.find(([p]) => path.startsWith(p));
