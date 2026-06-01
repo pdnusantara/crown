@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react'
 import { useTranslation, Trans } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Plus, Edit2, Trash2, Star, Search, Mail, KeyRound, Copy, Check, AlertTriangle, Camera, X, Eye, EyeOff, RefreshCw, Users, UserPlus, Scissors, Receipt, MapPin, ShieldAlert, Lock, CreditCard } from 'lucide-react'
+import { Plus, Edit2, Trash2, Star, Search, Mail, KeyRound, Copy, Check, AlertTriangle, Camera, X, Eye, EyeOff, RefreshCw, Users, UserPlus, Scissors, Receipt, MapPin, ShieldAlert, Lock, CreditCard, Phone, MessageCircle } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useResetUserPassword } from '../../hooks/useUsers.js'
 import { useBranches, useBranchLicenseSummary } from '../../hooks/useBranches.js'
@@ -18,6 +18,15 @@ import Input from '../../components/ui/Input.jsx'
 import Select from '../../components/ui/Select.jsx'
 import Avatar from '../../components/ui/Avatar.jsx'
 import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx'
+
+// Normalisasi no HP Indonesia → format wa.me (62xxxx).
+const toWaNumber = (raw) => {
+  const d = String(raw || '').replace(/\D/g, '')
+  if (!d) return ''
+  if (d.startsWith('0')) return '62' + d.slice(1)
+  if (d.startsWith('8')) return '62' + d
+  return d
+}
 
 
 // Charset tanpa karakter ambigu (0/O, 1/l/I) — gampang dibacakan ke staf.
@@ -450,6 +459,33 @@ export default function TAStaffPage() {
                       <div className="flex items-center gap-1.5 mt-1.5 text-xs text-muted">
                         <Mail className="w-3 h-3 flex-shrink-0" />
                         <span className="truncate font-mono" title={member.email}>{member.email}</span>
+                      </div>
+                    )}
+
+                    {member.phone && (
+                      <div className="flex items-center gap-1.5 mt-1.5 text-xs text-muted">
+                        <Phone className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate font-mono" title={member.phone}>{member.phone}</span>
+                        {/* Kontak cepat owner → staf: WhatsApp & telepon langsung. */}
+                        <a
+                          href={`https://wa.me/${toWaNumber(member.phone)}`}
+                          target="_blank" rel="noopener noreferrer"
+                          onClick={e => e.stopPropagation()}
+                          title={`WhatsApp ${member.name}`}
+                          aria-label={`WhatsApp ${member.name}`}
+                          className="ml-0.5 p-1 rounded-md text-emerald-600 hover:bg-emerald-500/10 transition-colors"
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                        </a>
+                        <a
+                          href={`tel:${member.phone.replace(/[^\d+]/g, '')}`}
+                          onClick={e => e.stopPropagation()}
+                          title={`Telepon ${member.name}`}
+                          aria-label={`Telepon ${member.name}`}
+                          className="p-1 rounded-md text-brand hover:bg-brand/10 transition-colors"
+                        >
+                          <Phone className="w-3.5 h-3.5" />
+                        </a>
                       </div>
                     )}
 
