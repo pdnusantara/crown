@@ -1244,7 +1244,7 @@ export default function TASettingsPage() {
                 <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{toko}'}</code>, dan{' '}
                 <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{link}'}</code>.
               </p>
-              <div className="rounded-lg border border-brand/20 bg-brand/5 px-3 py-2 text-[12px] text-off-white/90">
+              <div className="rounded-lg border border-brand/20 bg-brand/5 px-3 py-2 text-[12px] text-off-white">
                 <strong className="text-brand">Catatan:</strong> hanya transaksi yang selesai{' '}
                 <em>setelah</em> fitur diaktifkan yang akan menerima link. Transaksi lama tidak akan
                 dikirimi link supaya pelanggan tidak terganggu.
@@ -1466,7 +1466,7 @@ export default function TASettingsPage() {
                       </div>
                       {log.detail && <p className="text-sm text-off-white break-words">{log.detail}</p>}
                       <div className="flex items-center gap-1.5 text-[11px] text-muted flex-wrap">
-                        <span className="text-off-white/70">{log.actorName}</span>
+                        <span className="text-off-white font-medium">{log.actorName}</span>
                         <span>·</span>
                         <span>{formatDateTime(log.createdAt)}</span>
                       </div>

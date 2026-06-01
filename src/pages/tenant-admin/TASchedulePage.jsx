@@ -35,22 +35,23 @@ const DEFAULT_PRESETS = [
   { value: 'Sore', startTime: '14:00', endTime: '22:00' },
   { value: 'Full', startTime: '08:00', endTime: '22:00' },
 ]
+// Chip warna (light mode): text-X-700 di atas bg pale supaya kontras terbaca.
 const PRESET_COLORS = [
-  'bg-blue-500/20 text-blue-300 border-blue-500/30',
-  'bg-orange-500/20 text-orange-300 border-orange-500/30',
+  'bg-blue-500/20 text-blue-700 border-blue-500/30',
+  'bg-orange-500/20 text-orange-700 border-orange-500/30',
   'bg-brand/20 text-brand border-brand/30',
-  'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-  'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
-  'bg-sky-500/20 text-sky-300 border-sky-500/30',
+  'bg-emerald-500/20 text-emerald-700 border-emerald-500/30',
+  'bg-fuchsia-500/20 text-fuchsia-700 border-fuchsia-500/30',
+  'bg-sky-500/20 text-sky-700 border-sky-500/30',
 ]
 
 const BARBER_COLORS = [
-  'bg-purple-500/20 text-purple-300 border-purple-500/30',
-  'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
-  'bg-pink-500/20 text-pink-300 border-pink-500/30',
-  'bg-green-500/20 text-green-300 border-green-500/30',
-  'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
-  'bg-teal-500/20 text-teal-300 border-teal-500/30',
+  'bg-purple-500/20 text-purple-700 border-purple-500/30',
+  'bg-cyan-500/20 text-cyan-700 border-cyan-500/30',
+  'bg-pink-500/20 text-pink-700 border-pink-500/30',
+  'bg-green-500/20 text-green-700 border-green-500/30',
+  'bg-indigo-500/20 text-indigo-700 border-indigo-500/30',
+  'bg-teal-500/20 text-teal-700 border-teal-500/30',
 ]
 
 const TIME_SLOTS = Array.from({ length: 8 }, (_, i) => {
