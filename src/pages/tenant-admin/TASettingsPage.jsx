@@ -979,16 +979,29 @@ export default function TASettingsPage() {
             </CardHeader>
             <CardBody className="space-y-6">
               <p className="text-sm text-muted">
-                Sesuaikan teks pesan WhatsApp yang dikirim ke pelanggan setelah transaksi.
+                Sesuaikan teks pesan WhatsApp ke pelanggan setelah transaksi.
                 Gunakan <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{nama}'}</code> untuk
                 menyisipkan nama pelanggan dan <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{toko}'}</code> untuk
                 nama toko.
               </p>
 
+              {!whatsappEnabled && (
+                <div className="flex items-start gap-2 bg-amber-400/10 border border-amber-400/30 rounded-xl p-3 text-amber-200 text-xs leading-relaxed">
+                  <AlertTriangle size={14} className="mt-0.5 flex-shrink-0 text-amber-400" />
+                  <p>
+                    <span className="font-semibold">Pengiriman otomatis</span> ke WhatsApp pelanggan butuh fitur <span className="font-semibold">WhatsApp Beta</span> (tersedia di paket lebih tinggi).
+                    Di paket kamu yang aktif adalah <span className="font-semibold">Share manual</span> — kasir mengirim struk ke WhatsApp pelanggan satu klik dari halaman kasir (kolom kedua di bawah).
+                  </p>
+                </div>
+              )}
+
               {/* Pesan WA otomatis ke pelanggan */}
               <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-off-white">
+                <label className="flex items-center gap-2 text-sm font-medium text-off-white">
                   Pesan WhatsApp otomatis ke pelanggan
+                  {!whatsappEnabled && (
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30">Perlu WhatsApp Beta</span>
+                  )}
                 </label>
                 <textarea
                   value={txMsgForm.waCustomerMessage}
@@ -1010,8 +1023,11 @@ export default function TASettingsPage() {
 
               {/* Penutup pesan WA share manual */}
               <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-off-white">
+                <label className="flex items-center gap-2 text-sm font-medium text-off-white">
                   Penutup pesan WhatsApp share manual (kasir)
+                  {!whatsappEnabled && (
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-green-500/15 text-green-300 border border-green-500/30">Aktif di paketmu</span>
+                  )}
                 </label>
                 <textarea
                   value={txMsgForm.waShareMessage}
