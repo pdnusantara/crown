@@ -53,8 +53,9 @@ export function HeatmapChart({ data = [], hoursStart = 9, hoursEnd = 20 }) {
   return (
     <div>
       <div className="overflow-x-auto pb-1">
-        {/* Grid mengisi penuh lebar kolom: sel melar rata mengikuti kartu. */}
-        <div className="grid w-full min-w-[420px] gap-1.5" style={{ gridTemplateColumns: 'minmax(44px, auto) repeat(7, 1fr)' }}>
+        {/* Grid mengisi penuh lebar kolom: sel melar rata mengikuti kartu.
+            min-w kecil supaya muat di layar HP tanpa scroll horizontal. */}
+        <div className="grid w-full min-w-[300px] gap-1 sm:gap-1.5" style={{ gridTemplateColumns: 'minmax(34px, auto) repeat(7, 1fr)' }}>
           {/* Header row */}
           <div />
           {DAYS.map((d) => (
@@ -63,7 +64,7 @@ export function HeatmapChart({ data = [], hoursStart = 9, hoursEnd = 20 }) {
           {/* Data rows */}
           {hours.map((hour, hi) => (
             <Fragment key={hour}>
-              <div className="text-[11px] text-muted pr-2 flex items-center justify-end whitespace-nowrap">{hour}</div>
+              <div className="text-[10px] sm:text-[11px] text-muted pr-1.5 sm:pr-2 flex items-center justify-end whitespace-nowrap">{hour}</div>
               {DAYS.map((day, di) => {
                 const val = grid[hi]?.[di] || 0
                 const t = max > 0 ? val / max : 0
@@ -75,11 +76,11 @@ export function HeatmapChart({ data = [], hoursStart = 9, hoursEnd = 20 }) {
                   <div
                     key={`${hour}-${day}`}
                     title={`${DAY_FULL[di]} ${hour} — ${val} transaksi`}
-                    className={`relative h-9 sm:h-11 rounded-lg cursor-default transition-transform duration-150 hover:scale-[1.06] hover:z-10 hover:shadow-md ${isPeak ? 'ring-2 ring-offset-1 ring-brand' : ''}`}
+                    className={`relative h-8 sm:h-11 rounded-md sm:rounded-lg cursor-default transition-transform duration-150 hover:scale-[1.06] hover:z-10 hover:shadow-md ${isPeak ? 'ring-2 ring-offset-1 ring-brand' : ''}`}
                     style={{ backgroundColor: bg }}
                   >
                     {val > 0 && (
-                      <span className={`absolute inset-0 flex items-center justify-center text-[11px] font-semibold ${t > 0.55 ? 'text-white' : 'text-indigo-900/70'}`}>{val}</span>
+                      <span className={`absolute inset-0 items-center justify-center text-[10px] sm:text-[11px] font-semibold ${isPeak ? 'flex' : 'hidden sm:flex'} ${t > 0.55 ? 'text-white' : 'text-indigo-900/70'}`}>{val}</span>
                     )}
                   </div>
                 )
