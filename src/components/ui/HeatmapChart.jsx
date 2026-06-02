@@ -1,11 +1,13 @@
-export function HeatmapChart({ data, hoursStart = 9, hoursEnd = 20 }) {
+import { Fragment } from 'react'
+
+export function HeatmapChart({ data = [], hoursStart = 9, hoursEnd = 20 }) {
   // Rentang jam mengikuti jam buka cabang (dari meta endpoint). Default 09–20.
   const start = Number.isFinite(hoursStart) ? hoursStart : 9
   const end = Number.isFinite(hoursEnd) && hoursEnd >= start ? hoursEnd : 20
   const count = end - start + 1
   const hours = Array.from({ length: count }, (_, i) => `${String(start + i).padStart(2, '0')}:00`)
   const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
-  const allValues = data.flat()
+  const allValues = (data || []).flat()
   const max = allValues.length > 0 ? Math.max(...allValues) : 1
 
   return (
@@ -18,8 +20,8 @@ export function HeatmapChart({ data, hoursStart = 9, hoursEnd = 20 }) {
         ))}
         {/* Data rows */}
         {hours.map((hour, hi) => (
-          <>
-            <div key={`label-${hour}`} className="text-xs text-muted pr-2 flex items-center whitespace-nowrap">{hour}</div>
+          <Fragment key={hour}>
+            <div className="text-xs text-muted pr-2 flex items-center whitespace-nowrap">{hour}</div>
             {days.map((day, di) => {
               const val = data[hi]?.[di] || 0
               const opacity = max > 0 ? val / max : 0
@@ -32,7 +34,7 @@ export function HeatmapChart({ data, hoursStart = 9, hoursEnd = 20 }) {
                 />
               )
             })}
-          </>
+          </Fragment>
         ))}
       </div>
     </div>

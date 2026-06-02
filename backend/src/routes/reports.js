@@ -252,10 +252,11 @@ router.get('/daily', authenticate, requireRole('super_admin', 'tenant_admin'), a
   }
 });
 
-// Heatmap "jam tersibuk": matriks jumlah transaksi completed per JAM (09:00–20:00)
-// × HARI (Sen–Min), dihitung di zona waktu toko. Dipakai HeatmapChart di Laporan
+// Heatmap "jam tersibuk": matriks jumlah transaksi completed per JAM × HARI
+// (Sen–Min), dihitung di zona waktu toko. Dipakai HeatmapChart di Laporan
 // (fitur paket `heatmap` — gating UI di frontend; data tetap tenant-scoped).
-// Bentuk data: data[hourIndex 0..11 = jam 9..20][dayIndex 0..6 = Sen..Min].
+// Rentang jam dinamis mengikuti jam buka/tutup cabang (fallback 09–20); meta
+// membawa hoursStart/hoursEnd. Bentuk data: data[hourIndex][dayIndex 0..6=Sen..Min].
 router.get('/heatmap', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
   try {
     const tenantId = req.user.role === 'super_admin' ? req.query.tenantId : req.user.tenantId;
@@ -292,6 +293,12 @@ router.get('/heatmap', authenticate, requireRole('super_admin', 'tenant_admin'),
     const dayIdx = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
     const data = Array.from({ length: HOURS }, () => Array(DAYS).fill(0));
     const fmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short', hour: '2-digit', hourCycle: 'h23' });
+
+    // Ambil transaksi completed dalam rentang (cukup createdAt untuk bucketing).
+    const transactions = await prisma.transaction.findMany({
+      where: txWhere,
+      select: { createdAt: true },
+    });
 
     let counted = 0;
     for (const tx of transactions) {
