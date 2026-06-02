@@ -412,13 +412,23 @@ async function runRenewalJob() {
     } catch { /* observability only */ }
   }
 
-  log('done');
-  return {
+  // Catat waktu jalan terakhir untuk panel Kesehatan Sistem (super-admin).
+  const summary = {
     timestamp:         now.toISOString(),
     overdueCount:      toOverdue.length,
     trialExpiredCount: trialToExpire.length,
     expiredCount:      expiredResult.count,
   };
+  try {
+    await prisma.systemSetting.upsert({
+      where:  { key: 'cron_renewal_last_run' },
+      update: { value: JSON.stringify(summary) },
+      create: { key: 'cron_renewal_last_run', value: JSON.stringify(summary) },
+    });
+  } catch (e) { console.error('[RenewalJob] failed to record last_run:', e.message); }
+
+  log('done');
+  return summary;
 }
 
 // ── Init scheduler ─────────────────────────────────────────────────────────

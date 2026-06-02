@@ -27,6 +27,7 @@ import Button from '../../components/ui/Button.jsx'
 import LiveBadge from '../../components/ui/LiveBadge.jsx'
 import { formatRupiah, formatRupiahShort, formatDate } from '../../utils/format.js'
 import { useChartTheme } from '../../utils/chartTheme.js'
+import SystemHealthCard from '../../components/super-admin/SystemHealthCard.jsx'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const PKG_COLOR  = { Basic: '#3B82F6', Pro: '#6366F1', Enterprise: '#8B5CF6' }
@@ -421,6 +422,9 @@ export default function SADashboard() {
           </Card>
         </motion.div>
       )}
+
+      {/* Kesehatan Sistem — ringkasan operasional (error, WA, backup, cron) */}
+      <SystemHealthCard delay={0.23} />
 
       {/* Charts Row */}
       <div className="grid lg:grid-cols-2 gap-5 sm:gap-6">
