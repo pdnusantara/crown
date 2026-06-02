@@ -53,7 +53,8 @@ export function HeatmapChart({ data = [], hoursStart = 9, hoursEnd = 20 }) {
   return (
     <div>
       <div className="overflow-x-auto pb-1">
-        <div className="inline-grid gap-1.5" style={{ gridTemplateColumns: 'auto repeat(7, minmax(34px, 1fr))' }}>
+        {/* Grid mengisi penuh lebar kolom: sel melar rata mengikuti kartu. */}
+        <div className="grid w-full min-w-[420px] gap-1.5" style={{ gridTemplateColumns: 'minmax(44px, auto) repeat(7, 1fr)' }}>
           {/* Header row */}
           <div />
           {DAYS.map((d) => (
@@ -74,11 +75,11 @@ export function HeatmapChart({ data = [], hoursStart = 9, hoursEnd = 20 }) {
                   <div
                     key={`${hour}-${day}`}
                     title={`${DAY_FULL[di]} ${hour} — ${val} transaksi`}
-                    className={`relative aspect-square rounded-lg cursor-default transition-transform duration-150 hover:scale-[1.12] hover:z-10 hover:shadow-md ${isPeak ? 'ring-2 ring-offset-1 ring-brand' : ''}`}
+                    className={`relative h-9 sm:h-11 rounded-lg cursor-default transition-transform duration-150 hover:scale-[1.06] hover:z-10 hover:shadow-md ${isPeak ? 'ring-2 ring-offset-1 ring-brand' : ''}`}
                     style={{ backgroundColor: bg }}
                   >
-                    {isPeak && (
-                      <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white">{val}</span>
+                    {val > 0 && (
+                      <span className={`absolute inset-0 flex items-center justify-center text-[11px] font-semibold ${t > 0.55 ? 'text-white' : 'text-indigo-900/70'}`}>{val}</span>
                     )}
                   </div>
                 )
