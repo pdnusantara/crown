@@ -3,6 +3,7 @@ const path   = require('path');
 const fs     = require('fs');
 const crypto = require('crypto');
 const multer = require('multer');
+const { execFile } = require('child_process');
 const { z }  = require('zod');
 const prisma = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
@@ -350,14 +351,55 @@ const uploadVideo = multer({
   },
 }).single('video');
 
+// Transcode video apa pun → MP4 web-friendly (H.264 + yuv420p, faststart),
+// downscale maks lebar 1280, kompres (CRF 26), audio dibuang (landing autoplay
+// muted). Membuat .mov HEVC iPhone & file besar jadi ringan + pasti diputar.
+const FFMPEG_BIN = process.env.FFMPEG_PATH || 'ffmpeg';
+function transcodeToMp4(srcPath, destPath) {
+  return new Promise((resolve, reject) => {
+    const args = [
+      '-y', '-i', srcPath,
+      '-vf', "scale='min(1280,iw)':-2",
+      '-c:v', 'libx264', '-profile:v', 'high', '-pix_fmt', 'yuv420p',
+      '-crf', '26', '-preset', 'veryfast',
+      '-movflags', '+faststart',
+      '-an',
+      destPath,
+    ];
+    // maxBuffer kecil cukup (kita tak baca stdout); timeout 4 menit jaga-jaga.
+    execFile(FFMPEG_BIN, args, { timeout: 240000 }, (err) => {
+      if (err) return reject(err);
+      resolve();
+    });
+  });
+}
+
 router.post('/upload-video', authenticate, requireRole('super_admin'), (req, res) => {
-  uploadVideo(req, res, (err) => {
+  uploadVideo(req, res, async (err) => {
     if (err) {
       const msg = err.code === 'LIMIT_FILE_SIZE' ? 'Ukuran video maksimal 30 MB' : err.message;
       return res.status(400).json({ success: false, error: msg });
     }
     if (!req.file) return res.status(400).json({ success: false, error: 'File video wajib diunggah (field "video")' });
-    res.json({ success: true, data: { url: `/api/uploads/landing/${req.file.filename}` } });
+
+    const srcPath = req.file.path;
+    const outName = `${crypto.randomUUID()}.mp4`;
+    const outPath = path.join(UPLOAD_DIR, outName);
+    try {
+      await transcodeToMp4(srcPath, outPath);
+      fs.unlink(srcPath, () => {}); // buang file mentah hasil upload
+      res.json({ success: true, data: { url: `/api/uploads/landing/${outName}` } });
+    } catch (e) {
+      // Gagal transcode → bersihkan & beri pesan jelas (jangan simpan file mentah
+      // yang mungkin tak bisa diputar browser).
+      fs.unlink(srcPath, () => {});
+      fs.unlink(outPath, () => {});
+      console.error('[landing] transcode video gagal:', e.message);
+      const msg = e.killed || e.code === 'ETIMEDOUT'
+        ? 'Konversi video kelamaan — coba video lebih pendek/kecil.'
+        : 'Gagal memproses video. Pastikan file benar-benar video (MP4/WebM/MOV).';
+      res.status(422).json({ success: false, error: msg });
+    }
   });
 });
 

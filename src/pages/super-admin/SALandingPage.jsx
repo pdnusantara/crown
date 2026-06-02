@@ -464,7 +464,7 @@ function VideoUploadField({ label, hint, value, onChange }) {
       const res = await api.post('/landing/upload-video', fd, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 300000 })
       setPlayError(false)
       onChange(res.data?.data?.url || '')
-      toast.success('Video diunggah — jangan lupa simpan')
+      toast.success('Video diunggah & dikonversi ke MP4 — jangan lupa simpan')
     } catch (err) {
       const msg = err?.code === 'ECONNABORTED'
         ? 'Unggah video kelamaan (timeout). Coba file lebih kecil atau koneksi lebih cepat.'
@@ -887,7 +887,7 @@ function HeroEditor() {
                 label="Video fitur (opsional)"
                 value={f.video || ''}
                 onChange={url => updateFeature(i, 'video', url)}
-                hint="Rekaman layar fitur (MP4 H.264/WebM, maks 30 MB, rasio ~16:10). Hindari .MOV iPhone (HEVC) — tak diputar browser. Jalan otomatis (loop, tanpa suara). PRIORITAS: video > gambar > demo animasi."
+                hint="Rekaman layar fitur (MP4/WebM/MOV, maks 30 MB, rasio ~16:10). Server otomatis mengonversi & mengompres ke MP4 H.264 (termasuk .MOV iPhone) + membuang audio. Jalan otomatis (loop, tanpa suara). PRIORITAS: video > gambar > demo animasi."
               />
             </div>
           ))}
