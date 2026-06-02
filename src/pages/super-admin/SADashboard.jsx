@@ -241,24 +241,6 @@ export default function SADashboard() {
     return result
   }, [tenants])
 
-  // ── MRR trend (6 bulan, estimasi) ─────────────────────────────────────────
-  // MRR historis tak di-snapshot, jadi diestimasi: tiap bulan = Σ harga langganan
-  // tenant PEMBAYAR (active/overdue) yang sudah terdaftar s/d akhir bulan itu.
-  // Mengasumsikan harga & status bayar stabil sejak daftar → label "estimasi".
-  const mrrTrend = useMemo(() => {
-    const payers = tenants.filter(t => t.subscriptionStatus === 'active' || t.subscriptionStatus === 'overdue')
-    const result = []
-    for (let i = 5; i >= 0; i--) {
-      const d   = subMonths(new Date(), i)
-      const end = endOfMonth(d)
-      const mrr = payers
-        .filter(t => t.createdAt && new Date(t.createdAt) <= end)
-        .reduce((sum, t) => sum + (t.subscription?.price || 0), 0)
-      result.push({ month: format(d, 'MMM'), mrr })
-    }
-    return result
-  }, [tenants])
-
   // ── Top tenants by MTD revenue ────────────────────────────────────────────
   const revenueChartData = useMemo(() =>
     [...tenants]
@@ -518,45 +500,6 @@ export default function SADashboard() {
           </Card>
         </motion.div>
       </div>
-
-      {/* Tren MRR (estimasi) */}
-      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.29 }}>
-        <Card className="flex flex-col">
-          <CardHeader>
-            <div className="flex items-start justify-between flex-wrap gap-2">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-off-white">Tren MRR</h3>
-                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-dark-surface text-muted border border-dark-border">estimasi</span>
-                </div>
-                <p className="text-xs text-muted mt-0.5">Pendapatan berulang bulanan · 6 bulan terakhir</p>
-              </div>
-              <div className="text-right">
-                <p className="text-lg font-bold text-off-white tabular-nums">{formatRupiah(metrics.mrr)}</p>
-                <p className="text-[11px] text-muted">{formatRupiahShort(metrics.arr)}/tahun</p>
-              </div>
-            </div>
-          </CardHeader>
-          <CardBody>
-            <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={mrrTrend} margin={{ top: 4, right: 8, bottom: 0, left: -8 }}>
-                <defs>
-                  <linearGradient id="gradMrr" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
-                <XAxis dataKey="month" tick={{ fill: chart.axisTick, fontSize: 11 }} tickLine={false} />
-                <YAxis tick={{ fill: chart.axisTick, fontSize: 11 }} tickLine={false} width={56}
-                  tickFormatter={v => formatRupiahShort(v)} />
-                <Tooltip content={<ChartTooltip formatter={formatRupiah} />} />
-                <Area type="monotone" dataKey="mrr" name="MRR" stroke="#10B981" strokeWidth={2} fill="url(#gradMrr)" dot={{ fill: '#10B981', r: 3 }} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardBody>
-        </Card>
-      </motion.div>
 
       {/* Package Distribution + Status Distribution */}
       <div className="grid lg:grid-cols-2 gap-5 sm:gap-6">
