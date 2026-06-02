@@ -12,6 +12,7 @@ import { getBranchSlug } from '../../utils/branchSlug.js'
 import { useToast } from '../ui/Toast.jsx'
 import { useOnlineStatus } from '../../hooks/useOnlineStatus.js'
 import { useSwipe } from '../../hooks/useSwipe.js'
+import { useBarberQueueAlerts } from '../../hooks/useBarberQueueAlerts.js'
 import { Download, X, WifiOff, ShieldAlert } from 'lucide-react'
 import { formatRupiah } from '../../utils/format.js'
 
@@ -70,6 +71,8 @@ export const AppLayout = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const isOnline = useOnlineStatus()
+  // Notifikasi realtime antrian untuk barber (no-op utk peran lain).
+  useBarberQueueAlerts()
 
   // Tutup drawer sidebar mobile otomatis tiap pindah halaman. Tanpa ini, setelah
   // memilih menu di drawer, halaman berpindah TAPI drawer tetap menutupi layar

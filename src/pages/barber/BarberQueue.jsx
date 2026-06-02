@@ -1,9 +1,10 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
-import { Clock, ChevronRight } from 'lucide-react'
+import { Clock, ChevronRight, Bell, BellOff } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useBranchQueue, useUpdateQueueStatus } from '../../hooks/useQueue.js'
+import { isQueueAlertMuted, setQueueAlertMuted } from '../../hooks/useBarberQueueAlerts.js'
 import Card from '../../components/ui/Card.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import LiveBadge from '../../components/ui/LiveBadge.jsx'
@@ -84,14 +85,28 @@ export default function BarberQueue() {
     </div>
   )
 
+  const [muted, setMuted] = useState(isQueueAlertMuted())
+  const toggleMuted = () => { const next = !muted; setMuted(next); setQueueAlertMuted(next) }
+
   return (
     <div className="space-y-6">
-      <div>
-        <div className="flex items-center gap-2">
-          <h1 className="font-display text-2xl font-bold text-off-white">Antrian Saya</h1>
-          <LiveBadge />
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="font-display text-2xl font-bold text-off-white">Antrian Saya</h1>
+            <LiveBadge />
+          </div>
+          <p className="text-muted text-sm mt-1">{inProgress.length} sedang dilayani, {waiting.length} menunggu</p>
         </div>
-        <p className="text-muted text-sm mt-1">{inProgress.length} sedang dilayani, {waiting.length} menunggu</p>
+        <button
+          type="button"
+          onClick={toggleMuted}
+          aria-label={muted ? 'Nyalakan suara notifikasi' : 'Senyapkan suara notifikasi'}
+          title={muted ? 'Suara notifikasi: mati' : 'Suara notifikasi: nyala'}
+          className={`flex-shrink-0 p-2 rounded-xl border transition-colors ${muted ? 'border-dark-border text-muted hover:text-off-white' : 'border-brand/30 text-brand bg-brand/5'}`}
+        >
+          {muted ? <BellOff size={18} /> : <Bell size={18} />}
+        </button>
       </div>
       <Section title="Sedang Dilayani" items={inProgress} color="bg-blue-400" />
       <Section title="Menunggu" items={waiting} color="bg-amber-400" />
