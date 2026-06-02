@@ -14,6 +14,7 @@ import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
 import Button from '../../components/ui/Button.jsx'
 import { Skeleton, SkeletonChart } from '../../components/ui/Skeleton.jsx'
 import { formatDateInTz, formatDateTimeInTz } from '../../utils/timezone.js'
+import { useChartTheme } from '../../utils/chartTheme.js'
 
 const RANGE_OPTIONS = [7, 14, 30]
 const FLAG_CATEGORIES = ['Core', 'Analytics', 'Operations', 'UX', 'Enterprise']
@@ -114,6 +115,7 @@ function ErrorState({ onRetry, t }) {
 
 export default function SAUsagePage() {
   const { t } = useTranslation()
+  const chart = useChartTheme()
   const [days, setDays] = useState(7)
   const [selectedTenantId, setSelectedTenantId] = useState('')
   const [chartMode, setChartMode] = useState('dau') // 'dau' | 'tx'
@@ -315,27 +317,27 @@ export default function SAUsagePage() {
                 <ResponsiveContainer width="100%" height={240}>
                   {chartMode === 'tx' ? (
                     <LineChart data={chartData} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
+                      <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
                       <XAxis
                         dataKey="day"
-                        tick={{ fill: '#6B7280', fontSize: 11 }}
+                        tick={{ fill: chart.axisTick, fontSize: 11 }}
                         tickLine={false}
                         tickFormatter={(v) => formatBucketLabel(v, tenantTz)}
                       />
-                      <YAxis tick={{ fill: '#6B7280', fontSize: 11 }} tickLine={false} allowDecimals={false} />
+                      <YAxis tick={{ fill: chart.axisTick, fontSize: 11 }} tickLine={false} allowDecimals={false} />
                       <Tooltip content={<ChartTooltip t={t} tz={tenantTz} mode="tx" />} />
                       <Line type="monotone" dataKey="value" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981', r: 3 }} activeDot={{ r: 5 }} />
                     </LineChart>
                   ) : (
                     <BarChart data={chartData} barCategoryGap="30%" margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
+                      <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
                       <XAxis
                         dataKey="day"
-                        tick={{ fill: '#6B7280', fontSize: 11 }}
+                        tick={{ fill: chart.axisTick, fontSize: 11 }}
                         tickLine={false}
                         tickFormatter={(v) => formatBucketLabel(v, tenantTz)}
                       />
-                      <YAxis tick={{ fill: '#6B7280', fontSize: 11 }} tickLine={false} allowDecimals={false} />
+                      <YAxis tick={{ fill: chart.axisTick, fontSize: 11 }} tickLine={false} allowDecimals={false} />
                       <Tooltip content={<ChartTooltip t={t} tz={tenantTz} mode="dau" />} />
                       <Bar dataKey="value" radius={[6, 6, 0, 0]}>
                         {chartData.map((_, index) => (

@@ -25,6 +25,7 @@ import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
 import Button from '../../components/ui/Button.jsx'
 import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx'
 import { formatDateTimeInTz, getTenantTimezone, DEFAULT_TZ } from '../../utils/timezone.js'
+import { useChartTheme } from '../../utils/chartTheme.js'
 
 // ── Config ─────────────────────────────────────────────────────────────────────
 const LEVEL_CFG = {
@@ -354,6 +355,7 @@ function GroupedRow({ group, selected, onSelectGroup, onResolve, t, dateLocale, 
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function SAErrorLogPage() {
   const { t, i18n } = useTranslation()
+  const chart = useChartTheme()
   const toast = useToast()
   const dateLocale = pickLocale(i18n.language)
   // Super-admin tidak punya tenant aktif → fallback ke default TZ.
@@ -560,10 +562,10 @@ export default function SAErrorLogPage() {
             <CardBody>
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={trend} margin={{ top: 4, right: 8, bottom: 0, left: -16 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
                   <XAxis
                     dataKey="date"
-                    tick={{ fill: '#6B7280', fontSize: 11 }}
+                    tick={{ fill: chart.axisTick, fontSize: 11 }}
                     tickLine={false}
                     tickFormatter={(v) => {
                       try {
@@ -571,9 +573,9 @@ export default function SAErrorLogPage() {
                       } catch { return v }
                     }}
                   />
-                  <YAxis tick={{ fill: '#6B7280', fontSize: 11 }} tickLine={false} allowDecimals={false} />
+                  <YAxis tick={{ fill: chart.axisTick, fontSize: 11 }} tickLine={false} allowDecimals={false} />
                   <Tooltip content={<ChartTooltip tz={tz} lng={i18n.language} />} />
-                  <Legend wrapperStyle={{ fontSize: 11, color: '#6B7280', paddingTop: 8 }} />
+                  <Legend wrapperStyle={{ fontSize: 11, color: chart.legendText, paddingTop: 8 }} />
                   <Bar dataKey="errors"   name={t('superAdmin.errorLog.levelError')}   fill={LEVEL_CFG.error.barColor}   radius={[3, 3, 0, 0]} stackId="a" />
                   <Bar dataKey="warnings" name={t('superAdmin.errorLog.levelWarning')} fill={LEVEL_CFG.warning.barColor} radius={[3, 3, 0, 0]} stackId="a" />
                   <Bar dataKey="info"     name={t('superAdmin.errorLog.levelInfo')}    fill={LEVEL_CFG.info.barColor}    radius={[3, 3, 0, 0]} stackId="a" />

@@ -26,6 +26,7 @@ import Badge from '../../components/ui/Badge.jsx'
 import Button from '../../components/ui/Button.jsx'
 import LiveBadge from '../../components/ui/LiveBadge.jsx'
 import { formatRupiah, formatRupiahShort, formatDate } from '../../utils/format.js'
+import { useChartTheme } from '../../utils/chartTheme.js'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const PKG_COLOR  = { Basic: '#3B82F6', Pro: '#6366F1', Enterprise: '#8B5CF6' }
@@ -141,6 +142,7 @@ export default function SADashboard() {
   const toast    = useToast()
   const navigate = useNavigate()
   const qc       = useQueryClient()
+  const chart    = useChartTheme()
 
   // Realtime: status langganan & jumlah tenant berubah dari banyak sumber
   // (pembayaran, cron renewal, registrasi, edit SA). useTenants sudah dengar
@@ -450,9 +452,9 @@ export default function SADashboard() {
                       <stop offset="95%" stopColor="#60A5FA" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" />
-                  <XAxis dataKey="month" tick={{ fill: '#6B7280', fontSize: 11 }} tickLine={false} />
-                  <YAxis tick={{ fill: '#6B7280', fontSize: 11 }} tickLine={false} allowDecimals={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} />
+                  <XAxis dataKey="month" tick={{ fill: chart.axisTick, fontSize: 11 }} tickLine={false} />
+                  <YAxis tick={{ fill: chart.axisTick, fontSize: 11 }} tickLine={false} allowDecimals={false} />
                   <Tooltip content={<ChartTooltip />} />
                   <Area type="monotone" dataKey="total" name="Kumulatif" stroke="#6366F1" strokeWidth={2} fill="url(#gradTotal)" dot={false} />
                   <Area type="monotone" dataKey="baru"  name="Baru"      stroke="#60A5FA" strokeWidth={2} fill="url(#gradNew)"  dot={{ fill: '#60A5FA', r: 3 }} />
@@ -477,10 +479,10 @@ export default function SADashboard() {
               ) : (
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={revenueChartData} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#2A2A2A" horizontal={false} />
-                    <XAxis type="number" tick={{ fill: '#6B7280', fontSize: 10 }} tickLine={false}
+                    <CartesianGrid strokeDasharray="3 3" stroke={chart.grid} horizontal={false} />
+                    <XAxis type="number" tick={{ fill: chart.axisTick, fontSize: 10 }} tickLine={false}
                       tickFormatter={v => `${(v / 1_000_000).toFixed(0)}M`} />
-                    <YAxis type="category" dataKey="name" tick={{ fill: '#9CA3AF', fontSize: 11 }} tickLine={false} width={90} />
+                    <YAxis type="category" dataKey="name" tick={{ fill: chart.axisTick, fontSize: 11 }} tickLine={false} width={90} />
                     <Tooltip content={<ChartTooltip formatter={formatRupiah} />} />
                     <Bar dataKey="revenue" name="Revenue" radius={[0, 4, 4, 0]}>
                       {revenueChartData.map((entry, i) => (
