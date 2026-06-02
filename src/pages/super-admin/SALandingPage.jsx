@@ -447,6 +447,9 @@ function ImageUploadField({ label, hint, value, accept = 'image/png,image/jpeg,i
 function VideoUploadField({ label, hint, value, onChange }) {
   const toast = useToast()
   const [uploading, setUploading] = useState(false)
+  // Browser hanya bisa decode MP4(H.264)/WebM. .MOV HEVC dari iPhone ter-upload
+  // tapi gagal diputar → tandai supaya bisa kasih panduan, bukan diam "gagal memuat".
+  const [playError, setPlayError] = useState(false)
 
   async function handleUpload(e) {
     const file = e.target.files?.[0]
@@ -458,6 +461,7 @@ function VideoUploadField({ label, hint, value, onChange }) {
       fd.append('video', file)
       // Video besar (≤30MB) butuh waktu unggah > timeout default 10s → set 3 menit.
       const res = await api.post('/landing/upload-video', fd, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 180000 })
+      setPlayError(false)
       onChange(res.data?.data?.url || '')
       toast.success('Video diunggah — jangan lupa simpan')
     } catch (err) {
@@ -476,7 +480,8 @@ function VideoUploadField({ label, hint, value, onChange }) {
       <div className="flex items-center gap-3">
         <div className="w-14 h-14 rounded-lg bg-dark-surface border border-dark-border flex items-center justify-center overflow-hidden flex-shrink-0">
           {value
-            ? <video src={value} muted loop autoPlay playsInline className="w-full h-full object-cover" />
+            ? <video src={value} muted loop autoPlay playsInline className="w-full h-full object-cover"
+                onError={() => setPlayError(true)} onLoadedData={() => setPlayError(false)} />
             : <Upload size={18} className="text-muted" />}
         </div>
         <label className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-dark-surface border border-dark-border text-sm cursor-pointer hover:border-brand/40 transition-colors">
@@ -494,6 +499,11 @@ function VideoUploadField({ label, hint, value, onChange }) {
           </button>
         )}
       </div>
+      {playError && value && (
+        <p className="text-[11px] text-amber-400 mt-1.5">
+          ⚠️ Video terunggah, tapi browser tak bisa memutarnya — kemungkinan format <b>.MOV/HEVC</b> (rekaman layar iPhone). Konversi ke <b>MP4 (H.264)</b> agar tampil di landing.
+        </p>
+      )}
       {hint && <p className="text-[11px] text-muted mt-1.5">{hint}</p>}
     </div>
   )
@@ -876,7 +886,7 @@ function HeroEditor() {
                 label="Video fitur (opsional)"
                 value={f.video || ''}
                 onChange={url => updateFeature(i, 'video', url)}
-                hint="Rekaman layar fitur (MP4/WebM, maks 30 MB, rasio ~16:10). Jalan otomatis (loop, tanpa suara). PRIORITAS: video > gambar > demo animasi. Kosongkan untuk pakai demo animasi bawaan."
+                hint="Rekaman layar fitur (MP4 H.264/WebM, maks 30 MB, rasio ~16:10). Hindari .MOV iPhone (HEVC) — tak diputar browser. Jalan otomatis (loop, tanpa suara). PRIORITAS: video > gambar > demo animasi."
               />
             </div>
           ))}
