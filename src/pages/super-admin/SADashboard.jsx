@@ -319,12 +319,12 @@ export default function SADashboard() {
           ].map(s => (
             <div
               key={s.label}
-              className="bg-dark-card border border-dark-border rounded-xl px-3 py-2 sm:bg-transparent sm:border-0 sm:rounded-none sm:px-0 sm:py-0 sm:text-right"
+              className="px-2 py-1.5 sm:px-0 sm:py-0 sm:text-right"
             >
               <p className="text-[11px] text-muted flex items-center gap-1 sm:justify-end">
-                <s.icon size={11} className="flex-shrink-0" />{s.label}
+                <s.icon size={12} className="flex-shrink-0 text-brand" />{s.label}
               </p>
-              <p className="text-sm sm:text-base font-bold text-off-white mt-0.5 tabular-nums truncate">{s.value}</p>
+              <p className="text-base sm:text-lg font-bold text-off-white mt-0.5 tabular-nums truncate">{s.value}</p>
             </div>
           ))}
         </div>
