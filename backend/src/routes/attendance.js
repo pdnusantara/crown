@@ -229,6 +229,45 @@ router.get('/me/today', requireRole('kasir', 'barber'), async (req, res, next) =
   } catch (err) { next(err); }
 });
 
+// GET /api/attendance/me/schedule — jadwal kerja staf: pola mingguan (WorkSchedule)
+// + 7 hari ke depan yang sudah ter-resolve (untuk barber, BarberSchedule tanggal-
+// spesifik menimpa pola mingguan). Hanya jadwal milik si pemanggil.
+router.get('/me/schedule', requireRole('kasir', 'barber'), async (req, res, next) => {
+  try {
+    const { id: staffId, tenantId, role } = req.user;
+    const tz = await tenantTimezone(tenantId);
+    const clock = tenantClock(tz);
+
+    // Pola mingguan dari WorkSchedule (default bila hari itu belum diatur admin).
+    const rows = await prisma.workSchedule.findMany({ where: { staffId } });
+    const byDow = {};
+    rows.forEach((r) => { byDow[r.dayOfWeek] = r; });
+    const weekly = Array.from({ length: 7 }, (_, dow) => {
+      const r = byDow[dow];
+      return {
+        dayOfWeek: dow,
+        isDayOff: r ? r.isDayOff : SCHEDULE_DEFAULT.isDayOff,
+        startTime: r ? r.startTime : SCHEDULE_DEFAULT.startTime,
+        endTime: r ? r.endTime : SCHEDULE_DEFAULT.endTime,
+        configured: !!r,
+      };
+    });
+
+    // 7 hari ke depan (hari ini + 6), ter-resolve termasuk override shift barber.
+    const base = new Date(`${clock.ymd}T00:00:00.000Z`);
+    const upcoming = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(base);
+      d.setUTCDate(base.getUTCDate() + i);
+      const ymd = d.toISOString().slice(0, 10);
+      const sch = await getScheduleForDay(staffId, role, ymd, d.getUTCDay());
+      upcoming.push({ ymd, dayOfWeek: d.getUTCDay(), ...sch });
+    }
+
+    res.json({ success: true, data: { today: clock.ymd, timezone: tz, weekly, upcoming } });
+  } catch (err) { next(err); }
+});
+
 // GET /api/attendance/me/history — 30 catatan absen terakhir staf
 router.get('/me/history', requireRole('kasir', 'barber'), async (req, res, next) => {
   try {

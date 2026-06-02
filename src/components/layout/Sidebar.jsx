@@ -84,6 +84,7 @@ const navConfig = {
       { section: 'Operasional', labelKey: 'nav.transactions', icon: Receipt,       path: `/${slug}/kasir/transactions` },
 
       { section: 'Manajemen',   labelKey: 'nav.shiftClose',   icon: Wallet,        path: `/${slug}/kasir/shift-closing` },
+      { section: 'Manajemen',   labelKey: 'nav.schedule',     icon: CalendarDays,  path: `/${slug}/kasir/schedule`, flag: 'attendance' },
       { section: 'Manajemen',   labelKey: 'nav.attendance',   icon: Fingerprint,   path: `/${slug}/kasir/attendance`, flag: 'attendance' },
       { section: 'Manajemen',   labelKey: 'nav.ratings',      icon: Star,          path: `/${slug}/kasir/ratings` },
       // Komisi: hanya utk kasir yg merangkap barber (isBarber) — dia menghasilkan
@@ -101,6 +102,7 @@ const navConfig = {
     { labelKey: 'nav.queue',      icon: ListOrdered,     path: '/barber/queue' },
     { labelKey: 'nav.commission', icon: TrendingUp,      path: '/barber/commission' },
     { labelKey: 'nav.leaderboard', icon: Trophy,         path: '/barber/leaderboard' },
+    { labelKey: 'nav.schedule',   icon: CalendarDays,    path: '/barber/schedule', flag: 'attendance' },
     { labelKey: 'nav.attendance', icon: Fingerprint,     path: '/barber/attendance', flag: 'attendance' },
     { labelKey: 'nav.ratings',    icon: Star,            path: '/barber/ratings' },
   ],

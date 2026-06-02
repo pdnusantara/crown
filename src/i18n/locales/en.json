@@ -63,6 +63,7 @@
     "pos": "POS",
     "queue": "Queue",
     "leaderboard": "Leaderboard",
+    "schedule": "Schedule",
     "bookings": "Bookings",
     "staff": "Staff",
     "services": "Services",

@@ -90,6 +90,7 @@ const PublicRatingPage  = lazy(() => import('./pages/public/PublicRatingPage.jsx
 const KasirRatingsPage  = lazy(() => import('./pages/kasir/KasirRatingsPage.jsx'))
 const BarberRatingsPage = lazy(() => import('./pages/barber/BarberRatingsPage.jsx'))
 const BarberLeaderboardPage = lazy(() => import('./pages/barber/BarberLeaderboardPage.jsx'))
+const MySchedulePage = lazy(() => import('./pages/MySchedulePage.jsx'))
 
 // Affiliate program
 const SAAffiliatesPage       = lazy(() => import('./pages/super-admin/SAAffiliatesPage.jsx'))
@@ -373,6 +374,7 @@ export default function App() {
                 <Route path="transactions"  element={<TransactionsPage />} />
                 <Route path="shift-closing" element={<ShiftClosingPage />} />
                 <Route path="attendance"    element={<StaffAttendancePage />} />
+                <Route path="schedule"      element={<MySchedulePage />} />
                 <Route path="ratings"       element={<KasirRatingsPage />} />
                 {/* Komisi: hanya bermakna utk kasir yg merangkap barber (isBarber).
                     Menu disembunyikan utk kasir biasa; halaman tampil 0 bila dibuka
@@ -395,6 +397,7 @@ export default function App() {
                 <Route path="dashboard"  element={<BarberDashboard />} />
                 <Route path="queue"      element={<BarberQueue />} />
                 <Route path="leaderboard" element={<BarberLeaderboardPage />} />
+                <Route path="schedule"   element={<MySchedulePage />} />
                 <Route path="commission" element={<BarberCommission />} />
                 <Route path="attendance" element={<StaffAttendancePage />} />
                 <Route path="ratings"    element={<BarberRatingsPage />} />

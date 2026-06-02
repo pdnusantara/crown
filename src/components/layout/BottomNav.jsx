@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import {
   LayoutDashboard, Building2, BarChart3, Settings,
   CreditCard, ListOrdered, CalendarDays, Receipt,
-  Star, TrendingUp, DollarSign, MessageSquare, Menu, Fingerprint, Users, Trophy,
+  Star, TrendingUp, DollarSign, MessageSquare, Menu, Fingerprint, Users,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useTicketStats } from '../../hooks/useTickets.js'
@@ -38,7 +38,6 @@ const navConfig = {
     { labelKey: 'nav.dashboard',  icon: LayoutDashboard, path: '/barber/dashboard' },
     { labelKey: 'nav.queue',      icon: ListOrdered,     path: '/barber/queue' },
     { labelKey: 'nav.commission', icon: TrendingUp,      path: '/barber/commission' },
-    { labelKey: 'nav.leaderboard', icon: Trophy,         path: '/barber/leaderboard' },
     { labelKey: 'nav.attendance', icon: Fingerprint,     path: '/barber/attendance', flag: 'attendance' },
   ],
   customer: [
@@ -50,7 +49,7 @@ const navConfig = {
 
 // Peran yang sidebar-nya jauh lebih panjang dari bottom bar — beri tab "Lainnya"
 // agar seluruh menu tetap terjangkau di mobile tanpa membuka hamburger TopBar.
-const ROLES_WITH_MORE = ['super_admin', 'tenant_admin', 'kasir']
+const ROLES_WITH_MORE = ['super_admin', 'tenant_admin', 'kasir', 'barber']
 
 // Kerangka satu tab — dipakai NavLink (rute) maupun tombol "Lainnya".
 // Modernisasi Fase B: aksen aktif pakai brand indigo (bukan gold), strip kecil
