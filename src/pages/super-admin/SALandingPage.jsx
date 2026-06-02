@@ -645,7 +645,9 @@ function HeroEditor() {
         siteLogo:     data.hero.siteLogo     || '',
         siteFavicon:  data.hero.siteFavicon  || '',
       })
-      setFeatures(Array.isArray(data.hero.features) ? data.hero.features : [])
+      // _k = kunci stabil per-fitur (bukan index) supaya kartu tak remount saat
+      // tambah/hapus → cegah "lompat" & reset state field upload. Dibuang saat simpan.
+      setFeatures((Array.isArray(data.hero.features) ? data.hero.features : []).map(f => ({ ...f, _k: crypto.randomUUID() })))
       setTrustItems(Array.isArray(data.hero.trustItems) ? data.hero.trustItems : [])
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -657,7 +659,7 @@ function HeroEditor() {
     try {
       await updateHero.mutateAsync({
         ...form,
-        features,
+        features: features.map(({ _k, ...f }) => f), // buang kunci internal
         trustItems: trustItems.map(t => t.trim()).filter(Boolean),
       })
       toast.success('Konten landing tersimpan')
@@ -670,7 +672,7 @@ function HeroEditor() {
     setFeatures(arr => arr.map((f, idx) => idx === i ? { ...f, [key]: value } : f))
   }
   function addFeature() {
-    setFeatures(arr => [...arr, { icon: 'Sparkles', title: '', desc: '', image: '' }])
+    setFeatures(arr => [...arr, { icon: 'Sparkles', title: '', desc: '', image: '', _k: crypto.randomUUID() }])
   }
   function removeFeature(i) {
     setFeatures(arr => arr.filter((_, idx) => idx !== i))
@@ -681,7 +683,7 @@ function HeroEditor() {
       const have = new Set(arr.map(f => (f.title || '').trim().toLowerCase()))
       const fresh = items
         .filter(it => !have.has(it.title.trim().toLowerCase()))
-        .map(it => ({ icon: it.icon, title: it.title, desc: it.desc }))
+        .map(it => ({ icon: it.icon, title: it.title, desc: it.desc, _k: crypto.randomUUID() }))
       return [...arr, ...fresh]
     })
   }
@@ -845,12 +847,12 @@ function HeroEditor() {
             </div>
           </div>
         </CardHeader>
-        <CardBody className="space-y-3 max-h-[600px] overflow-y-auto">
+        <CardBody className="space-y-3">
           {features.length === 0 && (
             <p className="text-sm text-muted text-center py-4">Belum ada fitur.</p>
           )}
           {features.map((f, i) => (
-            <div key={i} className="p-3 bg-dark-surface rounded-xl border border-dark-border space-y-2">
+            <div key={f._k} className="p-3 bg-dark-surface rounded-xl border border-dark-border space-y-2">
               <div className="flex items-center gap-2">
                 <Input
                   label="Icon (Lucide)"
