@@ -107,7 +107,7 @@ function ImageUploadField({ value, onChange, label = 'Gambar' }) {
       fd.append('image', processed)
       // WAJIB multipart — default instance pakai application/json yg bikin axios
       // v1 merusak FormData (jadi [object Object]) → upload gagal.
-      const res = await api.post('/landing/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      const res = await api.post('/landing/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000 })
       onChange(res.data.data.url)
     } catch (err) {
       toast.error(err?.response?.data?.error || 'Gagal mengunggah gambar')

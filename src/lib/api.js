@@ -132,8 +132,10 @@ export const post  = (url, data)   => api.post(url, data)
 // Upload FormData (gambar/file). WAJIB override Content-Type — kalau dibiarkan
 // default 'application/json', axios v1 transformRequest mengubah FormData jadi
 // JSON kosong sehingga server tak menerima file.
-export const upload = (url, formData) =>
-  api.post(url, formData, { headers: { 'Content-Type': 'multipart/form-data' } })
+// Upload pakai timeout lebih panjang (default 60s, override via config) karena
+// file besar di koneksi lambat melebihi timeout default 10s instance `api`.
+export const upload = (url, formData, config = {}) =>
+  api.post(url, formData, { timeout: 60000, ...config, headers: { 'Content-Type': 'multipart/form-data', ...(config.headers || {}) } })
 export const put   = (url, data)   => api.put(url, data)
 export const patch = (url, data)   => api.patch(url, data)
 export const del   = (url)         => api.delete(url)

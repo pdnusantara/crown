@@ -158,7 +158,7 @@ function SeoEditor() {
       fd.append('image', file)
       // WAJIB multipart — default instance pakai application/json yg bikin axios
       // v1 merusak FormData (jadi [object Object]) → upload gagal.
-      const res = await api.post('/landing/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      const res = await api.post('/landing/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000 })
       setForm(f => ({ ...f, seoOgImage: res.data?.data?.url || '' }))
       toast.success('Gambar diunggah — jangan lupa simpan')
     } catch (err) {
@@ -402,7 +402,7 @@ function ImageUploadField({ label, hint, value, accept = 'image/png,image/jpeg,i
       fd.append('image', file)
       // WAJIB multipart — default instance pakai application/json yg bikin axios
       // v1 merusak FormData (jadi [object Object]) → upload gagal.
-      const res = await api.post('/landing/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      const res = await api.post('/landing/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000 })
       onChange(res.data?.data?.url || '')
       toast.success('Gambar diunggah — jangan lupa simpan')
     } catch (err) {
@@ -456,11 +456,15 @@ function VideoUploadField({ label, hint, value, onChange }) {
     try {
       const fd = new FormData()
       fd.append('video', file)
-      const res = await api.post('/landing/upload-video', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      // Video besar (≤30MB) butuh waktu unggah > timeout default 10s → set 3 menit.
+      const res = await api.post('/landing/upload-video', fd, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 180000 })
       onChange(res.data?.data?.url || '')
       toast.success('Video diunggah — jangan lupa simpan')
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal mengunggah video')
+      const msg = err?.code === 'ECONNABORTED'
+        ? 'Unggah video kelamaan (timeout). Coba file lebih kecil atau koneksi lebih cepat.'
+        : err?.response?.data?.error || 'Gagal mengunggah video'
+      toast.error(msg)
     } finally {
       setUploading(false)
     }
