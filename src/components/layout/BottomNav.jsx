@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import {
   LayoutDashboard, Building2, BarChart3, Settings,
   CreditCard, ListOrdered, CalendarDays, Receipt,
-  Star, TrendingUp, DollarSign, MessageSquare, Menu, Fingerprint, Users,
+  Star, TrendingUp, DollarSign, MessageSquare, Menu, Fingerprint, Users, Trophy,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useTicketStats } from '../../hooks/useTickets.js'
@@ -38,6 +38,7 @@ const navConfig = {
     { labelKey: 'nav.dashboard',  icon: LayoutDashboard, path: '/barber/dashboard' },
     { labelKey: 'nav.queue',      icon: ListOrdered,     path: '/barber/queue' },
     { labelKey: 'nav.commission', icon: TrendingUp,      path: '/barber/commission' },
+    { labelKey: 'nav.leaderboard', icon: Trophy,         path: '/barber/leaderboard' },
     { labelKey: 'nav.attendance', icon: Fingerprint,     path: '/barber/attendance', flag: 'attendance' },
   ],
   customer: [

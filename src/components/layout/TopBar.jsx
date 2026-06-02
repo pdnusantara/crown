@@ -33,6 +33,7 @@ const pageTitleKeys = {
   '/barber/dashboard':      'nav.dashboard',
   '/barber/queue':          'nav.queue',
   '/barber/commission':     'nav.commission',
+  '/barber/leaderboard':    'nav.leaderboard',
   '/customer/booking':      'nav.booking',
   '/customer/history':      'nav.history',
   '/customer/loyalty':      'nav.loyalty',

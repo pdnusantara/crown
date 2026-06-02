@@ -316,6 +316,74 @@ router.get('/heatmap', authenticate, requireRole('super_admin', 'tenant_admin'),
   }
 });
 
+// GET /api/reports/barber-leaderboard — peringkat barber dalam cabang (bulan
+// berjalan). Bisa diakses barber & kasir (yang merangkap barber); di-scope KETAT
+// ke tenant + cabang si pemanggil agar tak bocor lintas-cabang. Admin boleh
+// override branchId via query. Mengembalikan omzet, jumlah layanan, & rating.
+router.get('/barber-leaderboard', authenticate, requireRole('super_admin', 'tenant_admin', 'barber', 'kasir'), async (req, res, next) => {
+  try {
+    const isStaff = req.user.role === 'barber' || req.user.role === 'kasir';
+    const tenantId = req.user.role === 'super_admin' ? req.query.tenantId : req.user.tenantId;
+    // Staf dipaksa ke cabangnya sendiri; admin/SA boleh pilih cabang.
+    const branchId = isStaff ? req.user.branchId : await resolveBranchId(req.query.branchId, tenantId);
+    const tz = await resolveTenantTz(tenantId);
+
+    // Periode = bulan berjalan (zona waktu tenant).
+    const todayYmd = formatYmdInTz(new Date(), tz);
+    const [y, mo] = todayYmd.split('-').map(Number);
+    const startYmd = `${y}-${pad2(mo)}-01`;
+    const txWhere = { status: 'completed', createdAt: buildDateRange(startYmd, todayYmd, tz) };
+    if (tenantId) txWhere.tenantId = tenantId;
+    if (branchId) txWhere.branchId = branchId;
+
+    const stats = await prisma.transactionItem.groupBy({
+      by: ['barberId'],
+      where: { barberId: { not: null }, transaction: txWhere },
+      _sum: { price: true },
+      _count: { id: true },
+    });
+    const barberIds = stats.map((s) => s.barberId).filter(Boolean);
+    if (!barberIds.length) {
+      return res.json({ success: true, data: { period: 'month', meId: req.user.id, branchId: branchId || null, list: [] } });
+    }
+
+    // Hanya barber yang masih ada & (untuk staf) di cabang yang sama.
+    const users = await prisma.user.findMany({
+      where: { id: { in: barberIds }, ...(branchId ? { branchId } : {}) },
+      select: { id: true, name: true, photo: true },
+    });
+    const userMap = {};
+    users.forEach((u) => { userMap[u.id] = u; });
+
+    const ratings = await prisma.barberRating.groupBy({
+      by: ['barberId'],
+      where: { barberId: { in: barberIds } },
+      _avg: { rating: true },
+      _count: { id: true },
+    });
+    const ratingMap = {};
+    ratings.forEach((r) => { ratingMap[r.barberId] = r; });
+
+    const list = stats
+      .filter((s) => userMap[s.barberId])
+      .map((s) => ({
+        barberId: s.barberId,
+        name: userMap[s.barberId].name || 'Barber',
+        photo: userMap[s.barberId].photo || null,
+        revenue: s._sum.price || 0,
+        services: s._count.id,
+        avgRating: ratingMap[s.barberId]?._avg.rating || null,
+        totalRatings: ratingMap[s.barberId]?._count.id || 0,
+      }))
+      .sort((a, b) => b.revenue - a.revenue || b.services - a.services)
+      .map((row, i) => ({ ...row, rank: i + 1 }));
+
+    res.json({ success: true, data: { period: 'month', meId: req.user.id, branchId: branchId || null, list } });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/reports/barbers - barber performance report
 router.get('/barbers', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
   try {

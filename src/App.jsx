@@ -89,6 +89,7 @@ const PublicBookingPage = lazy(() => import('./pages/public/PublicBookingPage.js
 const PublicRatingPage  = lazy(() => import('./pages/public/PublicRatingPage.jsx'))
 const KasirRatingsPage  = lazy(() => import('./pages/kasir/KasirRatingsPage.jsx'))
 const BarberRatingsPage = lazy(() => import('./pages/barber/BarberRatingsPage.jsx'))
+const BarberLeaderboardPage = lazy(() => import('./pages/barber/BarberLeaderboardPage.jsx'))
 
 // Affiliate program
 const SAAffiliatesPage       = lazy(() => import('./pages/super-admin/SAAffiliatesPage.jsx'))
@@ -393,6 +394,7 @@ export default function App() {
               <Route element={<AppLayout />}>
                 <Route path="dashboard"  element={<BarberDashboard />} />
                 <Route path="queue"      element={<BarberQueue />} />
+                <Route path="leaderboard" element={<BarberLeaderboardPage />} />
                 <Route path="commission" element={<BarberCommission />} />
                 <Route path="attendance" element={<StaffAttendancePage />} />
                 <Route path="ratings"    element={<BarberRatingsPage />} />

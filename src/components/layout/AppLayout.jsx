@@ -56,6 +56,7 @@ const navConfigs = {
     '/barber/dashboard',
     '/barber/queue',
     '/barber/commission',
+    '/barber/leaderboard',
   ],
   customer: () => ['/customer/booking', '/customer/history', '/customer/loyalty'],
 }

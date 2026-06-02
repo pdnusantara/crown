@@ -7,7 +7,7 @@ import {
   Tag, GitCompare, Megaphone, Flag, MessageSquare, Activity,
   PieChart, UserCircle, DollarSign, Package, ShieldAlert, MapPin,
   ChevronRight, Wallet, Landmark, LifeBuoy, Fingerprint, Handshake,
-  Banknote, UserPlus, MessageCircle,
+  Banknote, UserPlus, MessageCircle, Trophy,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useTenantStore } from '../../store/tenantStore.js'
@@ -100,6 +100,7 @@ const navConfig = {
     { labelKey: 'nav.dashboard',  icon: LayoutDashboard, path: '/barber/dashboard' },
     { labelKey: 'nav.queue',      icon: ListOrdered,     path: '/barber/queue' },
     { labelKey: 'nav.commission', icon: TrendingUp,      path: '/barber/commission' },
+    { labelKey: 'nav.leaderboard', icon: Trophy,         path: '/barber/leaderboard' },
     { labelKey: 'nav.attendance', icon: Fingerprint,     path: '/barber/attendance', flag: 'attendance' },
     { labelKey: 'nav.ratings',    icon: Star,            path: '/barber/ratings' },
   ],
