@@ -459,8 +459,9 @@ function VideoUploadField({ label, hint, value, onChange }) {
     try {
       const fd = new FormData()
       fd.append('video', file)
-      // Video besar (≤30MB) butuh waktu unggah > timeout default 10s → set 3 menit.
-      const res = await api.post('/landing/upload-video', fd, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 180000 })
+      // Video besar (≤30MB) di koneksi lambat bisa lama → 5 menit, selaras dgn
+      // nginx client_body_timeout/proxy_*_timeout 300s di location /api/.
+      const res = await api.post('/landing/upload-video', fd, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 300000 })
       setPlayError(false)
       onChange(res.data?.data?.url || '')
       toast.success('Video diunggah — jangan lupa simpan')
