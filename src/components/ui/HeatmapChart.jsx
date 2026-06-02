@@ -1,41 +1,112 @@
 import { Fragment } from 'react'
 
+const DAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
+const DAY_FULL = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
+
+// Ramp sekuensial indigo untuk latar terang (area tenant = light-only):
+// makin ramai makin pekat. Lebih terbaca daripada opacity 1-warna.
+const STOPS = [
+  [0, [238, 242, 255]],    // indigo-50
+  [0.25, [199, 210, 254]], // indigo-200
+  [0.5, [129, 140, 248]],  // indigo-400
+  [0.75, [99, 102, 241]],  // indigo-500
+  [1, [67, 56, 202]],      // indigo-700
+]
+
+function rampColor(t) {
+  const x = Math.max(0, Math.min(1, t))
+  for (let i = 1; i < STOPS.length; i++) {
+    const [t0, c0] = STOPS[i - 1]
+    const [t1, c1] = STOPS[i]
+    if (x <= t1) {
+      const f = t1 === t0 ? 0 : (x - t0) / (t1 - t0)
+      const c = c0.map((v, k) => Math.round(v + (c1[k] - v) * f))
+      return `rgb(${c[0]}, ${c[1]}, ${c[2]})`
+    }
+  }
+  const last = STOPS[STOPS.length - 1][1]
+  return `rgb(${last[0]}, ${last[1]}, ${last[2]})`
+}
+
 export function HeatmapChart({ data = [], hoursStart = 9, hoursEnd = 20 }) {
   // Rentang jam mengikuti jam buka cabang (dari meta endpoint). Default 09–20.
   const start = Number.isFinite(hoursStart) ? hoursStart : 9
   const end = Number.isFinite(hoursEnd) && hoursEnd >= start ? hoursEnd : 20
   const count = end - start + 1
   const hours = Array.from({ length: count }, (_, i) => `${String(start + i).padStart(2, '0')}:00`)
-  const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
-  const allValues = (data || []).flat()
-  const max = allValues.length > 0 ? Math.max(...allValues) : 1
+
+  const grid = data || []
+  // Cari max + sel paling ramai/sepi (di antara yang ada transaksinya) untuk insight & sorotan.
+  let max = 0
+  let peak = null
+  let quiet = null
+  for (let hi = 0; hi < count; hi++) {
+    for (let di = 0; di < 7; di++) {
+      const v = grid[hi]?.[di] || 0
+      if (v > max) max = v
+      if (v > 0 && (peak == null || v > peak.v)) peak = { hi, di, v }
+      if (v > 0 && (quiet == null || v < quiet.v)) quiet = { hi, di, v }
+    }
+  }
+  const samePeakQuiet = peak && quiet && peak.hi === quiet.hi && peak.di === quiet.di
 
   return (
-    <div className="overflow-x-auto">
-      <div className="inline-grid gap-1" style={{ gridTemplateColumns: `auto repeat(7, 1fr)` }}>
-        {/* Header row */}
-        <div />
-        {days.map(d => (
-          <div key={d} className="text-xs text-muted text-center px-2 py-1 min-w-[36px]">{d}</div>
-        ))}
-        {/* Data rows */}
-        {hours.map((hour, hi) => (
-          <Fragment key={hour}>
-            <div className="text-xs text-muted pr-2 flex items-center whitespace-nowrap">{hour}</div>
-            {days.map((day, di) => {
-              const val = data[hi]?.[di] || 0
-              const opacity = max > 0 ? val / max : 0
-              return (
-                <div
-                  key={`${hour}-${day}`}
-                  title={`${day} ${hour} — ${val} transaksi`}
-                  className="w-8 h-8 rounded-md cursor-default transition-all hover:ring-1 hover:ring-brand"
-                  style={{ backgroundColor: `rgba(99, 102, 241, ${opacity * 0.9 + 0.05})` }}
-                />
-              )
-            })}
-          </Fragment>
-        ))}
+    <div>
+      <div className="overflow-x-auto pb-1">
+        <div className="inline-grid gap-1.5" style={{ gridTemplateColumns: 'auto repeat(7, minmax(34px, 1fr))' }}>
+          {/* Header row */}
+          <div />
+          {DAYS.map((d) => (
+            <div key={d} className="text-[11px] font-medium text-muted text-center px-1 py-1">{d}</div>
+          ))}
+          {/* Data rows */}
+          {hours.map((hour, hi) => (
+            <Fragment key={hour}>
+              <div className="text-[11px] text-muted pr-2 flex items-center justify-end whitespace-nowrap">{hour}</div>
+              {DAYS.map((day, di) => {
+                const val = grid[hi]?.[di] || 0
+                const t = max > 0 ? val / max : 0
+                const isPeak = peak && peak.hi === hi && peak.di === di
+                // Sel kosong = netral lavender (mundur ke belakang); ada transaksi = ramp
+                // dengan lantai 0.12 supaya aktivitas terkecil tetap terlihat.
+                const bg = val === 0 ? '#F1F1F8' : rampColor(0.12 + t * 0.88)
+                return (
+                  <div
+                    key={`${hour}-${day}`}
+                    title={`${DAY_FULL[di]} ${hour} — ${val} transaksi`}
+                    className={`relative aspect-square rounded-lg cursor-default transition-transform duration-150 hover:scale-[1.12] hover:z-10 hover:shadow-md ${isPeak ? 'ring-2 ring-offset-1 ring-brand' : ''}`}
+                    style={{ backgroundColor: bg }}
+                  >
+                    {isPeak && (
+                      <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white">{val}</span>
+                    )}
+                  </div>
+                )
+              })}
+            </Fragment>
+          ))}
+        </div>
+      </div>
+
+      {/* Legenda skala + insight otomatis */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
+        <div className="flex items-center gap-2 text-[11px] text-muted">
+          <span>Sepi</span>
+          <span
+            className="h-2.5 w-28 rounded-full"
+            style={{ background: 'linear-gradient(90deg, #EEF2FF, #C7D2FE, #818CF8, #6366F1, #4338CA)' }}
+          />
+          <span>Ramai</span>
+        </div>
+        {peak && (
+          <p className="text-xs text-off-white">
+            🔥 Paling ramai{' '}
+            <span className="font-semibold">{DAY_FULL[peak.di]} {hours[peak.hi]}</span> ({peak.v} transaksi)
+            {quiet && !samePeakQuiet && (
+              <span className="text-muted"> · paling sepi {DAY_FULL[quiet.di]} {hours[quiet.hi]}</span>
+            )}
+          </p>
+        )}
       </div>
     </div>
   )
