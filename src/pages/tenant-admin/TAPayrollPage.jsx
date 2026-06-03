@@ -6,7 +6,7 @@ import { useAuthStore } from '../../store/authStore.js'
 import { useIsFeatureEnabled } from '../../hooks/useFeatureFlags.js'
 import { useBarberReport } from '../../hooks/useReports.js'
 import { useBranches } from '../../hooks/useBranches.js'
-import { formatRupiah } from '../../utils/format.js'
+import { formatRupiah, formatRupiahShort } from '../../utils/format.js'
 import { Card, CardBody } from '../../components/ui/Card.jsx'
 import Button from '../../components/ui/Button.jsx'
 
@@ -162,10 +162,10 @@ function PayrollInner({ user }) {
 
       {/* Summary tiles */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-        <SummaryTile label="Total Dibayar" value={formatRupiah(totals.takeHome)} highlight />
-        <SummaryTile label="Komisi/Gaji Pokok" value={formatRupiah(totals.basePay)} />
-        <SummaryTile label="Bonus" value={formatRupiah(totals.bonus)} />
-        <SummaryTile label="Potongan" value={formatRupiah(totals.deduction)} />
+        <SummaryTile label="Total Dibayar" value={formatRupiahShort(totals.takeHome)} title={formatRupiah(totals.takeHome)} highlight />
+        <SummaryTile label="Komisi/Gaji Pokok" value={formatRupiahShort(totals.basePay)} title={formatRupiah(totals.basePay)} />
+        <SummaryTile label="Bonus" value={formatRupiahShort(totals.bonus)} title={formatRupiah(totals.bonus)} />
+        <SummaryTile label="Potongan" value={formatRupiahShort(totals.deduction)} title={formatRupiah(totals.deduction)} />
       </div>
 
       {isError ? (
@@ -238,14 +238,14 @@ function PayrollInner({ user }) {
                     <p className="text-[11px] text-muted mt-0.5">{schemeLabel(r)}{branches.length > 1 ? ` · ${branchName(r.branchId)}` : ''}</p>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className="text-base font-bold text-green-400 tabular-nums leading-none">{formatRupiah(r.takeHome)}</p>
+                    <p title={formatRupiah(r.takeHome)} className="text-base font-bold text-green-400 tabular-nums leading-none whitespace-nowrap">{formatRupiah(r.takeHome)}</p>
                     <p className="text-[10px] text-muted mt-0.5">dibayar</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 mt-2 text-[11px]">
-                  <div><p className="text-muted">Layanan</p><p className="text-off-white font-medium">{r.servicesCount || 0}</p></div>
-                  <div><p className="text-muted">Omzet</p><p className="text-off-white font-medium truncate">{formatRupiah(r.revenue || 0)}</p></div>
-                  <div><p className="text-muted">Komisi/Gaji</p><p className="text-brand font-medium truncate">{formatRupiah(r.basePay)}</p></div>
+                  <div className="min-w-0"><p className="text-muted">Layanan</p><p className="text-off-white font-medium">{r.servicesCount || 0}</p></div>
+                  <div className="min-w-0"><p className="text-muted">Omzet</p><p title={formatRupiah(r.revenue || 0)} className="text-off-white font-medium truncate">{formatRupiahShort(r.revenue || 0)}</p></div>
+                  <div className="min-w-0"><p className="text-muted">Komisi/Gaji</p><p title={formatRupiah(r.basePay)} className="text-brand font-medium truncate">{formatRupiahShort(r.basePay)}</p></div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 mt-2 no-print">
                   <label className="text-[11px] text-muted">Bonus
@@ -268,11 +268,11 @@ function PayrollInner({ user }) {
   )
 }
 
-function SummaryTile({ label, value, highlight }) {
+function SummaryTile({ label, value, title, highlight }) {
   return (
     <div className={`rounded-xl border p-3 ${highlight ? 'bg-brand/10 border-brand/30' : 'bg-dark-card/50 border-dark-border'}`}>
       <p className="text-[10px] sm:text-xs text-muted uppercase tracking-wider truncate">{label}</p>
-      <p className={`text-base sm:text-lg font-bold tabular-nums truncate ${highlight ? 'text-brand' : 'text-off-white'}`}>{value}</p>
+      <p title={title} className={`text-base sm:text-lg font-bold tabular-nums truncate ${highlight ? 'text-brand' : 'text-off-white'}`}>{value}</p>
     </div>
   )
 }
