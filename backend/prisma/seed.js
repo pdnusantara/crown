@@ -1,6 +1,9 @@
 require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
+// Fitur per paket berasal dari sumber tunggal (jangan salin literal di sini —
+// itu penyebab drift lama seed vs DB vs fallback).
+const { PACKAGE_FLAG_DEFAULTS } = require('../src/config/featureCatalog');
 
 const prisma = new PrismaClient();
 
@@ -14,21 +17,21 @@ async function main() {
       price: 299000, maxBranches: 1, maxStaff: 5,
       branchAddonPrice: 99000, branchAddonType: 'monthly',
       description: 'Cocok untuk barbershop single-outlet',
-      features: ['pos', 'queue', 'booking', 'loyalty', 'pwa'],
+      features: PACKAGE_FLAG_DEFAULTS.Basic,
     },
     {
       name: 'Pro',
       price: 599000, maxBranches: 1, maxStaff: 20,
       branchAddonPrice: 79000, branchAddonType: 'monthly',
       description: 'Untuk barbershop yang ingin scaling',
-      features: ['pos', 'queue', 'booking', 'loyalty', 'voucher', 'reports', 'heatmap', 'clv', 'schedule', 'multi_branch', 'whatsapp', 'barber_rating', 'pwa', 'backup'],
+      features: PACKAGE_FLAG_DEFAULTS.Pro,
     },
     {
       name: 'Enterprise',
       price: 1299000, maxBranches: 1, maxStaff: 99,
       branchAddonPrice: 49000, branchAddonType: 'monthly',
       description: 'Skala besar, unlimited fitur & prioritas support',
-      features: ['pos', 'queue', 'booking', 'loyalty', 'voucher', 'reports', 'heatmap', 'clv', 'schedule', 'multi_branch', 'whatsapp', 'barber_rating', 'pwa', 'backup', 'api_access', 'white_label'],
+      features: PACKAGE_FLAG_DEFAULTS.Enterprise,
     },
   ];
   for (const pkg of packageDefs) {

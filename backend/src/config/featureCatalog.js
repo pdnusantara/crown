@@ -36,4 +36,22 @@ const FEATURE_CATALOG = [
 
 const FEATURE_FLAG_IDS = FEATURE_CATALOG.map((f) => f.id);
 
-module.exports = { FEATURE_CATALOG, FEATURE_FLAG_IDS };
+// SUMBER TUNGGAL "paket → fitur default" (baseline saat tenant/paket dibuat).
+// Harus jadi satu-satunya tempat daftar ini hidup di backend: seed.js dan
+// services/featureFlagSync.js WAJIB mengimpor dari sini, jangan menyalin literal
+// (penyebab drift lama: seed.js sempat beda sendiri dari DB & fallback).
+//
+// Catatan: sumber kebenaran RUNTIME tetap Package.features di DB (diedit
+// super-admin via /super-admin/packages). Nilai di sini dipakai untuk seed awal
+// & sebagai fallback bila row Package belum ada. Frontend featureFlagStore.js
+// punya salinan fallback sendiri (build terpisah) yang harus dijaga sinkron.
+const PACKAGE_FLAG_DEFAULTS = {
+  Basic:      ['pos', 'queue', 'booking', 'loyalty', 'voucher', 'barber_rating',
+               'schedule', 'attendance', 'expense_tracking', 'pwa'],
+  Pro:        ['pos', 'queue', 'booking', 'loyalty', 'voucher', 'reports', 'schedule',
+               'expense_tracking', 'attendance', 'whatsapp', 'whatsapp_logs',
+               'barber_rating', 'heatmap', 'clv', 'wilayah_report', 'pwa'],
+  Enterprise: [...FEATURE_FLAG_IDS],
+};
+
+module.exports = { FEATURE_CATALOG, FEATURE_FLAG_IDS, PACKAGE_FLAG_DEFAULTS };

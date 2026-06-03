@@ -10,21 +10,12 @@ const { getIO, tenantRoom } = require('../config/socket');
 
 // Katalog flag valid — sumber tunggal di config/featureCatalog.js. Menambah
 // fitur baru cukup di sana; modul ini (seed + propagasi tenant) otomatis ikut.
-const { FEATURE_FLAG_IDS } = require('../config/featureCatalog');
+// Flag default per paket kini berasal dari config/featureCatalog.js (sumber
+// tunggal). Frontend featureFlagStore.js menyimpan salinan fallback sendiri yang
+// harus dijaga sinkron.
+const { FEATURE_FLAG_IDS, PACKAGE_FLAG_DEFAULTS } = require('../config/featureCatalog');
 const KNOWN_FLAG_IDS = FEATURE_FLAG_IDS;
 const KNOWN = new Set(KNOWN_FLAG_IDS);
-
-// Flag default per paket — dipakai saat tenant pertama dibuat supaya
-// TenantFeatureFlag punya baseline (bukan kosong → semua fitur ter-gate mati).
-// Harus sinkron dengan PACKAGE_FLAG_DEFAULTS di frontend featureFlagStore.js.
-const PACKAGE_FLAG_DEFAULTS = {
-  Basic:      ['pos', 'queue', 'booking', 'loyalty', 'voucher', 'barber_rating',
-               'schedule', 'attendance', 'expense_tracking', 'pwa'],
-  Pro:        ['pos', 'queue', 'booking', 'loyalty', 'voucher', 'reports', 'schedule',
-               'expense_tracking', 'attendance', 'whatsapp', 'whatsapp_logs',
-               'barber_rating', 'heatmap', 'clv', 'wilayah_report', 'pwa'],
-  Enterprise: [...KNOWN_FLAG_IDS],
-};
 
 // Seed seluruh flag untuk satu tenant baru sesuai paketnya. `client` boleh
 // prisma transaction (tx) maupun instance prisma global. Idempotent
