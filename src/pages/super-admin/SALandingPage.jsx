@@ -543,7 +543,6 @@ const FEATURE_PRESETS = [
   ]},
   { category: 'Skala & integrasi', items: [
     { icon: 'Code2',         title: 'Akses API',        desc: 'Integrasi dengan sistem lain buat kebutuhan jaringan besar atau custom.' },
-    { icon: 'Palette',       title: 'White label',      desc: 'Pakai domain dan branding sendiri, tanpa logo SembaPOS.' },
     { icon: 'DatabaseBackup',title: 'Backup & restore', desc: 'Export dan import data toko. Aman dan tenang soal data toko kamu.' },
   ]},
   { category: 'Selalu aktif (semua paket)', items: [

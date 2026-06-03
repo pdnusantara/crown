@@ -24,7 +24,6 @@ const AVAILABLE_FLAGS = [
   { id: 'whatsapp',         label: 'Struk WhatsApp',          category: 'UX' },
   { id: 'barber_rating',    label: 'Rating Barber',           category: 'UX' },
   { id: 'api_access',       label: 'API Access',              category: 'Enterprise' },
-  { id: 'white_label',      label: 'White Label',             category: 'Enterprise' },
   { id: 'backup',           label: 'Backup & Restore',        category: 'Enterprise' },
 ];
 

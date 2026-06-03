@@ -189,7 +189,6 @@ const BENEFIT_ORDER = [
   ['multi_branch',    'Kelola banyak cabang sekaligus'],
   ['backup',          'Backup & restore data toko'],
   ['api_access',      'Akses API untuk integrasi'],
-  ['white_label',     'Branding sendiri tanpa logo SembaPOS'],
 ]
 
 // Susun daftar manfaat kartu harga. Paket dasar tampil utuh; paket lebih
