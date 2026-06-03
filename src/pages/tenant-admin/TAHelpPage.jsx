@@ -208,6 +208,20 @@ const CATEGORIES = [
         to: '/admin/expenses',
         toLabel: 'Buka Pengeluaran',
       },
+      {
+        id: 'l-payroll',
+        q: 'Bagaimana memakai Komisi & Payroll? (Enterprise)',
+        a: 'Menu Komisi & Payroll (paket Enterprise) menampilkan komisi/gaji tiap barber untuk satu periode dalam satu halaman, lengkap dengan bonus/potongan dan total yang harus dibayar — siap diekspor atau dicetak sebagai slip. Komisi dihitung otomatis dari omzet layanan yang dikerjakan barber; barber gaji tetap memakai gaji pokok. Beda dengan "Gaji Staf" di Pengeluaran yang fokus mencatat gaji sebagai biaya untuk laba bersih — Payroll fokus menyiapkan pembayaran ke barber.',
+        steps: [
+          'Buka menu Komisi & Payroll (di grup Laporan).',
+          'Pilih periode (default Bulan Ini) dan cabang bila punya lebih dari satu.',
+          'Tabel menampilkan omzet, skema, dan komisi/gaji pokok tiap barber.',
+          'Isi Bonus atau Potongan bila ada — kolom "Dibayar" otomatis menghitung total.',
+          'Klik CSV untuk export, atau Cetak untuk slip gaji.',
+        ],
+        to: '/admin/payroll',
+        toLabel: 'Buka Komisi & Payroll',
+      },
     ],
   },
   {
