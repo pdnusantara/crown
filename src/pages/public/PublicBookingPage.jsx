@@ -120,6 +120,7 @@ function PublicBookingPageInner() {
   const [services, setServices]   = useState([])
   const [barbers, setBarbers]     = useState([])
   const [testimonials, setTestimonials] = useState([])
+  const [queueInfo, setQueueInfo] = useState({}) // branchId -> { waiting, estimatedMinutes }
   const [bookedSlots, setBookedSlots] = useState([])
   // Penutupan cabang pada tanggal terpilih (libur khusus admin).
   const [branchClosure, setBranchClosure] = useState(null) // null | { note }
@@ -199,16 +200,20 @@ function PublicBookingPageInner() {
     async function load() {
       setLoading(true); setError(null)
       try {
-        const [bRes, sRes, tRes] = await Promise.all([
+        const [bRes, sRes, tRes, qRes] = await Promise.all([
           publicApi.get('/public/branches'),
           publicApi.get('/public/services'),
           publicApi.get('/public/testimonials', { params: { limit: 6 } }).catch(() => ({ data: { data: [] } })),
+          publicApi.get('/public/queue-status').catch(() => ({ data: { data: [] } })),
         ])
         if (cancelled) return
         const br = bRes.data.data || []
         setBranches(br)
         setServices(sRes.data.data || [])
         setTestimonials(tRes.data.data || [])
+        setQueueInfo(
+          (qRes.data.data || []).reduce((m, q) => { m[q.branchId] = q; return m }, {})
+        )
         // Auto-select first/only branch
         if (br.length >= 1) {
           setSelected(s => ({ ...s, branch: br[0] }))
@@ -407,7 +412,7 @@ function PublicBookingPageInner() {
             <Step1Pick
               tenantName={tenantName} tenantLogo={tenantLogo} bp={bp}
               branches={branches} services={services} barbers={barbers}
-              testimonials={testimonials}
+              testimonials={testimonials} queueInfo={queueInfo}
               selected={selected} accent={accent} tenantTz={tenantTz}
               onPickBranch={pickBranch} onPickService={pickService} onPickBarber={pickBarber}
               canNext={canNextStep0}
@@ -928,7 +933,7 @@ function StickyCta({ label, onClick, disabled, accent, note }) {
 // STEP 1 — Pilih Barber & Layanan
 // ═══════════════════════════════════════════════════════════════════════════
 
-function Step1Pick({ tenantName, tenantLogo, bp, branches, services, barbers, testimonials = [], selected, accent, tenantTz,
+function Step1Pick({ tenantName, tenantLogo, bp, branches, services, barbers, testimonials = [], queueInfo = {}, selected, accent, tenantTz,
                     onPickBranch, onPickService, onPickBarber, onNext, canNext }) {
   return (
     <div className="space-y-7 lg:space-y-10">
@@ -940,7 +945,17 @@ function Step1Pick({ tenantName, tenantLogo, bp, branches, services, barbers, te
         <div className="lg:col-span-2 space-y-7">
           {/* Branch selector — only when multi-branch */}
           {branches.length > 1 && (
-            <BranchSelector branches={branches} selected={selected.branch} onPick={onPickBranch} accent={accent} />
+            <BranchSelector branches={branches} selected={selected.branch} onPick={onPickBranch} accent={accent} queueInfo={queueInfo} />
+          )}
+
+          {/* Estimasi antrean cabang terpilih — untuk tenant 1 cabang (selector
+              di atas sudah menampilkannya per-pill saat multi-cabang). */}
+          {branches.length <= 1 && selected.branch && queueInfo[selected.branch.id]?.waiting > 0 && (
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"
+              style={{ background: 'var(--bk-surface)', color: 'var(--bk-text)', border: '1px solid var(--bk-border)' }}>
+              🕐 Perkiraan tunggu {fmtWait(queueInfo[selected.branch.id].estimatedMinutes)}
+              <span style={{ color: 'var(--bk-text-muted)' }}>· {queueInfo[selected.branch.id].waiting} antre</span>
+            </div>
           )}
 
           {/* Barber picker */}
@@ -1311,16 +1326,28 @@ function Badge({ icon: Icon, label, accent, filled, onDark }) {
   )
 }
 
-function BranchSelector({ branches, selected, onPick, accent }) {
+function fmtWait(min) {
+  if (min < 60) return `± ${min} mnt`
+  const h = Math.floor(min / 60), m = min % 60
+  return m ? `± ${h} j ${m} mnt` : `± ${h} jam`
+}
+
+function BranchSelector({ branches, selected, onPick, accent, queueInfo = {} }) {
   return (
     <div>
       <SectionTitle accent={accent} step="" title="Cabang" />
       <div className="flex gap-2 overflow-x-auto pb-1">
         {branches.map(b => {
           const isSel = selected?.id === b.id
+          const q = queueInfo[b.id]
+          // Tampilkan estimasi hanya bila ada antrean — cabang tanpa antrean
+          // dibiarkan bersih (langsung dilayani, tak perlu angka menakuti).
+          const wait = q && q.waiting > 0
+            ? `🕐 ${fmtWait(q.estimatedMinutes)} · ${q.waiting} antre`
+            : null
           return (
             <button key={b.id} onClick={() => onPick(b)}
-              className="flex-shrink-0 px-4 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all"
+              className="flex-shrink-0 flex flex-col items-start justify-center px-4 py-2 rounded-2xl text-sm font-semibold whitespace-nowrap transition-all"
               style={{
                 background: isSel ? accent : 'var(--bk-surface)',
                 color: isSel ? '#FFFFFF' : 'var(--bk-text)',
@@ -1329,7 +1356,13 @@ function BranchSelector({ branches, selected, onPick, accent }) {
                 boxShadow: isSel ? `0 4px 12px -4px ${accent}66` : 'none',
               }}
             >
-              {b.name}
+              <span>{b.name}</span>
+              {wait && (
+                <span className="text-[10px] font-medium leading-none mt-0.5"
+                  style={{ color: isSel ? 'rgba(255,255,255,0.85)' : 'var(--bk-text-muted)' }}>
+                  {wait}
+                </span>
+              )}
             </button>
           )
         })}

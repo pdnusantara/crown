@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const { z } = require('zod');
 const prisma = require('../config/database');
-const { formatYmdInTz, normalizeTimezone, DEFAULT_TZ } = require('../utils/timezone');
+const { formatYmdInTz, normalizeTimezone, DEFAULT_TZ, tenantDayStart } = require('../utils/timezone');
 const { getBranchLicenseStatus, isBranchLicensed } = require('../utils/branchLicense');
 
 // Defense-in-depth: even if the public booking UI is bypassed, refuse a slot
@@ -206,6 +206,54 @@ router.get('/branches', requireTenant, async (req, res, next) => {
     const license = await getBranchLicenseStatus(req.tenant.id);
     const visible = branches.filter((b) => !license.unlicensed.has(b.id));
     res.json({ success: true, data: visible });
+  } catch (err) { next(err); }
+});
+
+// GET /api/public/queue-status — estimasi antrian per cabang untuk halaman /book.
+// Heuristik: (jumlah antri / jumlah barber aktif) × durasi rata-rata layanan.
+// Hanya untuk informasi pelanggan; tak menahan booking. Hitung antrian hari ini
+// (TZ tenant) berstatus `waiting`. Tidak membongkar data pelanggan — hanya angka.
+router.get('/queue-status', requireTenant, async (req, res, next) => {
+  try {
+    const tz = normalizeTimezone(req.tenant.timezone || DEFAULT_TZ);
+    const todayStart = tenantDayStart(formatYmdInTz(new Date(), tz), tz);
+
+    const [waitingByBranch, barbersByBranch, durAgg] = await Promise.all([
+      prisma.queue.groupBy({
+        by: ['branchId'],
+        where: { tenantId: req.tenant.id, status: 'waiting', createdAt: { gte: todayStart } },
+        _count: { _all: true },
+      }),
+      // Barber aktif per cabang (role barber atau kasir merangkap isBarber).
+      prisma.user.groupBy({
+        by: ['branchId'],
+        where: {
+          tenantId: req.tenant.id, isActive: true, deletedAt: null,
+          branchId: { not: null }, OR: [{ role: 'barber' }, { isBarber: true }],
+        },
+        _count: { _all: true },
+      }),
+      prisma.service.aggregate({
+        _avg: { duration: true },
+        where: { tenantId: req.tenant.id, isActive: true, deletedAt: null },
+      }),
+    ]);
+
+    const avgDuration = Math.round(durAgg._avg.duration || 30) || 30;
+    const barberCount = barbersByBranch.reduce((m, r) => {
+      if (r.branchId) m[r.branchId] = r._count._all;
+      return m;
+    }, {});
+
+    const data = waitingByBranch.map((r) => {
+      const waiting = r._count._all;
+      const barbers = Math.max(barberCount[r.branchId] || 1, 1);
+      // Pembulatan ke atas: pelanggan ke-(barbers+1) menunggu 1 giliran, dst.
+      const estimatedMinutes = Math.ceil(waiting / barbers) * avgDuration;
+      return { branchId: r.branchId, waiting, estimatedMinutes };
+    });
+
+    res.json({ success: true, data });
   } catch (err) { next(err); }
 });
 
