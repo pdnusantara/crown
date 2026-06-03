@@ -703,7 +703,7 @@ export default function QueuePage() {
                   const checked = form.serviceIds.includes(s.id)
                   return (
                     <button key={s.id} onClick={() => toggleService(s.id)} type="button"
-                      className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border transition-all active:scale-[0.97] ${
+                      className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 min-h-[44px] rounded-xl text-sm font-medium border transition-all active:scale-[0.97] ${
                         checked
                           ? 'bg-brand/15 border-brand text-brand'
                           : 'bg-dark-surface border-dark-border text-off-white hover:border-brand/40'
@@ -720,20 +720,16 @@ export default function QueuePage() {
           <div>
             <label className="block text-sm font-medium text-muted mb-2">Barber <span className="font-normal">(opsional)</span></label>
             <div className="flex flex-wrap gap-2">
-              <button onClick={() => setForm(f => ({ ...f, barberId: '' }))} type="button"
-                className={`px-3 py-2 rounded-xl text-sm font-medium border transition-all active:scale-[0.97] ${
-                  !form.barberId ? 'bg-brand/15 border-brand text-brand' : 'bg-dark-surface border-dark-border text-off-white hover:border-brand/40'
-                }`}>
-                Bebas
-              </button>
               {barbers.map(b => {
                 const sel = form.barberId === b.id
                 return (
-                  <button key={b.id} onClick={() => setForm(f => ({ ...f, barberId: b.id }))} type="button"
-                    className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border transition-all active:scale-[0.97] ${
+                  // Tap untuk pilih; tap lagi membatalkan (barber tetap opsional, tanpa chip "Bebas").
+                  <button key={b.id} type="button"
+                    onClick={() => setForm(f => ({ ...f, barberId: f.barberId === b.id ? '' : b.id }))}
+                    className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 min-h-[44px] rounded-xl text-sm font-medium border transition-all active:scale-[0.97] ${
                       sel ? 'bg-brand/15 border-brand text-brand' : 'bg-dark-surface border-dark-border text-off-white hover:border-brand/40'
                     }`}>
-                    <User className="w-3.5 h-3.5" />
+                    <User className="w-3.5 h-3.5 flex-shrink-0" />
                     {b.name}
                   </button>
                 )
