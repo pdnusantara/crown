@@ -606,9 +606,51 @@ async function resendLoggedMessage(tenantId, logId, { recipient = null, message 
   }
 }
 
+// Cek flag fitur tenant. Dipakai sebagai defense-in-depth di JALUR KIRIM (bukan
+// hanya endpoint connect/settings di routes/whatsapp.js) supaya tenant yang
+// turun paket / kehilangan flag berhenti mengirim apa pun jalur pemicunya
+// (POS, cron reminder, link rating).
+async function tenantHasFeature(tenantId, flagId) {
+  if (!tenantId) return false;
+  try {
+    const flag = await prisma.tenantFeatureFlag.findUnique({
+      where: { tenantId_flagId: { tenantId, flagId } },
+    });
+    return !!flag?.enabled;
+  } catch {
+    return false;
+  }
+}
+
+// Cabut akses WhatsApp tenant: matikan notifikasi & lepas device dari gateway
+// (membebaskan slot/kuota berbayar). Dipanggil saat flag `whatsapp` dicabut
+// (downgrade paket / edit fitur paket). Best-effort & idempotent.
+async function revokeWhatsappAccess(tenantId) {
+  if (!tenantId) return;
+  try {
+    const settings = await getTenantSettings(tenantId);
+    if (settings.enabled) await updateTenantSettings(tenantId, { enabled: false });
+  } catch (err) {
+    console.error(`[WA] revoke settings tenant=${tenantId} gagal:`, err.message);
+  }
+  try {
+    await removeTenantDevice(tenantId);
+  } catch (err) {
+    console.error(`[WA] revoke device tenant=${tenantId} gagal:`, err.message);
+  }
+}
+
 async function sendTransactionNotification(tenantId, transaction) {
-  const settings = await getTenantSettings(tenantId);
   const txId = transaction?.id || '?';
+
+  // Gate fitur: tenant tanpa flag `whatsapp` (mis. Basic, atau turun dari Pro)
+  // tak boleh mengirim — meski device masih tersambung dari masa lalu.
+  if (!(await tenantHasFeature(tenantId, 'whatsapp'))) {
+    console.log(`[WA] tx=${txId} tenant=${tenantId} → SKIP (fitur whatsapp nonaktif)`);
+    return { sent: false, reason: 'feature_disabled' };
+  }
+
+  const settings = await getTenantSettings(tenantId);
 
   if (!settings.enabled) {
     console.log(`[WA] tx=${txId} tenant=${tenantId} → SKIP (notifikasi disabled)`);
@@ -765,6 +807,8 @@ module.exports = {
   sendTestMessage,
   sendSystemMessage,
   sendRatingLink,
+  tenantHasFeature,
+  revokeWhatsappAccess,
   resendLoggedMessage,
   // konfigurasi gateway (super-admin)
   getConfig,

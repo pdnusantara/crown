@@ -10,7 +10,7 @@
 
 const cron = require('node-cron');
 const prisma = require('../config/database');
-const { getTenantStatus, sendSystemMessage } = require('../services/whatsappService');
+const { getTenantStatus, sendSystemMessage, tenantHasFeature } = require('../services/whatsappService');
 
 const DAY_MS = 86400 * 1000;
 // Batas aman pesan per tenant per eksekusi — cegah membanjiri gateway.
@@ -146,6 +146,12 @@ async function processTenant(tenant, opts = {}) {
 
   if (dryRun) {
     return { tenantId: tenant.id, eligible: eligible.length, sent: 0, config: cfg };
+  }
+  // Gate fitur (defense-in-depth, berlaku cron + tombol "Kirim sekarang"):
+  // hanya tenant ber-flag `whatsapp` (Pro+) yang boleh mengirim. dryRun di atas
+  // sengaja dibiarkan agar preview jumlah tetap jalan.
+  if (!(await tenantHasFeature(tenant.id, 'whatsapp'))) {
+    return { tenantId: tenant.id, skipped: 'feature_disabled', eligible: eligible.length, sent: 0 };
   }
   if (eligible.length === 0) {
     return { tenantId: tenant.id, eligible: 0, sent: 0 };

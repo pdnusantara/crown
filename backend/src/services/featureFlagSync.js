@@ -104,6 +104,15 @@ async function propagatePackageFeatureChange(packageName, oldFeatures, newFeatur
   if (added.length)   await applyFlags(tenantIds, added, true);
   if (removed.length) await applyFlags(tenantIds, removed, false);
 
+  // Bila fitur `whatsapp` dicabut dari paket, lepas device WA tiap tenant
+  // terdampak: matikan notifikasi + bebaskan slot/kuota gateway berbayar.
+  // Best-effort (revokeWhatsappAccess tak pernah throw). Lazy-require menghindari
+  // ketergantungan lingkar saat modul dimuat.
+  if (removed.includes('whatsapp')) {
+    const { revokeWhatsappAccess } = require('./whatsappService');
+    for (const tenantId of tenantIds) await revokeWhatsappAccess(tenantId);
+  }
+
   tenantIds.forEach(emitTenantFlagChange);
   emitSupportFlagChange();
 
@@ -132,6 +141,14 @@ async function syncTenantFlagsToPackage(tenantId, packageName) {
       })
     )
   );
+
+  // Downgrade (mis. Pro→Basic) yang mencabut `whatsapp`: lepas device WA tenant
+  // agar berhenti mengirim & slot gateway berbayar dibebaskan. Idempotent — bila
+  // tenant memang tak punya device, revokeWhatsappAccess no-op.
+  if (!enabled.has('whatsapp')) {
+    const { revokeWhatsappAccess } = require('./whatsappService');
+    await revokeWhatsappAccess(tenantId);
+  }
 
   emitTenantFlagChange(tenantId);
   emitSupportFlagChange();

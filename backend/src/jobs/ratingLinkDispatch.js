@@ -12,7 +12,7 @@
 
 const cron = require('node-cron');
 const prisma = require('../config/database');
-const { sendRatingLink } = require('../services/whatsappService');
+const { sendRatingLink, tenantHasFeature } = require('../services/whatsappService');
 
 const DEFAULT_DELAY_MIN = 15;
 const MIN_DELAY_MIN     = 1;
@@ -37,6 +37,10 @@ async function processTenant(tenant) {
   const cfg = resolveConfig(tenant.ratingConfig);
   if (!cfg.enabled) {
     return { tenantId: tenant.id, skipped: 'disabled', sent: 0 };
+  }
+  // Gate fitur: hanya tenant ber-flag `whatsapp` (Pro+) yang boleh kirim.
+  if (!(await tenantHasFeature(tenant.id, 'whatsapp'))) {
+    return { tenantId: tenant.id, skipped: 'feature_disabled', sent: 0 };
   }
 
   // Transaksi completed yang:

@@ -81,6 +81,13 @@ async function handlePutTenantFlags(req, res, next) {
       )
     );
 
+    // Bila `whatsapp` dimatikan manual oleh super-admin, lepas device WA tenant
+    // (matikan notifikasi + bebaskan slot gateway). Best-effort.
+    const waFlag = flags.find((f) => f.flagId === 'whatsapp');
+    if (waFlag && !waFlag.enabled) {
+      await require('../services/whatsappService').revokeWhatsappAccess(tenantId);
+    }
+
     const tenantFlags = await prisma.tenantFeatureFlag.findMany({ where: { tenantId } });
     const flagMap = {};
     tenantFlags.forEach((f) => { flagMap[f.flagId] = f.enabled; });
@@ -137,6 +144,11 @@ router.patch('/tenant/:tenantId/:flagId', authenticate, requireRole('super_admin
       create: { tenantId, flagId, enabled },
       update: { enabled },
     });
+
+    // `whatsapp` dimatikan → lepas device WA tenant (bebaskan slot gateway).
+    if (flagId === 'whatsapp' && !enabled) {
+      await require('../services/whatsappService').revokeWhatsappAccess(tenantId);
+    }
 
     await recordAudit(req, {
       action: 'flag.toggle',
