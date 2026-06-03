@@ -50,6 +50,7 @@ const TAServicesPage       = lazy(() => import('./pages/tenant-admin/TAServicesP
 const TAStaffPage          = lazy(() => import('./pages/tenant-admin/TAStaffPage.jsx'))
 const TACustomersPage      = lazy(() => import('./pages/tenant-admin/TACustomersPage.jsx'))
 const TAReportsPage        = lazy(() => import('./pages/tenant-admin/TAReportsPage.jsx'))
+const TAPayrollPage        = lazy(() => import('./pages/tenant-admin/TAPayrollPage.jsx'))
 const TASettingsPage       = lazy(() => import('./pages/tenant-admin/TASettingsPage.jsx'))
 const TASchedulePage       = lazy(() => import('./pages/tenant-admin/TASchedulePage.jsx'))
 const TAVouchersPage       = lazy(() => import('./pages/tenant-admin/TAVouchersPage.jsx'))
@@ -342,6 +343,7 @@ export default function App() {
               <Route path="staff"      element={<TAStaffPage />} />
               <Route path="customers"  element={<TACustomersPage />} />
               <Route path="reports"    element={<TAReportsPage />} />
+              <Route path="payroll"    element={<TAPayrollPage />} />
               <Route path="settings"   element={<TASettingsPage />} />
               <Route path="schedule"   element={<TASchedulePage />} />
               <Route path="vouchers"   element={<TAVouchersPage />} />

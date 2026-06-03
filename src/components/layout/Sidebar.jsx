@@ -66,6 +66,8 @@ const navConfig = {
     // Laporan Wilayah = fitur analitik berbayar (Pro+). Gate via flag paket.
     { section: 'Laporan',     labelKey: 'nav.wilayahReport',  icon: MapPin,     path: '/admin/wilayah-report', flag: 'wilayah_report' },
     { section: 'Laporan',     labelKey: 'nav.ratings',        icon: Star,       path: '/admin/ratings' },
+    // Komisi & Payroll = fitur Enterprise. Gate via flag paket `payroll`.
+    { section: 'Laporan',     labelKey: 'nav.payroll',        icon: Wallet,     path: '/admin/payroll', flag: 'payroll' },
 
     { section: 'Komunikasi',  labelKey: 'nav.whatsappLogs',   icon: MessageCircle, path: '/admin/whatsapp-logs', flag: 'whatsapp_logs' },
     { section: 'Komunikasi',  labelKey: 'nav.tickets',        icon: MessageSquare, path: '/admin/tickets', badge: 'ta_tickets' },

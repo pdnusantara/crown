@@ -543,6 +543,7 @@ const FEATURE_PRESETS = [
   ]},
   { category: 'Skala & integrasi', items: [
     { icon: 'Code2',         title: 'Akses API',        desc: 'Integrasi dengan sistem lain buat kebutuhan jaringan besar atau custom.' },
+    { icon: 'Wallet',        title: 'Komisi & Payroll', desc: 'Hitung komisi & gaji barber per periode otomatis, cetak slip & export.' },
     { icon: 'DatabaseBackup',title: 'Backup & restore', desc: 'Export dan import data toko. Aman dan tenang soal data toko kamu.' },
   ]},
   { category: 'Selalu aktif (semua paket)', items: [

@@ -35,7 +35,7 @@ const INITIAL_PACKAGES = {
     branchAddonPrice: 49000,
     branchAddonType: 'monthly',
     description: 'Skala besar, unlimited fitur & prioritas support',
-    features: ['pos', 'queue', 'booking', 'reports', 'loyalty', 'voucher', 'api'],
+    features: ['pos', 'queue', 'booking', 'reports', 'loyalty', 'voucher', 'api', 'payroll'],
   },
 }
 

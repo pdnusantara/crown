@@ -25,6 +25,7 @@ const AVAILABLE_FLAGS = [
   { id: 'barber_rating',    label: 'Rating Barber',           category: 'UX' },
   { id: 'api_access',       label: 'API Access',              category: 'Enterprise' },
   { id: 'backup',           label: 'Backup & Restore',        category: 'Enterprise' },
+  { id: 'payroll',          label: 'Komisi & Payroll',        category: 'Enterprise' },
 ];
 
 const querySchema = z.object({

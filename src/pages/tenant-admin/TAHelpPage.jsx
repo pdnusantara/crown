@@ -352,7 +352,7 @@ const CATEGORIES = [
         steps: [
           'Basic — POS kasir, manajemen antrian, booking online, loyalti/poin, voucher & promo, rating barber, jadwal shift, absensi digital, manajemen pengeluaran, dan install aplikasi (PWA).',
           'Pro — semua fitur Basic, plus laporan lanjutan, heatmap jam sibuk, Customer CLV, laporan wilayah, struk WhatsApp, dan laporan pesan WhatsApp.',
-          'Enterprise — semua fitur Pro, plus multi-cabang, backup & restore, dan akses API.',
+          'Enterprise — semua fitur Pro, plus multi-cabang, backup & restore, akses API, dan komisi & payroll barber (hitung gaji per periode + slip & export).',
         ],
         to: '/admin/billing',
         toLabel: 'Buka Billing',

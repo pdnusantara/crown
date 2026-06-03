@@ -35,6 +35,7 @@ const ALL_FLAGS = [
   { id: 'barber_rating', label: 'Rating Barber',       description: 'Pelanggan beri bintang setelah transaksi',          category: 'UX' },
   { id: 'api_access',    label: 'API Access',          description: 'Akses API untuk integrasi pihak ketiga',            category: 'Enterprise' },
   { id: 'backup',        label: 'Backup & Restore',    description: 'Export dan import data tenant',                     category: 'Enterprise' },
+  { id: 'payroll',       label: 'Komisi & Payroll',    description: 'Hitung komisi & gaji barber per periode + slip & export', category: 'Enterprise' },
 ]
 
 // Default fitur per paket — fallback tampilan saja (mis. /super-admin/feature-flags).
