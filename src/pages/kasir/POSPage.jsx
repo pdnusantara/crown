@@ -1016,16 +1016,18 @@ function POSPageInner() {
           </div>
         ) : (
           posStore.cartItems.map(item => (
-            <div key={item.id} className="p-3 bg-dark-card rounded-xl border border-dark-border flex items-center justify-between gap-2">
-              <p className="text-sm font-medium text-off-white leading-tight flex-1 min-w-0 truncate">{item.name}</p>
-              <span className="text-sm font-semibold text-brand whitespace-nowrap tabular-nums">{formatRupiah(item.price)}</span>
-              <button
-                onClick={() => posStore.removeFromCart(item.id)}
-                className="p-2.5 -m-1 text-muted hover:text-red-400 active:text-red-400 transition-colors flex-shrink-0"
-                aria-label={t('common.remove') || 'Remove'}
-              >
-                <X className="w-4 h-4" />
-              </button>
+            <div key={item.id} className="p-3 bg-dark-card rounded-xl border border-dark-border flex items-start justify-between gap-2">
+              <p className="text-sm font-medium text-off-white leading-snug flex-1 min-w-0 line-clamp-2">{item.name}</p>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <span className="text-sm font-semibold text-brand whitespace-nowrap tabular-nums">{formatRupiah(item.price)}</span>
+                <button
+                  onClick={() => posStore.removeFromCart(item.id)}
+                  className="p-2 -mr-1 text-muted hover:text-red-400 active:text-red-400 transition-colors"
+                  aria-label={t('common.remove') || 'Remove'}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           ))
         )}
@@ -1056,30 +1058,28 @@ function POSPageInner() {
 
         {discountTab === 'manual' ? (
           <>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2">
             <select
               value={discountInput.type}
               onChange={e => setDiscountInput(d => ({ ...d, type: e.target.value }))}
-              className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-xs outline-none w-28"
+              className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-2.5 py-2 text-xs outline-none w-24 flex-shrink-0"
             >
               <option value="percentage">{t('pos.percentDiscount')}</option>
               <option value="flat">{t('pos.flatDiscount')}</option>
             </select>
-            <div className="flex-1 flex gap-2 min-w-[140px]">
-              <input
-                type="number" inputMode="numeric" min="0"
-                value={discountInput.value}
-                onChange={e => setDiscountInput(d => ({ ...d, value: e.target.value }))}
-                placeholder={discountInput.type === 'percentage' ? '10' : '50000'}
-                className="flex-1 min-w-0 bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl px-3 py-2 text-xs outline-none"
-              />
-              <button
-                onClick={handleApplyDiscount}
-                className="px-3 py-2 bg-brand/10 border border-brand/20 text-brand rounded-xl text-xs font-medium hover:bg-brand/20 transition-colors flex-shrink-0"
-              >
-                {t('pos.apply')}
-              </button>
-            </div>
+            <input
+              type="number" inputMode="numeric" min="0"
+              value={discountInput.value}
+              onChange={e => setDiscountInput(d => ({ ...d, value: e.target.value }))}
+              placeholder={discountInput.type === 'percentage' ? '10' : '50000'}
+              className="flex-1 min-w-0 bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl px-3 py-2 text-xs outline-none"
+            />
+            <button
+              onClick={handleApplyDiscount}
+              className="px-3 py-2 bg-brand/10 border border-brand/20 text-brand rounded-xl text-xs font-medium hover:bg-brand/20 transition-colors flex-shrink-0"
+            >
+              {t('pos.apply')}
+            </button>
           </div>
           {!appliedVoucher && posStore.discountValue > 0 && (
             <div className="flex items-center justify-between mt-2 px-2.5 py-1.5 bg-brand/5 border border-brand/20 rounded-lg text-xs">
