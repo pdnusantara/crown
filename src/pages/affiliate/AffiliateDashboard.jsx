@@ -125,7 +125,7 @@ export default function AffiliateDashboard() {
 
             {/* URL bar */}
             <div className="flex items-center gap-2 bg-dark-surface border border-dark-border rounded-xl p-3 mb-3">
-              <code className="flex-1 font-mono text-sm text-brand truncate select-all">{refUrl}</code>
+              <code className="flex-1 min-w-0 font-mono text-sm text-brand truncate select-all">{refUrl}</code>
               <button onClick={() => handleCopy(refUrl, 'link')}
                 className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md bg-dark-card border border-dark-border text-xs text-muted hover:text-off-white">
                 {copiedKind === 'link' ? <><CheckCircle size={12} className="text-green-400" /> Tersalin</> : <><Copy size={12} /> Salin</>}
