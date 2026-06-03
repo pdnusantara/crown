@@ -68,6 +68,7 @@ const FALLBACK_FEATURES = [
   { icon: 'TrendingUp',    title: 'Laporan yang ngerti sendiri', desc: 'Omzet harian, layanan terlaris, performa barber — kebaca otomatis tanpa Excel.' },
   { icon: 'MessageCircle', title: 'WhatsApp otomatis', desc: 'Konfirmasi booking dan struk langsung mampir ke WhatsApp pelanggan.' },
   { icon: 'ShieldCheck',   title: 'Aman & sesuai peran', desc: 'Owner, kasir, barber — tiap orang punya akses sendiri. Data toko tetap aman.' },
+  { icon: 'Wallet',        title: 'Komisi & payroll barber', desc: 'Hitung komisi tiap barber per periode, tambah bonus/potongan, lalu cetak slip atau export — tanpa hitung manual.' },
 ]
 
 // Fallback konten section — dipakai kalau super-admin belum mengisinya.
