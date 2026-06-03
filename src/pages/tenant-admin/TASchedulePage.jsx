@@ -221,6 +221,8 @@ function TASchedulePageInner() {
   const [bulkMode, setBulkMode] = useState(false)
   const [selected, setSelected] = useState(new Set())
   const [sortHours, setSortHours] = useState(false)
+  // Modal: jam manual disembunyikan secara default — preset jadi aksi utama.
+  const [showManualTime, setShowManualTime] = useState(false)
 
   // Debounce search 200ms
   useEffect(() => {
@@ -320,6 +322,7 @@ function TASchedulePageInner() {
   const handleGhostClick = (e, date, ghost) => {
     e.stopPropagation()
     if (bulkMode) return
+    setShowManualTime(false)
     setSelectedCell({ date, slot: TIME_SLOTS[0] })
     setSelectedSchedule(null)
     const defaultBranch =
@@ -339,6 +342,7 @@ function TASchedulePageInner() {
 
   const handleCellClick = (date, slot) => {
     if (bulkMode) return
+    setShowManualTime(false)
     setSelectedCell({ date, slot })
     setSelectedSchedule(null)
     const defaultBranch =
@@ -1005,7 +1009,7 @@ function TASchedulePageInner() {
                       const isToday = dateStr === format(new Date(), 'yyyy-MM-dd')
                       const cs = closureStatusForDate(dateStr)
                       return (
-                        <div key={i} className={`p-2 text-center text-xs font-medium border-l border-dark-border first:border-l-0 relative ${
+                        <div key={i} className={`group p-2 text-center text-xs font-medium border-l border-dark-border first:border-l-0 relative ${
                           cs.allClosed ? 'bg-red-500/10' : cs.partial ? 'bg-amber-500/5' : ''
                         } ${isToday ? 'text-brand' : 'text-muted'}`}>
                           <div>{DAY_NAMES[i]}</div>
@@ -1036,7 +1040,7 @@ function TASchedulePageInner() {
                             <button
                               type="button"
                               onClick={() => setClosureModal({ date: day, mode: 'close' })}
-                              className="mt-1 text-[9px] text-muted/60 hover:text-red-300 transition-colors"
+                              className="mt-1 text-[9px] text-muted/60 hover:text-red-300 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
                               title="Tutup cabang tanggal ini"
                             >
                               Tutup?
@@ -1098,11 +1102,11 @@ function TASchedulePageInner() {
                                 onDragEnd={handleDragEnd}
                                 onClick={(e) => handleScheduleClick(e, sch)}
                                 title={bulkMode ? '' : t('tenantAdmin.schedule.dragHint')}
-                                className={`relative rounded border px-2 py-1.5 text-[11px] leading-tight ${color}
+                                className={`relative flex items-center gap-2 rounded-lg border bg-dark-card px-2 py-1.5
                                   ${bulkMode ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'}
                                   ${isDragging ? 'opacity-40' : ''}
                                   ${hideByFilter ? 'opacity-30' : ''}
-                                  ${isSelected ? 'ring-2 ring-brand ring-offset-1 ring-offset-dark-surface' : 'hover:opacity-80'}
+                                  ${isSelected ? 'border-brand ring-1 ring-brand/30' : 'border-dark-border hover:border-brand/40'}
                                   transition-all`}
                               >
                                 {bulkMode && (
@@ -1110,15 +1114,16 @@ function TASchedulePageInner() {
                                     {isSelected ? <CheckSquare size={12} className="text-brand" /> : <Square size={12} className="text-muted" />}
                                   </span>
                                 )}
-                                <div className="flex items-center gap-1 font-semibold truncate">
-                                  <span className="inline-block w-3 text-center text-[9px] font-bold opacity-70" aria-label={staffMember?.role}>
-                                    {staffMember?.role === 'kasir' ? 'K' : 'B'}
-                                  </span>
-                                  <span className="truncate">{staffMember?.name || '?'}</span>
-                                </div>
-                                <div className="tabular-nums opacity-80 mt-0.5">
-                                  {sch.startTime}–{sch.endTime}
-                                </div>
+                                <span
+                                  className={`flex-shrink-0 w-6 h-6 rounded-md border flex items-center justify-center text-[9px] font-bold ${color}`}
+                                  aria-label={staffMember?.role}
+                                >
+                                  {(staffMember?.name || '?').slice(0, 2).toUpperCase()}
+                                </span>
+                                <span className="min-w-0 flex-1 leading-tight">
+                                  <span className="block text-[11px] font-semibold text-off-white truncate">{staffMember?.name || '?'}</span>
+                                  <span className="block text-[10px] text-muted tabular-nums truncate">{sch.startTime}–{sch.endTime} · {sch.shift}</span>
+                                </span>
                               </div>
                             )
                           })}
@@ -1182,8 +1187,10 @@ function TASchedulePageInner() {
           ) : (
             // ─── LIST / MOBILE VIEW ──────────────────────────────────────
             <div className="space-y-3">
-              {/* Day pills (mobile-friendly) */}
-              <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 snap-x">
+              {/* Day pills — grid 7 kolom supaya ketujuh hari SELALU muat dalam
+                  satu baris di layar HP (tidak lagi scroll-horizontal yang
+                  membuat tanggal/hari kepotong). */}
+              <div className="grid grid-cols-7 gap-1 sm:gap-2">
                 {weekDays.map((day, i) => {
                   const dateStr = format(day, 'yyyy-MM-dd')
                   const isToday = dateStr === format(new Date(), 'yyyy-MM-dd')
@@ -1194,7 +1201,8 @@ function TASchedulePageInner() {
                     <button
                       key={i}
                       onClick={() => setActiveDayIdx(i)}
-                      className={`snap-start flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2 rounded-xl border transition-all min-w-[64px] ${
+                      title={`${DAY_NAMES[i]} ${format(day, 'd')}${cs.allClosed ? ' — Tutup' : count > 0 ? ` — ${count} shift` : ''}`}
+                      className={`min-w-0 flex flex-col items-center gap-0.5 px-0.5 py-2 rounded-lg border transition-all ${
                         isActive
                           ? cs.allClosed ? 'bg-red-500/80 text-white border-red-500' : 'bg-brand text-dark border-brand'
                           : cs.allClosed
@@ -1202,17 +1210,17 @@ function TASchedulePageInner() {
                             : `bg-dark-card border-dark-border ${isToday ? 'text-brand' : 'text-muted'}`
                       }`}
                     >
-                      <span className="text-[10px] uppercase tracking-wide font-medium">{DAY_NAMES[i]}</span>
-                      <span className={`text-lg font-bold tabular-nums ${isActive ? '' : isToday ? 'text-brand' : 'text-off-white'} ${cs.allClosed && !isActive ? 'text-red-300' : ''}`}>{format(day, 'd')}</span>
+                      <span className="text-[9px] sm:text-[10px] uppercase tracking-tight font-medium truncate max-w-full">{DAY_NAMES[i]}</span>
+                      <span className={`text-sm sm:text-lg font-bold tabular-nums ${isActive ? '' : isToday ? 'text-brand' : 'text-off-white'} ${cs.allClosed && !isActive ? 'text-red-300' : ''}`}>{format(day, 'd')}</span>
                       {cs.allClosed ? (
-                        <span className={`text-[10px] inline-flex items-center gap-0.5 ${isActive ? 'text-white/90' : 'text-red-300'}`}>
-                          <Lock className="w-2.5 h-2.5" /> Tutup
-                        </span>
+                        <Lock className={`w-2.5 h-2.5 ${isActive ? 'text-white/90' : 'text-red-300'}`} />
                       ) : count > 0 ? (
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isActive ? 'bg-dark/20 text-dark' : 'bg-brand/15 text-brand'}`}>
+                        <span className={`min-w-[16px] text-center text-[9px] sm:text-[10px] px-1 py-0.5 rounded-full leading-none ${isActive ? 'bg-dark/20 text-dark' : 'bg-brand/15 text-brand'}`}>
                           {count}
                         </span>
-                      ) : null}
+                      ) : (
+                        <span className="h-[14px]" aria-hidden="true" />
+                      )}
                     </button>
                   )
                 })}
@@ -1507,29 +1515,48 @@ function TASchedulePageInner() {
               ))}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-muted mb-1.5">Mulai</label>
-              <input
-                type="time"
-                value={form.startTime}
-                onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))}
-                className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60 tabular-nums"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-muted mb-1.5">Selesai</label>
-              <input
-                type="time"
-                value={form.endTime}
-                onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))}
-                className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60 tabular-nums"
-              />
-            </div>
-          </div>
-          <p className="text-[11px] text-muted">
-            Pilih preset untuk mengisi cepat, atau ubah jam manual di atas untuk shift khusus.
-          </p>
+          {/* Jam manual — disembunyikan default; preset sudah mengisi jam.
+              Auto-tampil bila jam shift tidak cocok preset mana pun (shift khusus). */}
+          {(() => {
+            const matchesPreset = presets.some(p => p.startTime === form.startTime && p.endTime === form.endTime)
+            const open = showManualTime || !matchesPreset
+            return (
+              <div className="space-y-3">
+                {matchesPreset && (
+                  <button
+                    type="button"
+                    onClick={() => setShowManualTime(v => !v)}
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-muted hover:text-brand transition-colors"
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    {open ? 'Tutup jam manual' : 'Atur jam manual (shift khusus)'}
+                  </button>
+                )}
+                {open && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-muted mb-1.5">Mulai</label>
+                      <input
+                        type="time"
+                        value={form.startTime}
+                        onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))}
+                        className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60 tabular-nums"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-muted mb-1.5">Selesai</label>
+                      <input
+                        type="time"
+                        value={form.endTime}
+                        onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))}
+                        className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60 tabular-nums"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
           {selectedSchedule ? (
             <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
               <Button variant="danger" fullWidth icon={Trash2} onClick={() => askDelete(selectedSchedule)} loading={deleteMut.isPending}>

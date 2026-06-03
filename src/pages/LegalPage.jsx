@@ -8,7 +8,36 @@ import { useLanding } from '../hooks/useLanding.js'
 // JANGAN pakai class tema app (bg-dark/text-off-white) supaya tidak ikut
 // di-flip oleh theme store. Konten netral & editable lewat brand/kontak dari
 // /api/landing. Tanggal "terakhir diperbarui" disetel manual saat revisi.
-const LAST_UPDATED = '29 Mei 2026'
+const LAST_UPDATED = '2 Juni 2026'
+
+// Identitas & kontak resmi penyelenggara Layanan.
+// CATATAN: nama badan usaha (PT/CV) menyusul — saat sudah terbit, isi `entity`
+// dan sebutkan di Pasal Kekayaan Intelektual & Hukum yang Berlaku.
+const CONTACT = {
+  entity: '',                       // mis. 'PT Semba Digital Nusantara' — isi saat PT terbit
+  phone: '0816-4812-342',
+  email: 'admin@sembapos.com',
+  address: 'Dusun Puhun RT 7 RW 2, Desa Dukuhlor, Kecamatan Sindangagung, Kabupaten Kuningan, Provinsi Jawa Barat',
+  jurisdiction: 'Kabupaten Kuningan, Jawa Barat, Indonesia',
+}
+
+function ContactBlock({ siteName, email }) {
+  const mail = email || CONTACT.email
+  return (
+    <div className="mt-3 rounded-xl bg-[#F4F4FA] border border-[#D5D8E8] p-4 text-[14px] text-[#3F3D5C] space-y-1.5">
+      <p className="font-semibold text-[#1E1B2E]">{CONTACT.entity || siteName}</p>
+      <p>{CONTACT.address}</p>
+      <p>
+        Telepon/WhatsApp:{' '}
+        <a href={`https://wa.me/${CONTACT.phone.replace(/\D/g, '').replace(/^0/, '62')}`} className="text-[#4F46E5] font-medium hover:underline">{CONTACT.phone}</a>
+      </p>
+      <p>
+        Email:{' '}
+        <a href={`mailto:${mail}`} className="text-[#4F46E5] font-medium hover:underline break-all">{mail}</a>
+      </p>
+    </div>
+  )
+}
 
 function Section({ n, title, children }) {
   return (
@@ -171,18 +200,17 @@ function TermsContent({ siteName, email }) {
       <Section n={15} title="Hukum yang Berlaku">
         <p>
           Syarat ini tunduk pada hukum Republik Indonesia. Setiap sengketa akan diupayakan
-          diselesaikan secara musyawarah terlebih dahulu, dan apabila tidak tercapai, diselesaikan
-          melalui jalur hukum yang berlaku di Indonesia.
+          diselesaikan secara musyawarah terlebih dahulu, dan apabila tidak tercapai, para pihak
+          memilih domisili hukum yang tetap dan umum di {CONTACT.jurisdiction}, tanpa mengurangi hak
+          kami untuk menempuh upaya hukum di yurisdiksi lain yang berwenang.
         </p>
       </Section>
 
       <Section n={16} title="Kontak">
         <p>
-          Pertanyaan mengenai Syarat ini dapat disampaikan ke{' '}
-          {email
-            ? <a href={`mailto:${email}`} className="text-[#4F46E5] font-medium hover:underline break-all">{email}</a>
-            : <span className="font-medium">kanal dukungan resmi {siteName}</span>}.
+          Pertanyaan mengenai Syarat ini dapat disampaikan kepada penyelenggara {siteName} melalui:
         </p>
+        <ContactBlock siteName={siteName} email={email} />
       </Section>
     </>
   )
@@ -296,11 +324,10 @@ function PrivacyContent({ siteName, email }) {
 
       <Section n={12} title="Kontak">
         <p>
-          Untuk pertanyaan atau permohonan terkait data pribadi, hubungi{' '}
-          {email
-            ? <a href={`mailto:${email}`} className="text-[#4F46E5] font-medium hover:underline break-all">{email}</a>
-            : <span className="font-medium">kanal dukungan resmi {siteName}</span>}.
+          Untuk pertanyaan atau permohonan terkait data pribadi (mis. akses, perbaikan, atau
+          penghapusan data), silakan hubungi penyelenggara {siteName} melalui:
         </p>
+        <ContactBlock siteName={siteName} email={email} />
       </Section>
     </>
   )
@@ -312,7 +339,7 @@ export default function LegalPage() {
   const { data } = useLanding()
   const hero = data?.hero || {}
   const siteName = (hero.siteName || 'SembaPOS').trim()
-  const email = (hero.contactEmail || '').trim()
+  const email = (hero.contactEmail || '').trim() || CONTACT.email
   const logo = hero.siteLogo
 
   const title = isPrivacy ? 'Kebijakan Privasi' : 'Syarat & Ketentuan'

@@ -109,7 +109,7 @@
   },
   "auth": {
     "login": "Masuk",
-    "loginTitle": "Masuk ke SembaPOS",
+    "loginTitle": "Masuk ke BarberOS",
     "loginSubtitle": "Sistem manajemen barbershop terlengkap",
     "emailLabel": "Email",
     "emailPlaceholder": "nama@email.com",

@@ -109,7 +109,7 @@
   },
   "auth": {
     "login": "Sign in",
-    "loginTitle": "Sign in to SembaPOS",
+    "loginTitle": "Sign in to BarberOS",
     "loginSubtitle": "Complete barbershop management system",
     "emailLabel": "Email",
     "emailPlaceholder": "name@email.com",

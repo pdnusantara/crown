@@ -429,15 +429,48 @@ export default function TAReportsPage() {
               {servicesQ.isLoading && !services.length ? <Skeleton className="h-56" /> : serviceData.length === 0 ? (
                 <div className="h-56 flex items-center justify-center text-muted text-sm">{t('tenantAdmin.reports.noServiceData')}</div>
               ) : (
-                <ResponsiveContainer width="100%" height={220}>
-                  <PieChart>
-                    <Pie data={serviceData} cx="50%" cy="50%" innerRadius={55} outerRadius={85} dataKey="value" nameKey="name" paddingAngle={3}>
-                      {serviceData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-                    </Pie>
-                    <Tooltip contentStyle={tooltipStyle(chart)} labelStyle={{ color: chart.tooltipLabel }} formatter={(v, n) => [v + 'x', n]} />
-                    <Legend wrapperStyle={{ fontSize: 12, color: chart.legendText }} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <>
+                  {/* Desktop: donut chart */}
+                  <div className="hidden md:block">
+                    <ResponsiveContainer width="100%" height={220}>
+                      <PieChart>
+                        <Pie data={serviceData} cx="50%" cy="50%" innerRadius={55} outerRadius={85} dataKey="value" nameKey="name" paddingAngle={3}>
+                          {serviceData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                        </Pie>
+                        <Tooltip contentStyle={tooltipStyle(chart)} labelStyle={{ color: chart.tooltipLabel }} formatter={(v, n) => [v + 'x', n]} />
+                        <Legend wrapperStyle={{ fontSize: 12, color: chart.legendText }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  {/* Mobile: daftar peringkat — nama tak terpotong, ada bar proporsi + jumlah + omzet */}
+                  <ul className="md:hidden space-y-3">
+                    {(() => {
+                      const maxVal = Math.max(...serviceData.map(s => s.value || 0), 1)
+                      return serviceData.map((s, i) => {
+                        const c = PIE_COLORS[i % PIE_COLORS.length]
+                        return (
+                          <li key={i} className="flex items-center gap-3">
+                            <span className="flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-bold text-white tabular-nums" style={{ backgroundColor: c }}>
+                              {i + 1}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-baseline justify-between gap-2">
+                                <span className="text-sm font-medium text-off-white truncate">{s.name}</span>
+                                <span className="text-xs text-muted tabular-nums flex-shrink-0">{s.value}x</span>
+                              </div>
+                              <div className="mt-1 h-1.5 rounded-full bg-dark-surface overflow-hidden">
+                                <div className="h-full rounded-full" style={{ width: `${Math.round((s.value / maxVal) * 100)}%`, backgroundColor: c }} />
+                              </div>
+                              {s.revenue != null && (
+                                <p className="text-[11px] text-brand tabular-nums mt-1">{formatRupiahShort(s.revenue || 0)}</p>
+                              )}
+                            </div>
+                          </li>
+                        )
+                      })
+                    })()}
+                  </ul>
+                </>
               )}
             </CardBody>
           </Card>

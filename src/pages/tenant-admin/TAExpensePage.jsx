@@ -235,7 +235,7 @@ function ExpenseFormModal({ open, onClose, initial, branches, onSaved }) {
 
         <div>
           <label className="block text-xs text-muted mb-1.5">Kategori</label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {EXPENSE_CATEGORIES.map(c => (
               <button
                 key={c.id}
@@ -996,59 +996,61 @@ function ExpensePageInner() {
       {/* ── Expense list ── */}
       <div className="bg-dark-card border border-dark-border rounded-2xl overflow-hidden">
         {/* Toolbar */}
-        <div className="flex items-center gap-2 px-3 sm:px-4 py-3 border-b border-dark-border flex-wrap">
-          <p className="text-sm font-medium text-off-white mr-auto">
+        <div className="flex flex-col gap-2 px-3 sm:px-4 py-3 border-b border-dark-border sm:flex-row sm:items-center sm:flex-wrap">
+          <p className="text-sm font-medium text-off-white sm:mr-auto">
             Daftar Pengeluaran
             {total > 0 && <span className="text-muted font-normal"> · {total}</span>}
           </p>
-          <div className="relative">
-            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
-            <input
-              type="text"
-              inputMode="search"
-              value={searchInput}
-              onChange={e => setSearchInput(e.target.value)}
-              placeholder="Cari deskripsi…"
-              className="bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg pl-8 pr-7 py-1.5 text-xs outline-none focus:border-brand/50 w-36 sm:w-44"
-            />
-            {searchInput && (
-              <button
-                onClick={() => setSearchInput('')}
-                aria-label="Hapus pencarian"
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-off-white"
-              >
-                <X size={13} />
-              </button>
-            )}
-          </div>
-          <select
-            value={catFilter}
-            onChange={e => setCatFilter(e.target.value)}
-            aria-label="Filter kategori"
-            className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-brand/50"
-          >
-            <option value="all">Semua Kategori</option>
-            {EXPENSE_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
-          </select>
-          {branches.length > 0 && (
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-2">
+            <div className="relative col-span-2 sm:col-span-1">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+              <input
+                type="text"
+                inputMode="search"
+                value={searchInput}
+                onChange={e => setSearchInput(e.target.value)}
+                placeholder="Cari deskripsi…"
+                className="bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg pl-8 pr-7 py-1.5 text-xs outline-none focus:border-brand/50 w-full sm:w-44"
+              />
+              {searchInput && (
+                <button
+                  onClick={() => setSearchInput('')}
+                  aria-label="Hapus pencarian"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-off-white"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
             <select
-              value={branchFilter}
-              onChange={e => setBranchFilter(e.target.value)}
-              aria-label="Filter cabang"
-              className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-brand/50"
+              value={catFilter}
+              onChange={e => setCatFilter(e.target.value)}
+              aria-label="Filter kategori"
+              className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-brand/50 w-full sm:w-auto"
             >
-              <option value="all">Semua Cabang</option>
-              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              <option value="all">Semua Kategori</option>
+              {EXPENSE_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
             </select>
-          )}
-          <select
-            value={sortBy}
-            onChange={e => setSortBy(e.target.value)}
-            aria-label="Urutkan"
-            className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-brand/50"
-          >
-            {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
+            {branches.length > 0 && (
+              <select
+                value={branchFilter}
+                onChange={e => setBranchFilter(e.target.value)}
+                aria-label="Filter cabang"
+                className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-brand/50 w-full sm:w-auto"
+              >
+                <option value="all">Semua Cabang</option>
+                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            )}
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value)}
+              aria-label="Urutkan"
+              className={`bg-dark-surface border border-dark-border text-off-white rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-brand/50 w-full sm:w-auto ${branches.length > 0 ? '' : 'col-span-2 sm:col-span-1'}`}
+            >
+              {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
         </div>
 
         {/* Bulk action bar */}

@@ -222,8 +222,8 @@ export default function TAWhatsappLogsPage() {
 
       {/* Filter */}
       <Card className="p-3">
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="relative flex-1 min-w-[180px]">
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-end">
+          <div className="relative col-span-2 sm:flex-1 sm:min-w-[180px]">
             <label className="block text-sm font-medium text-muted mb-1.5">Cari nomor</label>
             <Search size={15} className="absolute left-3 bottom-2.5 text-muted pointer-events-none" />
             <input
@@ -235,24 +235,24 @@ export default function TAWhatsappLogsPage() {
               className="w-full appearance-none rounded-lg border border-dark-border bg-dark-surface pl-9 pr-3 py-2 text-sm text-off-white placeholder-muted focus:outline-none focus:border-brand/50"
             />
           </div>
-          <div className="w-[150px]">
+          <div className="col-span-1 sm:w-[150px]">
             <Select label="Status" options={STATUS_OPTIONS} value={status} onChange={(e) => setStatus(e.target.value)} placeholder={null} />
           </div>
-          <div className="w-[190px]">
+          <div className="col-span-1 sm:w-[190px]">
             <Select label="Jenis" options={CATEGORY_OPTIONS} value={category} onChange={(e) => setCategory(e.target.value)} placeholder={null} />
           </div>
-          <div>
+          <div className="col-span-1 sm:w-auto">
             <label className="block text-sm font-medium text-muted mb-1.5">Dari</label>
             <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} max={to || undefined}
-              className="appearance-none rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-sm text-off-white focus:outline-none focus:border-brand/50" />
+              className="w-full appearance-none rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-sm text-off-white focus:outline-none focus:border-brand/50" />
           </div>
-          <div>
+          <div className="col-span-1 sm:w-auto">
             <label className="block text-sm font-medium text-muted mb-1.5">Sampai</label>
             <input type="date" value={to} onChange={(e) => setTo(e.target.value)} min={from || undefined}
-              className="appearance-none rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-sm text-off-white focus:outline-none focus:border-brand/50" />
+              className="w-full appearance-none rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-sm text-off-white focus:outline-none focus:border-brand/50" />
           </div>
           {hasFilter && (
-            <button type="button" onClick={resetFilters} className="text-xs text-muted hover:text-off-white underline py-2">
+            <button type="button" onClick={resetFilters} className="col-span-2 sm:w-auto text-left text-xs text-muted hover:text-off-white underline py-1 sm:py-2">
               Reset filter
             </button>
           )}
@@ -290,33 +290,31 @@ export default function TAWhatsappLogsPage() {
           {items.map((m, i) => (
             <motion.div key={m.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i * 0.02, 0.2) }}>
               <div className="rounded-xl border border-dark-border bg-dark-card p-3.5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <StatusBadge status={m.status} />
-                      <span className="text-xs text-muted">{CATEGORY_LABEL[m.category] || m.category}</span>
-                    </div>
-                    <p className="text-sm text-off-white font-medium mt-1.5 font-mono">{m.recipient}</p>
-                    {m.preview && <p className="text-xs text-muted mt-1 line-clamp-2 leading-snug">{m.preview}</p>}
-                    {m.status === 'failed' && m.reason && (
-                      <p className="text-[11px] text-red-400 mt-1 flex items-center gap-1">
-                        <AlertTriangle size={11} className="flex-shrink-0" /> {reasonText(m.reason)}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                    <span className="text-[11px] text-muted whitespace-nowrap">{formatDateTimeInTz(m.createdAt)}</span>
-                    {(m.status === 'failed' || m.status === 'skipped') && (
-                      <button
-                        type="button"
-                        onClick={() => openResend(m)}
-                        className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-lg border border-brand/30 text-brand hover:bg-brand/10 transition-colors"
-                      >
-                        <Send size={11} /> Kirim ulang
-                      </button>
-                    )}
-                  </div>
+                {/* Baris atas: status + waktu */}
+                <div className="flex items-center justify-between gap-2">
+                  <StatusBadge status={m.status} />
+                  <span className="text-[11px] text-muted whitespace-nowrap flex-shrink-0">{formatDateTimeInTz(m.createdAt)}</span>
                 </div>
+                {/* Nomor tujuan + jenis */}
+                <p className="text-sm text-off-white font-semibold mt-2 font-mono truncate">{m.recipient}</p>
+                <p className="text-[11px] text-muted mt-0.5">{CATEGORY_LABEL[m.category] || m.category}</p>
+                {m.preview && <p className="text-xs text-muted mt-1.5 line-clamp-2 leading-snug">{m.preview}</p>}
+                {m.status === 'failed' && m.reason && (
+                  <p className="text-[11px] text-red-400 mt-1.5 flex items-center gap-1">
+                    <AlertTriangle size={11} className="flex-shrink-0" /> {reasonText(m.reason)}
+                  </p>
+                )}
+                {(m.status === 'failed' || m.status === 'skipped') && (
+                  <div className="mt-2.5 pt-2.5 border-t border-dark-border/60 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => openResend(m)}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-brand/30 text-brand hover:bg-brand/10 transition-colors"
+                    >
+                      <Send size={12} /> Kirim ulang
+                    </button>
+                  </div>
+                )}
               </div>
             </motion.div>
           ))}

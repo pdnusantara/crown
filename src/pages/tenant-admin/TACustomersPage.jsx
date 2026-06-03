@@ -213,21 +213,21 @@ function CustomerMobileCard({ customer, onOpen, onEdit, onDelete, selected, onTo
                 <MapPin className="w-2.5 h-2.5" /> {province}
               </span>
             )}
-            <div className="ml-auto flex gap-1">
+            <div className="ml-auto flex gap-1.5">
               <button
                 onClick={(e) => { e.stopPropagation(); onEdit(customer) }}
-                className="p-1.5 rounded-lg bg-dark-card/40 border border-dark-border/60 text-muted hover:text-blue-400 hover:border-blue-500/30 transition-colors"
+                className="p-2 rounded-lg bg-dark-card/40 border border-dark-border/60 text-muted hover:text-blue-400 hover:border-blue-500/30 transition-colors"
                 aria-label="Edit"
               >
-                <Edit2 className="w-3 h-3" />
+                <Edit2 className="w-3.5 h-3.5" />
               </button>
               {onDelete && (
                 <button
                   onClick={(e) => { e.stopPropagation(); onDelete(customer) }}
-                  className="p-1.5 rounded-lg bg-dark-card/40 border border-dark-border/60 text-muted hover:text-red-400 hover:border-red-500/30 transition-colors"
+                  className="p-2 rounded-lg bg-dark-card/40 border border-dark-border/60 text-muted hover:text-red-400 hover:border-red-500/30 transition-colors"
                   aria-label="Hapus"
                 >
-                  <Trash2 className="w-3 h-3" />
+                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>

@@ -274,7 +274,7 @@ function ServiceFormModal({ open, onClose, editService, knownCategories, onSave,
         {/* Icon picker */}
         <div>
           <label className="block text-sm font-medium text-muted mb-1.5">Ikon</label>
-          <div className="grid grid-cols-8 sm:grid-cols-8 gap-1.5">
+          <div className="grid grid-cols-6 sm:grid-cols-8 gap-1.5">
             {ICON_OPTIONS.map(emoji => (
               <button
                 key={emoji}

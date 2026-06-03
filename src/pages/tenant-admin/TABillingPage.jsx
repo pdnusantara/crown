@@ -686,7 +686,7 @@ export default function TABillingPage() {
 function CycleToggle({ value, onChange, monthlyPrice, annualDiscountPct = 17 }) {
   const annual = annualPrice(monthlyPrice, annualDiscountPct)
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
       {[
         { id: 'monthly', label: 'Bulanan', price: monthlyPrice, hint: 'Per bulan, fleksibel' },
         { id: 'annual',  label: 'Tahunan', price: annual,        hint: `Hemat ${annualDiscountPct}% — ekuivalen ~${(12 * (1 - annualDiscountPct / 100)).toFixed(0)} bulan` },

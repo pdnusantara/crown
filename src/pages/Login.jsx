@@ -43,7 +43,7 @@ export default function Login() {
   // backend mengaktifkannya (env DEV_LOGIN=1).
   const showDevLogin = isTenantContext && devLoginEnabled
 
-  const brandName = isTenantContext ? tenantName : 'SembaPOS'
+  const brandName = isTenantContext ? tenantName : 'BarberOS'
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -88,7 +88,7 @@ export default function Login() {
           </div>
           <div className="leading-tight">
             <p className="font-display text-lg font-bold">{brandName}</p>
-            {isTenantContext && <p className="text-xs text-white/70">Powered by SembaPOS</p>}
+            {isTenantContext && <p className="text-xs text-white/70">Powered by BarberOS</p>}
           </div>
         </motion.div>
 
@@ -119,7 +119,7 @@ export default function Login() {
           </div>
         </motion.div>
 
-        <p className="relative text-xs text-white/60">SembaPOS v1.0 • Sistem Manajemen Barbershop</p>
+        <p className="relative text-xs text-white/60">BarberOS v1.0 • Sistem Manajemen Barbershop</p>
       </div>
 
       {/* ── Panel kanan: form ──────────────────────────────────────────────── */}
@@ -145,7 +145,7 @@ export default function Login() {
             </div>
             <h1 className="font-display text-2xl font-bold text-off-white">{brandName}</h1>
             {isTenantContext
-              ? <p className="text-muted text-sm">Powered by <span className="brand-text font-semibold">SembaPOS</span></p>
+              ? <p className="text-muted text-sm">Powered by <span className="brand-text font-semibold">BarberOS</span></p>
               : <p className="text-muted text-sm">Premium Barbershop Management System</p>}
           </motion.div>
 
@@ -156,8 +156,8 @@ export default function Login() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="glass rounded-3xl p-6 sm:p-7"
           >
-            <h2 className="font-display text-xl font-semibold text-off-white mb-1">{t('auth.loginTitle')}</h2>
-            <p className="text-sm text-muted mb-4">Masuk ke akun kamu untuk lanjut.</p>
+            <h2 className="font-display text-xl font-semibold text-off-white mb-1 text-center">{t('auth.loginTitle')}</h2>
+            <p className="text-sm text-muted mb-4 text-center">Masuk ke akun kamu untuk lanjut.</p>
 
             {/* Domain context banner */}
             {isMainDomain && (
@@ -171,8 +171,8 @@ export default function Login() {
               </div>
             )}
             {isTenantContext && (
-              <div className="flex items-start gap-2 bg-brand/10 border border-brand/30 rounded-xl p-3 mb-4 text-off-white text-xs leading-relaxed">
-                <Building2 size={14} className="mt-0.5 flex-shrink-0 text-brand" />
+              <div className="flex items-center justify-center gap-2 bg-brand/10 border border-brand/30 rounded-xl p-3 mb-4 text-off-white text-xs leading-relaxed text-center">
+                <Building2 size={14} className="flex-shrink-0 text-brand" />
                 <p>
                   Login tenant <span className="font-semibold">{tenantName}</span>.
                 </p>
