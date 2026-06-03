@@ -255,6 +255,7 @@ export default function QueuePage() {
   const [custSearch, setCustSearch] = useState('')
   const [custSearchDeb, setCustSearchDeb] = useState('')
   const [selectedCust, setSelectedCust] = useState(null)
+  const [serviceQuery, setServiceQuery] = useState('')
   const [activeItem, setActiveItem] = useState(null)
   const [mobileTab, setMobileTab] = useState('waiting')
   const [cancelTarget, setCancelTarget] = useState(null)
@@ -296,10 +297,14 @@ export default function QueuePage() {
     [services, form.serviceIds]
   )
   const selectedTotalDur = selectedServices.reduce((a, s) => a + (s.duration || 0), 0)
+  const filteredServices = useMemo(() => {
+    const q = serviceQuery.trim().toLowerCase()
+    return q ? services.filter(s => s.name.toLowerCase().includes(q)) : services
+  }, [services, serviceQuery])
 
   const resetForm = () => {
     setForm({ customerId: null, customerName: '', phone: '', serviceIds: [], barberId: '' })
-    setCustSearch(''); setCustSearchDeb(''); setSelectedCust(null)
+    setCustSearch(''); setCustSearchDeb(''); setSelectedCust(null); setServiceQuery('')
   }
   const pickCustomer = (c) => {
     setForm(f => ({ ...f, customerId: c.id, customerName: c.name, phone: c.phone || '' }))
@@ -695,25 +700,43 @@ export default function QueuePage() {
             {services.length === 0 ? (
               <p className="text-xs text-muted">Belum ada layanan.</p>
             ) : (
-              <div className="space-y-2">
-                {services.map(s => {
-                  const checked = form.serviceIds.includes(s.id)
-                  return (
-                    <button key={s.id} onClick={() => toggleService(s.id)} type="button"
-                      className={`w-full flex items-center justify-between gap-3 px-4 min-h-[48px] py-2.5 rounded-xl border text-left transition-all active:scale-[0.99] ${
-                        checked ? 'bg-brand/15 border-brand' : 'bg-dark-surface border-dark-border'
-                      }`}>
-                      <span className="min-w-0">
-                        <span className={`block text-sm font-medium truncate ${checked ? 'text-brand' : 'text-off-white'}`}>{s.name}</span>
-                        <span className="block text-xs text-muted">{s.duration} menit</span>
-                      </span>
-                      <span className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border ${checked ? 'bg-brand border-brand' : 'border-dark-border'}`}>
-                        {checked && <span className="text-dark-bg text-xs font-bold leading-none">✓</span>}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
+              <>
+                {/* Cari layanan — muncul saat banyak agar tak perlu scroll panjang */}
+                {services.length > 6 && (
+                  <div className="relative mb-2">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
+                    <input
+                      value={serviceQuery}
+                      onChange={e => setServiceQuery(e.target.value)}
+                      placeholder="Cari layanan…"
+                      className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-9 pr-3 py-2 text-sm outline-none focus:border-brand/60"
+                    />
+                  </div>
+                )}
+                {/* Area ber-scroll dgn tinggi terbatas → modal tak ikut memanjang */}
+                <div className="space-y-2 max-h-[38vh] overflow-y-auto -mr-1 pr-1">
+                  {filteredServices.length === 0 && (
+                    <p className="text-xs text-muted py-2">Layanan tak ditemukan.</p>
+                  )}
+                  {filteredServices.map(s => {
+                    const checked = form.serviceIds.includes(s.id)
+                    return (
+                      <button key={s.id} onClick={() => toggleService(s.id)} type="button"
+                        className={`w-full flex items-center justify-between gap-3 px-4 min-h-[48px] py-2.5 rounded-xl border text-left transition-all active:scale-[0.99] ${
+                          checked ? 'bg-brand/15 border-brand' : 'bg-dark-surface border-dark-border'
+                        }`}>
+                        <span className="min-w-0">
+                          <span className={`block text-sm font-medium truncate ${checked ? 'text-brand' : 'text-off-white'}`}>{s.name}</span>
+                          <span className="block text-xs text-muted">{s.duration} menit</span>
+                        </span>
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border ${checked ? 'bg-brand border-brand' : 'border-dark-border'}`}>
+                          {checked && <span className="text-dark-bg text-xs font-bold leading-none">✓</span>}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </>
             )}
           </div>
           <div>
