@@ -41,7 +41,13 @@ app.use(cors({
         return callback(null, true);
       }
     } catch {}
-    callback(new Error('Not allowed by CORS'));
+    // Origin tak diizinkan (mis. domain asing yang diarahkan ke server ini, atau
+    // situs yang mencoba memanggil API kita): TOLAK SECARA DIAM — jangan lempar
+    // Error. Melempar Error membuatnya jatuh ke handler 500 → tercatat ke tabel
+    // ErrorLog + alert Telegram + log pm2, mengotori "Log Aktivitas". Dengan
+    // callback(null, false), header CORS tak dikirim sehingga browser tetap
+    // memblokir lintas-origin (tetap aman), tanpa menimbulkan 500 palsu.
+    callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
