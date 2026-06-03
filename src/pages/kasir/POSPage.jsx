@@ -1374,14 +1374,18 @@ function POSPageInner() {
         </div>
 
         {/* flex-wrap: semua chip kategori terlihat penuh di mobile tanpa
-            terpotong/geser-horizontal; di desktop tetap muat satu baris. */}
-        <div className="flex flex-wrap gap-2 flex-shrink-0">
+            terpotong/geser-horizontal; di desktop tetap muat satu baris.
+            Semua chip pakai border (selected = border-brand) agar box-size
+            sama → sejajar rapi tanpa loncatan 1px. */}
+        <div className="flex flex-wrap gap-1.5 flex-shrink-0">
           {categories.map(cat => (
             <button
               key={cat}
               onClick={() => setCategory(cat)}
-              className={`px-3.5 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all flex-shrink-0 active:scale-95 ${
-                category === cat ? 'bg-brand text-dark' : 'bg-dark-card border border-dark-border text-muted hover:text-off-white'
+              className={`px-3 py-1.5 rounded-lg border text-[13px] font-medium whitespace-nowrap transition-all flex-shrink-0 active:scale-95 ${
+                category === cat
+                  ? 'bg-brand border-brand text-dark'
+                  : 'bg-dark-card border-dark-border text-muted hover:text-off-white hover:border-brand/40'
               }`}
             >
               {cat === 'All' ? t('common.all') : cat}
