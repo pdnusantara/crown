@@ -1345,10 +1345,10 @@ export default function TACustomersPage() {
                   key={s.id || 'all'}
                   type="button"
                   onClick={() => setSegment(s.id)}
-                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors inline-flex items-center gap-1 ${
+                  className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors inline-flex items-center gap-1 ${
                     active
-                      ? 'bg-brand text-dark'
-                      : 'bg-dark-card/60 border border-dark-border text-muted hover:text-off-white'
+                      ? 'bg-brand border-brand text-dark'
+                      : 'bg-dark-card/60 border-dark-border text-muted hover:text-off-white hover:border-brand/40'
                   }`}
                 >
                   {s.label}
