@@ -146,6 +146,17 @@ router.get('/:id', authenticate, requireRole('super_admin', 'tenant_admin', 'kas
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
+    // Kasir & barber terkunci ke cabangnya — selaras dgn list GET / & queueBranchGuard.
+    // Tanpa ini, mereka bisa membaca antrian cabang lain via tebak :id (membingungkan
+    // & bocor lintas-cabang dalam satu tenant).
+    if (
+      (req.user.role === 'kasir' || req.user.role === 'barber') &&
+      req.user.branchId &&
+      queue.branchId !== req.user.branchId
+    ) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
     res.json({ success: true, data: queue });
   } catch (err) {
     next(err);
