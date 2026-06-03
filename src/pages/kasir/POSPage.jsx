@@ -1426,7 +1426,7 @@ function POSPageInner() {
                 <button
                   key={svc.id}
                   onClick={() => handleAddToCart(svc)}
-                  className={`relative p-3 rounded-xl border text-left transition-all active:scale-[0.97] ${
+                  className={`relative flex flex-col min-h-[92px] p-3 rounded-xl border text-left transition-all active:scale-[0.97] ${
                     inCart ? 'bg-brand/10 border-brand/40' : 'bg-dark-card border-dark-border hover:border-brand/30 hover:bg-dark-surface'
                   }`}
                 >
@@ -1435,10 +1435,14 @@ function POSPageInner() {
                       <Check size={11} strokeWidth={3} />
                     </span>
                   )}
-                  <div className="text-xl mb-1.5 leading-none">{svc.icon}</div>
-                  <p className="font-medium text-[13px] text-off-white leading-tight mb-0.5 line-clamp-2 min-h-[2.2em]">{svc.name}</p>
-                  <p className="text-brand font-semibold text-sm tabular-nums">{formatRupiah(svc.price)}</p>
-                  <p className="text-[11px] text-muted mt-0.5">{svc.duration} {t('pos.minutesShort')}</p>
+                  {/* Ikon hanya dirender bila ada — tak menyisakan ruang kosong */}
+                  {svc.icon && <div className="text-xl mb-1 leading-none">{svc.icon}</div>}
+                  <p className="font-medium text-[13px] text-off-white leading-snug line-clamp-2 pr-5">{svc.name}</p>
+                  {/* Harga & durasi disejajarkan di dasar kartu → grid rapi & rata */}
+                  <div className="mt-auto pt-2 flex items-center justify-between gap-1">
+                    <span className="text-brand font-semibold text-sm tabular-nums">{formatRupiah(svc.price)}</span>
+                    <span className="text-[11px] text-muted whitespace-nowrap flex-shrink-0">{svc.duration} {t('pos.minutesShort')}</span>
+                  </div>
                 </button>
               )
             })}
