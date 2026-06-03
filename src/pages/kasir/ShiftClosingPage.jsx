@@ -453,13 +453,13 @@ function ShiftClosingPageInner() {
               {formatRupiah(totalCash)}
             </p>
           </div>
-          <div className="bg-dark-card/50 rounded-xl border border-brand/30 p-3">
+          <div className="col-span-2 lg:col-span-1 bg-dark-card/50 rounded-xl border border-brand/30 p-3">
             <p className="text-[10px] sm:text-xs text-brand uppercase tracking-wider">Kas Diharapkan</p>
             <p className="text-base sm:text-lg font-bold text-brand truncate" title={formatRupiah(expectedCash)}>
               {formatRupiah(expectedCash)}
             </p>
           </div>
-          <div>
+          <div className="col-span-2 lg:col-span-1">
             <label htmlFor="closing-cash" className="block text-[10px] sm:text-xs text-muted uppercase tracking-wider mb-1">Kas Aktual (Hitung Manual)</label>
             <input
               id="closing-cash"
@@ -467,7 +467,7 @@ function ShiftClosingPageInner() {
               value={closingCash}
               onChange={e => setClosingCash(e.target.value.replace(/\D/g, '').slice(0, 12))}
               placeholder="0"
-              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm sm:text-base outline-none focus:border-brand/60 transition-colors font-mono"
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 sm:py-2 text-base outline-none focus:border-brand/60 transition-colors font-mono"
             />
             {closingCash && (
               <p className="text-[10px] sm:text-xs text-muted mt-1 truncate">
