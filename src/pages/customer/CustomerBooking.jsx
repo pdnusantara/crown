@@ -264,7 +264,7 @@ export default function CustomerBooking() {
               {selected.date && (
                 <div>
                   <h3 className="text-sm font-medium text-muted mb-2">{t('customer.pickTime')}</h3>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                     {TIME_SLOTS.map(time => (
                       <button key={time} onClick={() => setSelected(s => ({ ...s, time }))}
                         className={`py-2.5 rounded-xl text-sm font-medium transition-all ${selected.time === time ? 'bg-brand text-dark' : 'bg-dark-card border border-dark-border text-off-white hover:border-brand/30'}`}

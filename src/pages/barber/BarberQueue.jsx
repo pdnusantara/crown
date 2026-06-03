@@ -48,14 +48,14 @@ export default function BarberQueue() {
         {items.map((item, i) => (
           <motion.div key={item.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
             <Card className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-bold text-brand">{item.ticketNumber}</span>
                     <Badge variant={item.type === 'booking' ? 'info' : 'muted'}>{item.type}</Badge>
                   </div>
-                  <p className="font-semibold text-off-white">{item.customerName}</p>
-                  <p className="text-sm text-muted">{item.services?.join(', ')}</p>
+                  <p className="font-semibold text-off-white truncate">{item.customerName}</p>
+                  <p className="text-sm text-muted truncate">{item.services?.join(', ')}</p>
                   {item.status === 'waiting' && (
                     <div className="flex items-center gap-1 mt-1">
                       <Clock className="w-3.5 h-3.5 text-amber-400" />
@@ -66,7 +66,7 @@ export default function BarberQueue() {
                 {(item.status === 'waiting' || item.status === 'in-progress') && (
                   <button
                     onClick={() => handleAdvance(item)}
-                    className="flex items-center gap-1 px-4 py-2 bg-brand/10 border border-brand/20 text-brand rounded-xl text-sm font-medium hover:bg-brand/20 transition-colors"
+                    className="flex-shrink-0 flex items-center gap-1 px-4 py-2 bg-brand/10 border border-brand/20 text-brand rounded-xl text-sm font-medium hover:bg-brand/20 transition-colors"
                   >
                     {item.status === 'waiting' ? 'Mulai' : 'Selesai'}
                     <ChevronRight className="w-4 h-4" />
