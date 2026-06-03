@@ -257,6 +257,7 @@ export default function QueuePage() {
   const [selectedCust, setSelectedCust] = useState(null)
   const [serviceQuery, setServiceQuery] = useState('')
   const [showSvcPicker, setShowSvcPicker] = useState(false)
+  const [showBarberPicker, setShowBarberPicker] = useState(false)
   const [activeItem, setActiveItem] = useState(null)
   const [mobileTab, setMobileTab] = useState('waiting')
   const [cancelTarget, setCancelTarget] = useState(null)
@@ -298,6 +299,7 @@ export default function QueuePage() {
     [services, form.serviceIds]
   )
   const selectedTotalDur = selectedServices.reduce((a, s) => a + (s.duration || 0), 0)
+  const selectedBarber = barbers.find(b => b.id === form.barberId) || null
   const filteredServices = useMemo(() => {
     const q = serviceQuery.trim().toLowerCase()
     return q ? services.filter(s => s.name.toLowerCase().includes(q)) : services
@@ -305,7 +307,7 @@ export default function QueuePage() {
 
   const resetForm = () => {
     setForm({ customerId: null, customerName: '', phone: '', serviceIds: [], barberId: '' })
-    setCustSearch(''); setCustSearchDeb(''); setSelectedCust(null); setServiceQuery(''); setShowSvcPicker(false)
+    setCustSearch(''); setCustSearchDeb(''); setSelectedCust(null); setServiceQuery(''); setShowSvcPicker(false); setShowBarberPicker(false)
   }
   const pickCustomer = (c) => {
     setForm(f => ({ ...f, customerId: c.id, customerName: c.name, phone: c.phone || '' }))
@@ -768,27 +770,54 @@ export default function QueuePage() {
             {barbers.length === 0 ? (
               <p className="text-xs text-muted">Belum ada barber di cabang ini.</p>
             ) : (
-              <div className="space-y-2">
-                {barbers.map(b => {
-                  const sel = form.barberId === b.id
-                  return (
-                    // Tap untuk pilih; tap lagi membatalkan (tetap opsional, tanpa "Bebas").
-                    <button key={b.id} type="button"
-                      onClick={() => setForm(f => ({ ...f, barberId: f.barberId === b.id ? '' : b.id }))}
-                      className={`w-full flex items-center justify-between gap-3 px-4 min-h-[48px] py-2.5 rounded-xl border text-left transition-all active:scale-[0.99] ${
-                        sel ? 'bg-brand/15 border-brand' : 'bg-dark-surface border-dark-border'
-                      }`}>
-                      <span className="flex items-center gap-2.5 min-w-0">
-                        <User className={`w-4 h-4 flex-shrink-0 ${sel ? 'text-brand' : 'text-muted'}`} />
-                        <span className={`text-sm font-medium truncate ${sel ? 'text-brand' : 'text-off-white'}`}>{b.name}</span>
-                      </span>
-                      <span className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border ${sel ? 'bg-brand border-brand' : 'border-dark-border'}`}>
-                        {sel && <span className="text-dark-bg text-xs font-bold leading-none">✓</span>}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
+              <>
+                {/* Pemicu dropdown — konsisten dgn Layanan */}
+                <button type="button" onClick={() => setShowBarberPicker(v => !v)}
+                  className="w-full flex items-center justify-between gap-2 px-4 min-h-[48px] py-2.5 rounded-xl border border-dark-border bg-dark-surface text-left transition-colors hover:border-brand/40">
+                  <span className="flex items-center gap-2.5 min-w-0">
+                    <User className={`w-4 h-4 flex-shrink-0 ${form.barberId ? 'text-brand' : 'text-muted'}`} />
+                    <span className={`text-sm truncate ${form.barberId ? 'text-off-white font-medium' : 'text-muted'}`}>
+                      {selectedBarber ? selectedBarber.name : 'Pilih barber…'}
+                    </span>
+                  </span>
+                  <span className="flex items-center gap-1 flex-shrink-0">
+                    {form.barberId && (
+                      <button type="button" aria-label="Hapus barber"
+                        onClick={(e) => { e.stopPropagation(); setForm(f => ({ ...f, barberId: '' })) }}
+                        className="w-6 h-6 inline-flex items-center justify-center rounded text-muted hover:text-off-white hover:bg-dark-card">
+                        <XIcon className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <ChevronRight className={`w-4 h-4 text-muted transition-transform ${showBarberPicker ? 'rotate-90' : ''}`} />
+                  </span>
+                </button>
+
+                {/* Panel pilihan — hanya saat dibuka; pilih = tutup (single) */}
+                {showBarberPicker && (
+                  <div className="mt-2 rounded-xl border border-dark-border overflow-hidden">
+                    <div className="max-h-[34vh] overflow-y-auto p-2 space-y-1.5">
+                      {barbers.map(b => {
+                        const sel = form.barberId === b.id
+                        return (
+                          <button key={b.id} type="button"
+                            onClick={() => { setForm(f => ({ ...f, barberId: f.barberId === b.id ? '' : b.id })); setShowBarberPicker(false) }}
+                            className={`w-full flex items-center justify-between gap-3 px-3 min-h-[44px] py-2 rounded-lg border text-left transition-all active:scale-[0.99] ${
+                              sel ? 'bg-brand/15 border-brand' : 'bg-dark-surface border-dark-border'
+                            }`}>
+                            <span className="flex items-center gap-2.5 min-w-0">
+                              <User className={`w-4 h-4 flex-shrink-0 ${sel ? 'text-brand' : 'text-muted'}`} />
+                              <span className={`text-sm font-medium truncate ${sel ? 'text-brand' : 'text-off-white'}`}>{b.name}</span>
+                            </span>
+                            <span className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border ${sel ? 'bg-brand border-brand' : 'border-dark-border'}`}>
+                              {sel && <span className="text-dark-bg text-xs font-bold leading-none">✓</span>}
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
           <div className="flex gap-3 pt-2">
