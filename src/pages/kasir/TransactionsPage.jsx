@@ -583,8 +583,8 @@ export default function TransactionsPage() {
                           {formatRupiah(tx.total)}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <p className="font-semibold text-off-white text-sm truncate max-w-[180px]">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <p className="font-semibold text-off-white text-sm truncate min-w-0">
                           {customerDisplayName(tx)}
                         </p>
                         <CustomerSourceBadge tx={tx} size="xs" />
