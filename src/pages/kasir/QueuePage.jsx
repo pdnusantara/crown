@@ -22,7 +22,7 @@ import { usePosStore } from '../../store/posStore.js'
 import { useBranchQueue, useAddToQueue, useUpdateQueueStatus, useDeleteQueueItem } from '../../hooks/useQueue.js'
 import { useServices } from '../../hooks/useServices.js'
 import { useUsers } from '../../hooks/useUsers.js'
-import { useCustomers } from '../../hooks/useCustomers.js'
+import { useCustomers, useCreateCustomer } from '../../hooks/useCustomers.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Modal from '../../components/ui/Modal.jsx'
@@ -275,12 +275,14 @@ export default function QueuePage() {
   }, [custSearch])
 
   // Cari pelanggan hanya saat modal terbuka, ada teks, & belum memilih.
-  const { data: custPage, isFetching: custFetching } = useCustomers({
+  // NB: useCustomers mengembalikan `customers` sebagai array (lihat hook); JANGAN
+  // pakai `data?.data` — `data` sudah array, akan selalu undefined/kosong.
+  const { customers: custResults = [], isFetching: custFetching } = useCustomers({
     page: 1, limit: 8,
     enabled: showModal && custSearchDeb.length >= 1 && !form.customerId,
     ...(custSearchDeb ? { search: custSearchDeb } : {}),
   })
-  const custResults = custPage?.data || []
+  const createCustomerM = useCreateCustomer()
 
   // Durasi layanan per nama — untuk estimasi tunggu posisi-aware.
   const serviceDurByName = useMemo(() => {
@@ -313,6 +315,18 @@ export default function QueuePage() {
     ...f,
     serviceIds: f.serviceIds.includes(id) ? f.serviceIds.filter(x => x !== id) : [...f.serviceIds, id],
   }))
+  // Tambah pelanggan baru (tersimpan utk loyalti) lalu langsung tertaut ke antrean.
+  const handleCreateNewCustomer = async () => {
+    const name = custSearch.trim()
+    if (!name) return toast.error(t('queue.toast.nameRequired'))
+    try {
+      const created = await createCustomerM.mutateAsync({ name, phone: form.phone || undefined })
+      if (created?.id) pickCustomer(created)
+      toast.success(`Pelanggan "${name}" ditambahkan`)
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal menambah pelanggan')
+    }
+  }
 
   // Tick setiap 60 detik supaya filter "Sudah Bayar > 30 menit" otomatis recompute
   // tanpa perlu user me-refresh halaman.
@@ -638,66 +652,97 @@ export default function QueuePage() {
               </div>
             )}
 
-            {/* Daftar hasil pencarian */}
+            {/* Daftar hasil pencarian + tombol tambah baru */}
             {!form.customerId && custSearchDeb.length >= 1 && (
-              <div className="mt-1.5 max-h-44 overflow-y-auto rounded-xl border border-dark-border divide-y divide-dark-border">
-                {custFetching && custResults.length === 0 && (
-                  <p className="px-3 py-2.5 text-xs text-muted">Mencari…</p>
-                )}
-                {!custFetching && custResults.length === 0 && (
-                  <p className="px-3 py-2.5 text-xs text-muted">Tidak ada pelanggan cocok — akan dibuat sebagai pelanggan baru.</p>
-                )}
-                {custResults.map(c => (
-                  <button key={c.id} onClick={() => pickCustomer(c)}
-                    className="w-full text-left px-3 py-2.5 hover:bg-dark-card transition-colors flex items-center justify-between gap-2">
-                    <span className="min-w-0">
-                      <span className="block text-sm text-off-white truncate">{c.name}</span>
-                      {c.phone && <span className="block text-xs text-muted truncate">{c.phone}</span>}
-                    </span>
-                    <span className="text-xs text-amber-300 whitespace-nowrap flex-shrink-0">⭐ {c.loyaltyPoints || 0}</span>
-                  </button>
-                ))}
+              <div className="mt-1.5 rounded-xl border border-dark-border overflow-hidden">
+                <div className="max-h-40 overflow-y-auto divide-y divide-dark-border">
+                  {custFetching && custResults.length === 0 && (
+                    <p className="px-3 py-2.5 text-xs text-muted">Mencari…</p>
+                  )}
+                  {!custFetching && custResults.length === 0 && (
+                    <p className="px-3 py-2.5 text-xs text-muted">Tidak ada pelanggan cocok.</p>
+                  )}
+                  {custResults.map(c => (
+                    <button key={c.id} onClick={() => pickCustomer(c)} type="button"
+                      className="w-full text-left px-3 py-2.5 hover:bg-dark-card transition-colors flex items-center justify-between gap-2">
+                      <span className="min-w-0">
+                        <span className="block text-sm text-off-white truncate">{c.name}</span>
+                        {c.phone && <span className="block text-xs text-muted truncate">{c.phone}</span>}
+                      </span>
+                      <span className="text-xs text-amber-300 whitespace-nowrap flex-shrink-0">⭐ {c.loyaltyPoints || 0}</span>
+                    </button>
+                  ))}
+                </div>
+                {/* Tambah pelanggan baru — tersimpan utk loyalti */}
+                <button onClick={handleCreateNewCustomer} type="button" disabled={createCustomerM.isPending}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-brand bg-brand/5 hover:bg-brand/10 border-t border-dark-border transition-colors disabled:opacity-60">
+                  <Plus className="w-4 h-4 flex-shrink-0" />
+                  {createCustomerM.isPending ? 'Menyimpan…' : <>Tambah “{custSearch.trim()}” sebagai pelanggan baru</>}
+                </button>
               </div>
+            )}
+            {!form.customerId && custSearchDeb.length >= 1 && (
+              <p className="mt-1 text-[11px] text-muted">Pilih pelanggan agar poin loyalti otomatis tercatat, atau tambahkan sebagai baru.</p>
             )}
           </div>
 
           <Input label="Telepon (opsional)" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="081234567890" />
 
           <div>
-            <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-muted">Layanan</label>
               {form.serviceIds.length > 0 && (
                 <span className="text-xs text-brand font-medium">{form.serviceIds.length} dipilih · {selectedTotalDur} min</span>
               )}
             </div>
-            <div className="max-h-44 overflow-y-auto rounded-xl border border-dark-border divide-y divide-dark-border">
-              {services.length === 0 && <p className="px-3 py-2.5 text-xs text-muted">Belum ada layanan.</p>}
-              {services.map(s => {
-                const checked = form.serviceIds.includes(s.id)
+            {services.length === 0 ? (
+              <p className="text-xs text-muted">Belum ada layanan.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {services.map(s => {
+                  const checked = form.serviceIds.includes(s.id)
+                  return (
+                    <button key={s.id} onClick={() => toggleService(s.id)} type="button"
+                      className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border transition-all active:scale-[0.97] ${
+                        checked
+                          ? 'bg-brand/15 border-brand text-brand'
+                          : 'bg-dark-surface border-dark-border text-off-white hover:border-brand/40'
+                      }`}>
+                      {checked && <span className="text-brand text-xs font-bold leading-none">✓</span>}
+                      <span>{s.name}</span>
+                      <span className={checked ? 'text-brand/70 text-xs' : 'text-muted text-xs'}>· {s.duration}m</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-muted mb-2">Barber <span className="font-normal">(opsional)</span></label>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => setForm(f => ({ ...f, barberId: '' }))} type="button"
+                className={`px-3 py-2 rounded-xl text-sm font-medium border transition-all active:scale-[0.97] ${
+                  !form.barberId ? 'bg-brand/15 border-brand text-brand' : 'bg-dark-surface border-dark-border text-off-white hover:border-brand/40'
+                }`}>
+                Bebas
+              </button>
+              {barbers.map(b => {
+                const sel = form.barberId === b.id
                 return (
-                  <button key={s.id} onClick={() => toggleService(s.id)} type="button"
-                    className="w-full text-left px-3 py-2.5 flex items-center justify-between gap-2 hover:bg-dark-card transition-colors">
-                    <span className="flex items-center gap-2.5 min-w-0">
-                      <span className={`w-4 h-4 rounded flex items-center justify-center border flex-shrink-0 ${checked ? 'bg-brand border-brand' : 'border-dark-border'}`}>
-                        {checked && <span className="text-dark-bg text-[10px] font-bold leading-none">✓</span>}
-                      </span>
-                      <span className="text-sm text-off-white truncate">{s.name}</span>
-                    </span>
-                    <span className="text-xs text-muted whitespace-nowrap flex-shrink-0">{s.duration} min</span>
+                  <button key={b.id} onClick={() => setForm(f => ({ ...f, barberId: b.id }))} type="button"
+                    className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border transition-all active:scale-[0.97] ${
+                      sel ? 'bg-brand/15 border-brand text-brand' : 'bg-dark-surface border-dark-border text-off-white hover:border-brand/40'
+                    }`}>
+                    <User className="w-3.5 h-3.5" />
+                    {b.name}
                   </button>
                 )
               })}
             </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-muted mb-1.5">Barber (opsional)</label>
-            <select value={form.barberId} onChange={e => setForm(f => ({ ...f, barberId: e.target.value }))} className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60">
-              <option value="">Pilih barber...</option>
-              {barbers.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
+            {barbers.length === 0 && <p className="text-xs text-muted">Belum ada barber di cabang ini.</p>}
           </div>
           <div className="flex gap-3 pt-2">
-            <Button variant="outline" fullWidth onClick={() => setShowModal(false)} disabled={addToQueueM.isPending}>Batal</Button>
+            <Button variant="outline" fullWidth onClick={() => { setShowModal(false); resetForm() }} disabled={addToQueueM.isPending}>Batal</Button>
             <Button fullWidth onClick={handleAddWalkIn} loading={addToQueueM.isPending} disabled={addToQueueM.isPending}>Tambah Antrian</Button>
           </div>
         </div>
