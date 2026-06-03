@@ -1101,8 +1101,9 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
             </div>
           )}
 
-          {/* Items */}
-          <div className="px-6 py-4 border-b border-dark-border max-h-72 overflow-y-auto">
+          {/* Items — cap tinggi hanya di desktop; di HP biarkan mengalir (hindari
+              nested-scroll yang membingungkan: cukup modalnya saja yang menggulir). */}
+          <div className="px-6 py-4 border-b border-dark-border md:max-h-72 md:overflow-y-auto">
             <p className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-3">Item</p>
             <div className="space-y-2">
               {items.length === 0 && <p className="text-sm text-muted italic">Tidak ada item</p>}
