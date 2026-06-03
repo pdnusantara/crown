@@ -282,6 +282,20 @@ const CATEGORIES = [
         toLabel: 'Buka Pengaturan',
       },
       {
+        id: 's-trial-whatsapp',
+        q: 'Paket saya belum ada WhatsApp Beta — bisa mencobanya dulu?',
+        a: 'Bisa. Jika paket Anda belum menyertakan WhatsApp Beta (mis. Basic), Anda bisa mencobanya GRATIS selama 14 hari, sekali saja. Selama masa coba, semua fitur WhatsApp terbuka penuh (struk otomatis, pengingat kunjungan, link rating, laporan pesan). Setelah 14 hari, fitur terkunci otomatis kecuali Anda upgrade ke paket Pro.',
+        steps: [
+          'Buka Pengaturan lalu pilih tab WhatsApp Beta.',
+          'Klik "Mulai trial 14 hari" — fitur langsung aktif tanpa biaya, tanpa kartu.',
+          'Sambungkan WhatsApp toko (scan QR) lalu nyalakan notifikasi seperti biasa.',
+          'Pantau sisa hari pada banner di tab WhatsApp Beta.',
+          'Sebelum trial habis, klik "Upgrade ke Pro" agar WhatsApp tetap aktif tanpa terputus. Trial hanya dapat diambil satu kali per toko.',
+        ],
+        to: '/admin/settings',
+        toLabel: 'Buka Pengaturan',
+      },
+      {
         id: 's-pesan-transaksi',
         q: 'Bagaimana menyesuaikan pesan WhatsApp setelah transaksi?',
         a: 'Di Pengaturan → tab Pesan Transaksi Anda bisa menulis sendiri teks pesan WhatsApp untuk pelanggan. Gunakan {nama} untuk nama pelanggan dan {toko} untuk nama toko. Catatan: pengiriman OTOMATIS ke pelanggan butuh fitur WhatsApp Beta (paket lebih tinggi); sedangkan "share manual" (kasir membagikan struk lewat tombol WhatsApp di kasir) berfungsi di semua paket.',
