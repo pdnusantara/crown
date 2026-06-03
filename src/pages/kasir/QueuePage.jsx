@@ -256,6 +256,7 @@ export default function QueuePage() {
   const [custSearchDeb, setCustSearchDeb] = useState('')
   const [selectedCust, setSelectedCust] = useState(null)
   const [serviceQuery, setServiceQuery] = useState('')
+  const [showSvcPicker, setShowSvcPicker] = useState(false)
   const [activeItem, setActiveItem] = useState(null)
   const [mobileTab, setMobileTab] = useState('waiting')
   const [cancelTarget, setCancelTarget] = useState(null)
@@ -304,7 +305,7 @@ export default function QueuePage() {
 
   const resetForm = () => {
     setForm({ customerId: null, customerName: '', phone: '', serviceIds: [], barberId: '' })
-    setCustSearch(''); setCustSearchDeb(''); setSelectedCust(null); setServiceQuery('')
+    setCustSearch(''); setCustSearchDeb(''); setSelectedCust(null); setServiceQuery(''); setShowSvcPicker(false)
   }
   const pickCustomer = (c) => {
     setForm(f => ({ ...f, customerId: c.id, customerName: c.name, phone: c.phone || '' }))
@@ -691,51 +692,74 @@ export default function QueuePage() {
           <Input label="Telepon (opsional)" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="081234567890" />
 
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-muted">Layanan</label>
-              {form.serviceIds.length > 0 && (
-                <span className="text-xs text-brand font-medium">{form.serviceIds.length} dipilih · {selectedTotalDur} min</span>
-              )}
-            </div>
+            <label className="block text-sm font-medium text-muted mb-2">Layanan</label>
             {services.length === 0 ? (
               <p className="text-xs text-muted">Belum ada layanan.</p>
             ) : (
               <>
-                {/* Cari layanan — muncul saat banyak agar tak perlu scroll panjang */}
-                {services.length > 6 && (
-                  <div className="relative mb-2">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
-                    <input
-                      value={serviceQuery}
-                      onChange={e => setServiceQuery(e.target.value)}
-                      placeholder="Cari layanan…"
-                      className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-9 pr-3 py-2 text-sm outline-none focus:border-brand/60"
-                    />
+                {/* Pemicu dropdown — modal tetap pendek */}
+                <button type="button" onClick={() => setShowSvcPicker(v => !v)}
+                  className="w-full flex items-center justify-between gap-2 px-4 min-h-[48px] py-2.5 rounded-xl border border-dark-border bg-dark-surface text-left transition-colors hover:border-brand/40">
+                  <span className={`text-sm ${form.serviceIds.length ? 'text-off-white font-medium' : 'text-muted'}`}>
+                    {form.serviceIds.length ? `${form.serviceIds.length} layanan · ${selectedTotalDur} min` : 'Pilih layanan…'}
+                  </span>
+                  <ChevronRight className={`w-4 h-4 text-muted flex-shrink-0 transition-transform ${showSvcPicker ? 'rotate-90' : ''}`} />
+                </button>
+
+                {/* Chip layanan terpilih (selalu terlihat) */}
+                {selectedServices.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {selectedServices.map(s => (
+                      <span key={s.id} className="inline-flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-lg bg-brand/15 text-brand text-xs font-medium">
+                        {s.name}
+                        <button type="button" onClick={() => toggleService(s.id)} aria-label={`Hapus ${s.name}`}
+                          className="w-5 h-5 inline-flex items-center justify-center rounded hover:bg-brand/20">
+                          <XIcon className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
                   </div>
                 )}
-                {/* Area ber-scroll dgn tinggi terbatas → modal tak ikut memanjang */}
-                <div className="space-y-2 max-h-[38vh] overflow-y-auto -mr-1 pr-1">
-                  {filteredServices.length === 0 && (
-                    <p className="text-xs text-muted py-2">Layanan tak ditemukan.</p>
-                  )}
-                  {filteredServices.map(s => {
-                    const checked = form.serviceIds.includes(s.id)
-                    return (
-                      <button key={s.id} onClick={() => toggleService(s.id)} type="button"
-                        className={`w-full flex items-center justify-between gap-3 px-4 min-h-[48px] py-2.5 rounded-xl border text-left transition-all active:scale-[0.99] ${
-                          checked ? 'bg-brand/15 border-brand' : 'bg-dark-surface border-dark-border'
-                        }`}>
-                        <span className="min-w-0">
-                          <span className={`block text-sm font-medium truncate ${checked ? 'text-brand' : 'text-off-white'}`}>{s.name}</span>
-                          <span className="block text-xs text-muted">{s.duration} menit</span>
-                        </span>
-                        <span className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border ${checked ? 'bg-brand border-brand' : 'border-dark-border'}`}>
-                          {checked && <span className="text-dark-bg text-xs font-bold leading-none">✓</span>}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
+
+                {/* Panel pilihan — hanya saat dibuka */}
+                {showSvcPicker && (
+                  <div className="mt-2 rounded-xl border border-dark-border overflow-hidden">
+                    {services.length > 6 && (
+                      <div className="relative p-2 border-b border-dark-border">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
+                        <input autoFocus value={serviceQuery} onChange={e => setServiceQuery(e.target.value)}
+                          placeholder="Cari layanan…"
+                          className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg pl-9 pr-3 py-2 text-sm outline-none focus:border-brand/60" />
+                      </div>
+                    )}
+                    <div className="max-h-[34vh] overflow-y-auto p-2 space-y-1.5">
+                      {filteredServices.length === 0 && (
+                        <p className="text-xs text-muted py-2 px-1">Layanan tak ditemukan.</p>
+                      )}
+                      {filteredServices.map(s => {
+                        const checked = form.serviceIds.includes(s.id)
+                        return (
+                          <button key={s.id} onClick={() => toggleService(s.id)} type="button"
+                            className={`w-full flex items-center justify-between gap-3 px-3 min-h-[44px] py-2 rounded-lg border text-left transition-all active:scale-[0.99] ${
+                              checked ? 'bg-brand/15 border-brand' : 'bg-dark-surface border-dark-border'
+                            }`}>
+                            <span className="min-w-0">
+                              <span className={`block text-sm font-medium truncate ${checked ? 'text-brand' : 'text-off-white'}`}>{s.name}</span>
+                              <span className="block text-xs text-muted">{s.duration} menit</span>
+                            </span>
+                            <span className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border ${checked ? 'bg-brand border-brand' : 'border-dark-border'}`}>
+                              {checked && <span className="text-dark-bg text-xs font-bold leading-none">✓</span>}
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <button type="button" onClick={() => setShowSvcPicker(false)}
+                      className="w-full py-2.5 text-sm font-semibold text-brand bg-brand/5 hover:bg-brand/10 border-t border-dark-border transition-colors">
+                      Selesai
+                    </button>
+                  </div>
+                )}
               </>
             )}
           </div>
