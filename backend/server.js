@@ -20,6 +20,7 @@ const { initAttendanceFinalizeJob } = require('./src/jobs/attendanceFinalize');
 const { initRatingLinkDispatchJob } = require('./src/jobs/ratingLinkDispatch');
 const { initBookingAutoCheckinJob } = require('./src/jobs/bookingAutoCheckin');
 const { initRegistrationSummaryJob } = require('./src/jobs/registrationSummary');
+const { initWhatsappTrialExpiryJob } = require('./src/jobs/whatsappTrialExpiry');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -191,6 +192,7 @@ httpServer.listen(PORT, () => {
   initRatingLinkDispatchJob();
   initBookingAutoCheckinJob();
   initRegistrationSummaryJob();
+  initWhatsappTrialExpiryJob();
 });
 
 // ── Graceful shutdown ──────────────────────────────────────────────────────

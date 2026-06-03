@@ -206,6 +206,13 @@ model Tenant {
   //   autoSendMinutes    = delay sebelum link dikirim (default 15 menit)
   //   messageTemplate    = teks pesan, placeholder {nama} {toko} {link}
   ratingConfig        Json?
+  // Trial WhatsApp untuk paket yang tidak menyertakan fitur `whatsapp` (mis.
+  // Basic). Sekali pakai per tenant: `whatsappTrialStartedAt` != null berarti
+  // trial pernah diambil (tak bisa diulang). Selama window aktif, flag `whatsapp`
+  // + `whatsapp_logs` di-enable sementara; cron mematikan + revoke saat habis
+  // bila tenant tidak upgrade ke paket yang menyertakan WhatsApp.
+  whatsappTrialStartedAt DateTime?
+  whatsappTrialEndsAt    DateTime?
   // Atribusi pendaftaran — dari mana tenant ini datang saat /register.
   //   signupChannel = kanal ternormalisasi untuk grouping cepat di laporan:
   //     'facebook_ads' | 'google_ads' | 'campaign' | 'referral' | 'direct'.

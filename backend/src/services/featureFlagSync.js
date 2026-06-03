@@ -154,10 +154,39 @@ async function syncTenantFlagsToPackage(tenantId, packageName) {
   emitSupportFlagChange();
 }
 
+// Apakah PAKET tenant (Package.features di DB, fallback PACKAGE_FLAG_DEFAULTS)
+// menyertakan sebuah flag secara permanen — beda dari TenantFeatureFlag yang
+// bisa di-enable sementara (mis. saat trial). Dipakai trial WhatsApp untuk
+// membedakan "punya karena paket" vs "punya karena trial".
+async function packageGrantsFlag(tenantId, flagId) {
+  if (!KNOWN.has(flagId)) return false;
+  const sub = await prisma.subscription.findUnique({
+    where: { tenantId },
+    select: { package: true },
+  });
+  if (!sub) return false;
+  const pkg = await prisma.package.findUnique({
+    where: { name: sub.package },
+    select: { features: true },
+  });
+  const source = (pkg?.features?.length ? pkg.features : (PACKAGE_FLAG_DEFAULTS[sub.package] || []));
+  return source.includes(flagId);
+}
+
+// Set sekumpulan flag untuk SATU tenant + emit realtime (UI langsung
+// kunci/buka). Dipakai trial WhatsApp (enable saat mulai, disable saat habis).
+async function setTenantFlags(tenantId, flagIds, enabled) {
+  await applyFlags([tenantId], flagIds, enabled);
+  emitTenantFlagChange(tenantId);
+  emitSupportFlagChange();
+}
+
 module.exports = {
   KNOWN_FLAG_IDS,
   PACKAGE_FLAG_DEFAULTS,
   seedTenantFlags,
   propagatePackageFeatureChange,
   syncTenantFlagsToPackage,
+  packageGrantsFlag,
+  setTenantFlags,
 };

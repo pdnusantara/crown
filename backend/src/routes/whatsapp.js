@@ -2,6 +2,8 @@ const router = require('express').Router();
 const { z } = require('zod');
 const prisma = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { recordAudit } = require('../utils/auditLog');
+const { getTrialStatus, startTrial } = require('../services/whatsappTrial');
 const { parsePagination, paginatedResponse } = require('../utils/pagination');
 const {
   connectTenant,
@@ -98,6 +100,45 @@ router.post('/config/test', authenticate, requireRole('super_admin'), async (req
     res.json({ success: true, data: await testConfig() });
   } catch (err) {
     handleWhatsappError(err, res, next);
+  }
+});
+
+// ── Trial WhatsApp (TIDAK di-gate flag — justru pintu masuk bagi paket tanpa
+// WhatsApp seperti Basic untuk mencicipi & jadi corong upgrade ke Pro) ─────────
+
+router.get('/trial', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
+  try {
+    const tenantId = resolveTenantId(req);
+    if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId is required' });
+    res.json({ success: true, data: await getTrialStatus(tenantId) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/trial/start', authenticate, requireRole('tenant_admin'), async (req, res, next) => {
+  try {
+    const tenantId = req.user.tenantId;
+    if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId is required' });
+    const data = await startTrial(tenantId);
+    await recordAudit(req, {
+      action: 'whatsapp.trial-start',
+      target: `tenant:${tenantId}`,
+      detail: `Trial WhatsApp ${data.durationDays} hari dimulai`,
+      severity: 'info',
+    });
+    res.json({ success: true, data });
+  } catch (err) {
+    if (err.code === 'ALREADY_OWNED') {
+      return res.status(400).json({ success: false, error: err.message, code: err.code });
+    }
+    if (err.code === 'ALREADY_USED') {
+      return res.status(409).json({ success: false, error: err.message, code: err.code });
+    }
+    if (err.code === 'TENANT_NOT_FOUND') {
+      return res.status(404).json({ success: false, error: err.message, code: err.code });
+    }
+    next(err);
   }
 });
 

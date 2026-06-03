@@ -6,13 +6,14 @@ import { useTenant, useUpdateMyTenant } from '../../hooks/useTenants.js'
 import { useSubscription } from '../../hooks/useSubscription.js'
 import { useAuditLogs, useAuditActions } from '../../hooks/useAuditLogs.js'
 import { useIsFeatureEnabled } from '../../hooks/useFeatureFlags.js'
+import { useWhatsappTrial, useStartWhatsappTrial } from '../../hooks/useWhatsappTrial.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Input from '../../components/ui/Input.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import * as api from '../../lib/api.js'
-import { Settings, Bell, Shield, Palette, Download, Upload, FileText, MessageCircle, Send, QrCode, Smartphone, RefreshCw, PowerOff, CheckCircle2, XCircle, Loader2, AlertTriangle, Phone, ArrowUpRight, ChevronLeft, ChevronRight, X, Star, Eye, EyeOff } from 'lucide-react'
+import { Settings, Bell, Shield, Palette, Download, Upload, FileText, MessageCircle, Send, QrCode, Smartphone, RefreshCw, PowerOff, CheckCircle2, XCircle, Loader2, AlertTriangle, Phone, ArrowUpRight, ChevronLeft, ChevronRight, X, Star, Eye, EyeOff, Gift, Lock } from 'lucide-react'
 import { format, differenceInDays } from 'date-fns'
 import { formatDistanceToNow } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
@@ -77,6 +78,22 @@ export default function TASettingsPage() {
   const { data: sub } = useSubscription(user?.tenantId)
   // Tab WhatsApp hanya untuk tenant yang paketnya mengaktifkan flag `whatsapp`.
   const whatsappEnabled = useIsFeatureEnabled(user?.tenantId, 'whatsapp')
+  // Trial WhatsApp (corong ke Pro untuk paket tanpa WA spt Basic).
+  const { data: trial } = useWhatsappTrial(user?.tenantId)
+  const startTrial = useStartWhatsappTrial()
+  const handleStartTrial = async () => {
+    try {
+      const data = await startTrial.mutateAsync()
+      toast.success(`Trial WhatsApp aktif! Nikmati semua fitur WA gratis ${data?.durationDays || 14} hari.`)
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal memulai trial WhatsApp')
+    }
+  }
+  // Tab WA tampil bila paket punya fitur (termasuk saat trial aktif → flag on),
+  // ATAU saat ada CTA trial (belum pernah / sudah habis) supaya tenant Basic
+  // tetap melihat pintu masuknya.
+  const waTrialCta = trial?.status === 'available' || trial?.status === 'expired'
+  const showWaTab = whatsappEnabled || waTrialCta
   const [form, setForm] = useState({
     name: '',
     phone: '',
@@ -671,7 +688,7 @@ export default function TASettingsPage() {
   const TABS = [
     { id: 'general', label: t('tenantAdmin.settings.tabGeneral') },
     { id: 'bookingPage', label: 'Halaman Booking' },
-    ...(whatsappEnabled ? [{ id: 'whatsapp', label: 'WhatsApp Beta' }] : []),
+    ...(showWaTab ? [{ id: 'whatsapp', label: 'WhatsApp Beta' }] : []),
     { id: 'transactionMsg', label: 'Pesan Transaksi' },
     ...(whatsappEnabled ? [{ id: 'visitReminder', label: 'Pengingat Kunjungan' }] : []),
     ...(whatsappEnabled ? [{ id: 'ratingAuto', label: 'Rating Otomatis' }] : []),
@@ -957,14 +974,34 @@ export default function TASettingsPage() {
 
       {activeTab === 'whatsapp' && (
         <div className="grid grid-cols-1 gap-6">
-          <WhatsAppCard
-            waState={waState}
-            setWaState={setWaState}
-            onConnect={connectWhatsApp}
-            onDisconnect={disconnectWhatsApp}
-            onSaveSettings={saveWhatsAppSettings}
-            onSendTest={sendWhatsAppTest}
-          />
+          {whatsappEnabled ? (
+            <>
+              {trial?.status === 'active' && (
+                <WaTrialActiveBanner
+                  daysLeft={trial.daysLeft}
+                  endsAt={trial.endsAt}
+                  onUpgrade={() => navigate('/admin/billing')}
+                />
+              )}
+              <WhatsAppCard
+                waState={waState}
+                setWaState={setWaState}
+                onConnect={connectWhatsApp}
+                onDisconnect={disconnectWhatsApp}
+                onSaveSettings={saveWhatsAppSettings}
+                onSendTest={sendWhatsAppTest}
+              />
+            </>
+          ) : trial?.status === 'expired' ? (
+            <WaTrialExpired onUpgrade={() => navigate('/admin/billing')} />
+          ) : (
+            <WaTrialCta
+              durationDays={trial?.durationDays || 14}
+              loading={startTrial.isPending}
+              onStart={handleStartTrial}
+              onUpgrade={() => navigate('/admin/billing')}
+            />
+          )}
         </div>
       )}
 
@@ -1559,6 +1596,77 @@ function validatePhone(raw) {
     return { valid: false, message: 'Format harus diawali 0, 62, atau 8.' }
   }
   return { valid: true, message: null }
+}
+
+// Banner saat trial WA sedang berjalan — tampil di atas WhatsAppCard.
+function WaTrialActiveBanner({ daysLeft, endsAt, onUpgrade }) {
+  return (
+    <Card className="p-4 border-brand/30 bg-gradient-to-br from-brand/10 to-transparent">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="flex items-start gap-3 min-w-0">
+          <div className="p-2 rounded-xl bg-brand/15 flex-shrink-0"><Gift size={18} className="text-brand" /></div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-semibold text-off-white">Mode Trial WhatsApp</p>
+              <Badge variant={daysLeft <= 3 ? 'warning' : 'info'}>Sisa {daysLeft} hari</Badge>
+            </div>
+            <p className="text-xs text-muted mt-1">
+              Berakhir {endsAt ? formatDateTime(endsAt) : '—'}. Setelah itu fitur WhatsApp terkunci otomatis
+              kecuali Anda upgrade ke Pro.
+            </p>
+          </div>
+        </div>
+        <Button icon={ArrowUpRight} onClick={onUpgrade}>Upgrade ke Pro</Button>
+      </div>
+    </Card>
+  )
+}
+
+// CTA mulai trial — untuk paket tanpa WA (mis. Basic) yang belum pernah trial.
+function WaTrialCta({ durationDays, loading, onStart, onUpgrade }) {
+  return (
+    <Card className="p-6 border-brand/30 bg-gradient-to-br from-brand/10 to-transparent text-center max-w-2xl">
+      <div className="mx-auto w-12 h-12 rounded-2xl bg-brand/15 flex items-center justify-center mb-3">
+        <MessageCircle size={24} className="text-brand" />
+      </div>
+      <h3 className="font-display text-xl font-bold text-off-white">Coba WhatsApp gratis {durationDays} hari</h3>
+      <p className="text-sm text-muted mt-2 max-w-md mx-auto">
+        Kirim struk, pengingat kunjungan & link rating otomatis ke pelanggan lewat WhatsApp.
+        Aktifkan sekarang — tanpa biaya, tanpa kartu. Trial hanya bisa diambil sekali.
+      </p>
+      <ul className="text-xs text-muted mt-4 space-y-1.5 inline-block text-left">
+        <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-green-400 flex-shrink-0" /> Struk WhatsApp otomatis dari POS</li>
+        <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-green-400 flex-shrink-0" /> Pengingat pelanggan yang lama tak datang</li>
+        <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-green-400 flex-shrink-0" /> Link rating otomatis + laporan status pesan</li>
+      </ul>
+      <div className="mt-5">
+        <Button icon={Gift} loading={loading} onClick={onStart}>Mulai trial {durationDays} hari</Button>
+      </div>
+      <p className="text-[11px] text-muted mt-3">
+        Ingin langsung permanen?{' '}
+        <button onClick={onUpgrade} className="text-brand hover:underline">Upgrade ke Pro</button>
+      </p>
+    </Card>
+  )
+}
+
+// State setelah trial habis & tenant tidak upgrade — upsell ke Pro.
+function WaTrialExpired({ onUpgrade }) {
+  return (
+    <Card className="p-6 border-amber-500/30 bg-amber-500/5 text-center max-w-2xl">
+      <div className="mx-auto w-12 h-12 rounded-2xl bg-amber-500/15 flex items-center justify-center mb-3">
+        <Lock size={22} className="text-amber-400" />
+      </div>
+      <h3 className="font-display text-xl font-bold text-off-white">Trial WhatsApp Anda sudah berakhir</h3>
+      <p className="text-sm text-muted mt-2 max-w-md mx-auto">
+        Masa coba gratis sudah habis. Upgrade ke Pro untuk mengaktifkan kembali struk WhatsApp,
+        pengingat kunjungan & link rating otomatis — plus Laporan Lanjutan, Heatmap, CLV & Laporan Wilayah.
+      </p>
+      <div className="mt-5">
+        <Button icon={ArrowUpRight} onClick={onUpgrade}>Upgrade ke Pro</Button>
+      </div>
+    </Card>
+  )
 }
 
 function WhatsAppCard({ waState, setWaState, onConnect, onDisconnect, onSaveSettings, onSendTest }) {
