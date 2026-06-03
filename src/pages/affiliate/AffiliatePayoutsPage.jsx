@@ -86,7 +86,8 @@ export default function AffiliatePayoutsPage() {
           <p>Belum ada permintaan pencairan.</p>
         </Card>
       ) : (
-        <Card className="overflow-hidden">
+        <>
+        <Card className="overflow-hidden hidden md:block">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-dark-surface text-xs text-muted">
@@ -128,6 +129,38 @@ export default function AffiliatePayoutsPage() {
             </table>
           </div>
         </Card>
+
+        <div className="md:hidden space-y-2">
+          {data.map(p => (
+            <Card key={p.id} className="p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-brand font-semibold tabular-nums">{formatRupiah(p.amount)}</p>
+                  <p className="text-[11px] text-muted">
+                    {new Date(p.createdAt).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  </p>
+                </div>
+                {badge(p.status)}
+              </div>
+              <div className="mt-2 pt-2 border-t border-dark-border text-xs">
+                <p className="text-off-white">{METHOD_LABEL[p.method] || p.method}</p>
+                <p className="text-muted font-mono break-all">{p.account}</p>
+              </div>
+              {p.adminNote && <p className="text-[10px] text-muted mt-1">“{p.adminNote}”</p>}
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-[11px] text-muted">
+                  {p.processedAt ? `Diproses ${new Date(p.processedAt).toLocaleString('id-ID', { day: '2-digit', month: 'short' })}` : 'Belum diproses'}
+                </span>
+                {p.proofUrl && (
+                  <a href={p.proofUrl} target="_blank" rel="noreferrer" className="text-xs text-brand inline-flex items-center gap-1 hover:underline">
+                    Lihat bukti <ExternalLink size={10} />
+                  </a>
+                )}
+              </div>
+            </Card>
+          ))}
+        </div>
+        </>
       )}
 
       <Modal isOpen={open} onClose={() => setOpen(false)} title="Ajukan pencairan" size="md">

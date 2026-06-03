@@ -83,7 +83,8 @@ export default function AffiliateCommissionsPage() {
           <p>Belum ada komisi pada filter ini.</p>
         </Card>
       ) : (
-        <Card className="overflow-hidden">
+        <>
+        <Card className="overflow-hidden hidden md:block">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-dark-surface text-xs text-muted">
@@ -123,6 +124,35 @@ export default function AffiliateCommissionsPage() {
             </table>
           </div>
         </Card>
+
+        <div className="md:hidden space-y-2">
+          {data.map(c => (
+            <Card key={c.id} className="p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-off-white font-medium truncate">{c.referral?.tenant?.name || '—'}</p>
+                  <p className="text-[11px] text-muted">
+                    {new Date(c.createdAt).toLocaleDateString('id-ID')}{c.period ? ` · ${c.period}` : ''}
+                  </p>
+                </div>
+                {badge(c.status)}
+              </div>
+              <div className="flex items-end justify-between mt-2 pt-2 border-t border-dark-border">
+                <span className="text-[11px] text-muted">Invoice {formatRupiah(c.baseAmount)}</span>
+                <div className="text-right">
+                  <p className="text-brand font-semibold tabular-nums">{formatRupiah(c.amount)}</p>
+                  <p className="text-[10px] text-muted">{Math.round(c.commissionRate * 100)}%</p>
+                </div>
+              </div>
+              {c.status === 'void' && c.voidReason && (
+                <p className="text-[10px] text-red-400 mt-2 flex items-start gap-0.5">
+                  <AlertCircle size={9} className="mt-0.5 flex-shrink-0" /> {c.voidReason}
+                </p>
+              )}
+            </Card>
+          ))}
+        </div>
+        </>
       )}
     </div>
   )
