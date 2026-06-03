@@ -681,9 +681,6 @@ export default function QueuePage() {
                 </button>
               </div>
             )}
-            {!form.customerId && custSearchDeb.length >= 1 && (
-              <p className="mt-1 text-[11px] text-muted">Pilih pelanggan agar poin loyalti otomatis tercatat, atau tambahkan sebagai baru.</p>
-            )}
           </div>
 
           <Input label="Telepon (opsional)" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="081234567890" />
@@ -698,19 +695,21 @@ export default function QueuePage() {
             {services.length === 0 ? (
               <p className="text-xs text-muted">Belum ada layanan.</p>
             ) : (
-              <div className="flex flex-wrap gap-2">
+              <div className="space-y-2">
                 {services.map(s => {
                   const checked = form.serviceIds.includes(s.id)
                   return (
                     <button key={s.id} onClick={() => toggleService(s.id)} type="button"
-                      className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 min-h-[44px] rounded-xl text-sm font-medium border transition-all active:scale-[0.97] ${
-                        checked
-                          ? 'bg-brand/15 border-brand text-brand'
-                          : 'bg-dark-surface border-dark-border text-off-white hover:border-brand/40'
+                      className={`w-full flex items-center justify-between gap-3 px-4 min-h-[48px] py-2.5 rounded-xl border text-left transition-all active:scale-[0.99] ${
+                        checked ? 'bg-brand/15 border-brand' : 'bg-dark-surface border-dark-border'
                       }`}>
-                      {checked && <span className="text-brand text-xs font-bold leading-none">✓</span>}
-                      <span>{s.name}</span>
-                      <span className={checked ? 'text-brand/70 text-xs' : 'text-muted text-xs'}>· {s.duration}m</span>
+                      <span className="min-w-0">
+                        <span className={`block text-sm font-medium truncate ${checked ? 'text-brand' : 'text-off-white'}`}>{s.name}</span>
+                        <span className="block text-xs text-muted">{s.duration} menit</span>
+                      </span>
+                      <span className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border ${checked ? 'bg-brand border-brand' : 'border-dark-border'}`}>
+                        {checked && <span className="text-dark-bg text-xs font-bold leading-none">✓</span>}
+                      </span>
                     </button>
                   )
                 })}
@@ -719,23 +718,31 @@ export default function QueuePage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-muted mb-2">Barber <span className="font-normal">(opsional)</span></label>
-            <div className="flex flex-wrap gap-2">
-              {barbers.map(b => {
-                const sel = form.barberId === b.id
-                return (
-                  // Tap untuk pilih; tap lagi membatalkan (barber tetap opsional, tanpa chip "Bebas").
-                  <button key={b.id} type="button"
-                    onClick={() => setForm(f => ({ ...f, barberId: f.barberId === b.id ? '' : b.id }))}
-                    className={`inline-flex items-center gap-1.5 px-3.5 py-2.5 min-h-[44px] rounded-xl text-sm font-medium border transition-all active:scale-[0.97] ${
-                      sel ? 'bg-brand/15 border-brand text-brand' : 'bg-dark-surface border-dark-border text-off-white hover:border-brand/40'
-                    }`}>
-                    <User className="w-3.5 h-3.5 flex-shrink-0" />
-                    {b.name}
-                  </button>
-                )
-              })}
-            </div>
-            {barbers.length === 0 && <p className="text-xs text-muted">Belum ada barber di cabang ini.</p>}
+            {barbers.length === 0 ? (
+              <p className="text-xs text-muted">Belum ada barber di cabang ini.</p>
+            ) : (
+              <div className="space-y-2">
+                {barbers.map(b => {
+                  const sel = form.barberId === b.id
+                  return (
+                    // Tap untuk pilih; tap lagi membatalkan (tetap opsional, tanpa "Bebas").
+                    <button key={b.id} type="button"
+                      onClick={() => setForm(f => ({ ...f, barberId: f.barberId === b.id ? '' : b.id }))}
+                      className={`w-full flex items-center justify-between gap-3 px-4 min-h-[48px] py-2.5 rounded-xl border text-left transition-all active:scale-[0.99] ${
+                        sel ? 'bg-brand/15 border-brand' : 'bg-dark-surface border-dark-border'
+                      }`}>
+                      <span className="flex items-center gap-2.5 min-w-0">
+                        <User className={`w-4 h-4 flex-shrink-0 ${sel ? 'text-brand' : 'text-muted'}`} />
+                        <span className={`text-sm font-medium truncate ${sel ? 'text-brand' : 'text-off-white'}`}>{b.name}</span>
+                      </span>
+                      <span className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border ${sel ? 'bg-brand border-brand' : 'border-dark-border'}`}>
+                        {sel && <span className="text-dark-bg text-xs font-bold leading-none">✓</span>}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </div>
           <div className="flex gap-3 pt-2">
             <Button variant="outline" fullWidth onClick={() => { setShowModal(false); resetForm() }} disabled={addToQueueM.isPending}>Batal</Button>
