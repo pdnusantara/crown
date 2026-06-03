@@ -408,7 +408,7 @@ function PublicBookingPageInner() {
               tenantName={tenantName} tenantLogo={tenantLogo} bp={bp}
               branches={branches} services={services} barbers={barbers}
               testimonials={testimonials}
-              selected={selected} accent={accent}
+              selected={selected} accent={accent} tenantTz={tenantTz}
               onPickBranch={pickBranch} onPickService={pickService} onPickBarber={pickBarber}
               canNext={canNextStep0}
               onNext={() => { if (canNextStep0) { setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }) } }}
@@ -928,12 +928,12 @@ function StickyCta({ label, onClick, disabled, accent, note }) {
 // STEP 1 — Pilih Barber & Layanan
 // ═══════════════════════════════════════════════════════════════════════════
 
-function Step1Pick({ tenantName, tenantLogo, bp, branches, services, barbers, testimonials = [], selected, accent,
+function Step1Pick({ tenantName, tenantLogo, bp, branches, services, barbers, testimonials = [], selected, accent, tenantTz,
                     onPickBranch, onPickService, onPickBarber, onNext, canNext }) {
   return (
     <div className="space-y-7 lg:space-y-10">
       {/* Header banner — full width on both mobile & desktop */}
-      <ShopHeader bp={bp} tenantName={tenantName} tenantLogo={tenantLogo} branch={selected.branch} accent={accent} />
+      <ShopHeader bp={bp} tenantName={tenantName} tenantLogo={tenantLogo} branch={selected.branch} accent={accent} tenantTz={tenantTz} />
 
       {/* Two-column layout on desktop: selection (2/3) + summary (1/3) */}
       <div className="lg:grid lg:grid-cols-3 lg:gap-8">
@@ -1166,24 +1166,23 @@ function SidebarRow({ label, value, highlight, accent, muted }) {
 }
 
 // Compute status "Buka sekarang" vs "Tutup" dari openTime/closeTime branch
-// (HH:mm). Sengaja TZ-naive: pakai jam lokal browser sebagai approximasi —
-// untuk presisi penuh perlu pakai tenantTz dari context (over-engineering
-// untuk MVP). Kalau jam buka/tutup hilang, return null = chip tidak tampil.
-function computeOpenStatus(branch) {
+// (HH:mm). TZ-aware: pakai jam zona waktu tenant (nowHHMMInTz) — sama dgn
+// logika kunci slot — agar status benar walau pengunjung di zona berbeda.
+// Kalau jam buka/tutup hilang, return null = chip tidak tampil.
+function computeOpenStatus(branch, tz) {
   const open = branch?.openTime
   const close = branch?.closeTime
   if (!open || !close) return null
-  const now = new Date()
-  const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+  const hhmm = nowHHMMInTz(tz)
   const isOpen = hhmm >= open && hhmm < close
   return { isOpen, open, close }
 }
 
-function ShopHeader({ bp, tenantName, tenantLogo, branch, accent }) {
+function ShopHeader({ bp, tenantName, tenantLogo, branch, accent, tenantTz }) {
   const heroImage = bp.heroImage
   const showLogo  = bp.showLogo !== false
   const tagline   = bp.tagline
-  const status    = computeOpenStatus(branch)
+  const status    = computeOpenStatus(branch, tenantTz)
   const useImage  = !!heroImage
 
   // Mode A: tenant punya heroImage → pertahankan visual asli (image + overlay)
@@ -1352,13 +1351,16 @@ function BarberCarousel({ barbers, selected, onPick, accent }) {
       {barbers.map(barber => {
         const isSel = selected?.id === barber.id
         const hasRating = barber.ratingCount > 0 && barber.avgRating != null
+        // "Rekomendasi": rating tinggi DAN cukup ulasan — cegah 1 ulasan bintang-5
+        // jadi "top". Bantu pelanggan baru memilih (kurangi choice paralysis).
+        const isTopRated = barber.avgRating >= 4.5 && barber.ratingCount >= 5
         return (
           <button key={barber.id}
             type="button"
             onClick={() => onPick(barber)}
             role="radio"
             aria-checked={isSel}
-            aria-label={`Barber ${barber.name}${hasRating ? `, rating ${barber.avgRating} dari 5 dari ${barber.ratingCount} ulasan` : ', belum ada rating'}`}
+            aria-label={`Barber ${barber.name}${isTopRated ? ', rekomendasi' : ''}${hasRating ? `, rating ${barber.avgRating} dari 5 dari ${barber.ratingCount} ulasan` : ', belum ada rating'}`}
             className="flex-shrink-0 flex flex-col items-center gap-1.5 w-[96px]"
           >
             <div className="relative">
@@ -1375,6 +1377,13 @@ function BarberCarousel({ barbers, selected, onPick, accent }) {
                 <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center"
                   style={{ background: accent, color: '#FFFFFF', border: '2px solid var(--bk-bg)' }}>
                   <Check className="w-3 h-3" strokeWidth={3} />
+                </div>
+              )}
+              {isTopRated && (
+                <div className="absolute -top-1 -left-1 w-5 h-5 rounded-full flex items-center justify-center text-[11px] leading-none"
+                  title="Rekomendasi — rating tinggi"
+                  style={{ background: '#F59E0B', color: '#FFFFFF', border: '2px solid var(--bk-bg)' }}>
+                  ★
                 </div>
               )}
             </div>
