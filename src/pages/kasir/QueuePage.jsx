@@ -22,6 +22,7 @@ import { usePosStore } from '../../store/posStore.js'
 import { useBranchQueue, useAddToQueue, useUpdateQueueStatus, useDeleteQueueItem } from '../../hooks/useQueue.js'
 import { useServices } from '../../hooks/useServices.js'
 import { useUsers } from '../../hooks/useUsers.js'
+import { useCustomers } from '../../hooks/useCustomers.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Modal from '../../components/ui/Modal.jsx'
@@ -101,7 +102,7 @@ function TicketCard({ item, col, onAdvance, onCancel, isDragging = false, compac
         {item.status === 'waiting' && (
           <div className="flex items-center gap-1">
             <Clock className="w-3 h-3 text-amber-400" />
-            <span className="text-xs text-amber-400">~{item.waitTime} min</span>
+            <span className="text-xs text-amber-400">{item.waitTime > 0 ? `~${item.waitTime} min` : 'Segera'}</span>
           </div>
         )}
         {item.status === 'in-progress' && item.updatedAt && (
@@ -248,7 +249,12 @@ export default function QueuePage() {
   const { t } = useTranslation()
   const isMobile = useIsMobile()
   const [showModal, setShowModal] = useState(false)
-  const [form, setForm] = useState({ customerName: '', phone: '', services: '', barberId: '' })
+  const [form, setForm] = useState({ customerId: null, customerName: '', phone: '', serviceIds: [], barberId: '' })
+  // Pencarian pelanggan (link ke loyalti). custSearch = teks di kotak; bila kasir
+  // tak memilih dari daftar, teks dipakai sebagai nama pelanggan baru (customerId null).
+  const [custSearch, setCustSearch] = useState('')
+  const [custSearchDeb, setCustSearchDeb] = useState('')
+  const [selectedCust, setSelectedCust] = useState(null)
   const [activeItem, setActiveItem] = useState(null)
   const [mobileTab, setMobileTab] = useState('waiting')
   const [cancelTarget, setCancelTarget] = useState(null)
@@ -262,6 +268,52 @@ export default function QueuePage() {
   const { data: services = [] } = useServices({ isActive: 'true' })
   const { data: barbers = [] } = useUsers({ role: 'barber', branchId: user?.branchId })
 
+  // Debounce pencarian pelanggan (250ms) → filter server-side.
+  useEffect(() => {
+    const id = setTimeout(() => setCustSearchDeb(custSearch.trim()), 250)
+    return () => clearTimeout(id)
+  }, [custSearch])
+
+  // Cari pelanggan hanya saat modal terbuka, ada teks, & belum memilih.
+  const { data: custPage, isFetching: custFetching } = useCustomers({
+    page: 1, limit: 8,
+    enabled: showModal && custSearchDeb.length >= 1 && !form.customerId,
+    ...(custSearchDeb ? { search: custSearchDeb } : {}),
+  })
+  const custResults = custPage?.data || []
+
+  // Durasi layanan per nama — untuk estimasi tunggu posisi-aware.
+  const serviceDurByName = useMemo(() => {
+    const m = new Map()
+    services.forEach(s => m.set(s.name, s.duration))
+    return m
+  }, [services])
+
+  const selectedServices = useMemo(
+    () => services.filter(s => form.serviceIds.includes(s.id)),
+    [services, form.serviceIds]
+  )
+  const selectedTotalDur = selectedServices.reduce((a, s) => a + (s.duration || 0), 0)
+
+  const resetForm = () => {
+    setForm({ customerId: null, customerName: '', phone: '', serviceIds: [], barberId: '' })
+    setCustSearch(''); setCustSearchDeb(''); setSelectedCust(null)
+  }
+  const pickCustomer = (c) => {
+    setForm(f => ({ ...f, customerId: c.id, customerName: c.name, phone: c.phone || '' }))
+    setSelectedCust(c); setCustSearch(c.name)
+  }
+  const onCustSearchChange = (v) => {
+    setCustSearch(v)
+    // Mengetik = anggap pelanggan baru/tak-tertaut sampai dipilih dari daftar.
+    setForm(f => ({ ...f, customerId: null, customerName: v }))
+    setSelectedCust(null)
+  }
+  const toggleService = (id) => setForm(f => ({
+    ...f,
+    serviceIds: f.serviceIds.includes(id) ? f.serviceIds.filter(x => x !== id) : [...f.serviceIds, id],
+  }))
+
   // Tick setiap 60 detik supaya filter "Sudah Bayar > 30 menit" otomatis recompute
   // tanpa perlu user me-refresh halaman.
   const [tick, setTick] = useState(0)
@@ -273,7 +325,7 @@ export default function QueuePage() {
   // Apply search & barber filter sebelum bagi per status
   const branchQueue = useMemo(() => {
     const s = search.trim().toLowerCase()
-    return queue.filter(q => {
+    const filtered = queue.filter(q => {
       if (filterBarber && q.staffId !== filterBarber) return false
       if (!s) return true
       return (
@@ -282,7 +334,19 @@ export default function QueuePage() {
         (q.services || []).join(' ').toLowerCase().includes(s)
       )
     })
-  }, [queue, search, filterBarber])
+    // Estimasi tunggu posisi-aware: pelanggan menunggu giliran berdasarkan total
+    // durasi antrean di depannya dibagi jumlah barber (paralel). Gantikan angka
+    // statik 15 menit. Urutan `queue` sudah by queueNumber dari backend.
+    const cap = Math.max(barbers.length, 1)
+    let acc = 0
+    const estMap = {}
+    filtered.filter(q => q.status === 'waiting').forEach(q => {
+      estMap[q.id] = Math.round(acc / cap)
+      const dur = (q.services || []).reduce((su, n) => su + (serviceDurByName.get(n) || 30), 0) || 30
+      acc += dur
+    })
+    return filtered.map(q => q.status === 'waiting' ? { ...q, waitTime: estMap[q.id] ?? q.waitTime } : q)
+  }, [queue, search, filterBarber, barbers.length, serviceDurByName])
 
   const getByStatus = (status) => {
     const items = branchQueue.filter(q => q.status === status)
@@ -295,22 +359,27 @@ export default function QueuePage() {
   }
 
   const handleAddWalkIn = async () => {
-    if (!form.customerName) return toast.error(t('queue.toast.nameRequired'))
+    const name = (form.customerId ? form.customerName : custSearch.trim())
+    if (!name) return toast.error(t('queue.toast.nameRequired'))
     const barber = barbers.find(b => b.id === form.barberId)
+    const svcNames = selectedServices.length ? selectedServices.map(s => s.name) : ['Potong Reguler']
     try {
       await addToQueueM.mutateAsync({
         tenantId: user.tenantId,
         branchId: user.branchId,
-        customerName: form.customerName,
+        customerId: form.customerId || undefined, // tertaut loyalti bila pelanggan dipilih
+        customerName: name,
         phone: form.phone,
-        services: form.services ? [form.services] : ['Potong Reguler'],
+        services: svcNames,
         staffId: form.barberId || null,
         staffName: barber?.name || null,
         type: 'walk-in',
+        // Simpan total durasi sebagai estimasi awal (display dihitung ulang posisi-aware).
+        waitTime: selectedTotalDur || undefined,
       })
-      toast.success(t('queue.toast.created', { name: form.customerName }))
+      toast.success(t('queue.toast.created', { name }))
       setShowModal(false)
-      setForm({ customerName: '', phone: '', services: '', barberId: '' })
+      resetForm()
     } catch (err) {
       toast.error(err?.response?.data?.error || t('queue.toast.createFailed'))
     }
@@ -537,16 +606,88 @@ export default function QueuePage() {
       )}
 
       {/* Walk-in Modal */}
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Tambah Walk-in">
+      <Modal isOpen={showModal} onClose={() => { setShowModal(false); resetForm() }} title="Tambah Walk-in">
         <div className="space-y-4">
-          <Input label="Nama Pelanggan" value={form.customerName} onChange={e => setForm(f => ({ ...f, customerName: e.target.value }))} placeholder="Nama pelanggan" />
-          <Input label="Telepon (opsional)" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="081234567890" />
+          {/* Pelanggan: cari yg sudah ada (tertaut loyalti) atau ketik nama baru */}
           <div>
-            <label className="block text-sm font-medium text-muted mb-1.5">Layanan</label>
-            <select value={form.services} onChange={e => setForm(f => ({ ...f, services: e.target.value }))} className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60">
-              <option value="">Pilih layanan...</option>
-              {services.map(s => <option key={s.id} value={s.name}>{s.name} — {s.duration} min</option>)}
-            </select>
+            <label className="block text-sm font-medium text-muted mb-1.5">Pelanggan</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
+              <input
+                value={custSearch}
+                onChange={e => onCustSearchChange(e.target.value)}
+                placeholder="Cari nama / HP, atau ketik nama baru"
+                className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-9 pr-9 py-2.5 text-sm outline-none focus:border-brand/60"
+              />
+              {custSearch && (
+                <button onClick={() => { setCustSearch(''); setForm(f => ({ ...f, customerId: null, customerName: '' })); setSelectedCust(null) }}
+                  aria-label="Hapus" className="absolute right-2.5 top-1/2 -translate-y-1/2 w-7 h-7 inline-flex items-center justify-center rounded-md text-muted hover:text-off-white hover:bg-dark-card">
+                  <XIcon className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Hint loyalti saat pelanggan tertaut dipilih */}
+            {selectedCust && form.customerId && (
+              <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-xl bg-brand/10 border border-brand/25">
+                <User className="w-4 h-4 text-brand flex-shrink-0" />
+                <span className="text-xs text-off-white font-medium truncate">{selectedCust.name}</span>
+                <span className="text-xs text-muted">·</span>
+                <span className="text-xs text-amber-300 whitespace-nowrap">⭐ {selectedCust.loyaltyPoints || 0} poin</span>
+                <span className="text-xs text-muted whitespace-nowrap">· {selectedCust.visitCount || 0}× kunjungan</span>
+              </div>
+            )}
+
+            {/* Daftar hasil pencarian */}
+            {!form.customerId && custSearchDeb.length >= 1 && (
+              <div className="mt-1.5 max-h-44 overflow-y-auto rounded-xl border border-dark-border divide-y divide-dark-border">
+                {custFetching && custResults.length === 0 && (
+                  <p className="px-3 py-2.5 text-xs text-muted">Mencari…</p>
+                )}
+                {!custFetching && custResults.length === 0 && (
+                  <p className="px-3 py-2.5 text-xs text-muted">Tidak ada pelanggan cocok — akan dibuat sebagai pelanggan baru.</p>
+                )}
+                {custResults.map(c => (
+                  <button key={c.id} onClick={() => pickCustomer(c)}
+                    className="w-full text-left px-3 py-2.5 hover:bg-dark-card transition-colors flex items-center justify-between gap-2">
+                    <span className="min-w-0">
+                      <span className="block text-sm text-off-white truncate">{c.name}</span>
+                      {c.phone && <span className="block text-xs text-muted truncate">{c.phone}</span>}
+                    </span>
+                    <span className="text-xs text-amber-300 whitespace-nowrap flex-shrink-0">⭐ {c.loyaltyPoints || 0}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <Input label="Telepon (opsional)" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="081234567890" />
+
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-sm font-medium text-muted">Layanan</label>
+              {form.serviceIds.length > 0 && (
+                <span className="text-xs text-brand font-medium">{form.serviceIds.length} dipilih · {selectedTotalDur} min</span>
+              )}
+            </div>
+            <div className="max-h-44 overflow-y-auto rounded-xl border border-dark-border divide-y divide-dark-border">
+              {services.length === 0 && <p className="px-3 py-2.5 text-xs text-muted">Belum ada layanan.</p>}
+              {services.map(s => {
+                const checked = form.serviceIds.includes(s.id)
+                return (
+                  <button key={s.id} onClick={() => toggleService(s.id)} type="button"
+                    className="w-full text-left px-3 py-2.5 flex items-center justify-between gap-2 hover:bg-dark-card transition-colors">
+                    <span className="flex items-center gap-2.5 min-w-0">
+                      <span className={`w-4 h-4 rounded flex items-center justify-center border flex-shrink-0 ${checked ? 'bg-brand border-brand' : 'border-dark-border'}`}>
+                        {checked && <span className="text-dark-bg text-[10px] font-bold leading-none">✓</span>}
+                      </span>
+                      <span className="text-sm text-off-white truncate">{s.name}</span>
+                    </span>
+                    <span className="text-xs text-muted whitespace-nowrap flex-shrink-0">{s.duration} min</span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-muted mb-1.5">Barber (opsional)</label>

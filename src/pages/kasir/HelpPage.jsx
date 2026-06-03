@@ -140,12 +140,13 @@ function buildCategories(slug) {
           q: 'Bagaimana melayani pelanggan walk-in?',
           a: 'Walk-in adalah pelanggan yang datang tanpa booking. Daftarkan mereka agar masuk antrian dan barber tahu urutannya.',
           steps: [
-            'Buka menu Booking lalu tekan tombol Walk-in.',
-            'Isi data pelanggan dan layanan yang diminta.',
-            'Simpan — tiket antrian otomatis dibuat untuk hari ini.',
+            'Buka halaman Antrian lalu tekan tombol Walk-in.',
+            'Cari pelanggan lama (ketik nama/HP) agar poin loyalti otomatis tertaut, atau ketik nama baru bila pelanggan belum terdaftar.',
+            'Pilih satu atau beberapa layanan (durasi total muncul otomatis) dan barber bila ada.',
+            'Simpan — tiket antrian dibuat untuk hari ini, lengkap dengan estimasi waktu tunggu.',
           ],
-          to: bookings,
-          toLabel: 'Buka Booking',
+          to: queue,
+          toLabel: 'Buka Antrian',
         },
         {
           id: 'an-checkin',
