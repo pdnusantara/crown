@@ -37,12 +37,14 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <!-- Font landing publik (tema barbershop heritage): judul Bricolage Grotesque + mono JetBrains. -->
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
     <style>
       /* Hindari flash putih sebelum React mount: latar gelap default. */
       html, body { background: #0E0E1A; color: #f5f5f5; }
-      /* Landing (`/`) SELALU terang — matikan latar gelap di route landing. */
-      html.is-landing, html.is-landing body { background: #F4F4FA; color: #1E1B2E; }
+      /* Landing (`/`) SELALU terang — krem hangat (tema barbershop heritage). */
+      html.is-landing, html.is-landing body { background: #F6F1E7; color: #16140F; }
       /* Sisi tenant kini selalu mode terang (dark mode hanya super_admin). */
       html.light-mode, html.light-mode body { background: #F4F4FA; color: #1E1B2E; }
       /* Sticky nav offset untuk anchor scroll. */
@@ -57,7 +59,7 @@
       if (location.pathname === '/') {
         document.documentElement.className += ' is-landing';
         var tc = document.querySelector('meta[name="theme-color"]');
-        if (tc) tc.content = '#F4F4FA';
+        if (tc) tc.content = '#F6F1E7';
       } else {
         // Subdomain tenant (mis. termul.sembapos.com) → mode terang sejak awal
         // supaya tidak ada kedip gelap; super_admin di domain utama tetap gelap.
