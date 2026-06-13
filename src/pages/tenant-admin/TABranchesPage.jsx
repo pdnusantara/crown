@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useTranslation, Trans } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Edit2, Trash2, MapPin, Phone, Clock, Building2, AlertTriangle,
@@ -22,13 +23,14 @@ import { useProvinces, useRegencies } from '../../hooks/useWilayah.js'
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const SUB_STATUS_CFG = {
-  active:  { label: 'Aktif',   variant: 'success', color: 'text-green-400' },
-  trial:   { label: 'Trial',   variant: 'info',    color: 'text-blue-400' },
-  overdue: { label: 'Overdue', variant: 'danger',  color: 'text-amber-400' },
-  expired: { label: 'Expired', variant: 'muted',   color: 'text-red-400' },
+  active:  { labelKey: 'statusActive',  variant: 'success', color: 'text-green-400' },
+  trial:   { labelKey: 'statusTrial',   variant: 'info',    color: 'text-blue-400' },
+  overdue: { labelKey: 'statusOverdue', variant: 'danger',  color: 'text-amber-400' },
+  expired: { labelKey: 'statusExpired', variant: 'muted',   color: 'text-red-400' },
 }
 
 function QuotaDots({ current, max, extra = 0 }) {
+  const { t } = useTranslation()
   const dots = Math.max(max, current)
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
@@ -44,29 +46,30 @@ function QuotaDots({ current, max, extra = 0 }) {
               addon         ? 'bg-amber-400 border-amber-400' :
                               'bg-transparent border-dark-border'
             }`}
-            title={addon ? 'Cabang add-on' : used ? 'Dipakai' : 'Tersedia'}
+            title={addon ? t('tenantAdmin.branches.dotAddon') : used ? t('tenantAdmin.branches.dotUsed') : t('tenantAdmin.branches.dotAvailable')}
           />
         )
       })}
-      {extra > 0 && <span className="text-xs text-amber-400 font-semibold">+{extra} add-on</span>}
+      {extra > 0 && <span className="text-xs text-amber-400 font-semibold">{t('tenantAdmin.branches.extraAddon', { count: extra })}</span>}
     </div>
   )
 }
 
 // Rincian staf per peran → "1 Kasir · 2 Barber" (lebih jelas dari angka tunggal).
-const STAFF_ROLE_LABEL = { kasir: 'Kasir', barber: 'Barber', tenant_admin: 'Admin' }
-function staffBreakdown(byRole) {
+const STAFF_ROLE_KEY = { kasir: 'roleKasir', barber: 'roleBarber', tenant_admin: 'roleAdmin' }
+function staffBreakdown(byRole, t) {
   if (!byRole) return ''
   return Object.entries(byRole)
     .filter(([, n]) => n > 0)
     .sort((a, b) => b[1] - a[1])
-    .map(([role, n]) => `${n} ${STAFF_ROLE_LABEL[role] || role}`)
+    .map(([role, n]) => `${n} ${STAFF_ROLE_KEY[role] ? t(`tenantAdmin.branches.${STAFF_ROLE_KEY[role]}`) : role}`)
     .join(' · ')
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function TABranchesPage() {
+  const { t } = useTranslation()
   const { user } = useAuthStore()
   const navigate = useNavigate()
   const toast = useToast()
@@ -106,9 +109,9 @@ export default function TABranchesPage() {
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   const openAdd = () => {
-    if (isSuspended) { toast.error('Akun tenant sedang di-suspend. Hubungi super admin.'); return }
+    if (isSuspended) { toast.error(t('tenantAdmin.branches.suspendedContactAdmin')); return }
     if (!withinQuota && !canAddon) {
-      toast.error(`Kuota paket ${sub?.package} sudah penuh. Upgrade paket untuk menambah cabang.`)
+      toast.error(t('tenantAdmin.branches.quotaReached', { package: sub?.package, max: maxBranches }))
       return
     }
     setEditBranch(null)
@@ -132,23 +135,23 @@ export default function TABranchesPage() {
 
   const handleSave = async () => {
     if (!form.name.trim() || !form.address.trim()) {
-      return toast.error('Nama dan alamat wajib diisi')
+      return toast.error(t('tenantAdmin.branches.nameAddressRequired'))
     }
     const codeTrim = form.code.trim().toLowerCase()
     if (codeTrim && !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(codeTrim)) {
-      return toast.error('Kode cabang hanya boleh huruf kecil, angka, dan tanda hubung')
+      return toast.error(t('tenantAdmin.branches.codeInvalid'))
     }
     const payload = { ...form, code: codeTrim || undefined }
 
     if (editBranch) {
       try {
         await updateBranch.mutateAsync({ id: editBranch.id, tenantId, ...payload })
-        toast.success('Cabang berhasil diperbarui')
+        toast.success(t('tenantAdmin.branches.branchUpdated'))
         setShowFormModal(false)
       } catch (err) {
         if (err?.response?.data?.code === 'BRANCH_CODE_TAKEN') {
-          toast.error('Kode cabang sudah dipakai, pilih yang lain')
-        } else { toast.error('Gagal memperbarui cabang') }
+          toast.error(t('tenantAdmin.branches.codeTaken'))
+        } else { toast.error(t('tenantAdmin.branches.updateFailed')) }
       }
       return
     }
@@ -160,14 +163,14 @@ export default function TABranchesPage() {
     }
     try {
       await createBranch.mutateAsync({ ...payload, tenantId })
-      toast.success('Cabang berhasil ditambahkan')
+      toast.success(t('tenantAdmin.branches.branchAdded'))
       setShowFormModal(false)
     } catch (err) {
       const code = err?.response?.data?.code
       if (code === 'QUOTA_EXCEEDED_UPGRADE_REQUIRED') toast.error(err.response.data.error)
-      else if (code === 'BRANCH_CODE_TAKEN') toast.error('Kode cabang sudah dipakai, pilih yang lain')
-      else if (code === 'SUSPENDED') toast.error('Akun tenant sedang di-suspend')
-      else toast.error('Gagal menambahkan cabang')
+      else if (code === 'BRANCH_CODE_TAKEN') toast.error(t('tenantAdmin.branches.codeTaken'))
+      else if (code === 'SUSPENDED') toast.error(t('tenantAdmin.branches.suspendedShort'))
+      else toast.error(t('tenantAdmin.branches.addFailed'))
     }
   }
 
@@ -175,22 +178,22 @@ export default function TABranchesPage() {
     if (!pendingForm) return
     try {
       await createBranch.mutateAsync({ ...pendingForm, tenantId })
-      toast.success(`Cabang "${pendingForm.name}" berhasil dibuat. Invoice dikirim ke super admin untuk konfirmasi.`)
+      toast.success(t('tenantAdmin.branches.branchCreatedInvoiceSent', { name: pendingForm.name }))
       setShowFeeModal(false)
       setPendingForm(null)
     } catch (err) {
       const code = err?.response?.data?.code
-      if (code === 'SUSPENDED') toast.error('Akun tenant sedang di-suspend')
-      else toast.error('Gagal menambahkan cabang')
+      if (code === 'SUSPENDED') toast.error(t('tenantAdmin.branches.suspendedShort'))
+      else toast.error(t('tenantAdmin.branches.addFailed'))
     }
   }
 
   const handleDelete = async (branch) => {
     try {
       await deleteBranch.mutateAsync({ id: branch.id, tenantId })
-      toast.success('Cabang dihapus')
+      toast.success(t('tenantAdmin.branches.branchDeleted'))
       setShowDelModal(null)
-    } catch { toast.error('Gagal menghapus cabang') }
+    } catch { toast.error(t('tenantAdmin.branches.deleteFailed')) }
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -201,22 +204,22 @@ export default function TABranchesPage() {
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold text-off-white">Cabang</h1>
-          <p className="text-muted text-sm mt-1">{currentCount} cabang aktif</p>
+          <h1 className="font-display text-2xl font-bold text-off-white">{t('tenantAdmin.branches.title')}</h1>
+          <p className="text-muted text-sm mt-1">{t('tenantAdmin.branches.activeCount', { count: currentCount })}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => refetch()}
             disabled={isFetching}
-            aria-label="Muat ulang"
-            title="Muat ulang"
+            aria-label={t('tenantAdmin.branches.refresh')}
+            title={t('tenantAdmin.branches.refresh')}
             className="p-2 rounded-lg border border-dark-border text-muted hover:text-off-white hover:bg-dark-card transition-colors disabled:opacity-50"
           >
             <RefreshCw size={16} className={isFetching ? 'animate-spin' : ''} />
           </button>
           <Button icon={Plus} onClick={openAdd} disabled={isSuspended || (!withinQuota && !canAddon)}>
-            Tambah Cabang
+            {t('tenantAdmin.branches.addBranch')}
           </Button>
         </div>
       </div>
@@ -228,8 +231,8 @@ export default function TABranchesPage() {
             className="flex items-start gap-3 p-4 rounded-2xl border bg-red-500/5 border-red-500/20">
             <XCircle size={16} className="text-red-400 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-red-400">Akun Tenant Di-Suspend</p>
-              <p className="text-xs text-muted mt-0.5">Semua operasi dinonaktifkan. Hubungi super admin untuk reaktivasi.</p>
+              <p className="text-sm font-semibold text-red-400">{t('tenantAdmin.branches.suspendedTitle')}</p>
+              <p className="text-xs text-muted mt-0.5">{t('tenantAdmin.branches.suspendedDesc')}</p>
             </div>
           </motion.div>
         )}
@@ -239,11 +242,11 @@ export default function TABranchesPage() {
             className="flex items-start gap-3 p-4 rounded-2xl border bg-red-500/5 border-red-500/20">
             <XCircle size={16} className="text-red-400 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-sm font-semibold text-red-400">Langganan Sudah Berakhir</p>
-              <p className="text-xs text-muted mt-0.5">Cabang yang melebihi kuota tidak berlisensi. Hubungi super admin untuk perpanjang.</p>
+              <p className="text-sm font-semibold text-red-400">{t('tenantAdmin.branches.expiredTitle')}</p>
+              <p className="text-xs text-muted mt-0.5">{t('tenantAdmin.branches.expiredDesc')}</p>
             </div>
             <button onClick={() => navigate('/admin/billing')} className="text-xs text-red-400 hover:text-red-400 underline flex-shrink-0">
-              Lihat Tagihan
+              {t('tenantAdmin.branches.viewBilling')}
             </button>
           </motion.div>
         )}
@@ -253,11 +256,11 @@ export default function TABranchesPage() {
             className="flex items-start gap-3 p-4 rounded-2xl border bg-amber-400/5 border-amber-400/20">
             <AlertTriangle size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-sm font-semibold text-amber-400">Pembayaran Tertunggak</p>
-              <p className="text-xs text-muted mt-0.5">Segera lunasi tagihan agar layanan tidak terputus.</p>
+              <p className="text-sm font-semibold text-amber-400">{t('tenantAdmin.branches.overdueTitle')}</p>
+              <p className="text-xs text-muted mt-0.5">{t('tenantAdmin.branches.overdueDesc')}</p>
             </div>
             <button onClick={() => navigate('/admin/billing')} className="text-xs text-amber-400 hover:text-amber-400 underline flex-shrink-0">
-              Lihat Tagihan
+              {t('tenantAdmin.branches.viewBilling')}
             </button>
           </motion.div>
         )}
@@ -271,30 +274,30 @@ export default function TABranchesPage() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <GitBranch size={14} className="text-brand" />
-                  <span className="text-sm font-medium text-off-white">Kuota Cabang — Paket <span className="text-brand">{sub.package}</span></span>
+                  <span className="text-sm font-medium text-off-white">{t('tenantAdmin.branches.quotaLabel')} <span className="text-brand">{sub.package}</span></span>
                   <Badge variant={SUB_STATUS_CFG[subStatus]?.variant || 'muted'}>
-                    {SUB_STATUS_CFG[subStatus]?.label || subStatus}
+                    {SUB_STATUS_CFG[subStatus] ? t(`tenantAdmin.branches.${SUB_STATUS_CFG[subStatus].labelKey}`) : subStatus}
                   </Badge>
                 </div>
                 <QuotaDots current={currentCount} max={maxBranches} extra={paidAddonCount} />
                 <p className="text-xs text-muted">
-                  {currentCount} dari {maxBranches} slot terpakai
-                  {paidAddonCount > 0 && ` · ${paidAddonCount} cabang add-on berlisensi`}
+                  {t('tenantAdmin.branches.slotsUsed', { current: currentCount, max: maxBranches })}
+                  {paidAddonCount > 0 && ` · ${t('tenantAdmin.branches.licensedAddons', { count: paidAddonCount })}`}
                   {pendingInvoices.length > 0 && (
-                    <span className="text-amber-400"> · {pendingInvoices.length} tagihan add-on menunggu konfirmasi</span>
+                    <span className="text-amber-400"> · {t('tenantAdmin.branches.pendingAddonInvoices', { count: pendingInvoices.length })}</span>
                   )}
                 </p>
               </div>
               <div className="flex gap-2 flex-shrink-0">
                 {!withinQuota && !canAddon && (
                   <Button size="sm" icon={ArrowUpCircle} variant="secondary" onClick={() => navigate('/admin/billing')}>
-                    Upgrade Paket
+                    {t('tenantAdmin.branches.upgradePlan')}
                   </Button>
                 )}
                 {!withinQuota && canAddon && (
                   <div className="text-right">
-                    <p className="text-xs text-amber-400 font-medium">{formatRupiah(addonPrice)}<span className="text-muted font-normal">/{addonType === 'monthly' ? 'bulan' : 'sekali bayar'}</span></p>
-                    <p className="text-[10px] text-muted">per cabang tambahan</p>
+                    <p className="text-xs text-amber-400 font-medium">{formatRupiah(addonPrice)}<span className="text-muted font-normal">/{addonType === 'monthly' ? t('tenantAdmin.branches.perMonthShort') : t('tenantAdmin.branches.oneTimeShort')}</span></p>
+                    <p className="text-[10px] text-muted">{t('tenantAdmin.branches.perExtraBranch')}</p>
                   </div>
                 )}
               </div>
@@ -305,7 +308,7 @@ export default function TABranchesPage() {
               <div className="mt-3 pt-3 border-t border-red-400/20 flex items-center gap-2">
                 <Info size={12} className="text-red-400 flex-shrink-0" />
                 <p className="text-xs text-red-400">
-                  Paket {sub.package} hanya mendukung {maxBranches} cabang. Upgrade ke Pro atau Enterprise untuk cabang tak terbatas.
+                  {t('tenantAdmin.branches.planLimitInfo', { package: sub.package, max: maxBranches })}
                 </p>
               </div>
             )}
@@ -319,7 +322,7 @@ export default function TABranchesPage() {
           <Card className="border-amber-400/30 bg-amber-400/5">
             <div className="flex items-center gap-2 px-5 pt-4 pb-3 border-b border-amber-400/20">
               <Receipt size={14} className="text-amber-400" />
-              <p className="text-sm font-semibold text-amber-400">Tagihan Cabang Menunggu Konfirmasi</p>
+              <p className="text-sm font-semibold text-amber-400">{t('tenantAdmin.branches.pendingInvoicesTitle')}</p>
             </div>
             <div className="divide-y divide-amber-400/10">
               {pendingInvoices.map(inv => (
@@ -327,12 +330,12 @@ export default function TABranchesPage() {
                   <div>
                     <p className="text-sm text-off-white">{inv.period}</p>
                     <p className="text-xs text-muted mt-0.5">
-                      Dibuat {formatDateInTz(inv.createdAt)}
+                      {t('tenantAdmin.branches.createdAt', { date: formatDateInTz(inv.createdAt) })}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold text-amber-400">{formatRupiah(inv.amount)}</p>
-                    <p className="text-[10px] text-amber-400 mt-0.5">Hubungi admin untuk konfirmasi</p>
+                    <p className="text-[10px] text-amber-400 mt-0.5">{t('tenantAdmin.branches.contactAdminConfirm')}</p>
                   </div>
                 </div>
               ))}
@@ -340,11 +343,10 @@ export default function TABranchesPage() {
             <div className="px-5 py-3 border-t border-amber-400/20 flex items-center gap-2">
               <Info size={12} className="text-amber-400 flex-shrink-0" />
               <p className="text-xs text-muted">
-                Cabang add-on akan aktif setelah super admin mengkonfirmasi pembayaran.
-                Transfer ke rekening yang tertera, lalu hubungi via tiket.
+                {t('tenantAdmin.branches.addonActivationNote')}
               </p>
               <button onClick={() => navigate('/admin/tickets')} className="ml-auto text-xs text-brand underline flex-shrink-0 hover:text-brand/80">
-                Buka Tiket
+                {t('tenantAdmin.branches.openTicket')}
               </button>
             </div>
           </Card>
@@ -364,10 +366,10 @@ export default function TABranchesPage() {
       {!isLoading && isError && (
         <Card className="p-10 text-center border-red-400/30 bg-red-400/5">
           <AlertTriangle className="w-9 h-9 text-red-400 mx-auto mb-3" />
-          <p className="text-off-white font-medium">Gagal memuat daftar cabang</p>
-          <p className="text-muted text-sm mt-1">Periksa koneksi internet lalu coba lagi.</p>
+          <p className="text-off-white font-medium">{t('tenantAdmin.branches.loadError')}</p>
+          <p className="text-muted text-sm mt-1">{t('tenantAdmin.branches.checkConnectionRetry')}</p>
           <Button size="sm" className="mt-4" icon={RefreshCw} variant="secondary" onClick={() => refetch()}>
-            Coba Lagi
+            {t('common.retry')}
           </Button>
         </Card>
       )}
@@ -376,10 +378,10 @@ export default function TABranchesPage() {
       {!isLoading && !isError && branches.length === 0 && (
         <Card className="p-12 text-center">
           <Building2 className="w-10 h-10 text-muted/30 mx-auto mb-3" />
-          <p className="text-off-white font-medium">Belum ada cabang</p>
-          <p className="text-muted text-sm mt-1">Tambahkan cabang pertama untuk mulai beroperasi.</p>
+          <p className="text-off-white font-medium">{t('tenantAdmin.branches.noBranches')}</p>
+          <p className="text-muted text-sm mt-1">{t('tenantAdmin.branches.emptyDesc')}</p>
           {!isSuspended && (
-            <Button size="sm" className="mt-4" icon={Plus} onClick={openAdd}>Tambah Cabang</Button>
+            <Button size="sm" className="mt-4" icon={Plus} onClick={openAdd}>{t('tenantAdmin.branches.addBranch')}</Button>
           )}
         </Card>
       )}
@@ -390,7 +392,7 @@ export default function TABranchesPage() {
             const unlicensed = branch.isLicensed === false
             const staffByRole = branch.staffByRole || {}
             const staffCount = branch._count?.users ?? Object.values(staffByRole).reduce((a, b) => a + b, 0)
-            const staffDetail = staffBreakdown(staffByRole)
+            const staffDetail = staffBreakdown(staffByRole, t)
             return (
               <motion.div key={branch.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
                 <Card className={`p-5 card-hover relative ${unlicensed ? 'border-amber-400/30 bg-amber-400/5' : ''}`}>
@@ -407,11 +409,11 @@ export default function TABranchesPage() {
                         <h3 className="font-semibold text-off-white truncate">{branch.name}</h3>
                         {unlicensed ? (
                           <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full border border-amber-400/40 bg-amber-400/10 text-amber-400 mt-0.5">
-                            <Lock size={9} /> Belum Berlisensi
+                            <Lock size={9} /> {t('tenantAdmin.branches.unlicensed')}
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full border border-green-400/30 bg-green-400/10 text-green-400 mt-0.5">
-                            <CheckCircle2 size={9} /> Berlisensi
+                            <CheckCircle2 size={9} /> {t('tenantAdmin.branches.licensed')}
                           </span>
                         )}
                       </div>
@@ -451,9 +453,9 @@ export default function TABranchesPage() {
                     <div className="mb-3 flex items-start gap-2 p-2.5 rounded-xl bg-amber-400/10 border border-amber-400/25">
                       <Lock size={12} className="text-amber-400 mt-0.5 flex-shrink-0" />
                       <p className="text-xs text-amber-400 leading-snug">
-                        Cabang ini melebihi kuota paket. Kasir tidak bisa beroperasi sampai lisensi aktif.{' '}
+                        {t('tenantAdmin.branches.unlicensedWarning')}{' '}
                         <button onClick={() => navigate('/admin/tickets')} className="text-amber-400 underline font-medium">
-                          Hubungi admin.
+                          {t('tenantAdmin.branches.contactAdminLink')}
                         </button>
                       </p>
                     </div>
@@ -464,11 +466,11 @@ export default function TABranchesPage() {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="bg-dark-surface rounded-xl p-2.5 text-center">
                         <p className="text-base font-bold text-off-white">{staffCount}</p>
-                        <p className="text-[10px] text-muted">Staf aktif</p>
+                        <p className="text-[10px] text-muted">{t('tenantAdmin.branches.activeStaff')}</p>
                       </div>
                       <div className="bg-dark-surface rounded-xl p-2.5 text-center">
                         <p className="text-sm font-bold text-brand">{formatRupiah(branch.monthlyRevenue || 0)}</p>
-                        <p className="text-[10px] text-muted">Omzet bulan ini</p>
+                        <p className="text-[10px] text-muted">{t('tenantAdmin.branches.revenueThisMonth')}</p>
                       </div>
                     </div>
                     {staffDetail && (
@@ -490,14 +492,13 @@ export default function TABranchesPage() {
               <ArrowUpCircle size={22} className="text-blue-400" />
             </div>
             <div className="flex-1">
-              <p className="font-semibold text-off-white">Butuh lebih banyak cabang?</p>
+              <p className="font-semibold text-off-white">{t('tenantAdmin.branches.needMoreBranches')}</p>
               <p className="text-xs text-muted mt-0.5">
-                Upgrade ke <strong className="text-brand">Pro</strong> (maks 5 cabang) atau{' '}
-                <strong className="text-purple-400">Enterprise</strong> (tidak terbatas). Hubungi super admin atau buka halaman tagihan.
+                <Trans i18nKey="tenantAdmin.branches.upgradeCtaDesc" components={{ pro: <strong className="text-brand" />, ent: <strong className="text-purple-400" /> }} />
               </p>
             </div>
             <Button size="sm" variant="secondary" icon={ChevronRight} onClick={() => navigate('/admin/billing')}>
-              Lihat Paket
+              {t('tenantAdmin.branches.viewPlans')}
             </Button>
           </div>
         </Card>
@@ -507,35 +508,37 @@ export default function TABranchesPage() {
       <Modal
         isOpen={showFormModal}
         onClose={() => !createBranch.isPending && !updateBranch.isPending && setShowFormModal(false)}
-        title={editBranch ? 'Edit Cabang' : 'Tambah Cabang'}
+        title={editBranch ? t('tenantAdmin.branches.editBranch') : t('tenantAdmin.branches.addBranch')}
       >
         <div className="space-y-4">
           {!editBranch && !withinQuota && canAddon && (
             <div className="flex items-start gap-2 p-3 bg-amber-400/10 border border-amber-400/20 rounded-xl">
               <AlertTriangle size={13} className="text-amber-400 mt-0.5 flex-shrink-0" />
               <p className="text-xs text-amber-400">
-                Cabang ini di luar kuota paket. Akan dikenakan biaya{' '}
-                <strong>{formatRupiah(addonPrice)}/{addonType === 'monthly' ? 'bulan' : 'sekali bayar'}</strong>.
-                Invoice akan dibuat dan dikirim ke super admin.
+                <Trans
+                  i18nKey="tenantAdmin.branches.addonFeeWarning"
+                  values={{ fee: `${formatRupiah(addonPrice)}/${addonType === 'monthly' ? t('tenantAdmin.branches.month') : t('tenantAdmin.branches.oneTimePay')}` }}
+                  components={{ b: <strong /> }}
+                />
               </p>
             </div>
           )}
-          <Input label="Nama Cabang" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Jakarta Pusat" />
+          <Input label={t('tenantAdmin.branches.branchName')} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder={t('tenantAdmin.branches.branchNamePlaceholder')} />
           <div>
             <Input
-              label="Kode Cabang (untuk URL)"
+              label={t('tenantAdmin.branches.branchCodeLabel')}
               value={form.code}
               onChange={e => setForm(f => ({ ...f, code: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
-              placeholder="mis. kuningan"
+              placeholder={t('tenantAdmin.branches.branchCodePlaceholder')}
               maxLength={24}
             />
-            <p className="text-xs text-muted mt-1">URL kasir jadi seperti <span className="font-mono text-off-white">/{form.code || 'kode-cabang'}/kasir/pos</span></p>
+            <p className="text-xs text-muted mt-1">{t('tenantAdmin.branches.codeUrlHint')} <span className="font-mono text-off-white">/{form.code || t('tenantAdmin.branches.codePlaceholderShort')}/kasir/pos</span></p>
           </div>
-          <Input label="Alamat" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Jl. ..." />
-          <Input label="Telepon" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="021-..." />
+          <Input label={t('common.address')} value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Jl. ..." />
+          <Input label={t('common.phone')} value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="021-..." />
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Jam Buka" type="time" value={form.openTime} onChange={e => setForm(f => ({ ...f, openTime: e.target.value }))} />
-            <Input label="Jam Tutup" type="time" value={form.closeTime} onChange={e => setForm(f => ({ ...f, closeTime: e.target.value }))} />
+            <Input label={t('tenantAdmin.branches.openTime')} type="time" value={form.openTime} onChange={e => setForm(f => ({ ...f, openTime: e.target.value }))} />
+            <Input label={t('tenantAdmin.branches.closeTime')} type="time" value={form.closeTime} onChange={e => setForm(f => ({ ...f, closeTime: e.target.value }))} />
           </div>
 
           {/* Wilayah BPS per cabang — opsional; kalau kosong fallback ke
@@ -548,9 +551,9 @@ export default function TABranchesPage() {
           />
 
           <div className="flex gap-3 pt-2">
-            <Button variant="outline" fullWidth onClick={() => setShowFormModal(false)}>Batal</Button>
+            <Button variant="outline" fullWidth onClick={() => setShowFormModal(false)}>{t('common.cancel')}</Button>
             <Button fullWidth onClick={handleSave} disabled={createBranch.isPending || updateBranch.isPending}>
-              {createBranch.isPending || updateBranch.isPending ? 'Menyimpan...' : editBranch ? 'Simpan' : (!withinQuota && canAddon ? 'Lanjut →' : 'Tambah')}
+              {createBranch.isPending || updateBranch.isPending ? t('tenantAdmin.branches.saving') : editBranch ? t('common.save') : (!withinQuota && canAddon ? t('tenantAdmin.branches.continueArrow') : t('common.add'))}
             </Button>
           </div>
         </div>
@@ -560,7 +563,7 @@ export default function TABranchesPage() {
       <Modal
         isOpen={showFeeModal}
         onClose={() => !createBranch.isPending && (setShowFeeModal(false), setPendingForm(null))}
-        title="Konfirmasi Cabang Berbayar"
+        title={t('tenantAdmin.branches.feeConfirmTitle')}
         size="sm"
       >
         <div className="space-y-4">
@@ -576,15 +579,15 @@ export default function TABranchesPage() {
             </div>
             <div className="border-t border-dark-border pt-3 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-muted">Biaya cabang add-on</span>
+                <span className="text-muted">{t('tenantAdmin.branches.feeAddBranch')}</span>
                 <span className="font-semibold text-brand">{formatRupiah(addonPrice)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted">Jenis biaya</span>
-                <span className="text-off-white">{addonType === 'monthly' ? 'Per bulan' : 'Sekali bayar'}</span>
+                <span className="text-muted">{t('tenantAdmin.branches.feeType')}</span>
+                <span className="text-off-white">{addonType === 'monthly' ? t('tenantAdmin.branches.feeTypeMonthly') : t('tenantAdmin.branches.feeTypeOneTime')}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted">Paket aktif</span>
+                <span className="text-muted">{t('tenantAdmin.branches.currentPackage')}</span>
                 <span className="text-off-white">{sub?.package}</span>
               </div>
             </div>
@@ -593,17 +596,17 @@ export default function TABranchesPage() {
           <div className="flex items-start gap-2 p-3 bg-blue-400/5 border border-blue-400/20 rounded-xl">
             <Info size={13} className="text-blue-400 mt-0.5 flex-shrink-0" />
             <p className="text-xs text-muted">
-              Cabang akan langsung dibuat namun status <strong className="text-amber-400">belum berlisensi</strong> sampai invoice dikonfirmasi oleh super admin.
-              {addonType === 'monthly' && ' Tagihan berulang tiap bulan.'}
+              <Trans i18nKey="tenantAdmin.branches.feeModalNote" components={{ b: <strong className="text-amber-400" /> }} />
+              {addonType === 'monthly' && ` ${t('tenantAdmin.branches.feeMonthlyRecurring')}`}
             </p>
           </div>
 
           <div className="flex gap-3">
             <Button variant="secondary" fullWidth onClick={() => { setShowFeeModal(false); setPendingForm(null) }} disabled={createBranch.isPending}>
-              Batal
+              {t('common.cancel')}
             </Button>
             <Button fullWidth icon={CreditCard} onClick={handleConfirmFee} disabled={createBranch.isPending}>
-              {createBranch.isPending ? 'Memproses...' : 'Buat Cabang & Tagihan'}
+              {createBranch.isPending ? t('tenantAdmin.branches.processing') : t('tenantAdmin.branches.createBranchInvoice')}
             </Button>
           </div>
         </div>
@@ -613,20 +616,20 @@ export default function TABranchesPage() {
       <Modal
         isOpen={!!showDelModal}
         onClose={() => !deleteBranch.isPending && setShowDelModal(null)}
-        title="Hapus Cabang?"
+        title={t('tenantAdmin.branches.deleteConfirmTitle')}
         size="sm"
       >
         <div className="space-y-4">
           <div className="p-3 bg-red-500/5 border border-red-500/20 rounded-xl">
-            <p className="text-sm text-red-400 font-medium">Tindakan ini tidak dapat dibatalkan</p>
+            <p className="text-sm text-red-400 font-medium">{t('tenantAdmin.branches.deleteIrreversible')}</p>
             <p className="text-xs text-muted mt-1">
-              Cabang <strong className="text-off-white">{showDelModal?.name}</strong> akan dihapus beserta semua konfigurasinya.
+              <Trans i18nKey="tenantAdmin.branches.deleteConfirmDesc" values={{ name: showDelModal?.name || '' }} components={{ b: <strong className="text-off-white" /> }} />
             </p>
           </div>
           <div className="flex gap-3">
-            <Button variant="outline" fullWidth onClick={() => setShowDelModal(null)} disabled={deleteBranch.isPending}>Batal</Button>
+            <Button variant="outline" fullWidth onClick={() => setShowDelModal(null)} disabled={deleteBranch.isPending}>{t('common.cancel')}</Button>
             <Button variant="danger" fullWidth onClick={() => handleDelete(showDelModal)} disabled={deleteBranch.isPending}>
-              {deleteBranch.isPending ? 'Menghapus...' : 'Hapus'}
+              {deleteBranch.isPending ? t('tenantAdmin.branches.deleting') : t('common.delete')}
             </Button>
           </div>
         </div>
@@ -639,6 +642,7 @@ export default function TABranchesPage() {
 // branch modal. Output value-nya null saat kabupaten dikosongkan supaya
 // backend fallback ke Tenant.wilayah.
 function BranchWilayahFields({ value, onChange }) {
+  const { t } = useTranslation()
   const { data: provinces = [] } = useProvinces()
   const { data: regencies = [] } = useRegencies(value?.provinsiId)
 
@@ -656,19 +660,19 @@ function BranchWilayahFields({ value, onChange }) {
 
   return (
     <div className="space-y-2">
-      <p className="text-xs text-muted">Wilayah Cabang (opsional) — default kecamatan/desa pelanggan di POS</p>
+      <p className="text-xs text-muted">{t('tenantAdmin.branches.wilayahHint')}</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <div>
-          <label className="block text-xs font-medium text-muted mb-1.5">Provinsi</label>
+          <label className="block text-xs font-medium text-muted mb-1.5">{t('tenantAdmin.branches.province')}</label>
           <select className={selectCls} value={value?.provinsiId || ''} onChange={e => pickProv(e.target.value)}>
-            <option value="">— Pakai default tenant —</option>
+            <option value="">{t('tenantAdmin.branches.useTenantDefault')}</option>
             {provinces.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-muted mb-1.5">Kabupaten / Kota</label>
+          <label className="block text-xs font-medium text-muted mb-1.5">{t('tenantAdmin.branches.regency')}</label>
           <select className={selectCls} value={value?.kabupatenId || ''} disabled={!value?.provinsiId} onChange={e => pickKab(e.target.value)}>
-            <option value="">{value?.provinsiId ? 'Pilih kabupaten / kota' : 'Pilih provinsi dulu'}</option>
+            <option value="">{value?.provinsiId ? t('tenantAdmin.branches.selectRegency') : t('tenantAdmin.branches.selectProvinceFirst')}</option>
             {regencies.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
           </select>
         </div>

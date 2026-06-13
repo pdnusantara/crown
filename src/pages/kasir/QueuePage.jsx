@@ -32,15 +32,16 @@ import LiveBadge from '../../components/ui/LiveBadge.jsx'
 import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx'
 import { getBranchSlug } from '../../utils/branchSlug.js'
 
+// label/short di-resolve via t() saat dipakai; di sini hanya kunci i18n + styling.
 const COLUMNS = [
-  { id: 'waiting', label: 'Menunggu', short: 'Antri', color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/20', dot: 'bg-amber-400' },
-  { id: 'in-progress', label: 'Sedang Dilayani', short: 'Dilayani', color: 'text-blue-400', bg: 'bg-blue-400/10', border: 'border-blue-400/20', dot: 'bg-blue-400' },
-  { id: 'done', label: 'Selesai', short: 'Selesai', color: 'text-green-400', bg: 'bg-green-400/10', border: 'border-green-400/20', dot: 'bg-green-400' },
-  { id: 'paid', label: 'Sudah Bayar', short: 'Bayar', color: 'text-brand', bg: 'bg-brand/10', border: 'border-brand/20', dot: 'bg-brand' },
+  { id: 'waiting', labelKey: 'queue.waiting', shortKey: 'queue.tabWaiting', color: 'text-amber-400', bg: 'bg-amber-400/10', border: 'border-amber-400/20', dot: 'bg-amber-400' },
+  { id: 'in-progress', labelKey: 'queue.inProgressShort', shortKey: 'queue.tabInProgress', color: 'text-blue-400', bg: 'bg-blue-400/10', border: 'border-blue-400/20', dot: 'bg-blue-400' },
+  { id: 'done', labelKey: 'queue.done', shortKey: 'queue.done', color: 'text-green-400', bg: 'bg-green-400/10', border: 'border-green-400/20', dot: 'bg-green-400' },
+  { id: 'paid', labelKey: 'queue.paid', shortKey: 'queue.paidShort', color: 'text-brand', bg: 'bg-brand/10', border: 'border-brand/20', dot: 'bg-brand' },
 ]
 
 const STATUS_NEXT = { waiting: 'in-progress', 'in-progress': 'done', done: 'paid' }
-const STATUS_BTN  = { waiting: 'Mulai', 'in-progress': 'Selesai', done: 'Ke Kasir' }
+const STATUS_BTN_KEY = { waiting: 'queue.start', 'in-progress': 'queue.finish', done: 'queue.toPos' }
 
 // Kartu di kolom "Sudah Bayar" otomatis hilang dari kanban setelah X menit.
 // Riwayat penuh tetap tersimpan & bisa dilihat di halaman Transaksi.
@@ -57,6 +58,7 @@ function useIsMobile() {
 }
 
 function ElapsedTimer({ startedAt }) {
+  const { t } = useTranslation()
   const [elapsed, setElapsed] = useState(0)
   useEffect(() => {
     const start = new Date(startedAt).getTime()
@@ -65,24 +67,26 @@ function ElapsedTimer({ startedAt }) {
     const id = setInterval(update, 30000)
     return () => clearInterval(id)
   }, [startedAt])
-  return <span className="text-xs text-blue-300">{elapsed} menit</span>
+  return <span className="text-xs text-blue-300">{t('queue.elapsedMin', { n: elapsed })}</span>
 }
 
 function TicketCard({ item, col, onAdvance, onCancel, isDragging = false, compact = false }) {
+  const { t } = useTranslation()
   const cancelable = item.status === 'waiting' || item.status === 'in-progress'
+  const advanceLabel = STATUS_BTN_KEY[item.status] ? t(STATUS_BTN_KEY[item.status]) : null
   return (
     <div className={`bg-dark-card border border-dark-border rounded-xl ${compact ? 'p-3' : 'p-3.5 sm:p-3'} ${isDragging ? 'opacity-50 shadow-2xl' : ''}`}>
       <div className="flex items-center justify-between mb-2">
         <span className={`text-sm sm:text-xs font-bold ${col.color}`}>{item.ticketNumber}</span>
         <div className="flex items-center gap-1">
           <Badge variant={item.type === 'booking' ? 'info' : 'muted'} className="text-[11px] sm:text-xs">
-            {item.type === 'booking' ? '📅' : '🚶'} {item.type}
+            {item.type === 'booking' ? '📅' : '🚶'} {t(`queue.ticketType.${item.type}`, item.type)}
           </Badge>
           {cancelable && onCancel && (
             <button
               onClick={(e) => { e.stopPropagation(); onCancel(item) }}
-              title="Batalkan antrian"
-              aria-label="Batalkan antrian"
+              title={t('queue.toast.cancelTooltip')}
+              aria-label={t('queue.toast.cancelTooltip')}
               className="ml-0.5 inline-flex items-center justify-center w-8 h-8 sm:w-7 sm:h-7 rounded-lg text-muted hover:text-red-400 hover:bg-red-500/10 active:bg-red-500/20 transition-colors"
             >
               <XIcon className="w-4 h-4 sm:w-3.5 sm:h-3.5" strokeWidth={2.2} />
@@ -102,7 +106,7 @@ function TicketCard({ item, col, onAdvance, onCancel, isDragging = false, compac
         {item.status === 'waiting' && (
           <div className="flex items-center gap-1">
             <Clock className="w-3 h-3 text-amber-400" />
-            <span className="text-xs text-amber-400">{item.waitTime > 0 ? `~${item.waitTime} min` : 'Segera'}</span>
+            <span className="text-xs text-amber-400">{item.waitTime > 0 ? t('queue.estimateMin', { n: item.waitTime }) : t('queue.soon')}</span>
           </div>
         )}
         {item.status === 'in-progress' && item.updatedAt && (
@@ -112,7 +116,7 @@ function TicketCard({ item, col, onAdvance, onCancel, isDragging = false, compac
           </div>
         )}
       </div>
-      {STATUS_BTN[item.status] && (
+      {advanceLabel && (
         <button
           onClick={() => onAdvance(item)}
           className={`mt-2.5 w-full py-2.5 sm:py-1.5 rounded-lg text-sm sm:text-xs font-semibold flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] ${
@@ -122,8 +126,8 @@ function TicketCard({ item, col, onAdvance, onCancel, isDragging = false, compac
           }`}
         >
           {item.status === 'done'
-            ? <><ShoppingCart className="w-4 h-4 sm:w-3 sm:h-3" /> {STATUS_BTN[item.status]}</>
-            : <>{STATUS_BTN[item.status]} <ChevronRight className="w-4 h-4 sm:w-3 sm:h-3" /></>
+            ? <><ShoppingCart className="w-4 h-4 sm:w-3 sm:h-3" /> {advanceLabel}</>
+            : <>{advanceLabel} <ChevronRight className="w-4 h-4 sm:w-3 sm:h-3" /></>
           }
         </button>
       )}
@@ -166,13 +170,14 @@ function SortableTicketCard({ item, col, onAdvance, onCancel }) {
 }
 
 function DroppableColumn({ col, items, onAdvance, onCancel, isMobile, hideHeader = false }) {
+  const { t } = useTranslation()
   return (
     <div
       className={`rounded-2xl border ${col.border} ${col.bg} p-3 ${isMobile ? '' : 'min-h-[400px]'} transition-all`}
     >
       {!hideHeader && (
         <div className="flex items-center justify-between mb-3">
-          <h3 className={`font-semibold text-sm ${col.color}`}>{col.label}</h3>
+          <h3 className={`font-semibold text-sm ${col.color}`}>{t(col.labelKey)}</h3>
           <span className={`min-w-6 h-6 px-2 rounded-full flex items-center justify-center text-xs font-bold ${col.bg} ${col.color} border ${col.border}`}>
             {items.length}
           </span>
@@ -199,7 +204,7 @@ function DroppableColumn({ col, items, onAdvance, onCancel, isMobile, hideHeader
           </AnimatePresence>
           {items.length === 0 && (
             <div className={`text-center py-8 ${col.color} opacity-30`}>
-              <p className="text-xs">Kosong</p>
+              <p className="text-xs">{t('queue.empty')}</p>
             </div>
           )}
         </div>
@@ -209,6 +214,7 @@ function DroppableColumn({ col, items, onAdvance, onCancel, isMobile, hideHeader
 }
 
 function MobileStatusTabs({ active, onChange, counts }) {
+  const { t } = useTranslation()
   return (
     <div className="sticky top-0 z-20 -mx-4 px-4 pb-2 pt-1 bg-dark-bg/95 backdrop-blur-sm border-b border-dark-border">
       <div className="flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -226,7 +232,7 @@ function MobileStatusTabs({ active, onChange, counts }) {
               }`}
             >
               <span className={`w-1.5 h-1.5 rounded-full ${col.dot}`} />
-              {col.short}
+              {t(col.shortKey)}
               <span className={`ml-0.5 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center ${
                 isActive ? `${col.bg} ${col.color}` : 'bg-dark-card text-muted'
               }`}>{count}</span>
@@ -330,9 +336,9 @@ export default function QueuePage() {
     try {
       const created = await createCustomerM.mutateAsync({ name, phone: form.phone || undefined })
       if (created?.id) pickCustomer(created)
-      toast.success(`Pelanggan "${name}" ditambahkan`)
+      toast.success(t('queue.customerAdded', { name }))
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal menambah pelanggan')
+      toast.error(err?.response?.data?.error || t('queue.customerAddFailed'))
     }
   }
 
@@ -384,7 +390,7 @@ export default function QueuePage() {
     const name = (form.customerId ? form.customerName : custSearch.trim())
     if (!name) return toast.error(t('queue.toast.nameRequired'))
     const barber = barbers.find(b => b.id === form.barberId)
-    const svcNames = selectedServices.length ? selectedServices.map(s => s.name) : ['Potong Reguler']
+    const svcNames = selectedServices.length ? selectedServices.map(s => s.name) : [t('queue.defaultService')]
     try {
       await addToQueueM.mutateAsync({
         tenantId: user.tenantId,
@@ -415,7 +421,7 @@ export default function QueuePage() {
         status: next,
       })
       const col = COLUMNS.find(c => c.id === next)
-      toast.success(t('queue.toast.statusChanged', { label: col?.label || next }))
+      toast.success(t('queue.toast.statusChanged', { label: col?.labelKey ? t(col.labelKey) : next }))
     } catch (err) {
       toast.error(err?.response?.data?.error || t('queue.toast.statusFailed'))
     }
@@ -467,7 +473,7 @@ export default function QueuePage() {
     // Lompatan/mundur ditolak agar tiket tak bisa ditandai "Sudah Bayar" tanpa
     // melewati kasir (tanpa transaksi/struk/omzet).
     if (targetColumnId !== STATUS_NEXT[draggedItem.status]) {
-      toast.error('Pindahkan antrian satu langkah berurutan')
+      toast.error(t('queue.advanceOneStep'))
       return
     }
     // "Selesai → Sudah Bayar" WAJIB lewat POS supaya transaksi tercatat.
@@ -498,15 +504,15 @@ export default function QueuePage() {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white">Antrian</h1>
+            <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white">{t('queue.title')}</h1>
             <LiveBadge />
           </div>
           <p className="text-muted text-xs sm:text-sm mt-1">
-            {counts.waiting} menunggu · {counts['in-progress']} dilayani
+            {t('queue.summary', { inProgress: counts['in-progress'], waiting: counts.waiting })}
           </p>
         </div>
         <div className="hidden sm:block">
-          <Button icon={Plus} onClick={() => setShowModal(true)}>Walk-in</Button>
+          <Button icon={Plus} onClick={() => setShowModal(true)}>{t('queue.walkIn')}</Button>
         </div>
       </div>
 
@@ -517,13 +523,13 @@ export default function QueuePage() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Cari nama, tiket, atau layanan…"
+            placeholder={t('queue.searchPlaceholder')}
             className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-10 pr-9 py-2.5 text-sm outline-none focus:border-brand/60 transition-colors"
           />
           {search && (
             <button
               onClick={() => setSearch('')}
-              aria-label="Hapus pencarian"
+              aria-label={t('queue.clearSearch')}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 w-7 h-7 inline-flex items-center justify-center rounded-md text-muted hover:text-off-white hover:bg-dark-card transition-colors"
             >
               <XIcon className="w-3.5 h-3.5" />
@@ -538,7 +544,7 @@ export default function QueuePage() {
               onChange={e => setFilterBarber(e.target.value)}
               className="w-full appearance-none bg-dark-surface border border-dark-border text-off-white rounded-xl pl-9 pr-8 py-2.5 text-sm outline-none focus:border-brand/60 cursor-pointer"
             >
-              <option value="">Semua barber</option>
+              <option value="">{t('queue.allBarbers')}</option>
               {barbers.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
             <ChevronRight className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted rotate-90 pointer-events-none" />
@@ -549,7 +555,7 @@ export default function QueuePage() {
             onClick={() => { setSearch(''); setFilterBarber('') }}
             className="px-3 py-2.5 rounded-xl text-xs font-semibold text-muted hover:text-off-white hover:bg-dark-card transition-colors whitespace-nowrap"
           >
-            Reset ({activeFilters})
+            {t('queue.resetCount', { count: activeFilters })}
           </button>
         )}
       </div>
@@ -557,9 +563,9 @@ export default function QueuePage() {
       {isError && (
         <div className="flex items-center justify-between gap-3 p-3 rounded-xl border border-red-400/30 bg-red-400/5">
           <p className="text-sm text-red-400 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 flex-shrink-0" /> Gagal memuat antrian. Periksa koneksi lalu coba lagi.
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" /> {t('queue.loadError')}
           </p>
-          <Button size="sm" variant="secondary" icon={RefreshCw} onClick={() => refetch()}>Coba Lagi</Button>
+          <Button size="sm" variant="secondary" icon={RefreshCw} onClick={() => refetch()}>{t('queue.retry')}</Button>
         </div>
       )}
 
@@ -620,7 +626,7 @@ export default function QueuePage() {
       {isMobile && (
         <button
           onClick={() => setShowModal(true)}
-          aria-label="Tambah Walk-in"
+          aria-label={t('queue.addWalkInModal')}
           className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-30 h-14 w-14 rounded-full bg-brand text-dark-bg shadow-2xl shadow-brand/30 flex items-center justify-center active:scale-95 transition-transform"
         >
           <Plus className="w-6 h-6" strokeWidth={2.5} />
@@ -628,22 +634,22 @@ export default function QueuePage() {
       )}
 
       {/* Walk-in Modal */}
-      <Modal isOpen={showModal} onClose={() => { setShowModal(false); resetForm() }} title="Tambah Walk-in">
+      <Modal isOpen={showModal} onClose={() => { setShowModal(false); resetForm() }} title={t('queue.addWalkInModal')}>
         <div className="space-y-4">
           {/* Pelanggan: cari yg sudah ada (tertaut loyalti) atau ketik nama baru */}
           <div>
-            <label className="block text-sm font-medium text-muted mb-1.5">Pelanggan</label>
+            <label className="block text-sm font-medium text-muted mb-1.5">{t('queue.customerName')}</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
               <input
                 value={custSearch}
                 onChange={e => onCustSearchChange(e.target.value)}
-                placeholder="Cari nama / HP, atau ketik nama baru"
+                placeholder={t('queue.customerSearchPlaceholder')}
                 className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-9 pr-9 py-2.5 text-sm outline-none focus:border-brand/60"
               />
               {custSearch && (
                 <button onClick={() => { setCustSearch(''); setForm(f => ({ ...f, customerId: null, customerName: '' })); setSelectedCust(null) }}
-                  aria-label="Hapus" className="absolute right-2.5 top-1/2 -translate-y-1/2 w-7 h-7 inline-flex items-center justify-center rounded-md text-muted hover:text-off-white hover:bg-dark-card">
+                  aria-label={t('common.remove')} className="absolute right-2.5 top-1/2 -translate-y-1/2 w-7 h-7 inline-flex items-center justify-center rounded-md text-muted hover:text-off-white hover:bg-dark-card">
                   <XIcon className="w-3.5 h-3.5" />
                 </button>
               )}
@@ -655,8 +661,8 @@ export default function QueuePage() {
                 <User className="w-4 h-4 text-brand flex-shrink-0" />
                 <span className="text-xs text-off-white font-medium truncate">{selectedCust.name}</span>
                 <span className="text-xs text-muted">·</span>
-                <span className="text-xs text-amber-300 whitespace-nowrap">⭐ {selectedCust.loyaltyPoints || 0} poin</span>
-                <span className="text-xs text-muted whitespace-nowrap">· {selectedCust.visitCount || 0}× kunjungan</span>
+                <span className="text-xs text-amber-300 whitespace-nowrap">⭐ {t('queue.pointsLabel', { count: selectedCust.loyaltyPoints || 0 })}</span>
+                <span className="text-xs text-muted whitespace-nowrap">· {t('queue.visitsLabel', { count: selectedCust.visitCount || 0 })}</span>
               </div>
             )}
 
@@ -665,10 +671,10 @@ export default function QueuePage() {
               <div className="mt-1.5 rounded-xl border border-dark-border overflow-hidden">
                 <div className="max-h-40 overflow-y-auto divide-y divide-dark-border">
                   {custFetching && custResults.length === 0 && (
-                    <p className="px-3 py-2.5 text-xs text-muted">Mencari…</p>
+                    <p className="px-3 py-2.5 text-xs text-muted">{t('queue.searching')}</p>
                   )}
                   {!custFetching && custResults.length === 0 && (
-                    <p className="px-3 py-2.5 text-xs text-muted">Tidak ada pelanggan cocok.</p>
+                    <p className="px-3 py-2.5 text-xs text-muted">{t('queue.noCustomerMatch')}</p>
                   )}
                   {custResults.map(c => (
                     <button key={c.id} onClick={() => pickCustomer(c)} type="button"
@@ -685,25 +691,25 @@ export default function QueuePage() {
                 <button onClick={handleCreateNewCustomer} type="button" disabled={createCustomerM.isPending}
                   className="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-brand bg-brand/5 hover:bg-brand/10 border-t border-dark-border transition-colors disabled:opacity-60">
                   <Plus className="w-4 h-4 flex-shrink-0" />
-                  {createCustomerM.isPending ? 'Menyimpan…' : <>Tambah “{custSearch.trim()}” sebagai pelanggan baru</>}
+                  {createCustomerM.isPending ? t('queue.saving') : t('queue.addAsNewCustomer', { name: custSearch.trim() })}
                 </button>
               </div>
             )}
           </div>
 
-          <Input label="Telepon (opsional)" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="081234567890" />
+          <Input label={t('queue.phoneOptional')} value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="081234567890" />
 
           <div>
-            <label className="block text-sm font-medium text-muted mb-2">Layanan</label>
+            <label className="block text-sm font-medium text-muted mb-2">{t('queue.service')}</label>
             {services.length === 0 ? (
-              <p className="text-xs text-muted">Belum ada layanan.</p>
+              <p className="text-xs text-muted">{t('queue.noServices')}</p>
             ) : (
               <>
                 {/* Pemicu dropdown — modal tetap pendek */}
                 <button type="button" onClick={() => setShowSvcPicker(v => !v)}
                   className="w-full flex items-center justify-between gap-2 px-4 min-h-[48px] py-2.5 rounded-xl border border-dark-border bg-dark-surface text-left transition-colors hover:border-brand/40">
                   <span className={`text-sm ${form.serviceIds.length ? 'text-off-white font-medium' : 'text-muted'}`}>
-                    {form.serviceIds.length ? `${form.serviceIds.length} layanan · ${selectedTotalDur} min` : 'Pilih layanan…'}
+                    {form.serviceIds.length ? t('queue.servicesSelected', { count: form.serviceIds.length, minutes: selectedTotalDur }) : t('queue.selectService')}
                   </span>
                   <ChevronRight className={`w-4 h-4 text-muted flex-shrink-0 transition-transform ${showSvcPicker ? 'rotate-90' : ''}`} />
                 </button>
@@ -714,7 +720,7 @@ export default function QueuePage() {
                     {selectedServices.map(s => (
                       <span key={s.id} className="inline-flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-lg bg-brand/15 text-brand text-xs font-medium">
                         {s.name}
-                        <button type="button" onClick={() => toggleService(s.id)} aria-label={`Hapus ${s.name}`}
+                        <button type="button" onClick={() => toggleService(s.id)} aria-label={t('queue.removeService', { name: s.name })}
                           className="w-5 h-5 inline-flex items-center justify-center rounded hover:bg-brand/20">
                           <XIcon className="w-3 h-3" />
                         </button>
@@ -730,13 +736,13 @@ export default function QueuePage() {
                       <div className="relative p-2 border-b border-dark-border">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
                         <input autoFocus value={serviceQuery} onChange={e => setServiceQuery(e.target.value)}
-                          placeholder="Cari layanan…"
+                          placeholder={t('queue.searchServicePlaceholder')}
                           className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg pl-9 pr-3 py-2 text-sm outline-none focus:border-brand/60" />
                       </div>
                     )}
                     <div className="max-h-[34vh] overflow-y-auto p-2 space-y-1.5">
                       {filteredServices.length === 0 && (
-                        <p className="text-xs text-muted py-2 px-1">Layanan tak ditemukan.</p>
+                        <p className="text-xs text-muted py-2 px-1">{t('queue.noServicesFound')}</p>
                       )}
                       {filteredServices.map(s => {
                         const checked = form.serviceIds.includes(s.id)
@@ -747,7 +753,7 @@ export default function QueuePage() {
                             }`}>
                             <span className="min-w-0">
                               <span className={`block text-sm font-medium truncate ${checked ? 'text-brand' : 'text-off-white'}`}>{s.name}</span>
-                              <span className="block text-xs text-muted">{s.duration} menit</span>
+                              <span className="block text-xs text-muted">{t('queue.minutesValue', { n: s.duration })}</span>
                             </span>
                             <span className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 border ${checked ? 'bg-brand border-brand' : 'border-dark-border'}`}>
                               {checked && <span className="text-dark-bg text-xs font-bold leading-none">✓</span>}
@@ -758,7 +764,7 @@ export default function QueuePage() {
                     </div>
                     <button type="button" onClick={() => setShowSvcPicker(false)}
                       className="w-full py-2.5 text-sm font-semibold text-brand bg-brand/5 hover:bg-brand/10 border-t border-dark-border transition-colors">
-                      Selesai
+                      {t('queue.done')}
                     </button>
                   </div>
                 )}
@@ -766,9 +772,9 @@ export default function QueuePage() {
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-muted mb-2">Barber <span className="font-normal">(opsional)</span></label>
+            <label className="block text-sm font-medium text-muted mb-2">{t('queue.barberOptional')}</label>
             {barbers.length === 0 ? (
-              <p className="text-xs text-muted">Belum ada barber di cabang ini.</p>
+              <p className="text-xs text-muted">{t('queue.noBarbersBranch')}</p>
             ) : (
               <>
                 {/* Pemicu dropdown — konsisten dgn Layanan */}
@@ -777,12 +783,12 @@ export default function QueuePage() {
                   <span className="flex items-center gap-2.5 min-w-0">
                     <User className={`w-4 h-4 flex-shrink-0 ${form.barberId ? 'text-brand' : 'text-muted'}`} />
                     <span className={`text-sm truncate ${form.barberId ? 'text-off-white font-medium' : 'text-muted'}`}>
-                      {selectedBarber ? selectedBarber.name : 'Pilih barber…'}
+                      {selectedBarber ? selectedBarber.name : t('queue.selectBarber')}
                     </span>
                   </span>
                   <span className="flex items-center gap-1 flex-shrink-0">
                     {form.barberId && (
-                      <button type="button" aria-label="Hapus barber"
+                      <button type="button" aria-label={t('queue.removeBarber')}
                         onClick={(e) => { e.stopPropagation(); setForm(f => ({ ...f, barberId: '' })) }}
                         className="w-6 h-6 inline-flex items-center justify-center rounded text-muted hover:text-off-white hover:bg-dark-card">
                         <XIcon className="w-3.5 h-3.5" />
@@ -821,8 +827,8 @@ export default function QueuePage() {
             )}
           </div>
           <div className="flex gap-3 pt-2">
-            <Button variant="outline" fullWidth onClick={() => { setShowModal(false); resetForm() }} disabled={addToQueueM.isPending}>Batal</Button>
-            <Button fullWidth onClick={handleAddWalkIn} loading={addToQueueM.isPending} disabled={addToQueueM.isPending}>Tambah Antrian</Button>
+            <Button variant="outline" fullWidth onClick={() => { setShowModal(false); resetForm() }} disabled={addToQueueM.isPending}>{t('common.cancel')}</Button>
+            <Button fullWidth onClick={handleAddWalkIn} loading={addToQueueM.isPending} disabled={addToQueueM.isPending}>{t('queue.addToQueue')}</Button>
           </div>
         </div>
       </Modal>
@@ -832,11 +838,11 @@ export default function QueuePage() {
         onClose={() => setCancelTarget(null)}
         onConfirm={confirmCancel}
         variant="danger"
-        title="Batalkan antrian?"
-        description={cancelTarget ? `Tiket ${cancelTarget.ticketNumber} akan dibatalkan dan tidak bisa dikembalikan.` : ''}
+        title={t('queue.cancelTitle')}
+        description={cancelTarget ? t('queue.cancelDesc', { ticket: cancelTarget.ticketNumber }) : ''}
         highlight={cancelTarget?.customerName}
-        confirmText="Ya, Batalkan"
-        cancelText="Tidak, Kembali"
+        confirmText={t('queue.confirmCancel')}
+        cancelText={t('queue.confirmKeep')}
       />
     </div>
   )

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="id" translate="no">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/icon-192.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#1e1b4b" />
+    <!-- Cegah terjemahan otomatis browser (Google Translate dll). App sudah
+         punya i18n sendiri; translator menyisipkan node ke DOM yang bikin
+         React/framer-motion crash dengan error removeChild/insertBefore. -->
+    <meta name="google" content="notranslate" />
+
+    <title>SembaPOS — Sistem Manajemen Barbershop Modern</title>
+    <meta name="description" content="Kasir, antrian, booking online, multi-cabang, dan laporan pintar — semua dalam satu aplikasi yang dirancang khusus untuk barbershop. Trial 14 hari gratis." />
+    <meta name="keywords" content="aplikasi barbershop, POS barbershop, manajemen barbershop, kasir barbershop, booking barbershop, antrian barbershop" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="SembaPOS — Sistem Manajemen Barbershop Modern" />
+    <meta property="og:description" content="Kasir, antrian, booking online, multi-cabang, dan laporan pintar — semua dalam satu aplikasi. Trial 14 hari gratis, tanpa kartu kredit." />
+    <meta property="og:url" content="https://sembapos.com" />
+    <meta property="og:site_name" content="SembaPOS" />
+    <meta property="og:locale" content="id_ID" />
+    <meta property="og:image" content="https://sembapos.com/og-image.svg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="SembaPOS — kelola barbershop tanpa ribet" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="SembaPOS — Sistem Manajemen Barbershop Modern" />
+    <meta name="twitter:description" content="Kasir, antrian, booking online, multi-cabang. Trial 14 hari gratis." />
+    <meta name="twitter:image" content="https://sembapos.com/og-image.svg" />
+
+    <link rel="canonical" href="https://sembapos.com" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <!-- Font landing publik (tema barbershop heritage): judul Bricolage Grotesque + mono JetBrains. -->
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+    <style>
+      /* Hindari flash putih sebelum React mount: latar gelap default. */
+      html, body { background: #0E0E1A; color: #f5f5f5; }
+      /* Landing (`/`) SELALU terang — krem hangat (tema barbershop heritage). */
+      html.is-landing, html.is-landing body { background: #F6F1E7; color: #16140F; }
+      /* Sisi tenant kini selalu mode terang (dark mode hanya super_admin). */
+      html.light-mode, html.light-mode body { background: #F4F4FA; color: #1E1B2E; }
+      /* Sticky nav offset untuk anchor scroll. */
+      html { scroll-behavior: smooth; }
+      [id] { scroll-margin-top: 80px; }
+    </style>
+    <script>
+      // Landing tidak punya dark mode — set latar terang sebelum React mount
+      // supaya tidak ada kedip gelap. Halaman app lain tetap gelap.
+      // 2026-05-28: landing migrated ke palet Electric Indigo + Mint, bg ivory
+      // #FBFAF6 → lavender #F4F4FA.
+      if (location.pathname === '/') {
+        document.documentElement.className += ' is-landing';
+        var tc = document.querySelector('meta[name="theme-color"]');
+        if (tc) tc.content = '#F6F1E7';
+      } else {
+        // Subdomain tenant (mis. termul.sembapos.com) → mode terang sejak awal
+        // supaya tidak ada kedip gelap; super_admin di domain utama tetap gelap.
+        var p = location.hostname.split('.');
+        var reserved = ['www','app','api','staging','admin','mail','localhost'];
+        if (p.length >= 3 && reserved.indexOf(p[0]) === -1) {
+          document.documentElement.classList.add('light-mode');
+          var tc2 = document.querySelector('meta[name="theme-color"]');
+          if (tc2) tc2.content = '#F4F4FA';
+        }
+      }
+    </script>
+    <script type="module" crossorigin src="/assets/index-D7a1bEzN.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CK8vu9El.css">
+  <link rel="manifest" href="/manifest.webmanifest"></head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

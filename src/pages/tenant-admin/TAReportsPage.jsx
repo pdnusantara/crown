@@ -82,7 +82,7 @@ function Skeleton({ className = '' }) {
 }
 
 export default function TAReportsPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { user } = useAuthStore()
   const tenantId = user?.tenantId
   const { data: branches = [] } = useBranches(tenantId)
@@ -151,29 +151,29 @@ export default function TAReportsPage() {
     const branchLabel = branchId ? (branches.find(b => b.id === branchId)?.name || branchId) : t('tenantAdmin.reports.allBranches')
     const sections = [
       {
-        title: `Laporan ${periodLabel} · ${branchLabel}`,
-        header: ['Metrik', 'Nilai'],
+        title: `${t('tenantAdmin.reports.title')} ${periodLabel} · ${branchLabel}`,
+        header: [t('tenantAdmin.reports.csvMetric'), t('tenantAdmin.reports.csvValue')],
         rows: [
-          ['Total Revenue',     summary?.summary?.totalRevenue || 0],
-          ['Total Transaksi',   summary?.summary?.totalTransactions || 0],
-          ['Avg/Transaksi',     summary?.summary?.averageTransactionValue || 0],
-          ['Pelanggan Unik',    summary?.summary?.totalCustomers || 0],
-          ['Pelanggan Baru',    summary?.summary?.totalNewCustomers || 0],
+          [t('tenantAdmin.reports.totalRevenue'),      summary?.summary?.totalRevenue || 0],
+          [t('tenantAdmin.reports.totalTransactions'), summary?.summary?.totalTransactions || 0],
+          [t('tenantAdmin.reports.avgPerTransaction'), summary?.summary?.averageTransactionValue || 0],
+          [t('tenantAdmin.reports.uniqueCustomers'),   summary?.summary?.totalCustomers || 0],
+          [t('tenantAdmin.reports.csvNewCustomers'),   summary?.summary?.totalNewCustomers || 0],
         ],
       },
       {
-        title: 'Daily Revenue',
-        header: ['Tanggal', 'Revenue', 'Transaksi'],
+        title: t('tenantAdmin.reports.dailyRevenueTrend'),
+        header: [t('tenantAdmin.reports.csvDate'), t('common.revenue'), t('common.transactions')],
         rows: revenueTrend.map(d => [d.date, d.revenue, d.transactions]),
       },
       {
-        title: 'Top Services',
-        header: ['Layanan', 'Jumlah', 'Revenue'],
+        title: t('tenantAdmin.reports.topServices'),
+        header: [t('tenantAdmin.reports.csvService'), t('common.amount'), t('common.revenue')],
         rows: services.map(s => [s.name, s.count, s.revenue]),
       },
       {
-        title: 'Performa Barber',
-        header: ['Barber', 'Transaksi', 'Revenue', 'Komisi', 'Rate', 'Avg Rating'],
+        title: t('tenantAdmin.reports.barberPerformance'),
+        header: [t('tenantAdmin.reports.colBarber'), t('common.transactions'), t('common.revenue'), t('tenantAdmin.reports.colCommission'), t('tenantAdmin.reports.csvRate'), t('tenantAdmin.reports.csvAvgRating')],
         rows: barbers.map(b => [
           b.barberName, b.servicesCount, b.revenue, b.commission || 0,
           `${Math.round((b.commissionRate || 0) * 100)}%`,
@@ -181,13 +181,13 @@ export default function TAReportsPage() {
         ]),
       },
       {
-        title: 'Revenue per Cabang',
-        header: ['Cabang', 'Revenue', 'Transaksi'],
+        title: t('tenantAdmin.reports.csvRevenueByBranch'),
+        header: [t('tenantAdmin.reports.csvBranch'), t('common.revenue'), t('common.transactions')],
         rows: (summary?.revenueByBranch || []).map(b => [b.branchName, b.revenue, b.transactions]),
       },
       {
-        title: 'Revenue per Metode Pembayaran',
-        header: ['Metode', 'Revenue', 'Transaksi'],
+        title: t('tenantAdmin.reports.csvRevenueByPayment'),
+        header: [t('tenantAdmin.reports.csvPaymentMethod'), t('common.revenue'), t('common.transactions')],
         rows: (summary?.revenueByPaymentMethod || []).map(p => [p.method, p.revenue, p.count]),
       },
     ]
@@ -200,7 +200,7 @@ export default function TAReportsPage() {
     { key: 'servicesCount', label: t('common.transactions'), sortable: true, render: v => <span className="text-off-white">{v}</span> },
     { key: 'revenue',      label: t('common.revenue'), sortable: true, render: v => <span className="text-brand font-medium whitespace-nowrap">{formatRupiah(v)}</span> },
     // Komisi riil per barber (revenue × rate barber) — acuan penggajian.
-    { key: 'commission',   label: 'Komisi', sortable: true, render: (v, row) => (
+    { key: 'commission',   label: t('tenantAdmin.reports.colCommission'), sortable: true, render: (v, row) => (
       <span className="whitespace-nowrap">
         <span className="text-off-white font-medium">{formatRupiah(v || 0)}</span>
         <span className="text-muted text-[11px] ml-1">{Math.round((row.commissionRate || 0) * 100)}%</span>
@@ -241,7 +241,7 @@ export default function TAReportsPage() {
               value={branchId}
               onChange={e => setBranchId(e.target.value)}
               className="bg-dark-card border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-brand/60 cursor-pointer max-w-[180px]"
-              aria-label="Filter cabang"
+              aria-label={t('tenantAdmin.reports.filterBranch')}
             >
               <option value="">{t('tenantAdmin.reports.allBranches')}</option>
               {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -315,7 +315,7 @@ export default function TAReportsPage() {
                     </p>
                   ) : (
                     <p className="text-lg sm:text-xl font-bold text-off-white leading-tight whitespace-nowrap tabular-nums">
-                      {Number(kpi.raw || 0).toLocaleString('id-ID')}
+                      {Number(kpi.raw || 0).toLocaleString(i18n.language === 'en' ? 'en-US' : 'id-ID')}
                     </p>
                   )}
                 </div>
@@ -362,8 +362,8 @@ export default function TAReportsPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <h3 className="font-semibold text-off-white">Jam Tersibuk</h3>
-              <span className="text-xs text-muted">Jumlah transaksi per jam &amp; hari</span>
+              <h3 className="font-semibold text-off-white">{t('tenantAdmin.reports.busiestHours')}</h3>
+              <span className="text-xs text-muted">{t('tenantAdmin.reports.heatmapCaption')}</span>
             </div>
           </CardHeader>
           <CardBody>
@@ -372,10 +372,10 @@ export default function TAReportsPage() {
             ) : (heatmapQ.data?.matrix && heatmapQ.data.matrix.flat().some(v => v > 0)) ? (
               <>
                 <HeatmapChart data={heatmapQ.data.matrix} hoursStart={heatmapQ.data.meta?.hoursStart} hoursEnd={heatmapQ.data.meta?.hoursEnd} />
-                <p className="text-xs text-muted mt-3">Makin gelap = makin ramai. Rentang jam mengikuti jam buka cabang, zona waktu toko. Pakai ini untuk atur jumlah barber di jam ramai &amp; promo di jam sepi.</p>
+                <p className="text-xs text-muted mt-3">{t('tenantAdmin.reports.heatmapHint')}</p>
               </>
             ) : (
-              <p className="text-sm text-muted text-center py-8">Belum ada transaksi pada rentang ini.</p>
+              <p className="text-sm text-muted text-center py-8">{t('tenantAdmin.reports.heatmapEmpty')}</p>
             )}
           </CardBody>
         </Card>
@@ -519,14 +519,14 @@ export default function TAReportsPage() {
                             <span className="text-xs text-amber-400 flex-shrink-0">⭐ {b.averageRating.toFixed(1)}</span>
                           )}
                         </div>
-                        <p className="text-[11px] text-muted mt-0.5">{b.servicesCount} transaksi</p>
+                        <p className="text-[11px] text-muted mt-0.5">{b.servicesCount} {t('common.transactions').toLowerCase()}</p>
                         <div className="grid grid-cols-2 gap-2 mt-2.5">
                           <div className="bg-dark-surface rounded-lg px-2.5 py-1.5">
-                            <p className="text-[10px] text-muted">Omzet</p>
+                            <p className="text-[10px] text-muted">{t('common.revenue')}</p>
                             <p className="text-sm font-semibold text-brand whitespace-nowrap tabular-nums">{formatRupiahShort(b.revenue || 0)}</p>
                           </div>
                           <div className="bg-dark-surface rounded-lg px-2.5 py-1.5">
-                            <p className="text-[10px] text-muted">Komisi · {Math.round((b.commissionRate || 0) * 100)}%</p>
+                            <p className="text-[10px] text-muted">{t('tenantAdmin.reports.colCommission')} · {Math.round((b.commissionRate || 0) * 100)}%</p>
                             <p className="text-sm font-semibold text-off-white whitespace-nowrap tabular-nums">{formatRupiahShort(b.commission || 0)}</p>
                           </div>
                         </div>

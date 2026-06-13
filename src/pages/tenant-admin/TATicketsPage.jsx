@@ -14,16 +14,16 @@ import { AttachmentPicker, AttachmentGallery } from '../../components/tickets/Ti
 import { timeAgo, formatDateTime } from '../../utils/format.js'
 
 const STATUS_CONFIG = {
-  open:        { label: 'Open',        variant: 'danger',  icon: AlertCircle, color: 'text-red-400' },
-  in_progress: { label: 'In Progress', variant: 'warning', icon: Clock,       color: 'text-amber-400' },
-  resolved:    { label: 'Selesai',     variant: 'success', icon: CheckCircle, color: 'text-green-400' },
+  open:        { labelKey: 'tenantAdmin.tickets.status.open',       variant: 'danger',  icon: AlertCircle, color: 'text-red-400' },
+  in_progress: { labelKey: 'tenantAdmin.tickets.status.inProgress', variant: 'warning', icon: Clock,       color: 'text-amber-400' },
+  resolved:    { labelKey: 'tenantAdmin.tickets.status.resolved',   variant: 'success', icon: CheckCircle, color: 'text-green-400' },
 }
 
 const CATEGORIES = ['Bug', 'Feature Request', 'Billing', 'General']
 const PRIORITIES  = [
-  { value: 'high',   label: 'Tinggi',  color: 'text-red-400 bg-red-400/10 border-red-400/30' },
-  { value: 'medium', label: 'Sedang',  color: 'text-amber-400 bg-amber-400/10 border-amber-400/30' },
-  { value: 'low',    label: 'Rendah',  color: 'text-blue-400 bg-blue-400/10 border-blue-400/30' },
+  { value: 'high',   labelKey: 'tenantAdmin.tickets.priority.high',   color: 'text-red-400 bg-red-400/10 border-red-400/30' },
+  { value: 'medium', labelKey: 'tenantAdmin.tickets.priority.medium', color: 'text-amber-400 bg-amber-400/10 border-amber-400/30' },
+  { value: 'low',    labelKey: 'tenantAdmin.tickets.priority.low',    color: 'text-blue-400 bg-blue-400/10 border-blue-400/30' },
 ]
 
 export default function TATicketsPage() {
@@ -53,7 +53,7 @@ export default function TATicketsPage() {
 
   const handleSubmit = async () => {
     if (!form.subject.trim() || !form.description.trim())
-      return toast.error('Judul dan deskripsi wajib diisi')
+      return toast.error(t('tenantAdmin.tickets.toast.subjectDescRequired'))
     try {
       await createTicket.mutateAsync({
         tenantId:    user.tenantId,
@@ -65,11 +65,11 @@ export default function TATicketsPage() {
         attachments: form.attachments,
         createdBy:   user.name,
       })
-      toast.success(t('tickets.toast.created'))
+      toast.success(t('tenantAdmin.tickets.toast.created'))
       setForm({ subject: '', description: '', category: 'Bug', priority: 'medium', attachments: [] })
       setShowNew(false)
     } catch {
-      toast.error(t('tickets.toast.createFailed'))
+      toast.error(t('tenantAdmin.tickets.toast.createFailed'))
     }
   }
 
@@ -80,9 +80,9 @@ export default function TATicketsPage() {
       await replyToTicket.mutateAsync({ id: selectedTicket.id, author: user.name, message: replyText.trim(), attachments: replyAttachments, isAdmin: false })
       setReplyText('')
       setReplyAttachments([])
-      toast.success(t('tickets.toast.replied'))
+      toast.success(t('tenantAdmin.tickets.toast.replied'))
     } catch {
-      toast.error(t('tickets.toast.replyFailed'))
+      toast.error(t('tenantAdmin.tickets.toast.replyFailed'))
     } finally {
       setSending(false)
     }
@@ -92,18 +92,18 @@ export default function TATicketsPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold text-off-white">Support Tickets</h1>
-          <p className="text-muted text-sm mt-1">Hubungi tim support platform SembaPOS</p>
+          <h1 className="font-display text-2xl font-bold text-off-white">{t('tenantAdmin.tickets.title')}</h1>
+          <p className="text-muted text-sm mt-1">{t('tenantAdmin.tickets.subtitle')}</p>
         </div>
-        <Button icon={Plus} onClick={() => setShowNew(true)}>Buat Tiket</Button>
+        <Button icon={Plus} onClick={() => setShowNew(true)}>{t('tenantAdmin.tickets.newTicket')}</Button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: 'Total Tiket', value: myTickets.length, color: 'text-off-white' },
-          { label: 'Open',        value: openCount,        color: 'text-red-400' },
-          { label: 'Selesai',     value: resolvedCount,    color: 'text-green-400' },
+          { label: t('tenantAdmin.tickets.stats.total'),    value: myTickets.length, color: 'text-off-white' },
+          { label: t('tenantAdmin.tickets.stats.open'),     value: openCount,        color: 'text-red-400' },
+          { label: t('tenantAdmin.tickets.stats.resolved'), value: resolvedCount,    color: 'text-green-400' },
         ].map((s, i) => (
           <motion.div key={s.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
             <Card className="p-4 text-center">
@@ -131,7 +131,7 @@ export default function TATicketsPage() {
             {myTickets.length === 0 && (
               <div className="text-center py-16 text-muted">
                 <MessageSquare size={36} className="mx-auto mb-3 opacity-20" />
-                <p className="text-sm">Belum ada tiket. Klik "Buat Tiket" untuk menghubungi support.</p>
+                <p className="text-sm">{t('tenantAdmin.tickets.emptyList')}</p>
               </div>
             )}
             {myTickets.map((ticket, i) => {
@@ -151,10 +151,10 @@ export default function TATicketsPage() {
                     <ChevronRight size={14} className="text-muted flex-shrink-0" />
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    {pr && <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${pr.color}`}>{pr.label}</span>}
-                    <Badge variant={sc.variant} className="text-[10px]">{sc.label}</Badge>
+                    {pr && <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${pr.color}`}>{t(pr.labelKey)}</span>}
+                    <Badge variant={sc.variant} className="text-[10px]">{t(sc.labelKey)}</Badge>
                     <span className="text-xs text-muted">{ticket.category}</span>
-                    {hasNewReply && <span className="text-[10px] text-brand bg-brand/10 px-1.5 py-0.5 rounded-full">Ada balasan</span>}
+                    {hasNewReply && <span className="text-[10px] text-brand bg-brand/10 px-1.5 py-0.5 rounded-full">{t('tenantAdmin.tickets.hasReply')}</span>}
                   </div>
                   <p className="text-xs text-muted mt-1.5" title={formatDateTime(ticket.createdAt)}>{timeAgo(ticket.createdAt)}</p>
                 </motion.button>
@@ -174,7 +174,7 @@ export default function TATicketsPage() {
                           <h3 className="font-semibold text-off-white">{selectedTicket.subject}</h3>
                           <div className="flex items-center gap-2 mt-1">
                             <Badge variant={STATUS_CONFIG[selectedTicket.status]?.variant}>
-                              {STATUS_CONFIG[selectedTicket.status]?.label}
+                              {STATUS_CONFIG[selectedTicket.status]?.labelKey ? t(STATUS_CONFIG[selectedTicket.status].labelKey) : ''}
                             </Badge>
                             <span className="text-xs text-muted">{selectedTicket.category}</span>
                             <span className="text-xs text-muted" title={formatDateTime(selectedTicket.createdAt)}>{timeAgo(selectedTicket.createdAt)}</span>
@@ -202,7 +202,7 @@ export default function TATicketsPage() {
                         <div key={r.id || i} className={`p-3 rounded-xl border ${r.isAdmin ? 'border-brand/20 bg-brand/5 ml-4' : 'border-dark-border bg-dark-card'}`}>
                           <div className="flex items-center gap-2 mb-2">
                             {r.isAdmin
-                              ? <><ShieldCheck size={13} className="text-brand" /><span className="text-xs font-semibold text-brand">{r.author?.name || r.author?.email || '—'} (Support)</span></>
+                              ? <><ShieldCheck size={13} className="text-brand" /><span className="text-xs font-semibold text-brand">{r.author?.name || r.author?.email || '—'} ({t('tenantAdmin.tickets.supportLabel')})</span></>
                               : <><User size={13} className="text-muted" /><span className="text-xs font-medium text-off-white">{r.author?.name || r.author?.email || '—'}</span></>
                             }
                             <span className="text-xs text-muted" title={formatDateTime(r.createdAt)}>{timeAgo(r.createdAt)}</span>
@@ -219,16 +219,16 @@ export default function TATicketsPage() {
                             value={replyText}
                             onChange={e => setReplyText(e.target.value)}
                             rows={3}
-                            placeholder="Tambah informasi atau pertanyaan lanjutan..."
+                            placeholder={t('tenantAdmin.tickets.replyPlaceholder')}
                             className="w-full bg-dark-card border border-dark-border rounded-xl px-3 py-2.5 text-sm text-off-white placeholder-muted resize-none focus:outline-none focus:border-brand/50"
                           />
                           <AttachmentPicker value={replyAttachments} onChange={setReplyAttachments} disabled={sending} />
                           <Button icon={Send} size="sm" onClick={handleReply} disabled={sending || (!replyText.trim() && replyAttachments.length === 0)}>
-                            {sending ? 'Mengirim...' : 'Kirim'}
+                            {sending ? t('tenantAdmin.tickets.sending') : t('common.submit')}
                           </Button>
                         </div>
                       ) : (
-                        <p className="text-xs text-muted text-center py-2">Tiket ini sudah diselesaikan oleh tim support.</p>
+                        <p className="text-xs text-muted text-center py-2">{t('tenantAdmin.tickets.resolvedNotice')}</p>
                       )}
                     </CardBody>
                   </Card>
@@ -237,7 +237,7 @@ export default function TATicketsPage() {
                 <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center justify-center h-64">
                   <div className="text-center text-muted">
                     <MessageSquare size={40} className="mx-auto mb-2 opacity-20" />
-                    <p className="text-sm">Pilih tiket untuk melihat detail</p>
+                    <p className="text-sm">{t('tenantAdmin.tickets.selectPrompt')}</p>
                   </div>
                 </motion.div>
               )}
@@ -247,47 +247,47 @@ export default function TATicketsPage() {
       )}
 
       {/* New Ticket Modal */}
-      <Modal isOpen={showNew} onClose={() => setShowNew(false)} title="Buat Tiket Support">
+      <Modal isOpen={showNew} onClose={() => setShowNew(false)} title={t('tenantAdmin.tickets.newModalTitle')}>
         <div className="space-y-4">
           <Input
-            label="Judul / Subjek"
+            label={t('tenantAdmin.tickets.subjectLabel')}
             value={form.subject}
             onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}
-            placeholder="Contoh: Laporan tidak bisa diexport"
+            placeholder={t('tenantAdmin.tickets.subjectPlaceholder')}
           />
           <div>
-            <label className="block text-xs text-muted mb-1.5">Deskripsi Masalah</label>
+            <label className="block text-xs text-muted mb-1.5">{t('tenantAdmin.tickets.descriptionLabel')}</label>
             <textarea
               value={form.description}
               onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
               rows={4}
-              placeholder="Jelaskan masalah secara detail, langkah reproduksi, dll."
+              placeholder={t('tenantAdmin.tickets.descriptionPlaceholder')}
               className="w-full bg-dark-card border border-dark-border rounded-xl px-3 py-2.5 text-sm text-off-white placeholder-muted resize-none focus:outline-none focus:border-brand/50"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-muted mb-1.5">Kategori</label>
+              <label className="block text-xs text-muted mb-1.5">{t('common.category')}</label>
               <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
                 className="w-full bg-dark-card border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-brand/50">
                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs text-muted mb-1.5">Prioritas</label>
+              <label className="block text-xs text-muted mb-1.5">{t('tenantAdmin.tickets.priorityLabel')}</label>
               <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}
                 className="w-full bg-dark-card border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-brand/50">
-                {PRIORITIES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                {PRIORITIES.map(p => <option key={p.value} value={p.value}>{t(p.labelKey)}</option>)}
               </select>
             </div>
           </div>
           <div>
-            <label className="block text-xs text-muted mb-1.5">Lampiran Gambar <span className="text-muted/60">(opsional)</span></label>
+            <label className="block text-xs text-muted mb-1.5">{t('tenantAdmin.tickets.attachmentLabel')} <span className="text-muted/60">({t('common.optional')})</span></label>
             <AttachmentPicker value={form.attachments} onChange={(a) => setForm(f => ({ ...f, attachments: a }))} />
           </div>
           <div className="flex gap-3 pt-1">
-            <Button variant="secondary" fullWidth onClick={() => setShowNew(false)}>Batal</Button>
-            <Button fullWidth onClick={handleSubmit}>Kirim Tiket</Button>
+            <Button variant="secondary" fullWidth onClick={() => setShowNew(false)}>{t('common.cancel')}</Button>
+            <Button fullWidth onClick={handleSubmit}>{t('tenantAdmin.tickets.submitTicket')}</Button>
           </div>
         </div>
       </Modal>

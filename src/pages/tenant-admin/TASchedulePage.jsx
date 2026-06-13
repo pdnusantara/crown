@@ -397,7 +397,7 @@ function TASchedulePageInner() {
     if (ws.isDayOff) {
       return {
         tone: 'warn',
-        text: 'Pola mingguan staf ini: HARI LIBUR. Shift di sini akan menggantikan dan menjadi dasar perhitungan absensi.',
+        text: t('tenantAdmin.schedule.wsWarnDayOff'),
       }
     }
     // Cek jam shift jauh berbeda dari WS (mis. WS 09-17, shift Sore 14-22).
@@ -407,12 +407,12 @@ function TASchedulePageInner() {
       if (!sameStart || !sameEnd) {
         return {
           tone: 'info',
-          text: `Pola mingguan staf ini: ${ws.startTime}–${ws.endTime}. Jam shift di sini akan dipakai untuk hitung terlambat hari itu.`,
+          text: t('tenantAdmin.schedule.wsWarnHours', { start: ws.startTime, end: ws.endTime }),
         }
       }
     }
     return null
-  }, [modalDate, form.staffId, form.startTime, form.endTime, wsLookup])
+  }, [modalDate, form.staffId, form.startTime, form.endTime, wsLookup, t])
 
   const toggleSelect = (id) => {
     setSelected(prev => {
@@ -425,10 +425,10 @@ function TASchedulePageInner() {
   const handleSave = async () => {
     if (!form.staffId) return toast.error(t('tenantAdmin.schedule.selectBarber'))
     if (!/^\d{2}:\d{2}$/.test(form.startTime) || !/^\d{2}:\d{2}$/.test(form.endTime)) {
-      return toast.error('Jam shift tidak valid (HH:MM).')
+      return toast.error(t('tenantAdmin.schedule.invalidShiftTime'))
     }
     if (form.startTime >= form.endTime) {
-      return toast.error('Jam selesai harus setelah jam mulai.')
+      return toast.error(t('tenantAdmin.schedule.endAfterStart'))
     }
     try {
       if (selectedSchedule) {
@@ -440,7 +440,7 @@ function TASchedulePageInner() {
           startTime: form.startTime,
           endTime:   form.endTime,
         })
-        toast.success('Jadwal diperbarui.')
+        toast.success(t('tenantAdmin.schedule.scheduleUpdated'))
       } else {
         await createMut.mutateAsync({
           staffId:   form.staffId,
@@ -682,26 +682,26 @@ function TASchedulePageInner() {
           di desktop). */}
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div className="min-w-0">
-          <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white truncate">Jadwal Kerja Mingguan</h1>
-          <p className="hidden sm:block text-muted text-xs sm:text-sm mt-1">Rencana shift kasir &amp; barber per tanggal. Pola jam dasar diatur di <Link to="/admin/attendance?tab=jadwal" className="text-brand hover:underline">Pola Mingguan</Link>.</p>
+          <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white truncate">{t('tenantAdmin.schedule.pageTitle')}</h1>
+          <p className="hidden sm:block text-muted text-xs sm:text-sm mt-1">{t('tenantAdmin.schedule.pageSubtitlePre')} <Link to="/admin/attendance?tab=jadwal" className="text-brand hover:underline">{t('tenantAdmin.schedule.weeklyPattern')}</Link>.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
             onClick={() => setShowPresetEditor(true)}
             className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs sm:text-sm text-muted hover:text-brand hover:border-brand/40 transition-all"
-            title="Atur preset jam shift"
+            title={t('tenantAdmin.schedule.managePresetsTitle')}
           >
             <Sliders className="w-4 h-4" />
-            <span className="hidden sm:inline">Atur Preset</span>
+            <span className="hidden sm:inline">{t('tenantAdmin.schedule.managePresets')}</span>
           </button>
           <Link
             to="/admin/attendance"
             className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs sm:text-sm text-muted hover:text-brand hover:border-brand/40 transition-all"
-            title="Halaman Absensi & Jadwal Mingguan"
+            title={t('tenantAdmin.schedule.attendanceTitle')}
           >
             <Fingerprint className="w-4 h-4" />
-            <span className="hidden sm:inline">Absensi</span>
+            <span className="hidden sm:inline">{t('tenantAdmin.schedule.attendance')}</span>
           </Link>
           <LiveBadge className="hidden sm:inline-flex" />
           <Button variant="secondary" size="sm" onClick={() => refetch()} icon={RefreshCw} loading={isFetching && !isLoading} aria-label={t('tenantAdmin.schedule.refresh')} />
@@ -872,11 +872,11 @@ function TASchedulePageInner() {
           </label>
           {/* Pemilih peran — segmented control, di LUAR label search supaya
               klik tidak propagate ke input. */}
-          <div className="w-full sm:w-auto sm:flex-shrink-0 flex sm:inline-flex rounded-lg border border-dark-border overflow-hidden divide-x divide-dark-border" role="tablist" aria-label="Filter peran">
+          <div className="w-full sm:w-auto sm:flex-shrink-0 flex sm:inline-flex rounded-lg border border-dark-border overflow-hidden divide-x divide-dark-border" role="tablist" aria-label={t('tenantAdmin.schedule.roleFilterAria')}>
             {[
-              { id: 'all',    label: 'Semua' },
-              { id: 'kasir',  label: 'Kasir' },
-              { id: 'barber', label: 'Barber' },
+              { id: 'all',    label: t('tenantAdmin.schedule.roleAll') },
+              { id: 'kasir',  label: t('tenantAdmin.schedule.roleKasir') },
+              { id: 'barber', label: t('tenantAdmin.schedule.roleBarber') },
             ].map((opt) => (
               <button
                 key={opt.id}
@@ -985,12 +985,12 @@ function TASchedulePageInner() {
           {viewMode === 'calendar' && Object.keys(ghostMap).length > 0 && !bulkMode && (
             <div className="flex items-start gap-2 rounded-lg border border-dark-border bg-dark-card/40 px-3 py-2 text-[11px] text-muted">
               <span className="inline-block px-1.5 py-0.5 rounded border border-dashed border-dark-border/70 bg-dark-card/40 italic opacity-70 shrink-0">
-                Tono · 09:00–17:00
+                {t('tenantAdmin.schedule.ghostLegendExample')}
               </span>
               <span>
-                Chip bergaris putus-putus = <span className="text-off-white">pola kerja mingguan</span> staf (diatur di
-                <Link to="/admin/attendance" className="ml-1 text-brand hover:underline">Pola Mingguan</Link>).
-                Klik untuk tambahkan sebagai shift khusus tanggal itu.
+                {t('tenantAdmin.schedule.ghostLegendPre')} <span className="text-off-white">{t('tenantAdmin.schedule.ghostLegendEmph')}</span> {t('tenantAdmin.schedule.ghostLegendMid')}
+                <Link to="/admin/attendance" className="ml-1 text-brand hover:underline">{t('tenantAdmin.schedule.weeklyPattern')}</Link>).
+                {' '}{t('tenantAdmin.schedule.ghostLegendPost')}
               </span>
             </div>
           )}
@@ -1021,9 +1021,9 @@ function TASchedulePageInner() {
                               type="button"
                               onClick={() => setClosureModal({ date: day, mode: 'reopen' })}
                               className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] bg-red-500/20 border border-red-500/40 text-red-300 hover:bg-red-500/30 transition-colors"
-                              title={cs.note || 'Cabang tutup tanggal ini'}
+                              title={cs.note || t('tenantAdmin.schedule.branchClosedThisDate')}
                             >
-                              <Lock className="w-2.5 h-2.5" /> TUTUP
+                              <Lock className="w-2.5 h-2.5" /> {t('tenantAdmin.schedule.closedUpper')}
                             </button>
                           )}
                           {!cs.allClosed && cs.partial && (
@@ -1031,7 +1031,7 @@ function TASchedulePageInner() {
                               type="button"
                               onClick={() => setClosureModal({ date: day, mode: 'close' })}
                               className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 transition-colors"
-                              title="Sebagian cabang tutup"
+                              title={t('tenantAdmin.schedule.partialClosed')}
                             >
                               <Lock className="w-2.5 h-2.5" /> {cs.branchIds.length}
                             </button>
@@ -1041,9 +1041,9 @@ function TASchedulePageInner() {
                               type="button"
                               onClick={() => setClosureModal({ date: day, mode: 'close' })}
                               className="mt-1 text-[9px] text-muted/60 hover:text-red-300 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                              title="Tutup cabang tanggal ini"
+                              title={t('tenantAdmin.schedule.closeBranchThisDate')}
                             >
-                              Tutup?
+                              {t('tenantAdmin.schedule.closeQ')}
                             </button>
                           )}
                         </div>
@@ -1132,7 +1132,7 @@ function TASchedulePageInner() {
                               key={`ghost-${g.staffId}`}
                               type="button"
                               onClick={(e) => handleGhostClick(e, day, g)}
-                              title={`Pola mingguan ${g.name} (${g.role}): ${g.startTime}–${g.endTime}. Klik untuk tambahkan sebagai shift khusus.`}
+                              title={t('tenantAdmin.schedule.ghostTitle', { name: g.name, role: g.role, start: g.startTime, end: g.endTime })}
                               className="block w-full text-[11px] px-2 py-1.5 rounded border border-dashed border-dark-border/70 bg-dark-card/20 text-muted italic opacity-70 hover:opacity-100 hover:border-brand/40 hover:text-brand transition-all text-left"
                             >
                               <div className="flex items-center gap-1 font-semibold truncate not-italic">
@@ -1150,18 +1150,18 @@ function TASchedulePageInner() {
                               onClick={() => handleCellClick(day, TIME_SLOTS[0])}
                               className="w-full mt-1 py-1.5 rounded border border-dashed border-dark-border/50 text-[10px] text-muted/60 hover:text-brand hover:border-brand/40 transition-all"
                             >
-                              + Tambah
+                              {t('tenantAdmin.schedule.addShort')}
                             </button>
                           )}
                           {dayClosure.allClosed && dayScheds.length === 0 && (
                             <div className="text-center text-[10px] text-red-300/60 mt-3">
-                              <Lock className="w-3 h-3 mx-auto mb-1" /> Cabang tutup
+                              <Lock className="w-3 h-3 mx-auto mb-1" /> {t('tenantAdmin.schedule.branchClosed')}
                             </div>
                           )}
                           {dayOff.length > 0 && (
                             <div className="mt-2 pt-2 border-t border-dark-border/30 space-y-0.5">
                               <div className="text-[9px] uppercase tracking-wide text-muted/60 flex items-center gap-1">
-                                <Moon className="w-2.5 h-2.5" /> Libur ({dayOff.length})
+                                <Moon className="w-2.5 h-2.5" /> {t('tenantAdmin.schedule.dayOffCount', { count: dayOff.length })}
                               </div>
                               {dayOff.map(u => (
                                 <div key={u.id} className="text-[10px] text-muted/70 flex items-center gap-1 px-1">
@@ -1201,7 +1201,7 @@ function TASchedulePageInner() {
                     <button
                       key={i}
                       onClick={() => setActiveDayIdx(i)}
-                      title={`${DAY_NAMES[i]} ${format(day, 'd')}${cs.allClosed ? ' — Tutup' : count > 0 ? ` — ${count} shift` : ''}`}
+                      title={`${DAY_NAMES[i]} ${format(day, 'd')}${cs.allClosed ? ` — ${t('tenantAdmin.schedule.close')}` : count > 0 ? ` — ${t('tenantAdmin.schedule.shiftCount', { count })}` : ''}`}
                       className={`min-w-0 flex flex-col items-center gap-0.5 px-0.5 py-2 rounded-lg border transition-all ${
                         isActive
                           ? cs.allClosed ? 'bg-red-500/80 text-white border-red-500' : 'bg-brand text-dark border-brand'
@@ -1248,12 +1248,12 @@ function TASchedulePageInner() {
                       {!bulkMode && (
                         dayCs.allClosed ? (
                           <Button size="sm" variant="outline" icon={Unlock} onClick={() => setClosureModal({ date: day, mode: 'reopen' })}>
-                            Buka kembali
+                            {t('tenantAdmin.schedule.reopen')}
                           </Button>
                         ) : (
                           <div className="flex gap-2">
                             <Button size="sm" variant="outline" icon={Lock} onClick={() => setClosureModal({ date: day, mode: 'close' })}>
-                              <span className="hidden sm:inline">Tutup</span>
+                              <span className="hidden sm:inline">{t('tenantAdmin.schedule.close')}</span>
                             </Button>
                             <Button size="sm" icon={Plus} onClick={() => handleCellClick(day, TIME_SLOTS[0])}>
                               <span className="hidden sm:inline">{t('tenantAdmin.schedule.addSchedule')}</span>
@@ -1266,15 +1266,15 @@ function TASchedulePageInner() {
                       <div className="mb-3 flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-200">
                         <Lock className="w-4 h-4 mt-0.5 shrink-0" />
                         <span>
-                          <span className="font-semibold">Cabang tutup</span> tanggal ini.
-                          {dayCs.note && <> Catatan: <span className="italic">{dayCs.note}</span></>}
+                          <span className="font-semibold">{t('tenantAdmin.schedule.branchClosed')}</span> {t('tenantAdmin.schedule.onThisDate')}
+                          {dayCs.note && <> {t('tenantAdmin.schedule.noteLabel')} <span className="italic">{dayCs.note}</span></>}
                         </span>
                       </div>
                     )}
                     {dayCs.partial && (
                       <div className="mb-3 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
                         <Lock className="w-4 h-4 mt-0.5 shrink-0" />
-                        <span>{dayCs.branchIds.length} dari {branches.length} cabang tutup tanggal ini.</span>
+                        <span>{t('tenantAdmin.schedule.partialClosedDetail', { closed: dayCs.branchIds.length, total: branches.length })}</span>
                       </div>
                     )}
                     {isLoading ? (
@@ -1293,7 +1293,7 @@ function TASchedulePageInner() {
                     ) : daySch.length === 0 && dayCs.allClosed ? (
                       <div className="w-full py-8 rounded-xl border border-dashed border-red-500/30 text-center">
                         <Lock size={20} className="mx-auto mb-2 text-red-400/70" />
-                        <p className="text-sm text-red-200/80">Tidak ada shift karena cabang tutup.</p>
+                        <p className="text-sm text-red-200/80">{t('tenantAdmin.schedule.noShiftBranchClosed')}</p>
                       </div>
                     ) : (
                       <div className="space-y-2">
@@ -1349,7 +1349,7 @@ function TASchedulePageInner() {
                     {dayOff.length > 0 && (
                       <div className="mt-4 pt-3 border-t border-dark-border/40">
                         <div className="text-[11px] uppercase tracking-wide text-muted/70 flex items-center gap-1.5 mb-2">
-                          <Moon className="w-3 h-3" /> Libur per pola mingguan ({dayOff.length})
+                          <Moon className="w-3 h-3" /> {t('tenantAdmin.schedule.dayOffWeeklyCount', { count: dayOff.length })}
                         </div>
                         <div className="flex flex-wrap gap-1.5">
                           {dayOff.map(u => (
@@ -1379,7 +1379,7 @@ function TASchedulePageInner() {
                     {t('tenantAdmin.schedule.copyLastWeek')}
                   </Button>
                   <button type="button" onClick={showWizard} className="text-xs text-brand hover:underline">
-                    Buka panduan
+                    {t('tenantAdmin.schedule.openGuide')}
                   </button>
                 </div>
               </Card>
@@ -1465,7 +1465,7 @@ function TASchedulePageInner() {
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-muted mb-1.5">Staf (Kasir / Barber)</label>
+            <label className="block text-sm font-medium text-muted mb-1.5">{t('tenantAdmin.schedule.staffLabel')}</label>
             <select
               value={form.staffId}
               onChange={e => setForm(f => ({ ...f, staffId: e.target.value }))}
@@ -1494,9 +1494,9 @@ function TASchedulePageInner() {
                 type="button"
                 onClick={() => setShowPresetEditor(true)}
                 className="inline-flex items-center gap-1 text-[11px] text-brand hover:underline"
-                title="Atur preset jam shift untuk tenant ini"
+                title={t('tenantAdmin.schedule.managePresetsTenantTitle')}
               >
-                <Sliders className="w-3 h-3" /> Atur Preset
+                <Sliders className="w-3 h-3" /> {t('tenantAdmin.schedule.managePresets')}
               </button>
             </div>
             <div className="space-y-2">
@@ -1529,13 +1529,13 @@ function TASchedulePageInner() {
                     className="inline-flex items-center gap-1.5 text-xs font-medium text-muted hover:text-brand transition-colors"
                   >
                     <Clock className="w-3.5 h-3.5" />
-                    {open ? 'Tutup jam manual' : 'Atur jam manual (shift khusus)'}
+                    {open ? t('tenantAdmin.schedule.hideManualTime') : t('tenantAdmin.schedule.showManualTime')}
                   </button>
                 )}
                 {open && (
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-muted mb-1.5">Mulai</label>
+                      <label className="block text-sm font-medium text-muted mb-1.5">{t('tenantAdmin.schedule.startLabel')}</label>
                       <input
                         type="time"
                         value={form.startTime}
@@ -1544,7 +1544,7 @@ function TASchedulePageInner() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-muted mb-1.5">Selesai</label>
+                      <label className="block text-sm font-medium text-muted mb-1.5">{t('tenantAdmin.schedule.endLabel')}</label>
                       <input
                         type="time"
                         value={form.endTime}
@@ -1562,7 +1562,7 @@ function TASchedulePageInner() {
               <Button variant="danger" fullWidth icon={Trash2} onClick={() => askDelete(selectedSchedule)} loading={deleteMut.isPending}>
                 {t('tenantAdmin.schedule.delete')}
               </Button>
-              <Button fullWidth icon={Save} onClick={handleSave} loading={updateMut.isPending}>Simpan Perubahan</Button>
+              <Button fullWidth icon={Save} onClick={handleSave} loading={updateMut.isPending}>{t('tenantAdmin.schedule.saveChanges')}</Button>
             </div>
           ) : (
             <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
@@ -1589,16 +1589,16 @@ function TASchedulePageInner() {
               for (const bid of branchIds) {
                 await closeBranchDate.mutateAsync({ branchId: bid, date, note: note || null })
               }
-              toast.success(`Cabang ditandai TUTUP pada ${format(closureModal.date, 'd MMM yyyy', { locale: dateLocale })}.`)
+              toast.success(t('tenantAdmin.schedule.branchMarkedClosedToast', { date: format(closureModal.date, 'd MMM yyyy', { locale: dateLocale }) }))
             } else {
               for (const bid of branchIds) {
                 await reopenBranchDate.mutateAsync({ branchId: bid, date })
               }
-              toast.success(`Cabang dibuka kembali pada ${format(closureModal.date, 'd MMM yyyy', { locale: dateLocale })}.`)
+              toast.success(t('tenantAdmin.schedule.branchReopenedToast', { date: format(closureModal.date, 'd MMM yyyy', { locale: dateLocale }) }))
             }
             setClosureModal(null)
           } catch (err) {
-            toast.error(err?.response?.data?.error || 'Gagal memperbarui penutupan cabang.')
+            toast.error(err?.response?.data?.error || t('tenantAdmin.schedule.closureUpdateFailed'))
           }
         }}
         saving={closeBranchDate.isPending || reopenBranchDate.isPending}
@@ -1612,10 +1612,10 @@ function TASchedulePageInner() {
         onSave={async (next) => {
           try {
             await updateTenant.mutateAsync({ shiftPresets: next })
-            toast.success('Preset shift disimpan.')
+            toast.success(t('tenantAdmin.schedule.presetSaved'))
             setShowPresetEditor(false)
           } catch (err) {
-            toast.error(err?.response?.data?.error || 'Gagal menyimpan preset.')
+            toast.error(err?.response?.data?.error || t('tenantAdmin.schedule.presetSaveFailed'))
           }
         }}
         saving={updateTenant.isPending}
@@ -1715,6 +1715,8 @@ function TASchedulePageInner() {
 
 // Modal Tutup/Buka cabang per-tanggal. Mendukung multi-cabang dengan checkbox.
 function ClosureModal({ isOpen, date, mode, branches, branchFilter, closureLookup, onClose, onSubmit, saving }) {
+  const { t, i18n } = useTranslation()
+  const localeStr = i18n.language?.startsWith('en') ? 'en-US' : 'id-ID'
   // Pre-select: bila branchFilter spesifik → cabang itu saja.
   // Bila mode 'reopen' → semua cabang yang tutup di tanggal ini.
   const [selected, setSelected] = useState(() => new Set())
@@ -1749,7 +1751,7 @@ function ClosureModal({ isOpen, date, mode, branches, branchFilter, closureLooku
   )
 
   const isClose = mode === 'close'
-  const title = isClose ? 'Tutup Cabang Tanggal Ini' : 'Buka Kembali Cabang'
+  const title = isClose ? t('tenantAdmin.schedule.closeModalTitle') : t('tenantAdmin.schedule.reopenModalTitle')
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title}>
@@ -1758,21 +1760,21 @@ function ClosureModal({ isOpen, date, mode, branches, branchFilter, closureLooku
           isClose ? 'border-red-500/30 bg-red-500/5' : 'border-emerald-500/30 bg-emerald-500/5'
         }`}>
           <p className="text-sm text-off-white font-medium">
-            {date.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            {date.toLocaleDateString(localeStr, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
           <p className="text-xs text-muted mt-1">
             {isClose
-              ? 'Semua shift terjadwal pada cabang & tanggal ini akan dihapus. Booking publik juga sebaiknya tidak menerima reservasi di tanggal ini (perlu integrasi /book).'
-              : 'Cabang akan menerima booking & jadwal lagi mulai tanggal ini.'}
+              ? t('tenantAdmin.schedule.closeModalDesc')
+              : t('tenantAdmin.schedule.reopenModalDesc')}
           </p>
         </div>
 
         {branches.length > 1 && (
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-muted">Pilih cabang</label>
+              <label className="text-sm font-medium text-muted">{t('tenantAdmin.schedule.selectBranch')}</label>
               <button type="button" onClick={toggleAll} className="text-[11px] text-brand hover:underline">
-                {selected.size === branches.length ? 'Kosongkan' : 'Pilih semua'}
+                {selected.size === branches.length ? t('tenantAdmin.schedule.clearSelection') : t('tenantAdmin.schedule.selectAll')}
               </button>
             </div>
             <div className="space-y-1.5 max-h-[40vh] overflow-y-auto">
@@ -1790,7 +1792,7 @@ function ClosureModal({ isOpen, date, mode, branches, branchFilter, closureLooku
                     <input type="checkbox" checked={checked} onChange={() => toggleBranch(b.id)} className="accent-brand w-4 h-4" />
                     <span className="text-sm text-off-white flex-1 truncate">{b.name}</span>
                     {mode === 'reopen' && closureLookup[b.id]?.[`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`] && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-300">Tutup</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-300">{t('tenantAdmin.schedule.close')}</span>
                     )}
                   </label>
                 )
@@ -1801,21 +1803,21 @@ function ClosureModal({ isOpen, date, mode, branches, branchFilter, closureLooku
 
         {isClose && (
           <div>
-            <label className="block text-sm font-medium text-muted mb-1.5">Catatan (opsional)</label>
+            <label className="block text-sm font-medium text-muted mb-1.5">{t('tenantAdmin.schedule.noteOptionalLabel')}</label>
             <input
               type="text"
               value={note}
               onChange={(e) => setNote(e.target.value.slice(0, 200))}
-              placeholder="mis. Libur Lebaran, Pemeliharaan AC"
+              placeholder={t('tenantAdmin.schedule.notePlaceholder')}
               className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60"
               maxLength={200}
             />
-            <p className="text-[11px] text-muted mt-1">Tampil di kalender saat staf/admin melihat tanggal ini.</p>
+            <p className="text-[11px] text-muted mt-1">{t('tenantAdmin.schedule.noteHint')}</p>
           </div>
         )}
 
         <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2 border-t border-dark-border">
-          <Button variant="outline" fullWidth onClick={onClose} disabled={saving}>Batal</Button>
+          <Button variant="outline" fullWidth onClick={onClose} disabled={saving}>{t('tenantAdmin.schedule.cancel')}</Button>
           <Button
             fullWidth
             icon={isClose ? Lock : Unlock}
@@ -1824,7 +1826,7 @@ function ClosureModal({ isOpen, date, mode, branches, branchFilter, closureLooku
             disabled={selected.size === 0}
             className={isClose ? '!bg-red-600 hover:!bg-red-500 !text-white' : ''}
           >
-            {isClose ? 'Tutup Cabang' : 'Buka Kembali'}
+            {isClose ? t('tenantAdmin.schedule.closeBranchBtn') : t('tenantAdmin.schedule.reopen')}
           </Button>
         </div>
       </div>
@@ -1837,34 +1839,35 @@ function OnboardingPanel({
   hasBarber, hasWeeklyPattern, hasCustomPresets,
   onOpenPresets, onCopyLastWeek, onAddFirst, onDismiss, copyLoading,
 }) {
+  const { t } = useTranslation()
   const steps = [
     {
       id: 'staff', icon: UserCircle, done: hasBarber,
-      title: 'Tambahkan barber',
-      desc: hasBarber ? 'Sudah ada barber aktif.' : 'Belum ada barber. Tambahkan dulu di Karyawan.',
-      action: hasBarber ? null : { label: 'Kelola Karyawan', to: '/admin/users' },
+      title: t('tenantAdmin.schedule.obStaffTitle'),
+      desc: hasBarber ? t('tenantAdmin.schedule.obStaffDoneDesc') : t('tenantAdmin.schedule.obStaffTodoDesc'),
+      action: hasBarber ? null : { label: t('tenantAdmin.schedule.obManageStaff'), to: '/admin/users' },
     },
     {
       id: 'pattern', icon: CalendarClock, done: hasWeeklyPattern,
-      title: 'Atur Pola Mingguan',
+      title: t('tenantAdmin.schedule.obPatternTitle'),
       desc: hasWeeklyPattern
-        ? 'Pola jam kerja mingguan sudah terisi. Pola ini akan muncul sebagai chip "default" di kalender.'
-        : 'Tentukan jam masuk/keluar default per hari. Pola ini jadi dasar perhitungan terlambat & chip default di kalender.',
-      action: { label: hasWeeklyPattern ? 'Lihat Pola' : 'Atur Pola', to: '/admin/attendance?tab=jadwal' },
+        ? t('tenantAdmin.schedule.obPatternDoneDesc')
+        : t('tenantAdmin.schedule.obPatternTodoDesc'),
+      action: { label: hasWeeklyPattern ? t('tenantAdmin.schedule.obViewPattern') : t('tenantAdmin.schedule.obSetPattern'), to: '/admin/attendance?tab=jadwal' },
     },
     {
       id: 'preset', icon: Sliders, done: true, // selalu ada (default ada bawaan)
-      title: hasCustomPresets ? 'Preset Shift sudah disesuaikan' : 'Preset Shift bawaan aktif',
+      title: hasCustomPresets ? t('tenantAdmin.schedule.obPresetCustomTitle') : t('tenantAdmin.schedule.obPresetDefaultTitle'),
       desc: hasCustomPresets
-        ? 'Preset shift mengikuti pengaturan tenant.'
-        : 'Pagi 08–14, Sore 14–22, Full 08–22. Bisa disesuaikan kalau jam buka toko berbeda.',
-      action: { label: 'Atur Preset', onClick: onOpenPresets },
+        ? t('tenantAdmin.schedule.obPresetCustomDesc')
+        : t('tenantAdmin.schedule.obPresetDefaultDesc'),
+      action: { label: t('tenantAdmin.schedule.managePresets'), onClick: onOpenPresets },
     },
     {
       id: 'add', icon: ListChecks, done: false,
-      title: 'Tambah shift pertama',
-      desc: 'Klik sel kalender kosong, atau pakai tombol di bawah. Bila ada chip bergaris putus-putus, klik untuk pakai jam pola mingguan.',
-      action: hasBarber ? { label: 'Tambah Sekarang', onClick: onAddFirst, primary: true } : null,
+      title: t('tenantAdmin.schedule.obAddTitle'),
+      desc: t('tenantAdmin.schedule.obAddDesc'),
+      action: hasBarber ? { label: t('tenantAdmin.schedule.obAddNow'), onClick: onAddFirst, primary: true } : null,
     },
   ]
 
@@ -1874,25 +1877,25 @@ function OnboardingPanel({
     <div className="rounded-2xl border border-brand/20 bg-gradient-to-b from-brand/[0.04] to-transparent p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3 mb-4">
         <div>
-          <h3 className="font-display text-lg sm:text-xl font-bold text-off-white">Panduan Cepat: Mulai Jadwal Shift</h3>
+          <h3 className="font-display text-lg sm:text-xl font-bold text-off-white">{t('tenantAdmin.schedule.obHeading')}</h3>
           <p className="text-xs text-muted mt-1">
-            Minggu ini belum ada jadwal. Ikuti {steps.length} langkah ringkas berikut — kebanyakan sudah otomatis bila data dasar sudah ada.
+            {t('tenantAdmin.schedule.obSubheading', { count: steps.length })}
           </p>
         </div>
         <button
           type="button"
           onClick={onDismiss}
           className="text-[11px] text-muted hover:text-off-white whitespace-nowrap"
-          title="Sembunyikan panduan minggu ini"
+          title={t('tenantAdmin.schedule.obHideTitle')}
         >
-          Sembunyikan
+          {t('tenantAdmin.schedule.obHide')}
         </button>
       </div>
 
       {/* Progress bar */}
       <div className="mb-5">
         <div className="flex items-center justify-between text-[11px] text-muted mb-1.5">
-          <span>{completedCount} dari {steps.length} langkah siap</span>
+          <span>{t('tenantAdmin.schedule.obProgress', { done: completedCount, total: steps.length })}</span>
           <span className="tabular-nums">{Math.round((completedCount / steps.length) * 100)}%</span>
         </div>
         <div className="h-1.5 rounded-full bg-dark-card overflow-hidden">
@@ -1965,10 +1968,10 @@ function OnboardingPanel({
       {/* Shortcut Copy Minggu Lalu — selalu ada di bawah */}
       <div className="mt-5 pt-5 border-t border-dark-border/60 flex items-center justify-between gap-3 flex-wrap">
         <p className="text-xs text-muted">
-          Sudah pernah atur sebelumnya?
+          {t('tenantAdmin.schedule.obAlreadySetup')}
         </p>
         <Button variant="secondary" size="sm" icon={Copy} onClick={onCopyLastWeek} loading={copyLoading}>
-          Salin Minggu Lalu
+          {t('tenantAdmin.schedule.copyLastWeek')}
         </Button>
       </div>
     </div>
@@ -1989,22 +1992,22 @@ function PresetEditorModal({ isOpen, onClose, initial, onSave, saving }) {
   const remove = (i) => setRows((arr) => arr.filter((_, idx) => idx !== i))
   const add = () => {
     if (rows.length >= 6) return
-    setRows((arr) => [...arr, { value: `Shift ${arr.length + 1}`, startTime: '08:00', endTime: '17:00' }])
+    setRows((arr) => [...arr, { value: t('tenantAdmin.schedule.presetDefaultLabel', { n: arr.length + 1 }), startTime: '08:00', endTime: '17:00' }])
   }
   const reset = () => setRows(DEFAULT_PRESETS.map((p) => ({ ...p })))
 
   const validate = () => {
-    if (rows.length === 0) return 'Minimal satu preset.'
+    if (rows.length === 0) return t('tenantAdmin.schedule.presetMinOne')
     const seen = new Set()
     for (const r of rows) {
       const v = (r.value || '').trim()
-      if (!v) return 'Label preset tidak boleh kosong.'
-      if (v.length > 20) return `Label "${v}" terlalu panjang (maks 20 karakter).`
+      if (!v) return t('tenantAdmin.schedule.presetLabelEmpty')
+      if (v.length > 20) return t('tenantAdmin.schedule.presetLabelTooLong', { label: v })
       const key = v.toLowerCase()
-      if (seen.has(key)) return `Label "${v}" duplikat.`
+      if (seen.has(key)) return t('tenantAdmin.schedule.presetLabelDup', { label: v })
       seen.add(key)
-      if (!/^\d{2}:\d{2}$/.test(r.startTime) || !/^\d{2}:\d{2}$/.test(r.endTime)) return `Jam preset "${v}" tidak valid.`
-      if (r.startTime >= r.endTime) return `Pada "${v}": jam selesai harus setelah jam mulai.`
+      if (!/^\d{2}:\d{2}$/.test(r.startTime) || !/^\d{2}:\d{2}$/.test(r.endTime)) return t('tenantAdmin.schedule.presetTimeInvalid', { label: v })
+      if (r.startTime >= r.endTime) return t('tenantAdmin.schedule.presetEndAfterStart', { label: v })
     }
     return null
   }
@@ -2016,11 +2019,10 @@ function PresetEditorModal({ isOpen, onClose, initial, onSave, saving }) {
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Atur Preset Shift">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('tenantAdmin.schedule.presetModalTitle')}>
       <div className="space-y-4">
         <p className="text-xs text-muted">
-          Preset memudahkan admin mengisi jam shift dengan satu klik. Tetap bisa ubah jam manual saat tambah jadwal.
-          Maks 6 preset.
+          {t('tenantAdmin.schedule.presetModalDesc')}
         </p>
         <div className="space-y-2">
           {rows.map((r, i) => (
@@ -2028,7 +2030,7 @@ function PresetEditorModal({ isOpen, onClose, initial, onSave, saving }) {
               <input
                 type="text" value={r.value}
                 onChange={(e) => update(i, { value: e.target.value })}
-                placeholder="Label (mis. Pagi)"
+                placeholder={t('tenantAdmin.schedule.presetLabelPlaceholder')}
                 className="col-span-5 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/60"
                 maxLength={20}
               />
@@ -2046,8 +2048,8 @@ function PresetEditorModal({ isOpen, onClose, initial, onSave, saving }) {
                 type="button"
                 onClick={() => remove(i)}
                 className="col-span-1 text-muted hover:text-red-400 inline-flex justify-center"
-                aria-label={`Hapus preset ${r.value || i + 1}`}
-                title="Hapus preset"
+                aria-label={t('tenantAdmin.schedule.presetDeleteAria', { label: r.value || i + 1 })}
+                title={t('tenantAdmin.schedule.presetDeleteTitle')}
               >
                 <Trash2 className="w-4 h-4" />
               </button>
@@ -2056,15 +2058,15 @@ function PresetEditorModal({ isOpen, onClose, initial, onSave, saving }) {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" size="sm" icon={Plus} onClick={add} disabled={rows.length >= 6}>
-            Tambah Preset
+            {t('tenantAdmin.schedule.presetAdd')}
           </Button>
           <Button variant="ghost" size="sm" icon={RotateCcw} onClick={reset}>
-            Reset Default
+            {t('tenantAdmin.schedule.presetResetDefault')}
           </Button>
         </div>
         <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2 border-t border-dark-border">
           <Button variant="outline" fullWidth onClick={onClose} disabled={saving}>{t('tenantAdmin.schedule.cancel')}</Button>
-          <Button fullWidth icon={Save} onClick={handleSave} loading={saving}>Simpan Preset</Button>
+          <Button fullWidth icon={Save} onClick={handleSave} loading={saving}>{t('tenantAdmin.schedule.presetSaveBtn')}</Button>
         </div>
       </div>
     </Modal>

@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { MapPin, Clock, CheckCircle2, LogIn, LogOut, AlertTriangle, CalendarDays, Loader2, History, Navigation, Camera } from 'lucide-react'
 import { useMyAttendanceToday, useMyAttendanceHistory, useCheckIn, useCheckOut } from '../hooks/useAttendance.js'
 import { useToast } from '../components/ui/Toast.jsx'
@@ -7,10 +8,10 @@ import Badge from '../components/ui/Badge.jsx'
 import { DAY_NAMES, statusMeta, fmtDuration, fmtTime, fmtDateLong } from '../utils/attendance.js'
 
 // Ambil posisi GPS perangkat — promise yang reject dengan pesan ramah.
-function getPosition() {
+function getPosition(t) {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
-      return reject(new Error('Perangkat ini tidak mendukung GPS.'))
+      return reject(new Error(t('staffAttendance.gpsUnsupported')))
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => resolve({
@@ -19,9 +20,9 @@ function getPosition() {
         accuracy: pos.coords.accuracy,
       }),
       (err) => reject(new Error(
-        err.code === 1 ? 'Izin lokasi ditolak. Aktifkan GPS lalu izinkan akses lokasi di browser.'
-        : err.code === 3 ? 'Permintaan lokasi melebihi waktu. Coba lagi di area dengan sinyal lebih baik.'
-        : 'Gagal membaca lokasi GPS. Pastikan GPS aktif.'
+        err.code === 1 ? t('staffAttendance.gpsDenied')
+        : err.code === 3 ? t('staffAttendance.gpsTimeout')
+        : t('staffAttendance.gpsFailed')
       )),
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
     )
@@ -29,6 +30,7 @@ function getPosition() {
 }
 
 export default function StaffAttendancePage() {
+  const { t } = useTranslation()
   const toast = useToast()
   const { data, isLoading, error } = useMyAttendanceToday()
   const { data: history = [] } = useMyAttendanceHistory()
@@ -45,12 +47,12 @@ export default function StaffAttendancePage() {
   const runAct = async (mode, photo) => {
     setBusy(true)
     try {
-      const geo = await getPosition()
+      const geo = await getPosition(t)
       const mut = mode === 'in' ? checkIn : checkOut
       await mut.mutateAsync({ ...geo, photo })
-      toast.success(mode === 'in' ? 'Check-in berhasil. Selamat bekerja!' : 'Check-out berhasil. Terima kasih!')
+      toast.success(mode === 'in' ? t('staffAttendance.checkInSuccess') : t('staffAttendance.checkOutSuccess'))
     } catch (err) {
-      const msg = err?.response?.data?.error || err?.message || 'Terjadi kesalahan.'
+      const msg = err?.response?.data?.error || err?.message || t('staffAttendance.genericError')
       toast.error(msg)
     } finally {
       setBusy(false)
@@ -90,8 +92,8 @@ export default function StaffAttendancePage() {
           <Card>
             <CardBody className="text-center py-10">
               <AlertTriangle className="w-10 h-10 text-amber-400 mx-auto mb-3" />
-              <h2 className="text-lg font-semibold text-off-white mb-1">Absensi belum aktif</h2>
-              <p className="text-sm text-muted">Fitur Absensi Digital tidak tersedia pada paket toko Anda saat ini.</p>
+              <h2 className="text-lg font-semibold text-off-white mb-1">{t('staffAttendance.disabledTitle')}</h2>
+              <p className="text-sm text-muted">{t('staffAttendance.disabledDesc')}</p>
             </CardBody>
           </Card>
         </div>
@@ -114,7 +116,7 @@ export default function StaffAttendancePage() {
       <div className="max-w-md mx-auto space-y-4">
         {/* Header */}
         <div className="text-center">
-          <h1 className="text-xl font-display font-bold text-off-white">Absensi Digital</h1>
+          <h1 className="text-xl font-display font-bold text-off-white">{t('staffAttendance.title')}</h1>
           <p className="text-sm text-muted mt-0.5 capitalize">{fmtDateLong(today)}</p>
         </div>
 
@@ -133,24 +135,24 @@ export default function StaffAttendancePage() {
 
             {phase === 'idle' && (
               <>
-                <p className="text-off-white font-semibold">Belum check-in</p>
-                <p className="text-sm text-muted mt-0.5">Tekan tombol di bawah untuk mulai absen.</p>
+                <p className="text-off-white font-semibold">{t('staffAttendance.idleTitle')}</p>
+                <p className="text-sm text-muted mt-0.5">{t('staffAttendance.idleDesc')}</p>
               </>
             )}
             {phase === 'working' && (
               <>
-                <p className="text-off-white font-semibold">Sedang bekerja</p>
+                <p className="text-off-white font-semibold">{t('staffAttendance.workingTitle')}</p>
                 <p className="text-sm text-muted mt-0.5">
-                  Check-in {fmtTime(attendance.checkInAt)}
+                  {t('staffAttendance.checkInAt', { time: fmtTime(attendance.checkInAt) })}
                   {attendance.status === 'late' && (
-                    <span className="text-amber-400"> · terlambat {attendance.lateMinutes}m</span>
+                    <span className="text-amber-400">{t('staffAttendance.lateSuffix', { minutes: attendance.lateMinutes })}</span>
                   )}
                 </p>
               </>
             )}
             {phase === 'done' && (
               <>
-                <p className="text-off-white font-semibold">Absen hari ini selesai</p>
+                <p className="text-off-white font-semibold">{t('staffAttendance.doneTitle')}</p>
                 <p className="text-sm text-muted mt-0.5">
                   {fmtTime(attendance.checkInAt)} – {fmtTime(attendance.checkOutAt)} · {fmtDuration(attendance.workedMinutes)}
                 </p>
@@ -182,14 +184,14 @@ export default function StaffAttendancePage() {
                   }`}
                 >
                   {busy
-                    ? <><Loader2 className="w-5 h-5 animate-spin" /> Memproses…</>
+                    ? <><Loader2 className="w-5 h-5 animate-spin" /> {t('staffAttendance.processing')}</>
                     : phase === 'idle'
-                      ? <>{requireSelfie ? <Camera className="w-5 h-5" /> : <LogIn className="w-5 h-5" />} Check In Sekarang</>
-                      : <>{requireSelfie ? <Camera className="w-5 h-5" /> : <LogOut className="w-5 h-5" />} Check Out Sekarang</>}
+                      ? <>{requireSelfie ? <Camera className="w-5 h-5" /> : <LogIn className="w-5 h-5" />} {t('staffAttendance.checkInNow')}</>
+                      : <>{requireSelfie ? <Camera className="w-5 h-5" /> : <LogOut className="w-5 h-5" />} {t('staffAttendance.checkOutNow')}</>}
                 </button>
                 {requireSelfie && (
                   <p className="mt-2 text-xs text-muted flex items-center justify-center gap-1">
-                    <Camera className="w-3.5 h-3.5" /> Anda akan diminta mengambil foto selfie.
+                    <Camera className="w-3.5 h-3.5" /> {t('staffAttendance.selfieNotice')}
                   </p>
                 )}
               </>
@@ -203,22 +205,22 @@ export default function StaffAttendancePage() {
             <div className="flex items-start gap-3">
               <CalendarDays className="w-4 h-4 text-gold mt-0.5 flex-shrink-0" />
               <div className="flex-1">
-                <p className="text-muted text-xs">Jadwal kerja {dayName}</p>
+                <p className="text-muted text-xs">{t('staffAttendance.workScheduleFor', { day: dayName })}</p>
                 <p className="text-off-white font-medium">
                   {schedule?.isDayOff
-                    ? 'Hari libur'
+                    ? t('staffAttendance.dayOff')
                     : `${schedule?.startTime || '—'} – ${schedule?.endTime || '—'}`}
                   {config?.lateToleranceMin > 0 && !schedule?.isDayOff && (
-                    <span className="text-muted font-normal"> · toleransi {config.lateToleranceMin}m</span>
+                    <span className="text-muted font-normal"> {t('staffAttendance.tolerance', { minutes: config.lateToleranceMin })}</span>
                   )}
                 </p>
                 {schedule?.source && !schedule.isDayOff && (
                   <p className="text-[11px] text-muted mt-0.5">
                     {schedule.source.startsWith('barberSchedule')
-                      ? <>Shift <span className="text-gold">{schedule.source.split(':')[1] || 'Khusus'}</span> · rencana shift harian</>
+                      ? <>{t('staffAttendance.shiftPrefix')} <span className="text-gold">{schedule.source.split(':')[1] || t('staffAttendance.shiftCustom')}</span> {t('staffAttendance.shiftDailyPlan')}</>
                       : schedule.source === 'workSchedule'
-                        ? 'Pola kerja mingguan'
-                        : 'Default sistem'}
+                        ? t('staffAttendance.weeklyPattern')
+                        : t('staffAttendance.systemDefault')}
                   </p>
                 )}
               </div>
@@ -226,16 +228,16 @@ export default function StaffAttendancePage() {
             <div className="flex items-start gap-3 border-t border-dark-border pt-3">
               <MapPin className="w-4 h-4 text-gold mt-0.5 flex-shrink-0" />
               <div className="flex-1">
-                <p className="text-muted text-xs">Lokasi absensi</p>
+                <p className="text-muted text-xs">{t('staffAttendance.attendanceLocation')}</p>
                 {branch ? (
                   <p className="text-off-white font-medium">
                     {branch.name}
                     {branchConfigured
-                      ? <span className="text-muted font-normal"> · radius {branch.attendanceRadius} m</span>
-                      : <span className="text-amber-400 font-normal"> · koordinat belum diatur</span>}
+                      ? <span className="text-muted font-normal"> {t('staffAttendance.radius', { meters: branch.attendanceRadius })}</span>
+                      : <span className="text-amber-400 font-normal"> {t('staffAttendance.coordsNotSet')}</span>}
                   </p>
                 ) : (
-                  <p className="text-amber-400 font-medium">Anda belum ditugaskan ke cabang.</p>
+                  <p className="text-amber-400 font-medium">{t('staffAttendance.noBranchAssigned')}</p>
                 )}
               </div>
             </div>
@@ -243,8 +245,8 @@ export default function StaffAttendancePage() {
               <div className="flex items-start gap-3 border-t border-dark-border pt-3">
                 <Navigation className="w-4 h-4 text-gold mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
-                  <p className="text-muted text-xs">Jarak saat check-in</p>
-                  <p className="text-off-white font-medium">{attendance.checkInDistance} m dari cabang</p>
+                  <p className="text-muted text-xs">{t('staffAttendance.checkInDistance')}</p>
+                  <p className="text-off-white font-medium">{t('staffAttendance.distanceFromBranch', { meters: attendance.checkInDistance })}</p>
                 </div>
               </div>
             )}
@@ -254,7 +256,7 @@ export default function StaffAttendancePage() {
         {!branchConfigured && (
           <p className="flex items-center gap-2 text-xs text-amber-400 px-1">
             <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-            Absensi belum bisa digunakan sampai admin mengatur koordinat cabang.
+            {t('staffAttendance.branchNotConfiguredWarn')}
           </p>
         )}
 
@@ -263,7 +265,7 @@ export default function StaffAttendancePage() {
           <Card>
             <CardHeader>
               <h2 className="flex items-center gap-2 text-sm font-semibold text-off-white">
-                <History className="w-4 h-4 text-gold" /> Riwayat Absensi
+                <History className="w-4 h-4 text-gold" /> {t('staffAttendance.historyTitle')}
               </h2>
             </CardHeader>
             <CardBody className="p-0">

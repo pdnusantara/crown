@@ -1,9 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Bell, BellOff, AlertTriangle, Info, CheckCircle, Star, AlertCircle, Megaphone } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useNotificationStore } from '../../store/notificationStore.js'
 import { useBroadcasts, useMarkBroadcastRead } from '../../hooks/useBroadcasts.js'
 import { formatDistanceToNow } from 'date-fns'
-import { id as idLocale } from 'date-fns/locale'
+import { id as idLocale, enUS as enLocale } from 'date-fns/locale'
 
 const severityConfig = {
   warning: { icon: AlertTriangle, color: 'text-amber-400',  bg: 'bg-amber-400/10',  border: 'border-l-amber-400' },
@@ -20,9 +21,9 @@ const bcTypeConfig = {
   success: { color: 'text-green-400', bg: 'bg-green-400/10', border: 'border-l-green-400' },
 }
 
-function timeAgo(dateStr) {
+function timeAgo(dateStr, locale) {
   try {
-    return formatDistanceToNow(new Date(dateStr), { addSuffix: true, locale: idLocale })
+    return formatDistanceToNow(new Date(dateStr), { addSuffix: true, locale })
   } catch {
     return ''
   }
@@ -35,6 +36,8 @@ const isToday = (dateStr) => {
 }
 
 export function NotificationDrawer({ open, onClose, tenantId }) {
+  const { t, i18n } = useTranslation()
+  const dateLocale = i18n.language === 'en' ? enLocale : idLocale
   const { getByTenant, markAsRead, markAllAsRead, deleteNotification } = useNotificationStore()
   const { data: broadcasts = [] } = useBroadcasts(tenantId)
   const markBroadcastRead = useMarkBroadcastRead()
@@ -66,7 +69,7 @@ export function NotificationDrawer({ open, onClose, tenantId }) {
         <div className="flex-1 min-w-0">
           <p className={`text-sm font-medium ${n.read ? 'text-muted' : 'text-off-white'}`}>{n.title}</p>
           <p className="text-xs text-muted mt-0.5 leading-snug">{n.message}</p>
-          <p className="text-xs text-muted/60 mt-1">{timeAgo(n.createdAt)}</p>
+          <p className="text-xs text-muted/60 mt-1">{timeAgo(n.createdAt, dateLocale)}</p>
         </div>
         {!n.read && <div className="w-2 h-2 rounded-full bg-brand flex-shrink-0 mt-1" />}
         <button
@@ -101,7 +104,7 @@ export function NotificationDrawer({ open, onClose, tenantId }) {
             <div className="flex items-center justify-between px-4 py-4 border-b border-dark-border flex-shrink-0">
               <div className="flex items-center gap-2">
                 <Bell size={18} className="text-brand" />
-                <h2 className="font-semibold text-off-white">Notifikasi</h2>
+                <h2 className="font-semibold text-off-white">{t('notifications.title')}</h2>
                 {(unreadBroadcasts.length + notifications.filter(n => !n.read).length) > 0 && (
                   <span className="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded-full font-bold">
                     {unreadBroadcasts.length + notifications.filter(n => !n.read).length}
@@ -114,7 +117,7 @@ export function NotificationDrawer({ open, onClose, tenantId }) {
                     onClick={() => markAllAsRead(tenantId)}
                     className="text-xs text-brand hover:text-brand-light transition-colors"
                   >
-                    Tandai Semua Dibaca
+                    {t('notifications.markAllRead')}
                   </button>
                 )}
                 <button onClick={onClose} className="p-1.5 rounded-lg text-muted hover:text-off-white hover:bg-dark-card transition-all">
@@ -128,8 +131,8 @@ export function NotificationDrawer({ open, onClose, tenantId }) {
               {!hasAnything ? (
                 <div className="flex flex-col items-center justify-center h-48 text-center">
                   <BellOff size={40} className="text-muted mb-3 opacity-40" />
-                  <p className="text-muted">Semua notifikasi telah dibaca</p>
-                  <p className="text-xs text-muted/60 mt-1">Tidak ada notifikasi baru</p>
+                  <p className="text-muted">{t('notifications.allRead')}</p>
+                  <p className="text-xs text-muted/60 mt-1">{t('notifications.noNew')}</p>
                 </div>
               ) : (
                 <>
@@ -138,7 +141,7 @@ export function NotificationDrawer({ open, onClose, tenantId }) {
                     <div>
                       <div className="flex items-center gap-1.5 mb-2 px-1">
                         <Megaphone size={11} className="text-muted" />
-                        <p className="text-xs text-muted uppercase tracking-wider">Pengumuman Platform</p>
+                        <p className="text-xs text-muted uppercase tracking-wider">{t('notifications.platformAnnouncements')}</p>
                       </div>
                       <div className="space-y-2">
                         <AnimatePresence>
@@ -160,13 +163,13 @@ export function NotificationDrawer({ open, onClose, tenantId }) {
                                 <div className="flex-1 min-w-0 pr-6">
                                   <p className={`text-sm font-medium ${isRead ? 'text-muted' : 'text-off-white'}`}>{bc.title}</p>
                                   <p className="text-xs text-muted mt-0.5 leading-snug">{bc.message}</p>
-                                  <p className="text-xs text-muted/60 mt-1">{timeAgo(bc.sentAt)}</p>
+                                  <p className="text-xs text-muted/60 mt-1">{timeAgo(bc.sentAt, dateLocale)}</p>
                                 </div>
                                 {!isRead && (
                                   <button
                                     onClick={() => markBroadcastRead.mutate(bc.id)}
                                     className="absolute top-2 right-2 p-1 rounded-lg text-muted hover:text-off-white hover:bg-dark-surface transition-all"
-                                    title="Tandai dibaca"
+                                    title={t('notifications.markRead')}
                                   >
                                     <X size={12} />
                                   </button>
@@ -185,7 +188,7 @@ export function NotificationDrawer({ open, onClose, tenantId }) {
                     <>
                       {todayNotifs.length > 0 && (
                         <div>
-                          <p className="text-xs text-muted uppercase tracking-wider mb-2 px-1">Terbaru</p>
+                          <p className="text-xs text-muted uppercase tracking-wider mb-2 px-1">{t('notifications.recent')}</p>
                           <div className="space-y-2">
                             <AnimatePresence>
                               {todayNotifs.map(renderNotif)}
@@ -195,7 +198,7 @@ export function NotificationDrawer({ open, onClose, tenantId }) {
                       )}
                       {olderNotifs.length > 0 && (
                         <div>
-                          <p className="text-xs text-muted uppercase tracking-wider mb-2 px-1">Sebelumnya</p>
+                          <p className="text-xs text-muted uppercase tracking-wider mb-2 px-1">{t('notifications.earlier')}</p>
                           <div className="space-y-2">
                             <AnimatePresence>
                               {olderNotifs.map(renderNotif)}

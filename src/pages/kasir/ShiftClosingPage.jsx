@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import {
   LogOut, DollarSign, Receipt, TrendingUp, CheckCircle, Download, Clock,
@@ -23,20 +24,21 @@ import { getBranchSlug } from '../../utils/branchSlug.js'
 import { formatInTenantTz, formatTimeInTz, formatDateTimeInTz, formatDateInTz } from '../../utils/timezone.js'
 
 // ── helpers ────────────────────────────────────────────────────────────────
+// label di-resolve via t() (pos.method*); icon tetap di sini.
 const PAYMENT_LABEL = {
-  cash:     { label: 'Tunai',        icon: '💵' },
-  transfer: { label: 'Transfer',     icon: '🏦' },
-  qris:     { label: 'QRIS',         icon: '📱' },
-  card:     { label: 'Kartu',        icon: '💳' },
+  cash:     { labelKey: 'pos.methodCash',     icon: '💵' },
+  transfer: { labelKey: 'pos.methodTransfer', icon: '🏦' },
+  qris:     { labelKey: 'pos.methodQris',     icon: '📱' },
+  card:     { labelKey: 'pos.methodCard',     icon: '💳' },
 }
 
-function durationLabel(start, end) {
+function durationLabel(start, end, t) {
   if (!start) return '0m'
   const mins = Math.max(0, differenceInMinutes(end || new Date(), new Date(start)))
   const h = Math.floor(mins / 60)
   const m = mins % 60
-  if (h === 0) return `${m}m`
-  return `${h}j ${m}m`
+  if (h === 0) return t ? t('shift.durationMinShort', { minutes: m }) : `${m}m`
+  return t ? t('shift.durationFormat', { hours: h, minutes: m }) : `${h}j ${m}m`
 }
 
 // Tanggal lengkap di TZ tenant — "Jumat, 16 Mei 2026".
@@ -54,12 +56,11 @@ function escapeCsv(v) {
 // ── Shift status pill — "Online" saat shift aktif, "Offline" saat tidak ─────
 // Penanda cepat apakah cabang sedang siap menerima transaksi.
 function ShiftStatusBadge({ active, className = '' }) {
+  const { t } = useTranslation()
   return (
     <span
       role="status"
-      title={active
-        ? 'Shift aktif — kasir siap menerima transaksi'
-        : 'Belum ada shift aktif — buka shift untuk menerima transaksi'}
+      title={active ? t('shift.statusActiveTitle') : t('shift.statusInactiveTitle')}
       className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
         active
           ? 'border-green-400/30 bg-green-400/10 text-green-300'
@@ -70,13 +71,14 @@ function ShiftStatusBadge({ active, className = '' }) {
         aria-hidden="true"
         className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-green-400 animate-pulse' : 'bg-slate-500'}`}
       />
-      {active ? 'Online' : 'Offline'}
+      {active ? t('shift.online') : t('shift.offline')}
     </span>
   )
 }
 
 // ── No active shift screen ─────────────────────────────────────────────────
 function OpenShiftScreen({ branchId, branchName }) {
+  const { t } = useTranslation()
   const [openingCash, setOpeningCash] = useState('')
   const [notes, setNotes] = useState('')
   const openShift = useOpenShift()
@@ -90,11 +92,11 @@ function OpenShiftScreen({ branchId, branchName }) {
         openingCash: parseInt(openingCash || '0', 10) || 0,
         notes: notes.trim() || undefined,
       })
-      toast.success('Shift dibuka')
+      toast.success(t('shift.shiftOpened'))
       setOpeningCash('')
       setNotes('')
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal membuka shift')
+      toast.error(err?.response?.data?.error || t('shift.openFailed'))
     }
   }
 
@@ -108,15 +110,15 @@ function OpenShiftScreen({ branchId, branchName }) {
           <ShiftStatusBadge active={false} />
         </div>
         <h2 className="font-display text-xl sm:text-2xl font-bold text-off-white mb-1">
-          Belum Ada Shift Aktif
+          {t('shift.noActiveShift')}
         </h2>
         <p className="text-muted text-sm mb-6">
-          Buka shift terlebih dahulu untuk mulai menerima transaksi di {branchName || 'cabang ini'}.
+          {t('shift.openShiftPrompt', { branch: branchName || t('shift.thisBranch') })}
         </p>
 
         <div className="space-y-3 text-left">
           <div>
-            <label htmlFor="opening-cash" className="block text-xs font-medium text-muted mb-1.5">Kas Awal (Rp)</label>
+            <label htmlFor="opening-cash" className="block text-xs font-medium text-muted mb-1.5">{t('shift.openingCashRp')}</label>
             <input
               id="opening-cash"
               inputMode="numeric"
@@ -132,14 +134,14 @@ function OpenShiftScreen({ branchId, branchName }) {
             )}
           </div>
           <div>
-            <label htmlFor="opening-notes" className="block text-xs font-medium text-muted mb-1.5">Catatan (opsional)</label>
+            <label htmlFor="opening-notes" className="block text-xs font-medium text-muted mb-1.5">{t('shift.notesOptional')}</label>
             <textarea
               id="opening-notes"
               value={notes}
               onChange={e => setNotes(e.target.value)}
               rows={2}
               maxLength={500}
-              placeholder="Misal: kondisi kas drawer, modal awal, dst."
+              placeholder={t('shift.openNotesPlaceholder')}
               className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60 transition-colors resize-none"
             />
           </div>
@@ -152,7 +154,7 @@ function OpenShiftScreen({ branchId, branchName }) {
           disabled={openShift.isPending}
           className="mt-6"
         >
-          {openShift.isPending ? 'Membuka…' : 'Buka Shift Sekarang'}
+          {openShift.isPending ? t('shift.opening') : t('shift.openShiftNow')}
         </Button>
       </Card>
     </div>
@@ -181,6 +183,7 @@ function Kpi({ icon: Icon, label, value, valueShort, color = 'text-off-white' })
 
 // ── error screen ───────────────────────────────────────────────────────────
 function LoadErrorScreen({ onRetry }) {
+  const { t } = useTranslation()
   return (
     <div className="max-w-md mx-auto py-10 sm:py-16">
       <Card className="p-8 text-center">
@@ -188,12 +191,12 @@ function LoadErrorScreen({ onRetry }) {
           <AlertTriangle className="w-7 h-7 text-red-400" />
         </div>
         <h2 className="font-display text-lg sm:text-xl font-bold text-off-white mb-1">
-          Gagal Memuat Data Shift
+          {t('shift.loadErrorTitle')}
         </h2>
         <p className="text-muted text-sm mb-5">
-          Periksa koneksi internet lalu coba lagi.
+          {t('shift.loadErrorHint')}
         </p>
-        <Button icon={RefreshCw} onClick={onRetry}>Coba Lagi</Button>
+        <Button icon={RefreshCw} onClick={onRetry}>{t('shift.retry')}</Button>
       </Card>
     </div>
   )
@@ -204,6 +207,7 @@ function ShiftClosingPageInner() {
   const { user } = useAuthStore()
   const navigate = useNavigate()
   const toast = useToast()
+  const { t } = useTranslation()
 
   const {
     data: activeShift, isLoading: loadingActive, isError: activeError, refetch: refetchActive,
@@ -248,12 +252,12 @@ function ShiftClosingPageInner() {
   const paymentRows = useMemo(() => {
     const map = summary?.paymentBreakdown || {}
     return Object.values(map)
-      .map(p => ({
-        ...p,
-        ...(PAYMENT_LABEL[p.method] || { label: p.method, icon: '•' }),
-      }))
+      .map(p => {
+        const meta = PAYMENT_LABEL[p.method]
+        return { ...p, label: meta ? t(meta.labelKey) : p.method, icon: meta?.icon || '•' }
+      })
       .sort((a, b) => b.amount - a.amount)
-  }, [summary])
+  }, [summary, t])
 
   const topServices  = summary?.topServices  || []
   const barberRows   = summary?.barberSummary || []
@@ -277,9 +281,9 @@ function ShiftClosingPageInner() {
       setShowConfirm(false)
       setClosingCash('')
       setCloseNotes('')
-      toast.success('Shift berhasil ditutup')
+      toast.success(t('shift.closedSuccessToast'))
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal menutup shift')
+      toast.error(err?.response?.data?.error || t('shift.closeFailed'))
     }
   }
 
@@ -287,41 +291,41 @@ function ShiftClosingPageInner() {
 
   const handleExport = () => {
     if (!summaryReady || !shift) {
-      toast.error('Data shift belum siap — tunggu sebentar.')
+      toast.error(t('shift.dataNotReady'))
       return
     }
     const rows = [
-      ['REKAP PENUTUPAN SHIFT'],
-      ['Cabang', shift.branchName || ''],
-      ['Kasir', shift.kasirName || user?.name || ''],
-      ['Dibuka', formatDateTimeInTz(shift.openedAt)],
-      ['Ditutup', shift.closedAt ? formatDateTimeInTz(shift.closedAt) : '—'],
+      [t('shift.exportTitle')],
+      [t('shift.tableBranch'), shift.branchName || ''],
+      [t('shift.cashierLabel'), shift.kasirName || user?.name || ''],
+      [t('shift.openedLabel'), formatDateTimeInTz(shift.openedAt)],
+      [t('shift.closedLabel'), shift.closedAt ? formatDateTimeInTz(shift.closedAt) : '—'],
       [],
-      ['RINGKASAN'],
-      ['Total Transaksi', totalTransactions],
-      ['Total Pendapatan', totalRevenue],
-      ['Rata-rata per Transaksi', avgPerTx],
+      [t('shift.exportSummaryHeaderPlain')],
+      [t('shift.totalTransactions'), totalTransactions],
+      [t('shift.totalRevenue'), totalRevenue],
+      [t('shift.avgPerTransaction'), avgPerTx],
       [],
-      ['KAS'],
-      ['Kas Awal', openingCash],
-      ['Tunai Masuk', totalCash],
-      ['Kas Diharapkan', expectedCash],
-      ['Kas Aktual', shift.closingCash != null ? shift.closingCash : ''],
-      ['Selisih', shift.cashDifference != null ? shift.cashDifference : ''],
+      [t('shift.cashHeader')],
+      [t('shift.openCash'), openingCash],
+      [t('shift.cashIn'), totalCash],
+      [t('shift.expectedCash'), expectedCash],
+      [t('shift.actualCash'), shift.closingCash != null ? shift.closingCash : ''],
+      [t('shift.diff'), shift.cashDifference != null ? shift.cashDifference : ''],
       [],
-      ['PEMBAYARAN', 'Jumlah', 'Transaksi'],
+      [t('shift.exportPaymentHeaderPlain'), t('common.amount'), t('common.transactions')],
       ...paymentRows.map(p => [p.label, p.amount, p.count]),
       [],
-      ['LAYANAN TERLARIS', 'Qty', 'Pendapatan'],
+      [t('shift.exportTopServicesHeaderPlain'), t('shift.qty'), t('common.revenue')],
       ...topServices.map((s, i) => [`${i + 1}. ${s.name}`, s.count, s.revenue]),
       [],
-      ['PERFORMA BARBER', 'Transaksi', 'Pendapatan', 'Rate %', 'Komisi'],
+      [t('shift.exportBarberHeaderPlain'), t('common.transactions'), t('common.revenue'), t('shift.ratePercent'), t('shift.commission')],
       ...barberRows.map(b => [
         b.name, b.transactions, b.revenue,
         Math.round((b.commissionRate || 0) * 100), b.commission,
       ]),
     ]
-    if (shift.notes) rows.push([], ['Catatan', shift.notes])
+    if (shift.notes) rows.push([], [t('shift.notesLabel'), shift.notes])
 
     const csv = rows.map(r => r.map(escapeCsv).join(',')).join('\r\n')
     const blob = new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' })
@@ -331,7 +335,7 @@ function ShiftClosingPageInner() {
     a.download = `shift-${format(new Date(), 'yyyy-MM-dd-HHmm')}.csv`
     a.click()
     URL.revokeObjectURL(url)
-    toast.success('Rekap shift diekspor (CSV)')
+    toast.success(t('shift.recapDownloadedToast'))
   }
 
   // ── render: loading ──────────────────────────────────────────────────────
@@ -375,7 +379,7 @@ function ShiftClosingPageInner() {
             onClick={() => setShowHistory(true)}
             className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-off-white transition-colors"
           >
-            <History className="w-4 h-4" /> Lihat riwayat shift
+            <History className="w-4 h-4" /> {t('shift.viewHistory')}
           </button>
         </div>
         <ShiftHistoryModal isOpen={showHistory} onClose={() => setShowHistory(false)} />
@@ -391,21 +395,21 @@ function ShiftClosingPageInner() {
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white">
-              Penutupan Shift
+              {t('shift.closingTitle')}
             </h1>
             <ShiftStatusBadge active />
             <LiveBadge />
             {isFetching && (
               <span className="inline-flex items-center gap-1 text-[11px] text-muted">
-                <Loader2 className="w-3 h-3 animate-spin" /> Memuat…
+                <Loader2 className="w-3 h-3 animate-spin" /> {t('shift.loading')}
               </span>
             )}
           </div>
           <p className="text-muted text-xs sm:text-sm mt-1">
             {fullDateLabel(activeShift.openedAt)}
-            {' '}· Kasir: <span className="text-off-white">{activeShift.kasirName || user?.name}</span>
-            {' '}· Dibuka {formatTimeInTz(activeShift.openedAt)}
-            {' '}· Durasi {durationLabel(activeShift.openedAt)}
+            {' '}· {t('shift.cashierLabel')}: <span className="text-off-white">{activeShift.kasirName || user?.name}</span>
+            {' '}· {t('shift.openedShort', { time: formatTimeInTz(activeShift.openedAt) })}
+            {' '}· {t('shift.durationShort', { duration: durationLabel(activeShift.openedAt, null, t) })}
           </p>
         </div>
         <div className="flex items-center gap-2 print:hidden">
@@ -414,7 +418,7 @@ function ShiftClosingPageInner() {
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-dark-card border border-dark-border text-muted hover:text-off-white text-sm transition-colors"
           >
             <History className="w-4 h-4" />
-            <span className="hidden sm:inline">Riwayat</span>
+            <span className="hidden sm:inline">{t('shift.history')}</span>
           </button>
         </div>
       </div>
@@ -422,45 +426,45 @@ function ShiftClosingPageInner() {
       {summaryError && (
         <div role="alert" className="rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-300 text-sm p-3 flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-          <span>Sebagian data ringkasan gagal dimuat — angka mungkin belum mutakhir.</span>
+          <span>{t('shift.summaryPartialError')}</span>
         </div>
       )}
 
       {/* KPI row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
-        <Kpi icon={Receipt}      label="Total Transaksi"  value={totalTransactions} color="text-blue-400" />
-        <Kpi icon={DollarSign}   label="Total Pendapatan" value={formatRupiah(totalRevenue)} valueShort={formatRupiahShort(totalRevenue)} color="text-brand" />
-        <Kpi icon={TrendingUp}   label="Rata-rata"        value={formatRupiah(avgPerTx)} valueShort={formatRupiahShort(avgPerTx)} color="text-green-400" />
-        <Kpi icon={Clock}        label="Durasi Shift"     value={durationLabel(activeShift.openedAt)} color="text-purple-400" />
+        <Kpi icon={Receipt}      label={t('shift.totalTransactions')}  value={totalTransactions} color="text-blue-400" />
+        <Kpi icon={DollarSign}   label={t('shift.totalRevenue')} value={formatRupiah(totalRevenue)} valueShort={formatRupiahShort(totalRevenue)} color="text-brand" />
+        <Kpi icon={TrendingUp}   label={t('shift.avg')}        value={formatRupiah(avgPerTx)} valueShort={formatRupiahShort(avgPerTx)} color="text-green-400" />
+        <Kpi icon={Clock}        label={t('shift.shiftDuration')}     value={durationLabel(activeShift.openedAt, null, t)} color="text-purple-400" />
       </div>
 
       {/* Cash drawer */}
       <Card className="p-4 sm:p-5">
         <div className="flex items-center gap-2 mb-3">
           <Wallet className="w-4 h-4 text-brand" />
-          <h3 className="font-semibold text-off-white text-sm sm:text-base">Rekonsiliasi Kas Drawer</h3>
+          <h3 className="font-semibold text-off-white text-sm sm:text-base">{t('shift.cashReconciliation')}</h3>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="bg-dark-card/50 rounded-xl border border-dark-border p-3">
-            <p className="text-[10px] sm:text-xs text-muted uppercase tracking-wider">Kas Awal</p>
+            <p className="text-[10px] sm:text-xs text-muted uppercase tracking-wider">{t('shift.openCash')}</p>
             <p className="text-base sm:text-lg font-bold text-off-white truncate" title={formatRupiah(openingCash)}>
               {formatRupiah(openingCash)}
             </p>
           </div>
           <div className="bg-dark-card/50 rounded-xl border border-dark-border p-3">
-            <p className="text-[10px] sm:text-xs text-muted uppercase tracking-wider">+ Tunai Masuk</p>
+            <p className="text-[10px] sm:text-xs text-muted uppercase tracking-wider">{t('shift.cashInPlus')}</p>
             <p className="text-base sm:text-lg font-bold text-green-400 truncate" title={formatRupiah(totalCash)}>
               {formatRupiah(totalCash)}
             </p>
           </div>
           <div className="col-span-2 lg:col-span-1 bg-dark-card/50 rounded-xl border border-brand/30 p-3">
-            <p className="text-[10px] sm:text-xs text-brand uppercase tracking-wider">Kas Diharapkan</p>
+            <p className="text-[10px] sm:text-xs text-brand uppercase tracking-wider">{t('shift.expectedCash')}</p>
             <p className="text-base sm:text-lg font-bold text-brand truncate" title={formatRupiah(expectedCash)}>
               {formatRupiah(expectedCash)}
             </p>
           </div>
           <div className="col-span-2 lg:col-span-1">
-            <label htmlFor="closing-cash" className="block text-[10px] sm:text-xs text-muted uppercase tracking-wider mb-1">Kas Aktual (Hitung Manual)</label>
+            <label htmlFor="closing-cash" className="block text-[10px] sm:text-xs text-muted uppercase tracking-wider mb-1">{t('shift.actualCashManual')}</label>
             <input
               id="closing-cash"
               inputMode="numeric"
@@ -487,10 +491,10 @@ function ShiftClosingPageInner() {
           }`}>
             {variance === 0 ? <CheckCircle className="w-4 h-4 flex-shrink-0" /> : <AlertTriangle className="w-4 h-4 flex-shrink-0" />}
             <span className="flex-1 min-w-0">
-              <span className="font-semibold">Selisih: {formatRupiah(variance)}</span>
-              {variance === 0 ? ' — Kas pas, lengkap.'
-                : variance > 0 ? ' — Kas lebih dari ekspektasi.'
-                : ' — Kas kurang. Tinjau kembali sebelum tutup.'}
+              <span className="font-semibold">{t('shift.varianceLabel', { amount: formatRupiah(variance) })}</span>
+              {variance === 0 ? ` — ${t('shift.varianceExact')}`
+                : variance > 0 ? ` — ${t('shift.varianceOver')}`
+                : ` — ${t('shift.varianceUnder')}`}
             </span>
           </div>
         )}
@@ -501,11 +505,11 @@ function ShiftClosingPageInner() {
         {/* Payment breakdown */}
         <Card>
           <CardHeader>
-            <h3 className="font-semibold text-off-white text-sm sm:text-base">Rekap Pembayaran</h3>
+            <h3 className="font-semibold text-off-white text-sm sm:text-base">{t('shift.paymentBreakdown')}</h3>
           </CardHeader>
           <CardBody className="space-y-3">
             {paymentRows.length === 0 && (
-              <p className="text-muted text-sm text-center py-3">Belum ada transaksi</p>
+              <p className="text-muted text-sm text-center py-3">{t('shift.noTransactionsYet')}</p>
             )}
             {paymentRows.map((p) => (
               <div key={p.method} className="flex items-center justify-between gap-3">
@@ -513,7 +517,7 @@ function ShiftClosingPageInner() {
                   <span className="text-xl flex-shrink-0">{p.icon}</span>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-off-white truncate">{p.label}</p>
-                    <p className="text-xs text-muted">{p.count} tx</p>
+                    <p className="text-xs text-muted">{t('shift.txCount', { count: p.count })}</p>
                   </div>
                 </div>
                 <span className="font-semibold text-brand text-sm sm:text-base whitespace-nowrap">
@@ -522,7 +526,7 @@ function ShiftClosingPageInner() {
               </div>
             ))}
             <div className="border-t border-dark-border pt-3 flex items-center justify-between gap-3">
-              <span className="font-semibold text-off-white text-sm">Total</span>
+              <span className="font-semibold text-off-white text-sm">{t('common.total')}</span>
               <span className="font-bold text-brand text-base sm:text-lg whitespace-nowrap">
                 {formatRupiah(totalRevenue)}
               </span>
@@ -533,11 +537,11 @@ function ShiftClosingPageInner() {
         {/* Top services */}
         <Card>
           <CardHeader>
-            <h3 className="font-semibold text-off-white text-sm sm:text-base">Layanan Terlaris</h3>
+            <h3 className="font-semibold text-off-white text-sm sm:text-base">{t('shift.topServices')}</h3>
           </CardHeader>
           <CardBody className="space-y-3">
             {topServices.length === 0 && (
-              <p className="text-muted text-sm text-center py-3">Belum ada data layanan</p>
+              <p className="text-muted text-sm text-center py-3">{t('shift.noServiceData')}</p>
             )}
             {topServices.slice(0, 5).map((s, i) => {
               const pct = topServices[0]?.count
@@ -572,7 +576,7 @@ function ShiftClosingPageInner() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-brand" />
-            <h3 className="font-semibold text-off-white text-sm sm:text-base">Performa Barber</h3>
+            <h3 className="font-semibold text-off-white text-sm sm:text-base">{t('shift.barberPerformance')}</h3>
           </div>
         </CardHeader>
 
@@ -581,18 +585,18 @@ function ShiftClosingPageInner() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-dark-border text-xs uppercase tracking-wider text-muted">
-                  <th className="px-4 py-3 text-left">Barber</th>
-                  <th className="px-4 py-3 text-right">Transaksi</th>
-                  <th className="px-4 py-3 text-right">Pendapatan</th>
-                  <th className="px-4 py-3 text-right">Rate</th>
-                  <th className="px-4 py-3 text-right">Komisi</th>
+                  <th className="px-4 py-3 text-left">{t('shift.tableBarber')}</th>
+                  <th className="px-4 py-3 text-right">{t('common.transactions')}</th>
+                  <th className="px-4 py-3 text-right">{t('common.revenue')}</th>
+                  <th className="px-4 py-3 text-right">{t('shift.rate')}</th>
+                  <th className="px-4 py-3 text-right">{t('shift.commission')}</th>
                 </tr>
               </thead>
               <tbody>
                 {barberRows.length === 0 && (
                   <tr>
                     <td colSpan={5} className="px-4 py-6 text-center text-muted text-sm">
-                      Belum ada barber yang melayani transaksi
+                      {t('shift.noBarberServed')}
                     </td>
                   </tr>
                 )}
@@ -618,27 +622,27 @@ function ShiftClosingPageInner() {
         {/* Mobile cards */}
         <div className="md:hidden px-3 pb-3 space-y-2">
             {barberRows.length === 0 && (
-              <p className="text-center text-muted text-sm py-4">Belum ada data barber</p>
+              <p className="text-center text-muted text-sm py-4">{t('shift.noBarberData')}</p>
             )}
             {barberRows.map((b) => (
               <div key={b.id} className="bg-dark-card/50 rounded-xl border border-dark-border p-3">
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <p className="font-semibold text-off-white text-sm truncate">{b.name}</p>
                   <Badge variant="muted" className="text-[10px] flex-shrink-0">
-                    {b.transactions} tx
+                    {t('shift.txCount', { count: b.transactions })}
                   </Badge>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-[11px]">
                   <div className="min-w-0">
-                    <p className="text-muted uppercase tracking-wide">Pendapatan</p>
+                    <p className="text-muted uppercase tracking-wide">{t('common.revenue')}</p>
                     <p className="text-brand font-semibold truncate">{formatRupiah(b.revenue)}</p>
                   </div>
                   <div className="min-w-0">
-                    <p className="text-muted uppercase tracking-wide">Rate</p>
+                    <p className="text-muted uppercase tracking-wide">{t('shift.rate')}</p>
                     <p className="text-off-white font-semibold">{Math.round((b.commissionRate || 0) * 100)}%</p>
                   </div>
                   <div className="min-w-0">
-                    <p className="text-muted uppercase tracking-wide">Komisi</p>
+                    <p className="text-muted uppercase tracking-wide">{t('shift.commission')}</p>
                     <p className="text-green-400 font-semibold truncate">{formatRupiah(b.commission)}</p>
                   </div>
                 </div>
@@ -649,14 +653,14 @@ function ShiftClosingPageInner() {
 
       {/* Notes */}
       <Card className="p-4 sm:p-5">
-        <label htmlFor="close-notes" className="block text-xs font-medium text-muted mb-1.5">Catatan Penutupan (opsional)</label>
+        <label htmlFor="close-notes" className="block text-xs font-medium text-muted mb-1.5">{t('shift.closingNotesOptional')}</label>
         <textarea
           id="close-notes"
           value={closeNotes}
           onChange={e => setCloseNotes(e.target.value)}
           rows={2}
           maxLength={500}
-          placeholder="Misal: insiden kas, pelanggan komplain, voucher khusus, dll."
+          placeholder={t('shift.closeNotesPlaceholder')}
           className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60 transition-colors resize-none"
         />
       </Card>
@@ -665,34 +669,34 @@ function ShiftClosingPageInner() {
       <div className="sticky bottom-2 z-20 print:hidden">
         <Card className="p-3 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 sm:justify-end shadow-lg backdrop-blur">
           <Button variant="outline" icon={Download} onClick={handleExport} disabled={!summaryReady}>
-            Ekspor CSV
+            {t('shift.exportCsvBtn')}
           </Button>
           <Button variant="outline" icon={Printer} onClick={handlePrint}>
-            Cetak
+            {t('shift.print')}
           </Button>
           <Button
             icon={LogOut}
             onClick={() => setShowConfirm(true)}
             disabled={!summaryReady}
-            title={!summaryReady ? 'Menunggu ringkasan shift termuat' : undefined}
+            title={!summaryReady ? t('shift.waitingSummary') : undefined}
             className="bg-red-600 hover:bg-red-500 text-white border-0"
           >
-            Tutup Shift
+            {t('shift.closeShift')}
           </Button>
         </Card>
       </div>
 
       {/* Confirm */}
-      <Modal isOpen={showConfirm} onClose={() => setShowConfirm(false)} title="Tutup Shift" size="md">
+      <Modal isOpen={showConfirm} onClose={() => setShowConfirm(false)} title={t('shift.closeShift')} size="md">
         <div className="space-y-4">
           <p className="text-muted text-sm">
-            Shift akan ditutup. Setelah ditutup, transaksi baru tidak dapat ditambahkan ke shift ini.
+            {t('shift.confirmCloseDescShort')}
           </p>
           <div className="bg-dark-card rounded-xl border border-dark-border p-4 text-center">
             <p className="text-2xl sm:text-3xl font-bold text-brand truncate" title={formatRupiah(totalRevenue)}>
               {formatRupiah(totalRevenue)}
             </p>
-            <p className="text-muted text-sm mt-1">{totalTransactions} transaksi</p>
+            <p className="text-muted text-sm mt-1">{t('shift.transactionCount', { count: totalTransactions })}</p>
           </div>
           {variance !== null && (
             <div className={`rounded-xl border p-3 text-sm ${
@@ -702,12 +706,12 @@ function ShiftClosingPageInner() {
                   ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
                   : 'bg-red-500/10 border-red-500/30 text-red-400'
             }`}>
-              Selisih kas: <span className="font-bold">{formatRupiah(variance)}</span>
+              {t('shift.cashVariance')}: <span className="font-bold">{formatRupiah(variance)}</span>
             </div>
           )}
           <div className="flex gap-2 sm:gap-3">
             <Button variant="outline" fullWidth onClick={() => setShowConfirm(false)}>
-              Batal
+              {t('common.cancel')}
             </Button>
             <Button
               fullWidth
@@ -715,7 +719,7 @@ function ShiftClosingPageInner() {
               disabled={closeShift.isPending}
               className="bg-red-600 hover:bg-red-500 text-white border-0"
             >
-              {closeShift.isPending ? 'Menutup…' : 'Ya, Tutup Shift'}
+              {closeShift.isPending ? t('shift.closing') : t('shift.confirmCloseButton')}
             </Button>
           </div>
         </div>
@@ -728,7 +732,7 @@ function ShiftClosingPageInner() {
       <div className="hidden print:block">
         <hr className="my-4 border-dark-border" />
         <p className="text-xs text-muted">
-          Dicetak {formatDateTimeInTz(new Date())}
+          {t('shift.printedAt', { time: formatDateTimeInTz(new Date()) })}
         </p>
       </div>
     </div>
@@ -737,6 +741,7 @@ function ShiftClosingPageInner() {
 
 // ── Closed success screen ──────────────────────────────────────────────────
 function ClosedSuccess({ shift, onOpenAgain, onBackToPos, onShowHistory }) {
+  const { t } = useTranslation()
   const total = shift?.totalRevenue || 0
   const variance = shift?.cashDifference
 
@@ -750,13 +755,14 @@ function ClosedSuccess({ shift, onOpenAgain, onBackToPos, onShowHistory }) {
         <CheckCircle className="w-10 h-10 text-green-400" />
       </div>
       <ShiftStatusBadge active={false} className="mb-3" />
-      <h2 className="font-display text-2xl font-bold text-off-white mb-2">Shift Ditutup</h2>
+      <h2 className="font-display text-2xl font-bold text-off-white mb-2">{t('shift.shiftClosedHeading')}</h2>
       <p className="text-muted mb-1 text-sm">
-        Ditutup {shift?.closedAt ? formatTimeInTz(shift.closedAt) : '—'}
-        {shift?.kasirName ? ` oleh ${shift.kasirName}` : ''}
+        {shift?.kasirName
+          ? t('shift.closedByAt', { time: shift?.closedAt ? formatTimeInTz(shift.closedAt) : '—', name: shift.kasirName })
+          : t('shift.closedAt', { time: shift?.closedAt ? formatTimeInTz(shift.closedAt) : '—' })}
       </p>
       <p className="text-muted mb-6 text-sm">
-        Total pendapatan shift: <span className="text-brand font-semibold">{formatRupiah(total)}</span>
+        {t('shift.totalShiftRevenue')} <span className="text-brand font-semibold">{formatRupiah(total)}</span>
       </p>
 
       {variance != null && (
@@ -765,14 +771,14 @@ function ClosedSuccess({ shift, onOpenAgain, onBackToPos, onShowHistory }) {
             : variance > 0 ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
             : 'bg-red-500/10 text-red-400 border border-red-500/30'
         }`}>
-          Selisih kas: {formatRupiah(variance)} {variance === 0 ? '✓' : variance > 0 ? '(lebih)' : '(kurang)'}
+          {t('shift.cashVariance')}: {formatRupiah(variance)} {variance === 0 ? '✓' : variance > 0 ? `(${t('shift.over')})` : `(${t('shift.under')})`}
         </div>
       )}
 
       <div className="flex flex-wrap gap-2 justify-center">
-        <Button onClick={onOpenAgain} icon={Plus}>Buka Shift Baru</Button>
-        <Button variant="outline" onClick={onBackToPos}>Kembali ke POS</Button>
-        <Button variant="outline" icon={History} onClick={onShowHistory}>Riwayat</Button>
+        <Button onClick={onOpenAgain} icon={Plus}>{t('shift.openNewShift')}</Button>
+        <Button variant="outline" onClick={onBackToPos}>{t('shift.backToPos')}</Button>
+        <Button variant="outline" icon={History} onClick={onShowHistory}>{t('shift.history')}</Button>
       </div>
     </motion.div>
   )
@@ -780,6 +786,7 @@ function ClosedSuccess({ shift, onOpenAgain, onBackToPos, onShowHistory }) {
 
 // ── Shift history modal ────────────────────────────────────────────────────
 function ShiftHistoryModal({ isOpen, onClose }) {
+  const { t } = useTranslation()
   const { user } = useAuthStore()
   const [page, setPage] = useState(1)
   const [dateFrom, setDateFrom] = useState('')
@@ -805,11 +812,11 @@ function ShiftHistoryModal({ isOpen, onClose }) {
   const hasFilter = !!dateFrom || !!dateTo
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Riwayat Shift" size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('shift.historyTitle')} size="lg">
       {/* Filter tanggal */}
       <div className="flex flex-wrap items-end gap-2 mb-3">
         <div>
-          <label htmlFor="hist-from" className="block text-[10px] text-muted uppercase tracking-wide mb-1">Dari</label>
+          <label htmlFor="hist-from" className="block text-[10px] text-muted uppercase tracking-wide mb-1">{t('common.from')}</label>
           <input
             id="hist-from" type="date" value={dateFrom}
             max={dateTo || undefined}
@@ -818,7 +825,7 @@ function ShiftHistoryModal({ isOpen, onClose }) {
           />
         </div>
         <div>
-          <label htmlFor="hist-to" className="block text-[10px] text-muted uppercase tracking-wide mb-1">Sampai</label>
+          <label htmlFor="hist-to" className="block text-[10px] text-muted uppercase tracking-wide mb-1">{t('common.to')}</label>
           <input
             id="hist-to" type="date" value={dateTo}
             min={dateFrom || undefined}
@@ -831,7 +838,7 @@ function ShiftHistoryModal({ isOpen, onClose }) {
             onClick={() => { setDateFrom(''); setDateTo('') }}
             className="px-2.5 py-1.5 rounded-lg text-xs text-muted hover:text-off-white hover:bg-dark-card transition-colors"
           >
-            Reset
+            {t('shift.reset')}
           </button>
         )}
       </div>
@@ -845,8 +852,8 @@ function ShiftHistoryModal({ isOpen, onClose }) {
       {!isLoading && isError && (
         <div className="text-center py-8">
           <AlertTriangle className="w-10 h-10 text-red-400/70 mx-auto mb-2" />
-          <p className="text-muted text-sm mb-3">Gagal memuat riwayat shift</p>
-          <Button variant="outline" icon={RefreshCw} onClick={() => refetch()}>Coba Lagi</Button>
+          <p className="text-muted text-sm mb-3">{t('shift.historyLoadError')}</p>
+          <Button variant="outline" icon={RefreshCw} onClick={() => refetch()}>{t('shift.retry')}</Button>
         </div>
       )}
 
@@ -854,7 +861,7 @@ function ShiftHistoryModal({ isOpen, onClose }) {
         <div className="text-center py-8">
           <Calendar className="w-10 h-10 text-muted/50 mx-auto mb-2" />
           <p className="text-muted text-sm">
-            {hasFilter ? 'Tidak ada shift pada rentang tanggal ini' : 'Belum ada riwayat shift'}
+            {hasFilter ? t('shift.noShiftInRange') : t('shift.noShiftHistory')}
           </p>
         </div>
       )}
@@ -867,20 +874,20 @@ function ShiftHistoryModal({ isOpen, onClose }) {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge variant={s.status === 'open' ? 'warning' : 'success'} dot>
-                      {s.status === 'open' ? 'Aktif' : 'Ditutup'}
+                      {s.status === 'open' ? t('shift.statusOpen') : t('shift.statusClosed')}
                     </Badge>
                     <span className="text-xs text-muted">
                       {formatDateInTz(s.openedAt)}
                     </span>
                   </div>
                   <p className="text-sm font-medium text-off-white mt-1 truncate">
-                    {s.kasirName || 'Kasir'}
+                    {s.kasirName || t('shift.cashierFallback')}
                   </p>
                   <p className="text-xs text-muted">
-                    {formatTimeInTz(s.openedAt)} – {s.closedAt ? formatTimeInTz(s.closedAt) : 'aktif'}
-                    {' '}· {s.totalTransactions ?? s._count?.transactions ?? 0} tx
+                    {formatTimeInTz(s.openedAt)} – {s.closedAt ? formatTimeInTz(s.closedAt) : t('shift.active')}
+                    {' '}· {t('shift.txCount', { count: s.totalTransactions ?? s._count?.transactions ?? 0 })}
                     {s.cashDifference != null && s.cashDifference !== 0 && (
-                      <> · selisih <span className={s.cashDifference > 0 ? 'text-blue-400' : 'text-red-400'}>{formatRupiah(s.cashDifference)}</span></>
+                      <> · {t('shift.diffLower')} <span className={s.cashDifference > 0 ? 'text-blue-400' : 'text-red-400'}>{formatRupiah(s.cashDifference)}</span></>
                     )}
                   </p>
                 </div>
@@ -894,13 +901,13 @@ function ShiftHistoryModal({ isOpen, onClose }) {
           {meta?.totalPages > 1 && (
             <div className="flex items-center justify-between pt-3 mt-3 border-t border-dark-border">
               <p className="text-xs text-muted">
-                Halaman {meta.page} dari {meta.totalPages} · {meta.total} total
+                {t('shift.pageOf', { page: meta.page, total: meta.totalPages })} · {t('shift.totalCount', { count: meta.total })}
               </p>
               <div className="flex gap-2">
                 <button
                   disabled={page <= 1}
                   onClick={() => setPage(p => Math.max(1, p - 1))}
-                  aria-label="Halaman sebelumnya"
+                  aria-label={t('shift.prevPage')}
                   className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-card border border-dark-border text-sm text-off-white disabled:opacity-40"
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -908,7 +915,7 @@ function ShiftHistoryModal({ isOpen, onClose }) {
                 <button
                   disabled={page >= meta.totalPages}
                   onClick={() => setPage(p => p + 1)}
-                  aria-label="Halaman berikutnya"
+                  aria-label={t('shift.nextPage')}
                   className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-dark-card border border-dark-border text-sm text-off-white disabled:opacity-40"
                 >
                   <ChevronRight className="w-4 h-4" />

@@ -1,0 +1,1 @@
+import{ci as s,g as a}from"./index-D7a1bEzN.js";const o="https://sembapos.com/api",r=s.create({baseURL:o,timeout:15e3});r.interceptors.request.use(e=>{const t=a();return t&&(e.headers["X-Tenant-Slug"]=t),e});export{r as p};

@@ -43,7 +43,8 @@ function genIdempotencyKey() {
 }
 
 export default function TABillingPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language === 'en' ? 'en-US' : 'id-ID'
   const ALL_FEATURE_FLAGS = useFeatureCatalog()
   const { user } = useAuthStore()
   const toast = useToast()
@@ -123,7 +124,7 @@ export default function TABillingPage() {
       window.open(result.paymentUrl, '_blank', 'noopener,noreferrer')
       return result
     } catch (err) {
-      setPayError(err?.response?.data?.error || 'Gagal membuat link pembayaran')
+      setPayError(err?.response?.data?.error || t('tenantAdmin.billing.createPaymentLinkFailed'))
       throw err
     }
   }
@@ -139,7 +140,7 @@ export default function TABillingPage() {
       })
       setCheckoutForm(f => ({ ...f, promoResult: data }))
     } catch (err) {
-      setCheckoutForm(f => ({ ...f, promoResult: { error: err?.response?.data?.error || 'Promo tidak valid' } }))
+      setCheckoutForm(f => ({ ...f, promoResult: { error: err?.response?.data?.error || t('tenantAdmin.billing.promoInvalid') } }))
     }
   }
 
@@ -167,33 +168,33 @@ export default function TABillingPage() {
   async function handleCancelOrder(merchantOrderId) {
     try {
       await cancelOrder.mutateAsync(merchantOrderId)
-      toast.success('Order pembayaran dibatalkan')
+      toast.success(t('tenantAdmin.billing.orderCancelled'))
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal membatalkan order')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.billing.orderCancelFailed'))
     }
   }
   async function handleResendOrder(merchantOrderId) {
     try {
       await resendOrder.mutateAsync(merchantOrderId)
-      toast.success('Link pembayaran dikirim ulang via WhatsApp')
+      toast.success(t('tenantAdmin.billing.paymentLinkResent'))
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal mengirim ulang')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.billing.resendFailed'))
     }
   }
   async function handleToggleAutoRenew() {
     try {
       await toggleAutoRenew.mutateAsync({ subscriptionId: sub.id })
-      toast.success(`Auto-renew ${!sub.autoRenew ? 'diaktifkan' : 'dinonaktifkan'}`)
+      toast.success(sub.autoRenew ? t('tenantAdmin.billing.autoRenewDisabled') : t('tenantAdmin.billing.autoRenewEnabled'))
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal')
+      toast.error(err?.response?.data?.error || t('common.saveFailed'))
     }
   }
   async function handleResume() {
     try {
       await resumeSub.mutateAsync({ subscriptionId: sub.id })
-      toast.success('Langganan kembali aktif')
+      toast.success(t('tenantAdmin.billing.subscriptionResumed'))
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal resume')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.billing.resumeFailed'))
     }
   }
 
@@ -202,7 +203,7 @@ export default function TABillingPage() {
     overdue: t('tenantAdmin.billing.statusOverdue'),
     trial: t('tenantAdmin.billing.statusTrial'),
     expired: t('tenantAdmin.billing.statusExpired'),
-    paused: 'Dijeda',
+    paused: t('tenantAdmin.billing.statusPaused'),
   }
 
   const packageList = pkgData?.list || []
@@ -249,10 +250,9 @@ export default function TABillingPage() {
           className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl">
           <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-semibold text-red-300">Langganan berakhir — akses dikunci</p>
+            <p className="text-sm font-semibold text-red-300">{t('tenantAdmin.billing.lockedTitle')}</p>
             <p className="text-xs text-muted mt-0.5">
-              Menu lain tidak bisa dibuka sampai langganan diperpanjang. Pilih paket di bawah
-              dan selesaikan pembayaran untuk mengaktifkan kembali toko Anda.
+              {t('tenantAdmin.billing.lockedDesc')}
             </p>
           </div>
         </motion.div>
@@ -264,9 +264,9 @@ export default function TABillingPage() {
           className="flex items-start gap-3 p-4 bg-green-500/10 border border-green-500/30 rounded-2xl">
           <CheckCircle size={18} className="text-green-400 mt-0.5 flex-shrink-0" />
           <div className="flex-1">
-            <p className="text-sm font-semibold text-green-300">Pembayaran sedang diproses</p>
+            <p className="text-sm font-semibold text-green-300">{t('tenantAdmin.billing.paymentProcessingTitle')}</p>
             <p className="text-xs text-muted mt-0.5">
-              Halaman ini akan otomatis ter-update dalam beberapa detik. Jika belum, refresh halaman.
+              {t('tenantAdmin.billing.paymentProcessingDesc')}
             </p>
           </div>
           <button onClick={() => setPaymentSuccess(null)} className="text-muted hover:text-off-white">
@@ -284,7 +284,7 @@ export default function TABillingPage() {
             <p className="text-sm font-semibold text-red-300">{t('tenantAdmin.billing.paymentOverdueTitle')}</p>
             <p className="text-xs text-muted mt-0.5">{t('tenantAdmin.billing.paymentOverdueDesc')}</p>
             <p className="text-xs text-red-300/80 mt-2">
-              Anda memiliki masa tenggang. Setelah itu akun akan dinonaktifkan dan data akan terkunci.
+              {t('tenantAdmin.billing.gracePeriodNote')}
             </p>
           </div>
         </motion.div>
@@ -295,14 +295,14 @@ export default function TABillingPage() {
           className="flex items-start gap-3 p-4 bg-slate-500/10 border border-slate-500/30 rounded-2xl">
           <Pause size={16} className="text-slate-300 mt-0.5 flex-shrink-0" />
           <div className="flex-1">
-            <p className="text-sm font-semibold text-slate-200">Langganan dijeda</p>
+            <p className="text-sm font-semibold text-slate-200">{t('tenantAdmin.billing.subscriptionPausedTitle')}</p>
             <p className="text-xs text-muted mt-0.5">
-              Otomatis aktif kembali pada {sub.pauseUntil ? format(new Date(sub.pauseUntil), 'dd MMM yyyy') : '—'}.
-              {sub.pauseReason && <> Alasan: <span className="text-off-white">{sub.pauseReason}</span></>}
+              {t('tenantAdmin.billing.autoResumeOn', { date: sub.pauseUntil ? format(new Date(sub.pauseUntil), 'dd MMM yyyy') : '—' })}
+              {sub.pauseReason && <> {t('tenantAdmin.billing.reasonLabel')} <span className="text-off-white">{sub.pauseReason}</span></>}
             </p>
           </div>
           <Button size="sm" variant="outline" onClick={handleResume} loading={resumeSub.isPending} icon={Play}>
-            Aktifkan Sekarang
+            {t('tenantAdmin.billing.activateNow')}
           </Button>
         </motion.div>
       )}
@@ -323,20 +323,20 @@ export default function TABillingPage() {
           className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-2xl space-y-2">
           <div className="flex items-center gap-2 mb-1">
             <Loader2 size={14} className="text-blue-400 animate-spin" />
-            <p className="text-sm font-semibold text-blue-300">Tagihan Menunggu Pembayaran</p>
+            <p className="text-sm font-semibold text-blue-300">{t('tenantAdmin.billing.pendingBillsTitle')}</p>
           </div>
           {pendingOrders.map(order => (
             <div key={order.id} className="flex flex-wrap items-center gap-2 justify-between bg-dark-card rounded-xl px-3 py-2 mt-1">
               <div className="min-w-0">
                 <p className="text-xs text-off-white font-medium">
-                  {order.type === 'subscription' && (order.billingCycle === 'annual' ? 'Perpanjang Tahunan' : 'Perpanjang Langganan')}
-                  {order.type === 'upgrade' && `Upgrade ke ${order.targetPackage}`}
-                  {order.type === 'branch_addon' && 'Tambah Cabang'}
+                  {order.type === 'subscription' && (order.billingCycle === 'annual' ? t('tenantAdmin.billing.renewAnnual') : t('tenantAdmin.billing.renewSubscription'))}
+                  {order.type === 'upgrade' && t('tenantAdmin.billing.upgradeTo', { name: order.targetPackage })}
+                  {order.type === 'branch_addon' && t('tenantAdmin.billing.addBranch')}
                 </p>
                 <p className="text-xs text-muted">
                   {formatRupiah(order.amount)}
-                  {order.discountAmount > 0 && <> · diskon {formatRupiah(order.discountAmount)}</>}
-                  {' · '}{new Date(order.createdAt).toLocaleString('id-ID')}
+                  {order.discountAmount > 0 && <> · {t('tenantAdmin.billing.discountInline', { amount: formatRupiah(order.discountAmount) })}</>}
+                  {' · '}{new Date(order.createdAt).toLocaleString(locale)}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
@@ -347,23 +347,23 @@ export default function TABillingPage() {
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-blue-500/20 border border-blue-500/30 text-blue-300 text-xs font-semibold hover:bg-blue-500/30 transition-all"
                   >
-                    <ExternalLink size={11} /> Bayar
+                    <ExternalLink size={11} /> {t('tenantAdmin.billing.pay')}
                   </a>
                 )}
                 <button
                   onClick={() => handleResendOrder(order.merchantOrderId)}
                   disabled={resendOrder.isPending}
                   className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-dark-border text-xs text-muted hover:text-off-white hover:border-brand/30 transition-colors disabled:opacity-40"
-                  title="Kirim ulang link via WhatsApp"
+                  title={t('tenantAdmin.billing.resendLinkTooltip')}
                 >
-                  <Send size={11} /> Resend
+                  <Send size={11} /> {t('tenantAdmin.billing.resend')}
                 </button>
                 <button
                   onClick={() => handleCancelOrder(order.merchantOrderId)}
                   disabled={cancelOrder.isPending}
                   className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-red-500/30 text-xs text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40"
                 >
-                  <X size={11} /> Batal
+                  <X size={11} /> {t('common.cancel')}
                 </button>
               </div>
             </div>
@@ -383,7 +383,7 @@ export default function TABillingPage() {
                   {STATUS_LABEL[sub.status] || sub.status}
                 </Badge>
                 <span className="text-xs text-muted">
-                  · Siklus {sub.billingCycle === 'annual' ? 'Tahunan' : 'Bulanan'}
+                  · {t('tenantAdmin.billing.cycleLabel')} {sub.billingCycle === 'annual' ? t('tenantAdmin.billing.annual') : t('tenantAdmin.billing.monthly')}
                 </span>
               </div>
             </div>
@@ -414,13 +414,13 @@ export default function TABillingPage() {
           {paySettings?.active ? (
             <div className="flex flex-wrap gap-2 pt-4 border-t border-dark-border/60">
               <Button size="sm" className="gap-1.5" disabled={isPaused} onClick={openRenew}>
-                <RefreshCw size={13} /> Perpanjang
+                <RefreshCw size={13} /> {t('tenantAdmin.billing.renew')}
               </Button>
               <a
                 href="#available-packages"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-dark-card border border-dark-border text-xs font-semibold text-off-white hover:border-brand/40 transition-colors"
               >
-                <ArrowUpCircle size={13} /> Upgrade paket
+                <ArrowUpCircle size={13} /> {t('tenantAdmin.billing.upgradePackage')}
               </a>
               <button
                 onClick={handleToggleAutoRenew}
@@ -432,27 +432,27 @@ export default function TABillingPage() {
                 }`}
               >
                 <RefreshCw size={11} className={toggleAutoRenew.isPending ? 'animate-spin' : ''} />
-                Auto-renew: {sub.autoRenew ? 'AKTIF' : 'Mati'}
+                {t('tenantAdmin.billing.autoRenewLabel')} {sub.autoRenew ? t('tenantAdmin.billing.onCaps') : t('tenantAdmin.billing.off')}
               </button>
               {!isPaused && (
                 <button
                   onClick={() => setPauseModalOpen(true)}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-dark-card border border-dark-border text-xs text-muted hover:border-amber-500/40 hover:text-amber-300 transition-colors"
                 >
-                  <Pause size={11} /> Jeda Langganan
+                  <Pause size={11} /> {t('tenantAdmin.billing.pauseSubscription')}
                 </button>
               )}
               {payError && <p className="text-xs text-red-400 w-full mt-1">{payError}</p>}
               <p className="text-xs text-muted w-full mt-1 flex items-center gap-1">
                 <ShieldCheck size={12} className="text-green-400" />
-                Pembayaran aman via Duitku — masa langganan otomatis bertambah saat lunas.
+                {t('tenantAdmin.billing.securePaymentNote')}
               </p>
             </div>
           ) : (
             <div className="pt-4 border-t border-dark-border/60">
               <p className="text-xs text-amber-300/80 flex items-start gap-1.5">
                 <AlertTriangle size={12} className="mt-0.5 flex-shrink-0" />
-                Payment gateway belum aktif. Hubungi admin platform untuk perpanjangan / upgrade.
+                {t('tenantAdmin.billing.gatewayInactiveNote')}
               </p>
             </div>
           )}
@@ -481,7 +481,7 @@ export default function TABillingPage() {
                   {formatRupiah(p.price)}<span className="text-xs text-muted font-normal">{t('tenantAdmin.billing.perMonthShort')}</span>
                 </p>
                 <p className="text-[11px] text-green-400 mb-2">
-                  Tahunan: {formatRupiah(annual)} <span className="text-muted">(hemat {p.annualDiscountPercent ?? 17}%)</span>
+                  {t('tenantAdmin.billing.annualLabel')} {formatRupiah(annual)} <span className="text-muted">{t('tenantAdmin.billing.savePercent', { percent: p.annualDiscountPercent ?? 17 })}</span>
                 </p>
                 <div className="space-y-1 text-xs text-muted mt-1 flex-1">
                   <p>{t('tenantAdmin.billing.maxBranchesLine', { value: p.maxBranches })}</p>
@@ -492,14 +492,14 @@ export default function TABillingPage() {
                   {isCurrent && <p className="text-xs text-green-400">{t('tenantAdmin.billing.yourActivePackage')}</p>}
                   {!isCurrent && isUpgrade && paySettings?.active && (
                     <Button size="sm" fullWidth className="gap-1.5" onClick={() => openUpgrade(p)} disabled={isPaused}>
-                      <ArrowUpCircle size={13} /> Upgrade ke {p.name}
+                      <ArrowUpCircle size={13} /> {t('tenantAdmin.billing.upgradeTo', { name: p.name })}
                     </Button>
                   )}
                   {!isCurrent && isUpgrade && !paySettings?.active && (
-                    <p className="text-xs text-amber-300/80">Payment gateway belum aktif — hubungi admin platform.</p>
+                    <p className="text-xs text-amber-300/80">{t('tenantAdmin.billing.gatewayInactiveContactAdmin')}</p>
                   )}
                   {!isCurrent && isDowngrade && (
-                    <p className="text-xs text-muted">Untuk turun paket, hubungi admin platform.</p>
+                    <p className="text-xs text-muted">{t('tenantAdmin.billing.downgradeContactAdmin')}</p>
                   )}
                 </div>
               </Card>
@@ -516,12 +516,12 @@ export default function TABillingPage() {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <Plus size={14} className="text-purple-400" />
-                  <h3 className="font-semibold text-off-white text-sm">Tambah Lisensi Cabang</h3>
+                  <h3 className="font-semibold text-off-white text-sm">{t('tenantAdmin.billing.addBranchLicense')}</h3>
                 </div>
                 <p className="text-xs text-muted">
-                  Beli lisensi cabang tambahan seharga{' '}
+                  {t('tenantAdmin.billing.buyBranchLicensePrefix')}{' '}
                   <span className="text-purple-300 font-semibold">{formatRupiah(pkg.branchAddonPrice)}</span>
-                  {pkg.branchAddonType === 'monthly' ? '/bulan' : ' (sekali bayar)'}
+                  {pkg.branchAddonType === 'monthly' ? t('tenantAdmin.billing.perMonth') : t('tenantAdmin.billing.oneTimePayment')}
                 </p>
               </div>
               <Button
@@ -532,7 +532,7 @@ export default function TABillingPage() {
                 disabled={isPaused}
                 onClick={() => handlePayDuitku('branch_addon')}
               >
-                <ExternalLink size={13} /> Beli via Duitku
+                <ExternalLink size={13} /> {t('tenantAdmin.billing.buyViaDuitku')}
               </Button>
             </div>
             {payError && <p className="text-xs text-red-400 mt-2">{payError}</p>}
@@ -587,7 +587,7 @@ export default function TABillingPage() {
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-400/10 text-purple-400 border border-purple-400/20">{t('tenantAdmin.billing.branchAddon')}</span>
                       )}
                       {inv.billingCycle === 'annual' && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-400/10 text-green-400 border border-green-400/20">Tahunan</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-400/10 text-green-400 border border-green-400/20">{t('tenantAdmin.billing.annual')}</span>
                       )}
                       {inv.promotionCode && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-400/10 text-amber-300 border border-amber-400/20 inline-flex items-center gap-1">
@@ -597,7 +597,7 @@ export default function TABillingPage() {
                     </div>
                     <p className="text-xs text-muted">{formatDate(inv.createdAt || inv.paidAt)}</p>
                     {inv.discountAmount > 0 && (
-                      <p className="text-xs text-green-400">Diskon {formatRupiah(inv.discountAmount)}</p>
+                      <p className="text-xs text-green-400">{t('tenantAdmin.billing.discountLabel', { amount: formatRupiah(inv.discountAmount) })}</p>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
@@ -611,7 +611,7 @@ export default function TABillingPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-1 px-2 py-1 rounded-lg bg-dark-surface border border-dark-border text-xs text-muted hover:text-off-white hover:border-brand/30 transition-all"
-                        title="Cetak / unduh struk"
+                        title={t('tenantAdmin.billing.printReceipt')}
                       >
                         <Printer size={11} />
                       </a>
@@ -622,7 +622,7 @@ export default function TABillingPage() {
                         disabled={createPayment.isPending}
                         className="flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium hover:bg-blue-500/20 transition-all disabled:opacity-40"
                       >
-                        <ExternalLink size={11} /> Bayar
+                        <ExternalLink size={11} /> {t('tenantAdmin.billing.pay')}
                       </button>
                     )}
                   </div>
@@ -669,10 +669,10 @@ export default function TABillingPage() {
         onConfirm={async (pauseUntilISO, reason) => {
           try {
             await pauseSub.mutateAsync({ subscriptionId: sub.id, pauseUntil: pauseUntilISO, reason })
-            toast.success('Langganan dijeda')
+            toast.success(t('tenantAdmin.billing.subscriptionPaused'))
             setPauseModalOpen(false)
           } catch (err) {
-            toast.error(err?.response?.data?.error || 'Gagal jeda')
+            toast.error(err?.response?.data?.error || t('tenantAdmin.billing.pauseFailed'))
           }
         }}
         loading={pauseSub.isPending}
@@ -684,12 +684,13 @@ export default function TABillingPage() {
 // ── Modals ────────────────────────────────────────────────────────────────
 
 function CycleToggle({ value, onChange, monthlyPrice, annualDiscountPct = 17 }) {
+  const { t } = useTranslation()
   const annual = annualPrice(monthlyPrice, annualDiscountPct)
   return (
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
       {[
-        { id: 'monthly', label: 'Bulanan', price: monthlyPrice, hint: 'Per bulan, fleksibel' },
-        { id: 'annual',  label: 'Tahunan', price: annual,        hint: `Hemat ${annualDiscountPct}% — ekuivalen ~${(12 * (1 - annualDiscountPct / 100)).toFixed(0)} bulan` },
+        { id: 'monthly', label: t('tenantAdmin.billing.monthly'), price: monthlyPrice, hint: t('tenantAdmin.billing.monthlyHint') },
+        { id: 'annual',  label: t('tenantAdmin.billing.annual'), price: annual,        hint: t('tenantAdmin.billing.annualHint', { percent: annualDiscountPct, months: (12 * (1 - annualDiscountPct / 100)).toFixed(0) }) },
       ].map(opt => (
         <button
           key={opt.id}
@@ -711,27 +712,28 @@ function CycleToggle({ value, onChange, monthlyPrice, annualDiscountPct = 17 }) 
 }
 
 function PromoInput({ form, setForm, onApply, loading }) {
+  const { t } = useTranslation()
   const result = form.promoResult
   const hasError = result?.error
   const hasOk    = result && !result.error
   return (
     <div>
-      <label className="text-xs text-muted block mb-1">Kode promo (opsional)</label>
+      <label className="text-xs text-muted block mb-1">{t('tenantAdmin.billing.promoCodeLabel')}</label>
       <div className="flex gap-2">
         <Input
           icon={Tag}
-          placeholder="Misal: HEMAT2026"
+          placeholder={t('tenantAdmin.billing.promoCodePlaceholder')}
           value={form.promoCode}
           onChange={e => setForm(f => ({ ...f, promoCode: e.target.value, promoResult: null }))}
         />
         <Button size="sm" variant="secondary" onClick={onApply} loading={loading} disabled={!form.promoCode.trim()}>
-          Pakai
+          {t('tenantAdmin.billing.apply')}
         </Button>
       </div>
       {hasError && <p className="text-xs text-red-400 mt-1">{result.error}</p>}
       {hasOk && (
         <p className="text-xs text-green-400 mt-1 flex items-center gap-1">
-          <Sparkles size={11} /> {result.code} terpasang — hemat {formatRupiah(result.discount)}
+          <Sparkles size={11} /> {t('tenantAdmin.billing.promoApplied', { code: result.code, amount: formatRupiah(result.discount) })}
         </p>
       )}
     </div>
@@ -739,20 +741,21 @@ function PromoInput({ form, setForm, onApply, loading }) {
 }
 
 function CheckoutSummary({ baseAmount, discount, finalAmount }) {
+  const { t } = useTranslation()
   return (
     <div className="p-3 bg-dark-card rounded-xl border border-dark-border space-y-1.5 text-sm">
       <div className="flex justify-between text-muted">
-        <span>Subtotal</span>
+        <span>{t('tenantAdmin.billing.subtotal')}</span>
         <span>{formatRupiah(baseAmount)}</span>
       </div>
       {discount > 0 && (
         <div className="flex justify-between text-green-400">
-          <span>Diskon</span>
+          <span>{t('tenantAdmin.billing.discount')}</span>
           <span>− {formatRupiah(discount)}</span>
         </div>
       )}
       <div className="flex justify-between text-off-white font-bold pt-1.5 border-t border-dark-border/60">
-        <span>Total bayar</span>
+        <span>{t('tenantAdmin.billing.totalToPay')}</span>
         <span>{formatRupiah(finalAmount)}</span>
       </div>
     </div>
@@ -760,6 +763,7 @@ function CheckoutSummary({ baseAmount, discount, finalAmount }) {
 }
 
 function RenewModal({ isOpen, onClose, sub, pkg, form, setForm, onApplyPromo, promoLoading, onConfirm, loading, payError }) {
+  const { t } = useTranslation()
   if (!sub || !pkg) return null
   const monthly = pkg.price
   const annualDiscPct = pkg.annualDiscountPercent ?? 17
@@ -768,7 +772,7 @@ function RenewModal({ isOpen, onClose, sub, pkg, form, setForm, onApplyPromo, pr
   const finalAmount = baseAmount - discount
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Perpanjang Langganan">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('tenantAdmin.billing.renewSubscription')}>
       <div className="space-y-4">
         <CycleToggle
           value={form.cycle}
@@ -783,15 +787,15 @@ function RenewModal({ isOpen, onClose, sub, pkg, form, setForm, onApplyPromo, pr
 
         <p className="text-xs text-muted flex items-start gap-1.5">
           <Info size={11} className="mt-0.5 flex-shrink-0" />
-          Masa langganan akan ditambah {form.cycle === 'annual' ? '365 hari' : '30 hari'} dari tanggal akhir saat ini setelah pembayaran lunas.
+          {t('tenantAdmin.billing.renewPeriodNote', { days: form.cycle === 'annual' ? t('tenantAdmin.billing.days365') : t('tenantAdmin.billing.days30') })}
         </p>
 
         {payError && <p className="text-xs text-red-400 p-2 bg-red-500/10 border border-red-500/20 rounded-lg">{payError}</p>}
 
         <div className="flex gap-2">
-          <Button variant="outline" fullWidth onClick={onClose} disabled={loading}>Batal</Button>
+          <Button variant="outline" fullWidth onClick={onClose} disabled={loading}>{t('common.cancel')}</Button>
           <Button fullWidth className="gap-1.5" loading={loading} onClick={onConfirm}>
-            <ExternalLink size={13} /> Bayar via Duitku
+            <ExternalLink size={13} /> {t('tenantAdmin.billing.payViaDuitku')}
           </Button>
         </div>
       </div>
@@ -800,6 +804,7 @@ function RenewModal({ isOpen, onClose, sub, pkg, form, setForm, onApplyPromo, pr
 }
 
 function UpgradeModal({ isOpen, onClose, sub, target, form, setForm, onApplyPromo, promoLoading, onConfirm, loading, payError }) {
+  const { t } = useTranslation()
   if (!sub || !target) return null
   const monthly = target.price
   const annualDiscPct = target.annualDiscountPercent ?? 17
@@ -808,16 +813,16 @@ function UpgradeModal({ isOpen, onClose, sub, target, form, setForm, onApplyProm
   const finalAmount = baseAmount - discount
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Upgrade ke ${target.name}`}>
+    <Modal isOpen={isOpen} onClose={onClose} title={t('tenantAdmin.billing.upgradeTo', { name: target.name })}>
       <div className="space-y-4">
         <div className="p-3 bg-brand/10 border border-brand/20 rounded-xl space-y-1 text-sm">
           <div className="flex justify-between text-muted">
-            <span>Sekarang</span>
-            <span className="text-off-white">{sub.package} · {formatRupiah(sub.price)}/bulan</span>
+            <span>{t('tenantAdmin.billing.current')}</span>
+            <span className="text-off-white">{sub.package} · {formatRupiah(sub.price)}{t('tenantAdmin.billing.perMonth')}</span>
           </div>
           <div className="flex justify-between text-muted">
-            <span>Tujuan</span>
-            <span className="text-brand font-semibold">{target.name} · {formatRupiah(target.price)}/bulan</span>
+            <span>{t('tenantAdmin.billing.target')}</span>
+            <span className="text-brand font-semibold">{target.name} · {formatRupiah(target.price)}{t('tenantAdmin.billing.perMonth')}</span>
           </div>
         </div>
 
@@ -833,17 +838,17 @@ function UpgradeModal({ isOpen, onClose, sub, target, form, setForm, onApplyProm
         <CheckoutSummary baseAmount={baseAmount} discount={discount} finalAmount={finalAmount} />
 
         <ul className="text-xs text-muted space-y-1 list-disc list-inside">
-          <li>Paket otomatis berubah ke <span className="text-off-white">{target.name}</span> setelah lunas.</li>
-          <li>Maks. cabang naik ke <span className="text-off-white">{target.maxBranches}</span>, maks. staf <span className="text-off-white">{target.maxStaff}</span>.</li>
-          <li>Masa langganan +{form.cycle === 'annual' ? '365' : '30'} hari dari tanggal akhir saat ini.</li>
+          <li>{t('tenantAdmin.billing.upgradeNotePackagePrefix')} <span className="text-off-white">{target.name}</span> {t('tenantAdmin.billing.upgradeNotePackageSuffix')}</li>
+          <li>{t('tenantAdmin.billing.upgradeNoteLimitsPrefix')} <span className="text-off-white">{target.maxBranches}</span>{t('tenantAdmin.billing.upgradeNoteLimitsMid')} <span className="text-off-white">{target.maxStaff}</span>.</li>
+          <li>{t('tenantAdmin.billing.upgradeNotePeriod', { days: form.cycle === 'annual' ? '365' : '30' })}</li>
         </ul>
 
         {payError && <p className="text-xs text-red-400 p-2 bg-red-500/10 border border-red-500/20 rounded-lg">{payError}</p>}
 
         <div className="flex gap-2">
-          <Button variant="outline" fullWidth onClick={onClose} disabled={loading}>Batal</Button>
+          <Button variant="outline" fullWidth onClick={onClose} disabled={loading}>{t('common.cancel')}</Button>
           <Button fullWidth className="gap-1.5" loading={loading} onClick={onConfirm}>
-            <ExternalLink size={13} /> Lanjut bayar via Duitku
+            <ExternalLink size={13} /> {t('tenantAdmin.billing.continuePayViaDuitku')}
           </Button>
         </div>
       </div>
@@ -852,6 +857,7 @@ function UpgradeModal({ isOpen, onClose, sub, target, form, setForm, onApplyProm
 }
 
 function PauseModal({ isOpen, onClose, sub, onConfirm, loading }) {
+  const { t } = useTranslation()
   const [until, setUntil] = useState('')
   const [reason, setReason] = useState('')
   const minDate = useMemo(() => format(new Date(Date.now() + 86400_000), 'yyyy-MM-dd'), [])
@@ -869,14 +875,14 @@ function PauseModal({ isOpen, onClose, sub, onConfirm, loading }) {
 
   if (!sub) return null
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Jeda Langganan">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('tenantAdmin.billing.pauseSubscription')}>
       <div className="space-y-4">
         <p className="text-sm text-muted">
-          Saat dijeda: auto-renew dimatikan dan masa langganan akan otomatis diperpanjang sebesar durasi pause saat aktif kembali (hari yang sudah Anda bayar tidak hilang).
+          {t('tenantAdmin.billing.pauseExplanation')}
         </p>
 
         <Input
-          label="Jeda hingga tanggal"
+          label={t('tenantAdmin.billing.pauseUntilLabel')}
           type="date"
           value={until}
           min={minDate}
@@ -885,21 +891,21 @@ function PauseModal({ isOpen, onClose, sub, onConfirm, loading }) {
         />
 
         <Input
-          label="Alasan (opsional)"
-          placeholder="Misal: tutup sementara untuk renovasi"
+          label={t('tenantAdmin.billing.pauseReasonLabel')}
+          placeholder={t('tenantAdmin.billing.pauseReasonPlaceholder')}
           value={reason}
           onChange={e => setReason(e.target.value)}
         />
 
         <p className="text-xs text-amber-300/80 flex items-start gap-1.5">
           <AlertTriangle size={11} className="mt-0.5 flex-shrink-0" />
-          Maksimal jeda 30 hari. Anda bisa aktifkan kembali kapan saja sebelum tanggal tersebut.
+          {t('tenantAdmin.billing.pauseMaxNote')}
         </p>
 
         <div className="flex gap-2">
-          <Button variant="outline" fullWidth onClick={onClose} disabled={loading}>Batal</Button>
+          <Button variant="outline" fullWidth onClick={onClose} disabled={loading}>{t('common.cancel')}</Button>
           <Button fullWidth className="gap-1.5" loading={loading} onClick={submit} disabled={!until}>
-            <Pause size={13} /> Jeda Sekarang
+            <Pause size={13} /> {t('tenantAdmin.billing.pauseNow')}
           </Button>
         </div>
       </div>

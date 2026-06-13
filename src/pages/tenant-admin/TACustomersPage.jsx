@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useSearchParams, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Plus, Star, Edit2, Trash2, MapPin, Users, X, Phone, Mail,
@@ -26,7 +27,7 @@ import Avatar from '../../components/ui/Avatar.jsx'
 import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx'
 import { formatRupiah, formatRupiahShort, formatDate, formatDateTime } from '../../utils/format.js'
 import { parseISO, formatDistanceToNow } from 'date-fns'
-import { id as idLocale } from 'date-fns/locale'
+import { id as idLocale, enUS as enLocale } from 'date-fns/locale'
 
 const PAGE_SIZE = 20
 
@@ -43,12 +44,12 @@ const EMPTY_FORM = {
 }
 
 const SORT_OPTIONS = [
-  { value: 'recent',     label: 'Terbaru',         sortBy: 'createdAt',     sortDir: 'desc' },
-  { value: 'oldest',     label: 'Terlama',         sortBy: 'createdAt',     sortDir: 'asc'  },
-  { value: 'name-asc',   label: 'Nama A→Z',        sortBy: 'name',          sortDir: 'asc'  },
-  { value: 'name-desc',  label: 'Nama Z→A',        sortBy: 'name',          sortDir: 'desc' },
-  { value: 'visits',     label: 'Kunjungan terbanyak', sortBy: 'visitCount',sortDir: 'desc' },
-  { value: 'points',     label: 'Poin terbanyak',  sortBy: 'loyaltyPoints', sortDir: 'desc' },
+  { value: 'recent',     labelKey: 'sortRecent',   sortBy: 'createdAt',     sortDir: 'desc' },
+  { value: 'oldest',     labelKey: 'sortOldest',   sortBy: 'createdAt',     sortDir: 'asc'  },
+  { value: 'name-asc',   labelKey: 'sortNameAsc',  sortBy: 'name',          sortDir: 'asc'  },
+  { value: 'name-desc',  labelKey: 'sortNameDesc', sortBy: 'name',          sortDir: 'desc' },
+  { value: 'visits',     labelKey: 'sortVisitsMost', sortBy: 'visitCount',  sortDir: 'desc' },
+  { value: 'points',     labelKey: 'sortPointsMost', sortBy: 'loyaltyPoints', sortDir: 'desc' },
 ]
 
 // Threshold default — di-override dari stats.thresholds saat tersedia.
@@ -60,14 +61,20 @@ const DEFAULT_THRESHOLDS = {
 // Segment scheme baru (time-aware RFM 6-tier).
 // `id` cocok dengan classifier output di backend (vip/loyal/new/atRisk/lost/never).
 const SEGMENTS = [
-  { id: '',       label: 'Semua',    badge: 'muted',   desc: '' },
-  { id: 'vip',    label: 'VIP',      badge: 'gold',    desc: '',  icon: Crown },
-  { id: 'loyal',  label: 'Loyal',    badge: 'info',    desc: '',  icon: BadgeCheck },
-  { id: 'new',    label: 'Baru',     badge: 'success', desc: '',  icon: Sparkles },
-  { id: 'atRisk', label: 'At-Risk',  badge: 'warning', desc: '',  icon: AlertTriangle },
-  { id: 'lost',   label: 'Lost',     badge: 'danger',  desc: '',  icon: HeartCrack },
-  { id: 'never',  label: 'Belum Tx', badge: 'muted',   desc: '',  icon: Activity },
+  { id: '',       labelKey: 'segAll',    badge: 'muted',   desc: '' },
+  { id: 'vip',    labelKey: 'segVip',    badge: 'gold',    desc: '',  icon: Crown },
+  { id: 'loyal',  labelKey: 'segLoyal',  badge: 'info',    desc: '',  icon: BadgeCheck },
+  { id: 'new',    labelKey: 'segNew',    badge: 'success', desc: '',  icon: Sparkles },
+  { id: 'atRisk', labelKey: 'segAtRisk', badge: 'warning', desc: '',  icon: AlertTriangle },
+  { id: 'lost',   labelKey: 'segLost',   badge: 'danger',  desc: '',  icon: HeartCrack },
+  { id: 'never',  labelKey: 'segNever',  badge: 'muted',   desc: '',  icon: Activity },
 ]
+
+// Resolve a segment id to its translated label.
+const segmentLabel = (t, id) => {
+  const seg = SEGMENTS.find(s => s.id === id)
+  return seg ? t(`tenantAdmin.customers.${seg.labelKey}`) : id
+}
 
 /**
  * Classify customer ke 1 dari 6 segment berdasarkan visitCount + lastVisitAt.
@@ -100,9 +107,10 @@ const downloadCSV = (filename, header, rows) => {
   URL.revokeObjectURL(url)
 }
 
-const lastVisitLabel = (date) => {
+const lastVisitLabel = (date, lang = 'id') => {
   if (!date) return null
-  try { return formatDistanceToNow(parseISO(date), { addSuffix: true, locale: idLocale }) }
+  const locale = lang === 'en' ? enLocale : idLocale
+  try { return formatDistanceToNow(parseISO(date), { addSuffix: true, locale }) }
   catch { return null }
 }
 
@@ -159,8 +167,9 @@ function StatTile({ icon: Icon, label, value, valueShort, accent = 'gold', hint,
 
 // ─── Mobile customer card ───────────────────────────────────────────────────
 function CustomerMobileCard({ customer, onOpen, onEdit, onDelete, selected, onToggleSelect }) {
+  const { t } = useTranslation()
   const segment = getSegment(customer.visitCount, customer.lastVisitAt)
-  const segLabel = SEGMENTS.find(s => s.id === segment)?.label || segment
+  const segLabel = segmentLabel(t, segment)
   const province = customer.address?.provinsi
   const lv = customer.lifetimeValue || 0
   return (
@@ -178,7 +187,7 @@ function CustomerMobileCard({ customer, onOpen, onEdit, onDelete, selected, onTo
             onClick={(e) => e.stopPropagation()}
             onChange={() => onToggleSelect(customer.id)}
             className="mt-1 w-4 h-4 rounded border-dark-border bg-dark-surface text-brand focus:ring-brand/40 shrink-0 cursor-pointer"
-            aria-label={`Pilih ${customer.name}`}
+            aria-label={t('tenantAdmin.customers.selectName', { name: customer.name })}
           />
         )}
         <Avatar name={customer.name} size="md" />
@@ -196,7 +205,7 @@ function CustomerMobileCard({ customer, onOpen, onEdit, onDelete, selected, onTo
                 {formatRupiahShort(lv)}
               </p>
               <p className="text-[10px] text-muted tabular-nums whitespace-nowrap mt-0.5">
-                {customer.lifetimeTxCount || 0} tx
+                {t('tenantAdmin.customers.txCount', { count: customer.lifetimeTxCount || 0 })}
               </p>
             </div>
           </div>
@@ -206,7 +215,7 @@ function CustomerMobileCard({ customer, onOpen, onEdit, onDelete, selected, onTo
               <Star className="w-2.5 h-2.5 fill-brand" /> {customer.loyaltyPoints || 0}
             </span>
             <span className="text-[11px] text-muted tabular-nums">
-              {customer.visitCount || 0}× kunjungan
+              {t('tenantAdmin.customers.visitsShort', { count: customer.visitCount || 0 })}
             </span>
             {province && (
               <span className="inline-flex items-center gap-0.5 text-[10px] text-muted truncate max-w-[100px]">
@@ -217,7 +226,7 @@ function CustomerMobileCard({ customer, onOpen, onEdit, onDelete, selected, onTo
               <button
                 onClick={(e) => { e.stopPropagation(); onEdit(customer) }}
                 className="p-2 rounded-lg bg-dark-card/40 border border-dark-border/60 text-muted hover:text-blue-400 hover:border-blue-500/30 transition-colors"
-                aria-label="Edit"
+                aria-label={t('common.edit')}
               >
                 <Edit2 className="w-3.5 h-3.5" />
               </button>
@@ -225,7 +234,7 @@ function CustomerMobileCard({ customer, onOpen, onEdit, onDelete, selected, onTo
                 <button
                   onClick={(e) => { e.stopPropagation(); onDelete(customer) }}
                   className="p-2 rounded-lg bg-dark-card/40 border border-dark-border/60 text-muted hover:text-red-400 hover:border-red-500/30 transition-colors"
-                  aria-label="Hapus"
+                  aria-label={t('common.delete')}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -240,8 +249,9 @@ function CustomerMobileCard({ customer, onOpen, onEdit, onDelete, selected, onTo
 
 // ─── Desktop table row ──────────────────────────────────────────────────────
 function CustomerTableRow({ customer, onOpen, onEdit, onDelete, selected, onToggleSelect }) {
+  const { t } = useTranslation()
   const segment = getSegment(customer.visitCount, customer.lastVisitAt)
-  const segLabel = SEGMENTS.find(s => s.id === segment)?.label || segment
+  const segLabel = segmentLabel(t, segment)
   const province = customer.address?.provinsi
   const lv = customer.lifetimeValue || 0
   return (
@@ -258,7 +268,7 @@ function CustomerTableRow({ customer, onOpen, onEdit, onDelete, selected, onTogg
           onClick={(e) => e.stopPropagation()}
           onChange={() => onToggleSelect(customer.id)}
           className="w-4 h-4 rounded border-dark-border bg-dark-surface accent-brand focus:ring-brand/40 shrink-0 cursor-pointer"
-          aria-label={`Pilih ${customer.name}`}
+          aria-label={t('tenantAdmin.customers.selectName', { name: customer.name })}
         />
       )}
       <Avatar name={customer.name} size="sm" />
@@ -291,7 +301,7 @@ function CustomerTableRow({ customer, onOpen, onEdit, onDelete, selected, onTogg
           <span className="hidden lg:inline">{formatRupiah(lv)}</span>
         </p>
         <p className="text-[10px] text-muted tabular-nums whitespace-nowrap mt-0.5">
-          {customer.lifetimeTxCount || 0} tx
+          {t('tenantAdmin.customers.txCount', { count: customer.lifetimeTxCount || 0 })}
         </p>
       </div>
       <div className="hidden lg:block w-16 text-center shrink-0 text-sm text-off-white tabular-nums">
@@ -308,7 +318,7 @@ function CustomerTableRow({ customer, onOpen, onEdit, onDelete, selected, onTogg
         <button
           onClick={(e) => { e.stopPropagation(); onEdit(customer) }}
           className="p-1.5 rounded-lg hover:bg-dark-card text-muted hover:text-blue-400 transition-colors"
-          aria-label="Edit"
+          aria-label={t('common.edit')}
         >
           <Edit2 className="w-3.5 h-3.5" />
         </button>
@@ -316,7 +326,7 @@ function CustomerTableRow({ customer, onOpen, onEdit, onDelete, selected, onTogg
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(customer) }}
             className="p-1.5 rounded-lg hover:bg-dark-card text-muted hover:text-red-400 transition-colors"
-            aria-label="Hapus"
+            aria-label={t('common.delete')}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
@@ -329,30 +339,32 @@ function CustomerTableRow({ customer, onOpen, onEdit, onDelete, selected, onTogg
 // Preset alasan untuk manual adjust — admin pilih dropdown atau tulis sendiri.
 const ADJUST_REASON_PRESETS = {
   add: [
-    'Hadiah ulang tahun',
-    'Kompensasi keluhan layanan',
-    'Bonus referral',
-    'Promo kampanye khusus',
-    'Koreksi sistem (poin hilang)',
+    'reasonBirthday',
+    'reasonComplaintComp',
+    'reasonReferralBonus',
+    'reasonCampaignPromo',
+    'reasonCorrectionLost',
   ],
   deduct: [
-    'Tukar reward / hadiah',
-    'Koreksi sistem (poin double)',
-    'Pelanggaran syarat & ketentuan',
-    'Refund transaksi',
-    'Pemindahan ke akun lain',
+    'reasonRedeemReward',
+    'reasonCorrectionDouble',
+    'reasonTermsViolation',
+    'reasonRefund',
+    'reasonTransferAccount',
   ],
 }
 
 const POINT_TYPE_STYLE = {
-  earn:   { bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', text: 'text-emerald-300', label: 'Earn' },
-  adjust: { bg: 'bg-amber-500/10',   border: 'border-amber-500/30',   text: 'text-amber-300',   label: 'Adjust' },
-  redeem: { bg: 'bg-red-500/10',     border: 'border-red-500/30',     text: 'text-red-300',     label: 'Redeem' },
-  expire: { bg: 'bg-dark-card/50',   border: 'border-dark-border',    text: 'text-muted',       label: 'Expire' },
+  earn:   { bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', text: 'text-emerald-300', labelKey: 'ledgerEarn' },
+  adjust: { bg: 'bg-amber-500/10',   border: 'border-amber-500/30',   text: 'text-amber-300',   labelKey: 'ledgerAdjust' },
+  redeem: { bg: 'bg-red-500/10',     border: 'border-red-500/30',     text: 'text-red-300',     labelKey: 'ledgerRedeem' },
+  expire: { bg: 'bg-dark-card/50',   border: 'border-dark-border',    text: 'text-muted',       labelKey: 'ledgerExpire' },
 }
 
 // ─── Adjust Points Modal — wajib alasan ────────────────────────────────────
 function AdjustPointsModal({ open, onClose, customer, presetDelta, onConfirm, loading }) {
+  const { t, i18n } = useTranslation()
+  const numLocale = i18n.language === 'en' ? 'en-US' : 'id-ID'
   const [delta, setDelta] = useState(presetDelta ?? 0)
   const [reasonPreset, setReasonPreset] = useState('')
   const [reasonCustom, setReasonCustom] = useState('')
@@ -371,25 +383,25 @@ function AdjustPointsModal({ open, onClose, customer, presetDelta, onConfirm, lo
   const canApply = delta !== 0 && finalReason && !loading
 
   return (
-    <Modal isOpen={open} onClose={onClose} title="Penyesuaian Poin Manual" size="md">
+    <Modal isOpen={open} onClose={onClose} title={t('tenantAdmin.customers.adjustPointsTitle')} size="md">
       {!customer ? null : (
         <div className="space-y-4">
           <div className="p-3 rounded-xl bg-dark-card border border-dark-border">
-            <p className="text-xs text-muted">Pelanggan</p>
+            <p className="text-xs text-muted">{t('common.customers')}</p>
             <p className="text-sm text-off-white font-medium">{customer.name}</p>
             <p className="text-xs text-muted mt-1">
-              Saldo saat ini: <span className="text-brand font-semibold tabular-nums">{(customer.loyaltyPoints || 0).toLocaleString('id-ID')}</span> poin
+              {t('tenantAdmin.customers.currentBalance')} <span className="text-brand font-semibold tabular-nums">{(customer.loyaltyPoints || 0).toLocaleString(numLocale)}</span> {t('tenantAdmin.customers.pointsUnit')}
             </p>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-muted mb-1.5">Jumlah Poin</label>
+            <label className="block text-xs font-medium text-muted mb-1.5">{t('tenantAdmin.customers.pointAmount')}</label>
             <div className="flex items-center gap-2">
               <input
                 type="number"
                 value={delta}
                 onChange={e => setDelta(Number(e.target.value) || 0)}
-                placeholder="±poin"
+                placeholder={t('tenantAdmin.customers.pointAmountPlaceholder')}
                 className="flex-1 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm text-center outline-none focus:border-brand/60 tabular-nums"
               />
             </div>
@@ -411,39 +423,39 @@ function AdjustPointsModal({ open, onClose, customer, presetDelta, onConfirm, lo
             </div>
             {delta !== 0 && (
               <p className="text-[11px] text-muted mt-1.5">
-                Saldo setelah: <span className="text-brand font-semibold tabular-nums">{Math.max(0, (customer.loyaltyPoints || 0) + delta).toLocaleString('id-ID')}</span> poin
+                {t('tenantAdmin.customers.balanceAfter')} <span className="text-brand font-semibold tabular-nums">{Math.max(0, (customer.loyaltyPoints || 0) + delta).toLocaleString(numLocale)}</span> {t('tenantAdmin.customers.pointsUnit')}
                 {(customer.loyaltyPoints || 0) + delta < 0 && (
-                  <span className="text-amber-400 ml-1.5">(akan ditahan di 0)</span>
+                  <span className="text-amber-400 ml-1.5">{t('tenantAdmin.customers.heldAtZero')}</span>
                 )}
               </p>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-muted mb-1.5">Alasan <span className="text-red-400">*</span></label>
+            <label className="block text-xs font-medium text-muted mb-1.5">{t('tenantAdmin.customers.reason')} <span className="text-red-400">*</span></label>
             <select
               value={reasonPreset}
               onChange={e => { setReasonPreset(e.target.value); setReasonCustom('') }}
               disabled={delta === 0}
               className="w-full bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/60 disabled:opacity-50"
             >
-              <option value="">— Pilih alasan {isAdd ? 'penambahan' : 'pengurangan'} —</option>
-              {presets.map(r => <option key={r} value={r}>{r}</option>)}
+              <option value="">{isAdd ? t('tenantAdmin.customers.selectReasonAdd') : t('tenantAdmin.customers.selectReasonDeduct')}</option>
+              {presets.map(r => <option key={r} value={t(`tenantAdmin.customers.${r}`)}>{t(`tenantAdmin.customers.${r}`)}</option>)}
             </select>
             <input
               type="text"
               value={reasonCustom}
               onChange={e => { setReasonCustom(e.target.value); if (e.target.value) setReasonPreset('') }}
-              placeholder="Atau tulis alasan sendiri…"
+              placeholder={t('tenantAdmin.customers.customReasonPlaceholder')}
               maxLength={200}
               disabled={delta === 0}
               className="w-full mt-2 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/60 placeholder-muted disabled:opacity-50"
             />
-            <p className="text-[10px] text-muted mt-1">Alasan tercatat di riwayat poin & audit log.</p>
+            <p className="text-[10px] text-muted mt-1">{t('tenantAdmin.customers.reasonAuditNote')}</p>
           </div>
 
           <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
-            <Button variant="outline" fullWidth onClick={onClose} disabled={loading}>Batal</Button>
+            <Button variant="outline" fullWidth onClick={onClose} disabled={loading}>{t('common.cancel')}</Button>
             <Button
               fullWidth
               variant={isAdd ? 'primary' : 'danger'}
@@ -451,7 +463,7 @@ function AdjustPointsModal({ open, onClose, customer, presetDelta, onConfirm, lo
               disabled={!canApply}
               loading={loading}
             >
-              {isAdd ? `Tambah ${delta} poin` : `Kurangi ${Math.abs(delta)} poin`}
+              {isAdd ? t('tenantAdmin.customers.addPoints', { count: delta }) : t('tenantAdmin.customers.deductPoints', { count: Math.abs(delta) })}
             </Button>
           </div>
         </div>
@@ -462,6 +474,8 @@ function AdjustPointsModal({ open, onClose, customer, presetDelta, onConfirm, lo
 
 // ─── Customer Detail Drawer ─────────────────────────────────────────────────
 function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
+  const { t, i18n } = useTranslation()
+  const numLocale = i18n.language === 'en' ? 'en-US' : 'id-ID'
   const { data: customer, isLoading, isError, refetch } = useCustomer(customerId)
   const { data: historyData, isLoading: historyLoading, isError: historyError } = usePointHistory(customerId, { limit: 50 })
   const updateLoyalty = useUpdateLoyalty()
@@ -478,18 +492,18 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
     if (!customer || !delta || !reason) return
     try {
       await updateLoyalty.mutateAsync({ id: customer.id, points: delta, reason })
-      toast.success(delta > 0 ? `+${delta} poin ditambahkan (${reason})` : `${delta} poin dikurangi (${reason})`)
+      toast.success(delta > 0 ? t('tenantAdmin.customers.pointsAddedToast', { count: delta, reason }) : t('tenantAdmin.customers.pointsDeductedToast', { count: delta, reason }))
       setAdjustOpen(false)
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal mengubah poin')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.customers.pointsChangeFailed'))
     }
   }
 
   const segment = customer ? getSegment(customer.visitCount, customer.lastVisitAt) : null
-  const segLabel = SEGMENTS.find(s => s.id === segment)?.label || segment
+  const segLabel = segmentLabel(t, segment)
 
   return (
-    <Modal isOpen={open} onClose={onClose} size="lg" title="Detail Pelanggan">
+    <Modal isOpen={open} onClose={onClose} size="lg" title={t('tenantAdmin.customers.customerDetail')}>
       {isLoading ? (
         <div className="space-y-3">
           {[...Array(4)].map((_, i) => <div key={i} className="h-16 rounded-xl bg-dark-card/60 animate-pulse" />)}
@@ -497,10 +511,10 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
       ) : isError || !customer ? (
         <div className="text-center py-12">
           <AlertTriangle className="w-10 h-10 text-amber-400 mx-auto mb-3" />
-          <p className="text-sm text-off-white font-medium">Gagal memuat detail pelanggan</p>
-          <p className="text-xs text-muted mt-1">Periksa koneksi lalu coba lagi.</p>
+          <p className="text-sm text-off-white font-medium">{t('tenantAdmin.customers.detailLoadError')}</p>
+          <p className="text-xs text-muted mt-1">{t('tenantAdmin.customers.checkConnectionRetry')}</p>
           <Button variant="secondary" size="sm" className="mt-4" onClick={() => refetch()}>
-            <RefreshCw className="w-3.5 h-3.5" /> Coba Lagi
+            <RefreshCw className="w-3.5 h-3.5" /> {t('common.retry')}
           </Button>
         </div>
       ) : (
@@ -534,7 +548,7 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
                 )}
                 <span className="inline-flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5 shrink-0" />
-                  Sejak {formatDate(customer.createdAt)}
+                  {t('tenantAdmin.customers.sinceDate', { date: formatDate(customer.createdAt) })}
                 </span>
               </div>
               {customer.address?.provinsi && (
@@ -551,29 +565,29 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
           {/* LV Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <Card className="p-3 min-w-0 overflow-hidden">
-              <p className="text-[10px] text-muted uppercase tracking-wide truncate">Total Belanja</p>
+              <p className="text-[10px] text-muted uppercase tracking-wide truncate">{t('tenantAdmin.customers.totalSpend')}</p>
               <p className="text-base sm:text-lg font-bold text-brand tabular-nums truncate">
                 <span className="sm:hidden">{formatRupiahShort(customer.lifetimeValue || 0)}</span>
                 <span className="hidden sm:inline">{formatRupiah(customer.lifetimeValue || 0)}</span>
               </p>
             </Card>
             <Card className="p-3 min-w-0 overflow-hidden">
-              <p className="text-[10px] text-muted uppercase tracking-wide truncate">Transaksi</p>
+              <p className="text-[10px] text-muted uppercase tracking-wide truncate">{t('common.transactions')}</p>
               <p className="text-base sm:text-lg font-bold text-off-white tabular-nums truncate">
                 {customer.lifetimeTxCount || 0}
               </p>
             </Card>
             <Card className="p-3 min-w-0 overflow-hidden">
-              <p className="text-[10px] text-muted uppercase tracking-wide truncate">Avg Tiket</p>
+              <p className="text-[10px] text-muted uppercase tracking-wide truncate">{t('tenantAdmin.customers.avgTicket')}</p>
               <p className="text-base sm:text-lg font-bold text-off-white tabular-nums truncate">
                 <span className="sm:hidden">{formatRupiahShort(customer.avgTicket || 0)}</span>
                 <span className="hidden sm:inline">{formatRupiah(customer.avgTicket || 0)}</span>
               </p>
             </Card>
             <Card className="p-3 min-w-0 overflow-hidden">
-              <p className="text-[10px] text-muted uppercase tracking-wide truncate">Kunjungan Terakhir</p>
+              <p className="text-[10px] text-muted uppercase tracking-wide truncate">{t('tenantAdmin.customers.lastVisit')}</p>
               <p className="text-xs font-medium text-off-white truncate">
-                {lastVisitLabel(customer.lastVisitAt) || '—'}
+                {lastVisitLabel(customer.lastVisitAt, i18n.language) || '—'}
               </p>
             </Card>
           </div>
@@ -583,15 +597,15 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div className="min-w-0">
                 <p className="text-[11px] text-muted uppercase tracking-wide font-medium inline-flex items-center gap-1">
-                  <Star className="w-3 h-3 fill-brand text-brand" /> Poin Loyalty
+                  <Star className="w-3 h-3 fill-brand text-brand" /> {t('tenantAdmin.customers.loyaltyPoints')}
                 </p>
                 <p className="text-3xl font-display font-bold text-brand tabular-nums leading-none mt-1">
-                  {(customer.loyaltyPoints || 0).toLocaleString('id-ID')}
+                  {(customer.loyaltyPoints || 0).toLocaleString(numLocale)}
                 </p>
                 <p className="text-[11px] text-muted mt-1">
                   {customer.lifetimeTxCount > 0
-                    ? `≈ ${Math.floor((customer.lifetimeValue || 0) / 10_000).toLocaleString('id-ID')} pts seumur hidup dari transaksi`
-                    : 'Belum ada poin diperoleh'}
+                    ? t('tenantAdmin.customers.lifetimePtsFromTx', { count: Math.floor((customer.lifetimeValue || 0) / 10_000).toLocaleString(numLocale) })
+                    : t('tenantAdmin.customers.noPointsYet')}
                 </p>
               </div>
               <div className="flex flex-col gap-1.5 items-end">
@@ -601,7 +615,7 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
                   className="px-3 py-1.5 rounded-lg bg-brand text-dark text-xs font-semibold hover:bg-brand-light inline-flex items-center gap-1.5"
                 >
                   <Edit2 className="w-3 h-3" />
-                  Sesuaikan Poin
+                  {t('tenantAdmin.customers.adjustPoints')}
                 </button>
                 <div className="flex gap-1">
                   {[-10, +10, +25, +50].map(n => (
@@ -625,20 +639,20 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
             {/* Earning rules — alur poin yang dijelaskan */}
             <div className="mt-3 pt-3 border-t border-brand/20">
               <p className="text-[11px] text-muted uppercase tracking-wide font-medium mb-1.5 inline-flex items-center gap-1">
-                <Award className="w-3 h-3 text-brand" /> Cara Mendapatkan Poin
+                <Award className="w-3 h-3 text-brand" /> {t('tenantAdmin.customers.howToEarnPoints')}
               </p>
               <ul className="space-y-1 text-[11px] text-off-white">
                 <li className="flex items-center justify-between gap-2">
-                  <span>Otomatis dari transaksi POS</span>
-                  <span className="text-brand tabular-nums">+1 poin / Rp10.000 (setelah diskon)</span>
+                  <span>{t('tenantAdmin.customers.earnAutoPos')}</span>
+                  <span className="text-brand tabular-nums">{t('tenantAdmin.customers.earnAutoPosValue')}</span>
                 </li>
                 <li className="flex items-center justify-between gap-2">
-                  <span>Penyesuaian manual oleh admin</span>
-                  <span className="text-muted">wajib alasan</span>
+                  <span>{t('tenantAdmin.customers.earnManualAdjust')}</span>
+                  <span className="text-muted">{t('tenantAdmin.customers.earnManualReason')}</span>
                 </li>
               </ul>
               <p className="text-[10px] text-muted mt-1.5 leading-relaxed">
-                Pelanggan harus tersambung di transaksi (via nama+telepon atau pilih dari daftar di POS) supaya poin tercatat. Walk-in tanpa identitas → tidak dapat poin.
+                {t('tenantAdmin.customers.earnConnectionNote')}
               </p>
             </div>
           </Card>
@@ -646,7 +660,7 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
           {/* Riwayat Pergerakan Poin (Ledger) */}
           <div>
             <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2 inline-flex items-center gap-2">
-              <Activity className="w-3.5 h-3.5" /> Riwayat Pergerakan Poin
+              <Activity className="w-3.5 h-3.5" /> {t('tenantAdmin.customers.pointLedgerTitle')}
               {historyData?.items?.length > 0 && (
                 <span className="text-muted normal-case font-normal">
                   ({historyData.items.length}{historyData.meta?.hasMore ? '+' : ''})
@@ -659,11 +673,11 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
               </div>
             ) : historyError ? (
               <p className="text-sm text-amber-400 text-center py-6 bg-dark-card/30 rounded-xl border border-dashed border-dark-border inline-flex items-center justify-center gap-2 w-full">
-                <AlertTriangle className="w-4 h-4 shrink-0" /> Gagal memuat riwayat poin
+                <AlertTriangle className="w-4 h-4 shrink-0" /> {t('tenantAdmin.customers.pointLedgerError')}
               </p>
             ) : !historyData?.items?.length ? (
               <p className="text-sm text-muted text-center py-6 bg-dark-card/30 rounded-xl border border-dashed border-dark-border">
-                Belum ada pergerakan poin
+                {t('tenantAdmin.customers.noPointMovement')}
               </p>
             ) : (
               <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
@@ -682,16 +696,16 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-off-white truncate font-medium inline-flex items-center gap-1.5 flex-wrap">
                           <span className={`text-[10px] px-1.5 py-0.5 rounded ${style.bg} ${style.text} border ${style.border} font-semibold`}>
-                            {style.label}
+                            {t(`tenantAdmin.customers.${style.labelKey}`)}
                           </span>
                           {h.reason || (h.transaction
-                            ? `Transaksi ${formatRupiahShort(h.transaction.total || 0)}`
-                            : h.type === 'earn' ? 'Earn otomatis' : 'Penyesuaian')}
+                            ? t('tenantAdmin.customers.ledgerTransaction', { amount: formatRupiahShort(h.transaction.total || 0) })
+                            : h.type === 'earn' ? t('tenantAdmin.customers.ledgerAutoEarn') : t('tenantAdmin.customers.ledgerAdjustment'))}
                         </p>
                         <p className="text-[11px] text-muted truncate">
                           {formatDateTime(h.createdAt)}
-                          {h.actorName && <> · oleh <span className="text-off-white">{h.actorName}</span></>}
-                          {h.transaction && <> · saldo setelah <span className="text-off-white tabular-nums">{h.balanceAfter.toLocaleString('id-ID')}</span></>}
+                          {h.actorName && <> · {t('tenantAdmin.customers.byActor')} <span className="text-off-white">{h.actorName}</span></>}
+                          {h.transaction && <> · {t('tenantAdmin.customers.balanceAfterShort')} <span className="text-off-white tabular-nums">{h.balanceAfter.toLocaleString(numLocale)}</span></>}
                         </p>
                       </div>
                       <div className={`shrink-0 text-sm font-bold tabular-nums ${isPositive ? 'text-emerald-300' : 'text-red-400'}`}>
@@ -701,7 +715,7 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
                   )
                 })}
                 {historyData.meta?.hasMore && (
-                  <p className="text-[10px] text-muted text-center pt-1">Menampilkan 50 terbaru. Riwayat lebih lama tersedia via API.</p>
+                  <p className="text-[10px] text-muted text-center pt-1">{t('tenantAdmin.customers.ledgerShowingRecent')}</p>
                 )}
               </div>
             )}
@@ -710,7 +724,7 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
           {/* Notes */}
           {customer.notes && (
             <div>
-              <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-1">Catatan</p>
+              <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-1">{t('tenantAdmin.customers.notes')}</p>
               <p className="text-sm text-off-white bg-dark-card/50 border border-dark-border/60 rounded-xl p-3 leading-relaxed">
                 {customer.notes}
               </p>
@@ -720,11 +734,11 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
           {/* Recent Transactions */}
           <div>
             <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2 inline-flex items-center gap-2">
-              <ShoppingBag className="w-3.5 h-3.5" /> Transaksi Terbaru
-              <span className="text-muted normal-case font-normal">(maks 20)</span>
+              <ShoppingBag className="w-3.5 h-3.5" /> {t('tenantAdmin.customers.recentTransactions')}
+              <span className="text-muted normal-case font-normal">{t('tenantAdmin.customers.max20')}</span>
             </p>
             {(customer.transactions || []).length === 0 ? (
-              <p className="text-sm text-muted text-center py-6">Belum ada transaksi</p>
+              <p className="text-sm text-muted text-center py-6">{t('tenantAdmin.customers.noTransactionsYet')}</p>
             ) : (
               <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
                 {customer.transactions.map(tx => {
@@ -736,7 +750,7 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-off-white truncate font-medium">
-                          {(tx.items || []).map(i => i.name).join(', ') || 'Transaksi'}
+                          {(tx.items || []).map(i => i.name).join(', ') || t('common.transactions')}
                         </p>
                         <p className="text-[11px] text-muted truncate inline-flex items-center gap-1.5">
                           <span>{formatDateTime(tx.createdAt)}</span>
@@ -766,7 +780,7 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
           {(customer.bookings || []).length > 0 && (
             <div>
               <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2 inline-flex items-center gap-2">
-                <Calendar className="w-3.5 h-3.5" /> Booking Terbaru
+                <Calendar className="w-3.5 h-3.5" /> {t('tenantAdmin.customers.recentBookings')}
               </p>
               <div className="space-y-1.5">
                 {customer.bookings.slice(0, 5).map(b => (
@@ -775,7 +789,7 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
                       <Calendar className="w-3.5 h-3.5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-off-white truncate font-medium">{b.serviceName || 'Booking'}</p>
+                      <p className="text-xs text-off-white truncate font-medium">{b.serviceName || t('nav.booking')}</p>
                       <p className="text-[11px] text-muted truncate">
                         {b.date} {b.time && `· ${b.time}`}
                       </p>
@@ -789,11 +803,11 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
 
           {/* Actions */}
           <div className="flex gap-2 pt-2 border-t border-dark-border/60">
-            <Button variant="outline" fullWidth onClick={onClose}>Tutup</Button>
-            <Button variant="outline" fullWidth icon={Edit2} onClick={() => { onEdit(customer); onClose() }}>Edit</Button>
+            <Button variant="outline" fullWidth onClick={onClose}>{t('common.close')}</Button>
+            <Button variant="outline" fullWidth icon={Edit2} onClick={() => { onEdit(customer); onClose() }}>{t('common.edit')}</Button>
             {onDelete && (
               <Button variant="outline" fullWidth icon={Trash2} onClick={() => onDelete(customer)} className="text-red-400 border-red-500/40 hover:bg-red-500/10">
-                Hapus
+                {t('common.delete')}
               </Button>
             )}
           </div>
@@ -814,6 +828,7 @@ function CustomerDetailDrawer({ open, onClose, customerId, onEdit, onDelete }) {
 
 // ─── Form Modal ─────────────────────────────────────────────────────────────
 function CustomerFormModal({ open, onClose, editing, onSave, saving }) {
+  const { t } = useTranslation()
   const [form, setForm] = useState(EMPTY_FORM)
   const [errors, setErrors] = useState({})
 
@@ -838,10 +853,10 @@ function CustomerFormModal({ open, onClose, editing, onSave, saving }) {
 
   const validate = () => {
     const e = {}
-    if (!form.name.trim()) e.name = 'Nama wajib diisi'
-    if (!form.phone.trim()) e.phone = 'Nomor telepon wajib diisi'
-    if (form.phone && !/^[0-9+\-\s()]{6,20}$/.test(form.phone.trim())) e.phone = 'Format telepon tidak valid'
-    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Format email tidak valid'
+    if (!form.name.trim()) e.name = t('tenantAdmin.customers.errNameRequired')
+    if (!form.phone.trim()) e.phone = t('tenantAdmin.customers.errPhoneRequired')
+    if (form.phone && !/^[0-9+\-\s()]{6,20}$/.test(form.phone.trim())) e.phone = t('tenantAdmin.customers.errPhoneInvalid')
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = t('tenantAdmin.customers.errEmailInvalid')
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -864,21 +879,21 @@ function CustomerFormModal({ open, onClose, editing, onSave, saving }) {
       isOpen={open}
       onClose={saving ? () => {} : onClose}
       size="lg"
-      title={editing ? 'Edit Pelanggan' : 'Tambah Pelanggan'}
+      title={editing ? t('tenantAdmin.customers.editCustomer') : t('tenantAdmin.customers.addCustomer')}
     >
       <div className="space-y-5">
         <div>
-          <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Info Dasar</p>
+          <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">{t('tenantAdmin.customers.basicInfo')}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
-              label="Nama *"
+              label={`${t('common.name')} *`}
               value={form.name}
               onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              placeholder="Nama lengkap"
+              placeholder={t('tenantAdmin.customers.fullNamePlaceholder')}
               error={errors.name}
             />
             <Input
-              label="No. Telepon *"
+              label={`${t('tenantAdmin.customers.phoneLabel')} *`}
               value={form.phone}
               onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
               placeholder="08xxxxxxxxxx"
@@ -886,7 +901,7 @@ function CustomerFormModal({ open, onClose, editing, onSave, saving }) {
               error={errors.phone}
             />
             <Input
-              label="Email"
+              label={t('common.email')}
               type="email"
               value={form.email}
               onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
@@ -894,31 +909,31 @@ function CustomerFormModal({ open, onClose, editing, onSave, saving }) {
               error={errors.email}
             />
             <div>
-              <label className="block text-sm font-medium text-muted mb-1.5">Jenis Kelamin</label>
+              <label className="block text-sm font-medium text-muted mb-1.5">{t('tenantAdmin.customers.gender')}</label>
               <select
                 value={form.gender}
                 onChange={e => setForm(f => ({ ...f, gender: e.target.value }))}
                 className="w-full appearance-none bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60 cursor-pointer"
               >
-                <option value="">Tidak diisi</option>
-                <option value="L">Laki-laki</option>
-                <option value="P">Perempuan</option>
+                <option value="">{t('tenantAdmin.customers.genderUnset')}</option>
+                <option value="L">{t('tenantAdmin.customers.genderMale')}</option>
+                <option value="P">{t('tenantAdmin.customers.genderFemale')}</option>
               </select>
             </div>
             <div className="sm:col-span-2 sm:max-w-[50%]">
               <Input
-                label="Tanggal Lahir"
+                label={t('tenantAdmin.customers.birthDate')}
                 type="date"
                 value={form.birthDate}
                 onChange={e => setForm(f => ({ ...f, birthDate: e.target.value }))}
-                hint="Untuk reminder ulang tahun"
+                hint={t('tenantAdmin.customers.birthDateHint')}
               />
             </div>
           </div>
         </div>
 
         <div className="border-t border-dark-border pt-5">
-          <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">Alamat (opsional)</p>
+          <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">{t('tenantAdmin.customers.addressOptional')}</p>
           <WilayahSelect
             value={form.address}
             onChange={address => setForm(f => ({ ...f, address }))}
@@ -927,17 +942,17 @@ function CustomerFormModal({ open, onClose, editing, onSave, saving }) {
 
         <div className="border-t border-dark-border pt-5">
           <Input
-            label="Catatan"
+            label={t('tenantAdmin.customers.notes')}
             value={form.notes}
             onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-            placeholder="Preferensi gaya, alergi, dll. (opsional)"
+            placeholder={t('tenantAdmin.customers.notesFormPlaceholder')}
           />
         </div>
 
         <div className="flex flex-col-reverse sm:flex-row gap-2 pt-1">
-          <Button variant="outline" fullWidth onClick={onClose} disabled={saving}>Batal</Button>
+          <Button variant="outline" fullWidth onClick={onClose} disabled={saving}>{t('common.cancel')}</Button>
           <Button fullWidth onClick={submit} loading={saving}>
-            {editing ? 'Simpan Perubahan' : 'Tambah Pelanggan'}
+            {editing ? t('tenantAdmin.customers.saveChanges') : t('tenantAdmin.customers.addCustomer')}
           </Button>
         </div>
       </div>
@@ -947,6 +962,7 @@ function CustomerFormModal({ open, onClose, editing, onSave, saving }) {
 
 // ─── Main ───────────────────────────────────────────────────────────────────
 export default function TACustomersPage() {
+  const { t } = useTranslation()
   const toast = useToast()
   const [params, setParams] = useSearchParams()
   const { user } = useAuthStore()
@@ -1079,14 +1095,14 @@ export default function TACustomersPage() {
     try {
       if (editingCust) {
         await updateM.mutateAsync({ id: editingCust.id, ...payload })
-        toast.success('Pelanggan diperbarui')
+        toast.success(t('tenantAdmin.customers.customerUpdated'))
       } else {
         await createM.mutateAsync(payload)
-        toast.success('Pelanggan ditambahkan')
+        toast.success(t('tenantAdmin.customers.customerAdded'))
       }
       setShowForm(false)
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal menyimpan')
+      toast.error(err?.response?.data?.error || t('common.saveFailed'))
     }
   }
 
@@ -1095,16 +1111,16 @@ export default function TACustomersPage() {
     if (!confirmDel) return
     try {
       await deleteM.mutateAsync(confirmDel.id)
-      toast.success('Pelanggan dihapus')
+      toast.success(t('tenantAdmin.customers.customerDeleted'))
       if (detailId === confirmDel.id) setDetailId(null)
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal menghapus')
+      toast.error(err?.response?.data?.error || t('common.deleteFailed'))
     }
   }
 
   const exportCSV = async () => {
     if (totalItems === 0) {
-      toast.error('Tidak ada data untuk diekspor')
+      toast.error(t('tenantAdmin.customers.noExportData'))
       return
     }
     setExporting(true)
@@ -1120,16 +1136,28 @@ export default function TACustomersPage() {
       const result = await exportM.mutateAsync(exportFilters)
       const all = result.data || []
       if (!all.length) {
-        toast.error('Tidak ada data untuk diekspor')
+        toast.error(t('tenantAdmin.customers.noExportData'))
         return
       }
-      const header = ['Nama', 'Telepon', 'Email', 'Gender', 'Segmen', 'Kunjungan', 'Total Belanja', 'Transaksi', 'Poin Loyalty', 'Provinsi', 'Bergabung']
+      const header = [
+        t('tenantAdmin.customers.csvName'),
+        t('common.phone'),
+        t('common.email'),
+        t('tenantAdmin.customers.csvGender'),
+        t('tenantAdmin.customers.segment'),
+        t('tenantAdmin.customers.visits'),
+        t('tenantAdmin.customers.totalSpend'),
+        t('common.transactions'),
+        t('tenantAdmin.customers.loyaltyPoints'),
+        t('tenantAdmin.customers.province'),
+        t('tenantAdmin.customers.csvJoined'),
+      ]
       const rows = all.map(c => [
         c.name,
         c.phone || '',
         c.email || '',
         c.gender || '',
-        SEGMENTS.find(s => s.id === getSegment(c.visitCount, c.lastVisitAt))?.label || '—',
+        segmentLabel(t, getSegment(c.visitCount, c.lastVisitAt)) || '—',
         c.visitCount || 0,
         c.lifetimeValue || 0,
         c.lifetimeTxCount || 0,
@@ -1140,11 +1168,11 @@ export default function TACustomersPage() {
       const fname = `pelanggan-${new Date().toISOString().slice(0, 10)}.csv`
       downloadCSV(fname, header, rows)
       const note = result.meta?.capped
-        ? ` (dipotong di 5000 baris — saring lebih spesifik untuk semua data)`
+        ? t('tenantAdmin.customers.exportCappedNote')
         : ''
-      toast.success(`Berhasil ekspor ${rows.length} pelanggan${note}`)
+      toast.success(t('tenantAdmin.customers.exportSuccess', { count: rows.length, note }))
     } catch (err) {
-      toast.error('Gagal ekspor: ' + (err?.response?.data?.error || err?.message || 'Unknown'))
+      toast.error(t('tenantAdmin.customers.exportFailed', { message: err?.response?.data?.error || err?.message || 'Unknown' }))
     } finally {
       setExporting(false)
     }
@@ -1170,11 +1198,11 @@ export default function TACustomersPage() {
     if (!ids.length) return
     try {
       const result = await bulkDeleteM.mutateAsync(ids)
-      toast.success(`${result?.count ?? ids.length} pelanggan dihapus`)
+      toast.success(t('tenantAdmin.customers.bulkDeleted', { count: result?.count ?? ids.length }))
       setSelected(new Set())
       setConfirmBulkDel(false)
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal menghapus massal')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.customers.bulkDeleteFailed'))
     }
   }
 
@@ -1184,7 +1212,7 @@ export default function TACustomersPage() {
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white inline-flex items-center gap-2 flex-wrap">
-            <Users className="w-5 h-5 text-brand" /> Pelanggan
+            <Users className="w-5 h-5 text-brand" /> {t('tenantAdmin.customers.title')}
             {branchScopeId && scopedBranch?.name && (
               <span className="inline-flex items-center gap-1 text-[11px] font-medium text-brand bg-brand/10 border border-brand/30 rounded-full px-2 py-0.5">
                 <MapPin className="w-3 h-3" /> {scopedBranch.name}
@@ -1192,12 +1220,12 @@ export default function TACustomersPage() {
             )}
           </h1>
           <p className="text-muted text-xs sm:text-sm mt-1">
-            {totalItems} pelanggan
-            {branchScopeId ? ' · cabang ini saja' : ''}
-            {segment ? ` · ${SEGMENTS.find(s => s.id === segment)?.label || segment}` : ''}
+            {t('tenantAdmin.customers.countLabel', { count: totalItems })}
+            {branchScopeId ? t('tenantAdmin.customers.suffixThisBranch') : ''}
+            {segment ? ` · ${segmentLabel(t, segment)}` : ''}
             {provinsi ? ` · ${provinsi}` : ''}
-            {dormantDays > 0 ? ` · Dormant ${dormantDays}+ hari` : ''}
-            {birthMonthFilter === 'current' ? ` · Ulang tahun bulan ini` : ''}
+            {dormantDays > 0 ? t('tenantAdmin.customers.suffixDormant', { count: dormantDays }) : ''}
+            {birthMonthFilter === 'current' ? t('tenantAdmin.customers.suffixBirthday') : ''}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -1206,14 +1234,14 @@ export default function TACustomersPage() {
               type="button"
               onClick={exportCSV}
               disabled={exporting || totalItems === 0}
-              title={totalItems > 0 ? `Ekspor ${totalItems} pelanggan terfilter` : 'Tidak ada data'}
+              title={totalItems > 0 ? t('tenantAdmin.customers.exportTitle', { count: totalItems }) : t('common.noData')}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-dark-card/60 border border-dark-border text-muted text-xs font-medium hover:text-off-white hover:border-brand/40 disabled:opacity-50 transition-colors"
             >
               {exporting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-              <span className="hidden sm:inline">Ekspor CSV</span>
+              <span className="hidden sm:inline">{t('tenantAdmin.customers.exportCsv')}</span>
             </button>
           )}
-          <Button icon={Plus} onClick={openAdd}>Tambah Pelanggan</Button>
+          <Button icon={Plus} onClick={openAdd}>{t('tenantAdmin.customers.addCustomer')}</Button>
         </div>
       </div>
 
@@ -1221,55 +1249,55 @@ export default function TACustomersPage() {
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3">
         <StatTile
           icon={Users}
-          label="Total"
+          label={t('common.total')}
           value={tileVal(stats.total)}
           loading={statsLoading}
           accent="gold"
-          hint={stats.total > 0 ? `Avg ${stats.avgVisits || 0}× / orang` : 'Belum ada pelanggan'}
+          hint={stats.total > 0 ? t('tenantAdmin.customers.avgVisitsHint', { count: stats.avgVisits || 0 }) : t('tenantAdmin.customers.noCustomers')}
           onClick={() => { setSegment(''); setPage(1) }}
           active={segment === ''}
           delay={0.02}
         />
         <StatTile
           icon={Crown}
-          label="VIP"
+          label={t('tenantAdmin.customers.segVip')}
           value={tileVal(stats.vip)}
           loading={statsLoading}
           accent="gold"
-          hint="≥10 kunjungan, aktif"
+          hint={t('tenantAdmin.customers.hintVip')}
           onClick={() => setSegment(s => s === 'vip' ? '' : 'vip')}
           active={segment === 'vip'}
           delay={0.04}
         />
         <StatTile
           icon={BadgeCheck}
-          label="Loyal"
+          label={t('tenantAdmin.customers.segLoyal')}
           value={tileVal(stats.loyal)}
           loading={statsLoading}
           accent="blue"
-          hint="3–9 kunjungan, aktif"
+          hint={t('tenantAdmin.customers.hintLoyal')}
           onClick={() => setSegment(s => s === 'loyal' ? '' : 'loyal')}
           active={segment === 'loyal'}
           delay={0.06}
         />
         <StatTile
           icon={Sparkles}
-          label="Baru"
+          label={t('tenantAdmin.customers.segNew')}
           value={tileVal(stats.new)}
           loading={statsLoading}
           accent="green"
-          hint="1–2 kunjungan, aktif"
+          hint={t('tenantAdmin.customers.hintNew')}
           onClick={() => setSegment(s => s === 'new' ? '' : 'new')}
           active={segment === 'new'}
           delay={0.08}
         />
         <StatTile
           icon={Activity}
-          label="Belum Tx"
+          label={t('tenantAdmin.customers.segNever')}
           value={tileVal(stats.never ?? stats.inactive)}
           loading={statsLoading}
           accent="rose"
-          hint="0 kunjungan"
+          hint={t('tenantAdmin.customers.hintNever')}
           onClick={() => setSegment(s => s === 'never' ? '' : 'never')}
           active={segment === 'never'}
           delay={0.1}
@@ -1285,7 +1313,7 @@ export default function TACustomersPage() {
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Cari nama, telepon, email…"
+                placeholder={t('tenantAdmin.customers.searchPlaceholderFull')}
                 className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-10 pr-9 py-2.5 text-sm outline-none focus:border-brand/60 focus:ring-2 focus:ring-brand/15"
               />
               {search && (
@@ -1293,7 +1321,7 @@ export default function TACustomersPage() {
                   type="button"
                   onClick={() => setSearch('')}
                   className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted hover:text-off-white"
-                  aria-label="Hapus pencarian"
+                  aria-label={t('tenantAdmin.customers.clearSearch')}
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -1304,16 +1332,16 @@ export default function TACustomersPage() {
               onChange={e => setSort(e.target.value)}
               className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60 cursor-pointer appearance-none"
             >
-              {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{t(`tenantAdmin.customers.${o.labelKey}`)}</option>)}
             </select>
             <select
               value={gender}
               onChange={e => setGender(e.target.value)}
               className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60 cursor-pointer appearance-none"
             >
-              <option value="">Semua Gender</option>
-              <option value="L">Laki-laki</option>
-              <option value="P">Perempuan</option>
+              <option value="">{t('tenantAdmin.customers.allGenders')}</option>
+              <option value="L">{t('tenantAdmin.customers.genderMale')}</option>
+              <option value="P">{t('tenantAdmin.customers.genderFemale')}</option>
             </select>
             {allProvinces.length > 0 && (
               <select
@@ -1321,7 +1349,7 @@ export default function TACustomersPage() {
                 onChange={e => setProvinsi(e.target.value)}
                 className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60 cursor-pointer appearance-none max-w-[160px]"
               >
-                <option value="">Semua Provinsi</option>
+                <option value="">{t('tenantAdmin.customers.allProvinces')}</option>
                 {allProvinces.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
             )}
@@ -1331,7 +1359,7 @@ export default function TACustomersPage() {
                 onClick={resetFilters}
                 className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs hover:bg-amber-500/20"
               >
-                <X className="w-3.5 h-3.5" /> Reset ({activeFilterCount})
+                <X className="w-3.5 h-3.5" /> {t('tenantAdmin.customers.resetCount', { count: activeFilterCount })}
               </button>
             )}
           </div>
@@ -1351,7 +1379,7 @@ export default function TACustomersPage() {
                       : 'bg-dark-card/60 border-dark-border text-muted hover:text-off-white hover:border-brand/40'
                   }`}
                 >
-                  {s.label}
+                  {t(`tenantAdmin.customers.${s.labelKey}`)}
                   {s.desc && !active && <span className="opacity-70 text-[10px]">{s.desc}</span>}
                 </button>
               )
@@ -1362,11 +1390,11 @@ export default function TACustomersPage() {
               Dormant dijadikan segmented control — satu grup ringkas, bukan
               3 chip panjang yang membungkus berantakan di mobile. */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] uppercase tracking-wider text-off-white font-semibold">Cepat:</span>
+            <span className="text-[11px] uppercase tracking-wider text-off-white font-semibold">{t('tenantAdmin.customers.quickLabel')}</span>
 
             <div className="inline-flex items-center gap-0.5 rounded-lg bg-dark-card/60 border border-dark-border p-0.5">
               <span className="inline-flex items-center gap-1 pl-1.5 pr-1 text-[11px] text-muted">
-                <Clock className="w-3 h-3" /> Dormant
+                <Clock className="w-3 h-3" /> {t('tenantAdmin.customers.dormant')}
               </span>
               {[30, 60, 90].map(days => {
                 const active = dormantDays === days
@@ -1376,7 +1404,7 @@ export default function TACustomersPage() {
                     type="button"
                     onClick={() => setDormantDays(active ? 0 : days)}
                     aria-pressed={active}
-                    title={`Pelanggan tanpa kunjungan ${days}+ hari`}
+                    title={t('tenantAdmin.customers.dormantTitle', { count: days })}
                     className={`px-2 py-1 rounded-md text-[11px] font-medium tabular-nums transition-colors ${
                       active
                         ? 'bg-amber-500/25 text-amber-300'
@@ -1402,7 +1430,7 @@ export default function TACustomersPage() {
                       : 'bg-dark-card/60 border-dark-border text-muted hover:text-off-white'
                   }`}
                 >
-                  <Cake className="w-3 h-3" /> Ulang Tahun Bulan Ini
+                  <Cake className="w-3 h-3" /> {t('tenantAdmin.customers.birthdayThisMonth')}
                 </button>
               )
             })()}
@@ -1417,21 +1445,21 @@ export default function TACustomersPage() {
             <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-brand text-dark text-xs font-bold tabular-nums">
               {selected.size}
             </span>
-            <span className="font-medium">pelanggan dipilih</span>
+            <span className="font-medium">{t('tenantAdmin.customers.customersSelected')}</span>
           </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={clearSelection}
               className="text-xs text-off-white hover:text-off-white px-2.5 py-1.5 rounded-lg border border-dark-border hover:border-dark-border"
-            >Batal</button>
+            >{t('common.cancel')}</button>
             <button
               type="button"
               onClick={() => setConfirmBulkDel(true)}
               disabled={bulkDeleteM.isPending}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500 border border-red-500 text-white text-xs font-semibold hover:bg-red-600 disabled:opacity-50"
             >
-              <Trash2 className="w-3.5 h-3.5" /> Hapus {selected.size}
+              <Trash2 className="w-3.5 h-3.5" /> {t('tenantAdmin.customers.deleteCount', { count: selected.size })}
             </button>
           </div>
         </div>
@@ -1449,13 +1477,13 @@ export default function TACustomersPage() {
           <div className="w-14 h-14 mx-auto rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center mb-3">
             <X className="w-7 h-7 text-red-400" />
           </div>
-          <h3 className="font-display text-lg font-semibold text-off-white">Gagal memuat data pelanggan</h3>
+          <h3 className="font-display text-lg font-semibold text-off-white">{t('tenantAdmin.customers.loadError')}</h3>
           <p className="text-muted text-sm mt-1 max-w-md mx-auto">
-            {customersQuery.error?.response?.data?.error || customersQuery.error?.message || 'Terjadi kesalahan jaringan.'}
+            {customersQuery.error?.response?.data?.error || customersQuery.error?.message || t('tenantAdmin.customers.networkError')}
           </p>
           <div className="mt-4">
             <Button icon={RefreshCw} onClick={() => customersQuery.refetch()} loading={customersQuery.isFetching}>
-              Coba Lagi
+              {t('common.retry')}
             </Button>
           </div>
         </Card>
@@ -1465,18 +1493,18 @@ export default function TACustomersPage() {
             <Users className="w-7 h-7 text-brand" />
           </div>
           <h3 className="font-display text-lg font-semibold text-off-white">
-            {activeFilterCount > 0 ? 'Tidak ada pelanggan cocok dengan filter' : 'Belum ada pelanggan'}
+            {activeFilterCount > 0 ? t('tenantAdmin.customers.emptyFilteredTitle') : t('tenantAdmin.customers.noCustomers')}
           </h3>
           <p className="text-muted text-sm mt-1 max-w-md mx-auto">
             {activeFilterCount > 0
-              ? 'Coba reset filter atau ubah kata kunci pencarian.'
-              : 'Pelanggan akan otomatis tercatat saat walk-in atau booking. Anda juga bisa menambahkan manual.'}
+              ? t('tenantAdmin.customers.emptyFilteredDesc')
+              : t('tenantAdmin.customers.emptyDesc')}
           </p>
           <div className="mt-4 flex items-center justify-center gap-2">
             {activeFilterCount > 0 && (
-              <Button variant="outline" onClick={resetFilters}>Reset Filter</Button>
+              <Button variant="outline" onClick={resetFilters}>{t('tenantAdmin.customers.resetFilter')}</Button>
             )}
-            <Button icon={Plus} onClick={openAdd}>Tambah Pelanggan</Button>
+            <Button icon={Plus} onClick={openAdd}>{t('tenantAdmin.customers.addCustomer')}</Button>
           </div>
         </Card>
       ) : (
@@ -1491,9 +1519,9 @@ export default function TACustomersPage() {
                     checked={allOnPageSelected}
                     onChange={() => allOnPageSelected ? clearSelection() : selectAllOnPage()}
                     className="w-4 h-4 rounded border-dark-border bg-dark-surface accent-brand focus:ring-brand/40 cursor-pointer"
-                    aria-label="Pilih semua di halaman"
+                    aria-label={t('tenantAdmin.customers.selectAllOnPageAria')}
                   />
-                  <span>Pilih semua di halaman ({items.length})</span>
+                  <span>{t('tenantAdmin.customers.selectAllOnPage', { count: items.length })}</span>
                 </div>
               )}
               {items.map(c => (
@@ -1520,17 +1548,17 @@ export default function TACustomersPage() {
                     checked={allOnPageSelected}
                     onChange={() => allOnPageSelected ? clearSelection() : selectAllOnPage()}
                     className="w-4 h-4 rounded border-dark-border bg-dark-surface accent-brand focus:ring-brand/40 shrink-0 cursor-pointer"
-                    aria-label="Pilih semua di halaman"
+                    aria-label={t('tenantAdmin.customers.selectAllOnPageAria')}
                   />
                 )}
                 <div className="w-8 shrink-0" />
-                <div className="flex-1 min-w-0">Pelanggan</div>
-                <div className="hidden xl:block w-28 shrink-0">Provinsi</div>
-                <div className="w-[88px] shrink-0">Segmen</div>
-                <div className="hidden md:block w-24 text-right shrink-0">Total Belanja</div>
-                <div className="hidden lg:block w-16 text-center shrink-0">Kunjungan</div>
-                <div className="w-16 text-center shrink-0">Poin</div>
-                <div className="hidden lg:block w-20 text-right shrink-0">Bergabung</div>
+                <div className="flex-1 min-w-0">{t('tenantAdmin.customers.title')}</div>
+                <div className="hidden xl:block w-28 shrink-0">{t('tenantAdmin.customers.province')}</div>
+                <div className="w-[88px] shrink-0">{t('tenantAdmin.customers.segment')}</div>
+                <div className="hidden md:block w-24 text-right shrink-0">{t('tenantAdmin.customers.totalSpend')}</div>
+                <div className="hidden lg:block w-16 text-center shrink-0">{t('tenantAdmin.customers.visits')}</div>
+                <div className="w-16 text-center shrink-0">{t('tenantAdmin.customers.points')}</div>
+                <div className="hidden lg:block w-20 text-right shrink-0">{t('tenantAdmin.customers.joined')}</div>
                 <div className="w-[60px] shrink-0" />
               </div>
               {items.map(c => (
@@ -1563,7 +1591,7 @@ export default function TACustomersPage() {
                 className="inline-flex items-center gap-0.5 px-2 py-1.5 rounded-md text-xs text-muted border border-dark-border bg-dark-card/40 disabled:opacity-40 hover:text-off-white"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Sebelumnya</span>
+                <span className="hidden sm:inline">{t('tenantAdmin.customers.prevPage')}</span>
               </button>
               <span className="px-3 py-1.5 text-xs text-off-white tabular-nums">
                 {page} / {totalPages}
@@ -1574,7 +1602,7 @@ export default function TACustomersPage() {
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 className="inline-flex items-center gap-0.5 px-2 py-1.5 rounded-md text-xs text-muted border border-dark-border bg-dark-card/40 disabled:opacity-40 hover:text-off-white"
               >
-                <span className="hidden sm:inline">Berikutnya</span>
+                <span className="hidden sm:inline">{t('tenantAdmin.customers.nextPage')}</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
               <button
@@ -1609,9 +1637,9 @@ export default function TACustomersPage() {
         isOpen={!!confirmDel}
         onClose={() => setConfirmDel(null)}
         onConfirm={confirmDelete}
-        title="Hapus Pelanggan?"
-        description={`Pelanggan "${confirmDel?.name || ''}" akan dihapus. Transaksi & booking lama tetap utuh tapi tidak terkait pelanggan ini lagi.`}
-        confirmText="Ya, Hapus"
+        title={t('tenantAdmin.customers.deleteConfirmTitle')}
+        description={t('tenantAdmin.customers.deleteConfirmDesc', { name: confirmDel?.name || '' })}
+        confirmText={t('tenantAdmin.customers.confirmDelete')}
         variant="danger"
       />
 
@@ -1619,16 +1647,16 @@ export default function TACustomersPage() {
         isOpen={confirmBulkDel}
         onClose={() => setConfirmBulkDel(false)}
         onConfirm={handleBulkDelete}
-        title={`Hapus ${selected.size} pelanggan?`}
-        description={`${selected.size} pelanggan akan dihapus secara massal. Transaksi & booking lama tetap utuh tapi tidak terkait pelanggan ini lagi. Aksi ini tidak bisa dibatalkan dengan mudah.`}
-        confirmText={`Ya, Hapus ${selected.size}`}
+        title={t('tenantAdmin.customers.bulkDeleteTitle', { count: selected.size })}
+        description={t('tenantAdmin.customers.bulkDeleteDesc', { count: selected.size })}
+        confirmText={t('tenantAdmin.customers.confirmDeleteCount', { count: selected.size })}
         variant="danger"
       />
 
       {customersQuery.isFetching && !customersQuery.isLoading && (
         <div className="fixed bottom-20 sm:bottom-6 right-4 z-30 inline-flex items-center gap-2 px-3 py-2 rounded-full bg-dark-card/90 border border-dark-border text-xs text-muted shadow-card backdrop-blur">
           <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-          Sinkronisasi…
+          {t('tenantAdmin.customers.syncing')}
         </div>
       )}
     </div>

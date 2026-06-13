@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import Sidebar from './Sidebar.jsx'
 import TopBar from './TopBar.jsx'
@@ -62,6 +63,7 @@ const navConfigs = {
 }
 
 export const AppLayout = () => {
+  const { t } = useTranslation()
   const { user, impersonating, stopImpersonation } = useAuthStore()
   const isDesktop = useMediaQuery('(min-width: 1024px)')
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
@@ -141,10 +143,10 @@ export const AppLayout = () => {
       const isBarber = user.role === 'barber'
       if (isBarber && !(data.barberIds || []).includes(user.id)) return
 
-      const title = isBarber ? '✂️ Komisi Baru' : '💰 Transaksi Baru'
+      const title = isBarber ? `✂️ ${t('notifications.newCommission')}` : `💰 ${t('notifications.newTransaction')}`
       const message = isBarber
-        ? `${data.customerName} — ${formatRupiah(data.total)} di ${data.branchName}`
-        : `${data.customerName} — ${formatRupiah(data.total)} via ${data.paymentMethod || 'cash'} (${data.branchName})`
+        ? t('notifications.commissionMsg', { customer: data.customerName, amount: formatRupiah(data.total), branch: data.branchName })
+        : t('notifications.transactionMsg', { customer: data.customerName, amount: formatRupiah(data.total), method: data.paymentMethod || 'cash', branch: data.branchName })
 
       addNotification({
         type: 'transaction',
@@ -177,8 +179,8 @@ export const AppLayout = () => {
 
     const handleQueueCreated = (entry) => {
       if (!isRelevantQueueEvent(entry)) return
-      const title = '🔔 Antrian Baru'
-      const message = `${ticketStr(entry)} · ${entry.customerName || 'Pelanggan'} masuk antrian`
+      const title = `🔔 ${t('notifications.newQueue')}`
+      const message = t('notifications.queueJoinedMsg', { ticket: ticketStr(entry), customer: entry.customerName || t('notifications.aCustomer') })
       addNotification({
         type: 'queue', title, message, severity: 'info',
         tenantId: entry.tenantId, branchId: entry.branchId, refId: entry.id,
@@ -187,11 +189,11 @@ export const AppLayout = () => {
     }
 
     const STATUS_TEXT = {
-      waiting:     'menunggu',
-      in_progress: 'sedang dilayani',
-      done:        'selesai dilayani',
-      paid:        'sudah membayar',
-      cancelled:   'dibatalkan',
+      waiting:     t('notifications.statusWaiting'),
+      in_progress: t('notifications.statusInProgress'),
+      done:        t('notifications.statusDone'),
+      paid:        t('notifications.statusPaid'),
+      cancelled:   t('notifications.statusCancelled'),
     }
 
     // Pakai cache lokal supaya tidak duplikat toast pada update yang
@@ -203,11 +205,11 @@ export const AppLayout = () => {
       statusCache.set(entry.id, entry.status)
       if (prev === entry.status) return
       const label = STATUS_TEXT[entry.status] || entry.status
-      const title = entry.status === 'paid' ? '💰 Pembayaran Selesai'
-        : entry.status === 'in_progress' ? '✂️ Mulai Dilayani'
-        : entry.status === 'done' ? '✅ Layanan Selesai'
-        : '📌 Status Antrian'
-      const message = `${ticketStr(entry)} · ${entry.customerName || 'Pelanggan'} ${label}`
+      const title = entry.status === 'paid' ? `💰 ${t('notifications.paymentDone')}`
+        : entry.status === 'in_progress' ? `✂️ ${t('notifications.serviceStarted')}`
+        : entry.status === 'done' ? `✅ ${t('notifications.serviceDone')}`
+        : `📌 ${t('notifications.queueStatus')}`
+      const message = `${ticketStr(entry)} · ${entry.customerName || t('notifications.aCustomer')} ${label}`
       addNotification({
         type: 'queue', title, message,
         severity: entry.status === 'paid' ? 'success' : 'info',
@@ -219,8 +221,8 @@ export const AppLayout = () => {
 
     const handleQueueDeleted = (entry) => {
       if (!isRelevantQueueEvent(entry)) return
-      const title = '⚠️ Antrian Dibatalkan'
-      const message = `${ticketStr(entry)} · ${entry.customerName || 'Pelanggan'}`
+      const title = `⚠️ ${t('notifications.queueCancelled')}`
+      const message = `${ticketStr(entry)} · ${entry.customerName || t('notifications.aCustomer')}`
       addNotification({
         type: 'queue', title, message, severity: 'warning',
         tenantId: entry.tenantId, branchId: entry.branchId, refId: entry.id,
@@ -251,8 +253,8 @@ export const AppLayout = () => {
 
     const handleBookingCreated = (b) => {
       if (!isRelevantBookingEvent(b)) return
-      const title = '📅 Booking Baru'
-      const message = `${b.customerName || 'Pelanggan'} — ${b.serviceName || 'layanan'} (${bookingWhen(b)}) ${bookingIdShort(b)}`
+      const title = `📅 ${t('notifications.newBooking')}`
+      const message = `${b.customerName || t('notifications.aCustomer')} — ${b.serviceName || t('notifications.aService')} (${bookingWhen(b)}) ${bookingIdShort(b)}`
       addNotification({
         type: 'booking', title, message, severity: 'info',
         tenantId: b.tenantId, branchId: b.branchId, refId: b.id,
@@ -261,11 +263,11 @@ export const AppLayout = () => {
     }
 
     const BOOKING_STATUS_TEXT = {
-      pending:     'menunggu konfirmasi',
-      confirmed:   'dikonfirmasi',
-      in_progress: 'masuk antrian',
-      done:        'selesai',
-      cancelled:   'dibatalkan',
+      pending:     t('notifications.bookingPending'),
+      confirmed:   t('notifications.bookingConfirmed'),
+      in_progress: t('notifications.bookingInProgress'),
+      done:        t('notifications.bookingDone'),
+      cancelled:   t('notifications.bookingCancelled'),
     }
     const bookingStatusCache = new Map()
     const handleBookingUpdated = (b) => {
@@ -280,12 +282,12 @@ export const AppLayout = () => {
       // booking-specific yang tak selalu punya pair queue event.
       if (b.status === 'in_progress') return
       const label = BOOKING_STATUS_TEXT[b.status] || b.status
-      const title = b.status === 'cancelled' ? '⚠️ Booking Dibatalkan'
-        : b.status === 'confirmed' ? '✅ Booking Dikonfirmasi'
-        : b.status === 'in_progress' ? '🚪 Booking Check-in'
-        : b.status === 'done' ? '✨ Booking Selesai'
-        : '📌 Status Booking'
-      const message = `${b.customerName || 'Pelanggan'} ${label} ${bookingIdShort(b)}`
+      const title = b.status === 'cancelled' ? `⚠️ ${t('notifications.bookingCancelledTitle')}`
+        : b.status === 'confirmed' ? `✅ ${t('notifications.bookingConfirmedTitle')}`
+        : b.status === 'in_progress' ? `🚪 ${t('notifications.bookingCheckinTitle')}`
+        : b.status === 'done' ? `✨ ${t('notifications.bookingDoneTitle')}`
+        : `📌 ${t('notifications.bookingStatusTitle')}`
+      const message = `${b.customerName || t('notifications.aCustomer')} ${label} ${bookingIdShort(b)}`
       addNotification({
         type: 'booking', title, message,
         severity: b.status === 'cancelled' ? 'warning' : b.status === 'done' ? 'success' : 'info',
@@ -313,7 +315,7 @@ export const AppLayout = () => {
       // Tidak otomatis leaveBranchRoom — biarkan socket tetap di room
       // sampai user logout (auth:logout listener di socket.js akan close).
     }
-  }, [user, addNotification, toast])
+  }, [user, addNotification, toast, t])
 
   // Swipe navigation
   const getNavRoutes = () => {
@@ -348,13 +350,13 @@ export const AppLayout = () => {
         <div className="fixed top-0 left-0 right-0 z-[9999] flex items-center justify-between gap-3 px-4 py-2 bg-red-600 text-white text-sm font-medium shadow-lg">
           <div className="flex items-center gap-2">
             <ShieldAlert size={15} />
-            <span>Mode Impersonation — Anda melihat sebagai <strong>{user?.name}</strong> ({user?.tenantId})</span>
+            <span>{t('layout.impersonationPrefix')} <strong>{user?.name}</strong> ({user?.tenantId})</span>
           </div>
           <button
             onClick={() => { const path = stopImpersonation(); navigate(path) }}
             className="px-3 py-1 bg-white text-red-600 rounded-lg text-xs font-bold hover:bg-red-50 transition-colors flex-shrink-0"
           >
-            Keluar dari Impersonation
+            {t('layout.exitImpersonation')}
           </button>
         </div>
       )}
@@ -370,14 +372,14 @@ export const AppLayout = () => {
           >
             <div className="flex items-center gap-2">
               <Download size={15} />
-              <span>Pasang SembaPOS di HP kamu untuk pengalaman lebih baik!</span>
+              <span>{t('layout.pwaBanner')}</span>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 onClick={handleInstallPwa}
                 className="px-3 py-1 bg-dark text-brand rounded-lg text-xs font-semibold hover:bg-dark-surface transition-colors"
               >
-                Pasang
+                {t('layout.install')}
               </button>
               <button onClick={dismissPwaBanner} className="p-1 hover:bg-dark/10 rounded-lg transition-colors">
                 <X size={15} />
@@ -397,7 +399,7 @@ export const AppLayout = () => {
             className="bg-amber-900/90 border-b border-amber-600/50 px-4 py-2 flex items-center gap-2 text-sm text-amber-200 z-[9998] relative"
           >
             <WifiOff size={16} className="text-amber-400 flex-shrink-0" />
-            Mode offline — perubahan akan tersinkronisasi saat koneksi kembali
+            {t('layout.offlineBanner')}
           </motion.div>
         )}
       </AnimatePresence>

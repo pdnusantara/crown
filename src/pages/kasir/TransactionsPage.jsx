@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import {
@@ -28,17 +29,20 @@ import { getSocket } from '../../lib/socket.js'
 import { formatRupiah, formatRupiahShort } from '../../utils/format.js'
 import { formatDateTimeInTz } from '../../utils/timezone.js'
 
-const PAYMENT_LABELS = {
-  cash:     'Tunai',
-  transfer: 'Transfer',
-  qris:     'QRIS',
-  card:     'Kartu',
+// kode metode → kunci i18n (reuse pos.method*). Helper paymentLabel(t, m).
+const PAYMENT_LABEL_KEY = {
+  cash:     'pos.methodCash',
+  transfer: 'pos.methodTransfer',
+  qris:     'pos.methodQris',
+  card:     'pos.methodCard',
 }
+const paymentLabel = (t, m) => (PAYMENT_LABEL_KEY[m] ? t(PAYMENT_LABEL_KEY[m]) : (m || '—'))
 
 // Badge sumber: pelanggan booking vs walk-in. Diturunkan dari `tx.bookingId`
 // — kalau ada, transaksi ini berasal dari booking yang sudah dipesan
 // sebelumnya. Kalau null, walk-in langsung di counter.
 function CustomerSourceBadge({ tx, size = 'sm' }) {
+  const { t } = useTranslation()
   const isBooking = !!tx?.bookingId
   const isCompact = size === 'xs'
   const cls = isCompact
@@ -47,18 +51,18 @@ function CustomerSourceBadge({ tx, size = 'sm' }) {
   return isBooking ? (
     <span
       className={`inline-flex items-center ${cls} rounded-full font-semibold whitespace-nowrap bg-brand/15 text-brand border border-brand/30`}
-      title="Pelanggan booking — datang dari reservasi sebelumnya"
+      title={t('transactions.sourceBookingTitle')}
     >
       <BookmarkCheck className={isCompact ? 'w-2.5 h-2.5' : 'w-3 h-3'} />
-      Booking
+      {t('transactions.sourceBooking')}
     </span>
   ) : (
     <span
       className={`inline-flex items-center ${cls} rounded-full font-semibold whitespace-nowrap bg-dark-card text-muted border border-dark-border`}
-      title="Pelanggan walk-in — bayar langsung tanpa booking"
+      title={t('transactions.sourceWalkInTitle')}
     >
       <Footprints className={isCompact ? 'w-2.5 h-2.5' : 'w-3 h-3'} />
-      Walk-in
+      {t('transactions.sourceWalkIn')}
     </span>
   )
 }
@@ -88,9 +92,13 @@ function transactionBarbers(tx) {
 }
 
 const STATUS_META = {
-  completed: { label: 'Selesai',    variant: 'success', dot: 'bg-emerald-400' },
-  cancelled: { label: 'Dibatalkan', variant: 'danger',  dot: 'bg-red-400' },
-  refunded:  { label: 'Refund',     variant: 'warning', dot: 'bg-amber-400' },
+  completed: { labelKey: 'transactions.completed', variant: 'success', dot: 'bg-emerald-400' },
+  cancelled: { labelKey: 'transactions.cancelled', variant: 'danger',  dot: 'bg-red-400' },
+  refunded:  { labelKey: 'transactions.refunded',  variant: 'warning', dot: 'bg-amber-400' },
+}
+const statusLabel = (t, status) => {
+  const m = STATUS_META[status] || STATUS_META.completed
+  return t(m.labelKey)
 }
 
 const todayISO = () => {
@@ -104,9 +112,9 @@ const shiftDate = (days) => {
 }
 
 const PRESETS = [
-  { id: 'today',     label: 'Hari Ini', range: () => ({ start: todayISO(),    end: todayISO() }) },
-  { id: 'yesterday', label: 'Kemarin',  range: () => ({ start: shiftDate(-1), end: shiftDate(-1) }) },
-  { id: 'all',       label: 'Semua',    range: () => ({ start: '',            end: '' }) },
+  { id: 'today',     labelKey: 'transactions.filterToday', range: () => ({ start: todayISO(),    end: todayISO() }) },
+  { id: 'yesterday', labelKey: 'common.yesterday',         range: () => ({ start: shiftDate(-1), end: shiftDate(-1) }) },
+  { id: 'all',       labelKey: 'transactions.filterAll',   range: () => ({ start: '',            end: '' }) },
 ]
 const presetIdFor = (start, end) => {
   for (const p of PRESETS) {
@@ -121,6 +129,8 @@ const PAGE_SIZE = 20
 export default function TransactionsPage() {
   const { user } = useAuthStore()
   const toast = useToast()
+  const { t, i18n } = useTranslation()
+  const isEn = i18n.language === 'en'
   const [params, setParams] = useSearchParams()
 
   const [search, setSearch] = useState(params.get('q') || '')
@@ -242,14 +252,19 @@ export default function TransactionsPage() {
     try {
       const all = await fetchAllTransactions({ tenantId: user.tenantId, ...summaryFilters })
       if (!all.length) {
-        toast.error('Tidak ada data untuk diekspor')
+        toast.error(t('transactions.noExportData'))
         return
       }
-      const header = ['Tanggal', 'ID', 'Sumber', 'Pelanggan', 'Telepon', 'Item', 'Barber', 'Subtotal', 'Diskon', 'Total', 'Pembayaran', 'Status']
+      const header = [
+        t('transactions.csvDate'), t('transactions.csvId'), t('transactions.csvSource'),
+        t('transactions.headerCustomer'), t('common.phone'), t('transactions.csvItem'),
+        t('shift.tableBarber'), t('pos.subtotal'),
+        t('pos.discount'), t('common.total'), t('transactions.headerPayment'), t('common.status'),
+      ]
       const rows = all.map((tx) => [
         formatDateTimeInTz(tx.createdAt),
         tx.id,
-        tx.bookingId ? 'Booking' : 'Walk-in',
+        tx.bookingId ? t('transactions.sourceBooking') : t('transactions.sourceWalkIn'),
         customerDisplayName(tx),
         customerDisplayPhone(tx),
         (tx.items || []).map(i => i.name).join(' | '),
@@ -257,8 +272,8 @@ export default function TransactionsPage() {
         tx.subtotal || 0,
         tx.discountAmount || 0,
         tx.total || 0,
-        PAYMENT_LABELS[tx.paymentMethod] || tx.paymentMethod || '',
-        STATUS_META[tx.status]?.label || tx.status || 'Selesai',
+        paymentLabel(t, tx.paymentMethod),
+        statusLabel(t, tx.status),
       ])
       const escape = (v) => {
         const s = String(v ?? '')
@@ -270,12 +285,12 @@ export default function TransactionsPage() {
       const url  = URL.createObjectURL(blob)
       const a    = document.createElement('a')
       a.href     = url
-      a.download = `transaksi-${dateRange.start || 'semua'}-${dateRange.end || todayISO()}.csv`
+      a.download = `transaksi-${dateRange.start || 'all'}-${dateRange.end || todayISO()}.csv`
       a.click()
       URL.revokeObjectURL(url)
-      toast.success(`Berhasil ekspor ${all.length} transaksi`)
+      toast.success(t('transactions.exportSuccess', { count: all.length }))
     } catch (err) {
-      toast.error('Gagal ekspor: ' + (err?.response?.data?.error || err.message))
+      toast.error(t('transactions.exportFailed', { error: err?.response?.data?.error || err.message }))
     } finally {
       setExporting(false)
     }
@@ -295,17 +310,17 @@ export default function TransactionsPage() {
     <div className="space-y-3 sm:space-y-5 pb-6">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white">Transaksi</h1>
+          <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white">{t('transactions.title')}</h1>
           <p className="text-muted text-xs sm:text-sm mt-1">
-            {summary?.count ?? total} transaksi · {formatRupiah(summary?.totalRevenue || 0)}
+            {t('transactions.subtitleLine', { count: summary?.count ?? total, revenue: formatRupiah(summary?.totalRevenue || 0) })}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => refetch()}
             disabled={isFetching}
-            title="Muat ulang"
-            aria-label="Muat ulang"
+            title={t('transactions.reload')}
+            aria-label={t('transactions.reload')}
             className="hidden sm:inline-flex w-10 h-10 items-center justify-center rounded-xl border border-dark-border text-muted hover:text-off-white hover:border-brand/40 disabled:opacity-50 transition-colors"
           >
             <RefreshCcw className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`} />
@@ -316,7 +331,7 @@ export default function TransactionsPage() {
             className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl bg-brand/10 border border-brand/40 text-brand text-xs sm:text-sm font-semibold hover:bg-brand/20 disabled:opacity-50 transition-colors"
           >
             <Download className={`w-4 h-4 ${exporting ? 'animate-pulse' : ''}`} />
-            <span className="hidden sm:inline">{exporting ? 'Mengekspor…' : 'Ekspor CSV'}</span>
+            <span className="hidden sm:inline">{exporting ? t('transactions.exporting') : t('transactions.exportCSV')}</span>
           </button>
         </div>
       </div>
@@ -340,16 +355,16 @@ export default function TransactionsPage() {
                 }`}
               >
                 {p.id === 'today' && <Calendar className="w-3.5 h-3.5" />}
-                {p.label}
+                {t(p.labelKey)}
               </button>
             )
           })}
 
           {/* Quick source toggle */}
           {[
-            { id: '',        label: 'Semua',   icon: null },
-            { id: 'booking', label: 'Booking', icon: BookmarkCheck },
-            { id: 'walk_in', label: 'Walk-in', icon: Footprints },
+            { id: '',        label: t('common.all'),             icon: null },
+            { id: 'booking', label: t('transactions.sourceBooking'), icon: BookmarkCheck },
+            { id: 'walk_in', label: t('transactions.sourceWalkIn'),  icon: Footprints },
           ].map(opt => {
             const active = sourceFilter === opt.id
             const Icon = opt.icon
@@ -382,7 +397,7 @@ export default function TransactionsPage() {
                   : 'text-muted bg-dark-surface border-dark-border hover:text-off-white'
               }`}
             >
-              <Filter className="w-3.5 h-3.5" /> Filter
+              <Filter className="w-3.5 h-3.5" /> {t('common.filter')}
               {activeFilterCount > 0 && (
                 <span className="ml-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-brand text-dark-bg text-[10px] font-bold flex items-center justify-center">
                   {activeFilterCount}
@@ -399,13 +414,13 @@ export default function TransactionsPage() {
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Cari ID, pelanggan, atau layanan…"
+          placeholder={t('transactions.searchPlaceholder')}
           className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-10 pr-9 py-2.5 text-sm outline-none focus:border-brand/60 transition-colors"
         />
         {search && (
           <button
             onClick={() => setSearch('')}
-            aria-label="Kosongkan pencarian"
+            aria-label={t('transactions.clearSearch')}
             className="absolute right-2.5 top-1/2 -translate-y-1/2 w-7 h-7 inline-flex items-center justify-center rounded-md text-muted hover:text-off-white hover:bg-dark-card transition-colors"
           >
             <XIcon className="w-3.5 h-3.5" />
@@ -417,45 +432,45 @@ export default function TransactionsPage() {
       {showFilters && (
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 p-3 sm:p-4 bg-dark-surface border border-dark-border rounded-2xl">
           <DateField
-            label="Dari Tanggal"
+            label={t('transactions.fromDate')}
             value={dateRange.start}
             max={dateRange.end || todayISO()}
             onChange={(v) => setDateRange(r => ({ ...r, start: v }))}
           />
           <DateField
-            label="Sampai Tanggal"
+            label={t('transactions.toDate')}
             value={dateRange.end}
             min={dateRange.start || undefined}
             max={todayISO()}
             onChange={(v) => setDateRange(r => ({ ...r, end: v }))}
           />
-          <SelectField label="Pembayaran" value={pmFilter} onChange={setPmFilter}
+          <SelectField label={t('transactions.headerPayment')} value={pmFilter} onChange={setPmFilter}
             options={[
-              { value: '', label: 'Semua' },
-              { value: 'cash', label: 'Tunai' },
-              { value: 'transfer', label: 'Transfer' },
-              { value: 'qris', label: 'QRIS' },
-              { value: 'card', label: 'Kartu' },
+              { value: '', label: t('common.all') },
+              { value: 'cash', label: t('pos.methodCash') },
+              { value: 'transfer', label: t('pos.methodTransfer') },
+              { value: 'qris', label: t('pos.methodQris') },
+              { value: 'card', label: t('pos.methodCard') },
             ]}
           />
-          <SelectField label="Status" value={statusFilter} onChange={setStatusFilter}
+          <SelectField label={t('common.status')} value={statusFilter} onChange={setStatusFilter}
             options={[
-              { value: '', label: 'Semua status' },
-              { value: 'completed', label: 'Selesai' },
-              { value: 'cancelled', label: 'Dibatalkan' },
-              { value: 'refunded', label: 'Refund' },
+              { value: '', label: t('transactions.allStatus') },
+              { value: 'completed', label: t('transactions.completed') },
+              { value: 'cancelled', label: t('transactions.cancelled') },
+              { value: 'refunded', label: t('transactions.refunded') },
             ]}
           />
           {barbers.length > 0 && (
-            <SelectField label="Barber" value={barberFilter} onChange={setBarberFilter}
-              options={[{ value: '', label: 'Semua barber' }, ...barbers.map(b => ({ value: b.id, label: b.name }))]}
+            <SelectField label={t('shift.tableBarber')} value={barberFilter} onChange={setBarberFilter}
+              options={[{ value: '', label: t('transactions.allBarbers') }, ...barbers.map(b => ({ value: b.id, label: b.name }))]}
             />
           )}
-          <SelectField label="Sumber Pelanggan" value={sourceFilter} onChange={setSourceFilter}
+          <SelectField label={t('transactions.customerSource')} value={sourceFilter} onChange={setSourceFilter}
             options={[
-              { value: '', label: 'Semua' },
-              { value: 'booking', label: 'Booking' },
-              { value: 'walk_in', label: 'Walk-in' },
+              { value: '', label: t('common.all') },
+              { value: 'booking', label: t('transactions.sourceBooking') },
+              { value: 'walk_in', label: t('transactions.sourceWalkIn') },
             ]}
           />
           <div className="sm:col-span-2 flex items-end justify-end">
@@ -463,7 +478,7 @@ export default function TransactionsPage() {
               onClick={resetFilters}
               className="text-xs font-medium text-muted hover:text-off-white px-3 py-2 transition-colors"
             >
-              Reset filter
+              {t('transactions.resetFilter')}
             </button>
           </div>
         </div>
@@ -487,13 +502,13 @@ export default function TransactionsPage() {
                 <table className="w-full text-sm">
                   <thead className="bg-dark-card/50">
                     <tr className="border-b border-dark-border">
-                      <Th>Waktu</Th>
-                      <Th>ID</Th>
-                      <Th>Pelanggan</Th>
-                      <Th>Barber</Th>
-                      <Th>Bayar</Th>
-                      <Th className="text-right">Total</Th>
-                      <Th>Status</Th>
+                      <Th>{t('transactions.headerTime')}</Th>
+                      <Th>{t('transactions.csvId')}</Th>
+                      <Th>{t('transactions.headerCustomer')}</Th>
+                      <Th>{t('shift.tableBarber')}</Th>
+                      <Th>{t('transactions.payShort')}</Th>
+                      <Th className="text-right">{t('common.total')}</Th>
+                      <Th>{t('common.status')}</Th>
                       <Th className="text-right w-1" />
                     </tr>
                   </thead>
@@ -539,7 +554,7 @@ export default function TransactionsPage() {
                         </Td>
                         <Td>
                           <Badge variant={getStatusBadge(tx.paymentMethod)}>
-                            {PAYMENT_LABELS[tx.paymentMethod] || tx.paymentMethod || '—'}
+                            {paymentLabel(t, tx.paymentMethod)}
                           </Badge>
                         </Td>
                         <Td className="text-right">
@@ -575,7 +590,7 @@ export default function TransactionsPage() {
                       <div className="flex items-center justify-between gap-3 mb-1">
                         <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
-                          <span className="text-muted">{meta.label}</span>
+                          <span className="text-muted">{statusLabel(t, tx.status)}</span>
                           <span className="text-muted">·</span>
                           <span className="text-muted font-mono">#{tx.id.slice(-6).toUpperCase()}</span>
                         </span>
@@ -607,7 +622,7 @@ export default function TransactionsPage() {
                       <div className="flex items-center justify-between gap-2 mt-2">
                         <span className="text-[11px] text-muted">{formatDateTimeInTz(tx.createdAt)}</span>
                         <Badge variant={getStatusBadge(tx.paymentMethod)}>
-                          {PAYMENT_LABELS[tx.paymentMethod] || tx.paymentMethod || '—'}
+                          {paymentLabel(t, tx.paymentMethod)}
                         </Badge>
                       </div>
                     </button>
@@ -640,18 +655,20 @@ export default function TransactionsPage() {
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function StatsGrid({ summary, loading, statusFilter }) {
+  const { t, i18n } = useTranslation()
+  const numLocale = i18n.language === 'en' ? 'en-US' : 'id-ID'
   // Backend menghitung "Pendapatan" sesuai filter status. Saat memfilter
   // transaksi batal/refund, angka itu BUKAN omzet → relabel + warnai merah
   // supaya tak salah dibaca sebagai pendapatan.
   const reversed = statusFilter === 'cancelled' || statusFilter === 'refunded'
-  const revenueLabel = statusFilter === 'cancelled' ? 'Nilai dibatalkan'
-    : statusFilter === 'refunded' ? 'Nilai refund'
-    : 'Pendapatan'
+  const revenueLabel = statusFilter === 'cancelled' ? t('transactions.cancelledValue')
+    : statusFilter === 'refunded' ? t('transactions.refundValue')
+    : t('common.revenue')
   const stats = [
-    { label: 'Transaksi',   value: summary ? (summary.count ?? 0).toLocaleString('id-ID') : '—' },
+    { label: t('common.transactions'), value: summary ? (summary.count ?? 0).toLocaleString(numLocale) : '—' },
     { label: revenueLabel,  value: summary ? formatRupiah(summary.totalRevenue) : '—',          valueShort: summary ? formatRupiahShort(summary.totalRevenue) : '—', danger: reversed },
-    { label: 'Rata-rata',   value: summary ? formatRupiah(summary.avgTicket || 0) : '—',        valueShort: summary ? formatRupiahShort(summary.avgTicket || 0) : '—' },
-    { label: 'Diskon',      value: summary ? formatRupiah(summary.totalDiscount || 0) : '—',    valueShort: summary ? formatRupiahShort(summary.totalDiscount || 0) : '—' },
+    { label: t('transactions.avg'),    value: summary ? formatRupiah(summary.avgTicket || 0) : '—',        valueShort: summary ? formatRupiahShort(summary.avgTicket || 0) : '—' },
+    { label: t('pos.discount'),        value: summary ? formatRupiah(summary.totalDiscount || 0) : '—',    valueShort: summary ? formatRupiahShort(summary.totalDiscount || 0) : '—' },
   ]
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
@@ -673,11 +690,12 @@ function StatsGrid({ summary, loading, statusFilter }) {
 }
 
 function StatusPill({ status }) {
+  const { t } = useTranslation()
   const meta = STATUS_META[status] || STATUS_META.completed
   return (
     <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-dark-card text-[11px] font-medium">
       <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
-      <span className="text-off-white">{meta.label}</span>
+      <span className="text-off-white">{t(meta.labelKey)}</span>
     </span>
   )
 }
@@ -709,10 +727,11 @@ function SelectField({ label, value, onChange, options, className = '' }) {
 }
 
 function DateField({ label, value, min, max, onChange }) {
+  const { t, i18n } = useTranslation()
   const ref = useRef(null)
   const formatted = value
-    ? new Date(value + 'T00:00:00').toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
-    : 'Pilih tanggal'
+    ? new Date(value + 'T00:00:00').toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+    : t('transactions.pickDate')
 
   const openPicker = (e) => {
     const el = ref.current
@@ -733,7 +752,7 @@ function DateField({ label, value, min, max, onChange }) {
           <button
             type="button"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onChange('') }}
-            aria-label="Hapus tanggal"
+            aria-label={t('transactions.clearDate')}
             className="relative z-20 w-6 h-6 inline-flex items-center justify-center rounded-md text-muted hover:text-off-white hover:bg-dark-card transition-colors"
           >
             <XIcon className="w-3.5 h-3.5" />
@@ -757,11 +776,12 @@ function DateField({ label, value, min, max, onChange }) {
 }
 
 function Pagination({ page, totalPages, total, onChange, loading }) {
+  const { t } = useTranslation()
   if (totalPages <= 1) {
     return (
       <div className="px-4 py-3 border-t border-dark-border text-xs text-muted flex items-center justify-between">
-        <span>{total} transaksi</span>
-        {loading && <span className="text-muted/70">Memuat…</span>}
+        <span>{t('transactions.countLabel', { count: total })}</span>
+        {loading && <span className="text-muted/70">{t('transactions.loading')}</span>}
       </div>
     )
   }
@@ -771,14 +791,14 @@ function Pagination({ page, totalPages, total, onChange, loading }) {
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-3 border-t border-dark-border text-xs">
       <span className="text-muted">
-        Halaman {page} dari {totalPages} · {total} transaksi
+        {t('transactions.pageOf', { page, total: totalPages })} · {t('transactions.countLabel', { count: total })}
       </span>
       <div className="flex items-center gap-1">
         <button
           onClick={() => onChange(Math.max(1, page - 1))}
           disabled={page === 1 || loading}
           className="p-2 rounded-lg text-muted hover:text-off-white hover:bg-dark-card disabled:opacity-30 transition-colors"
-          aria-label="Halaman sebelumnya"
+          aria-label={t('transactions.prevPage')}
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
@@ -800,7 +820,7 @@ function Pagination({ page, totalPages, total, onChange, loading }) {
           onClick={() => onChange(Math.min(totalPages, page + 1))}
           disabled={page === totalPages || loading}
           className="p-2 rounded-lg text-muted hover:text-off-white hover:bg-dark-card disabled:opacity-30 transition-colors"
-          aria-label="Halaman berikutnya"
+          aria-label={t('transactions.nextPage')}
         >
           <ChevronRight className="w-4 h-4" />
         </button>
@@ -810,18 +830,19 @@ function Pagination({ page, totalPages, total, onChange, loading }) {
 }
 
 function EmptyState({ onReset }) {
+  const { t } = useTranslation()
   return (
     <div className="text-center py-14 px-6">
       <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-dark-card border border-dark-border flex items-center justify-center">
         <Receipt className="w-6 h-6 text-muted" />
       </div>
-      <p className="text-off-white font-semibold mb-1">Tidak ada transaksi</p>
-      <p className="text-muted text-sm mb-4">Coba ubah rentang tanggal atau hapus filter aktif.</p>
+      <p className="text-off-white font-semibold mb-1">{t('transactions.noTransactions')}</p>
+      <p className="text-muted text-sm mb-4">{t('transactions.emptyHint')}</p>
       <button
         onClick={onReset}
         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-dark-card border border-dark-border text-sm text-off-white hover:border-brand/40 transition-colors"
       >
-        Reset filter
+        {t('transactions.resetFilter')}
       </button>
     </div>
   )
@@ -830,6 +851,8 @@ function EmptyState({ onReset }) {
 // ── Detail Modal ──────────────────────────────────────────────────────────────
 
 function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
+  const { t, i18n } = useTranslation()
+  const isEn = i18n.language === 'en'
   const isOpen = !!tx || loading
   const updateStatus = useUpdateTransactionStatus()
   const toast = useToast()
@@ -888,46 +911,46 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
   // Susun data struk → kirim ke printer thermal Bluetooth (ESC/POS).
   const buildTxReceiptData = () => {
     const rcMeta = [
-      { label: 'No',      value: `#${shortId8}` },
-      { label: 'Tanggal', value: formatDateTimeInTz(tx.createdAt) },
+      { label: t('pos.receiptNo'),      value: `#${shortId8}` },
+      { label: t('pos.receiptDate'), value: formatDateTimeInTz(tx.createdAt) },
     ]
-    if (custName && custName !== 'Walk-in') rcMeta.push({ label: 'Pelanggan', value: custName })
-    rcMeta.push({ label: 'Status', value: meta.label })
+    if (custName && custName !== 'Walk-in') rcMeta.push({ label: t('pos.receiptCustomer'), value: custName })
+    rcMeta.push({ label: t('common.status'), value: statusLabel(t, tx.status) })
     const rcItems = items.map((it) => ({
       name: it.name,
       price: formatRupiah(it.price),
       barber: it.barber?.name || it.barberName || '',
     }))
-    const rows = [{ label: 'Subtotal', value: formatRupiah(subtotal) }]
-    if (discount > 0) rows.push({ label: `Diskon${tx.voucherCode ? ` (${tx.voucherCode})` : ''}`, value: `-${formatRupiah(discount)}` })
-    if (tx.pointsRedeemed > 0) rows.push({ label: `Poin dipakai (${tx.pointsRedeemed} pt)`, value: `-${formatRupiah(calcRedeemValue(tx.pointsRedeemed))}` })
-    if (tax > 0) rows.push({ label: 'Pajak', value: formatRupiah(tax) })
-    rows.push({ label: 'TOTAL', value: formatRupiah(tx.total), bold: true })
-    rows.push({ label: 'Bayar', value: PAYMENT_LABELS[tx.paymentMethod] || tx.paymentMethod || '-' })
+    const rows = [{ label: t('pos.receiptSubtotal'), value: formatRupiah(subtotal) }]
+    if (discount > 0) rows.push({ label: `${t('pos.receiptDiscount')}${tx.voucherCode ? ` (${tx.voucherCode})` : ''}`, value: `-${formatRupiah(discount)}` })
+    if (tx.pointsRedeemed > 0) rows.push({ label: t('pos.receiptPointsRedeemed', { points: tx.pointsRedeemed }), value: `-${formatRupiah(calcRedeemValue(tx.pointsRedeemed))}` })
+    if (tax > 0) rows.push({ label: t('pos.receiptTax'), value: formatRupiah(tax) })
+    rows.push({ label: t('pos.receiptTotalUpper'), value: formatRupiah(tx.total), bold: true })
+    rows.push({ label: t('pos.receiptPay'), value: paymentLabel(t, tx.paymentMethod) })
     if (tx.paymentMethod === 'cash' && cashReceived > 0) {
-      rows.push({ label: 'Diterima', value: formatRupiah(cashReceived) })
-      rows.push({ label: 'Kembalian', value: formatRupiah(change) })
+      rows.push({ label: t('pos.receiptReceived'), value: formatRupiah(cashReceived) })
+      rows.push({ label: t('pos.receiptChange'), value: formatRupiah(change) })
     }
-    if (tx.loyaltyPointsEarned > 0) rows.push({ label: 'Poin loyalti', value: `+${tx.loyaltyPointsEarned}` })
+    if (tx.loyaltyPointsEarned > 0) rows.push({ label: t('transactions.loyaltyPoints'), value: `+${tx.loyaltyPointsEarned}` })
     return {
       shopName, branchName: rcBranchName, branchAddr,
-      branchPhone: branchPhone ? `Telp: ${branchPhone}` : '',
+      branchPhone: branchPhone ? `${t('pos.receiptPhonePrefix')}: ${branchPhone}` : '',
       meta: rcMeta, items: rcItems, rows,
-      thanks: 'Terima kasih sudah berkunjung!',
-      poweredBy: 'Powered by SembaPos',
+      thanks: t('pos.receiptThanksLong'),
+      poweredBy: t('pos.poweredBy'),
     }
   }
 
   const handleBtPrint = async () => {
-    if (!bt.supported) { toast.error('Browser ini tidak mendukung Bluetooth. Gunakan Chrome di Android.'); return }
+    if (!bt.supported) { toast.error(t('transactions.btNotSupported')); return }
     setBtBusy(true)
     try {
       if (!bt.connected) await bt.connect()        // tampilkan pemilih perangkat (butuh klik)
       await bt.write(buildReceipt(buildTxReceiptData(), paperWidth >= 80 ? 42 : 32))
-      toast.success('Struk terkirim ke printer')
+      toast.success(t('transactions.receiptSent'))
     } catch (err) {
       // NotFoundError = pengguna menutup dialog pemilih perangkat → diam saja.
-      if (err?.name !== 'NotFoundError') toast.error(err?.message || 'Gagal mencetak via Bluetooth')
+      if (err?.name !== 'NotFoundError') toast.error(err?.message || t('transactions.btPrintFailed'))
     } finally {
       setBtBusy(false)
     }
@@ -936,12 +959,12 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
   const doStatusChange = async (status) => {
     try {
       await updateStatus.mutateAsync({ id: tx.id, status })
-      toast.success(status === 'cancelled' ? 'Transaksi dibatalkan' : 'Transaksi di-refund')
+      toast.success(status === 'cancelled' ? t('transactions.txCancelled') : t('transactions.txRefunded'))
       setConfirmAction(null)
       onChanged?.()
       onClose()
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal mengubah status')
+      toast.error(err?.response?.data?.error || t('transactions.statusChangeFailed'))
     }
   }
 
@@ -960,18 +983,18 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
               <p className="font-bold text-gray-900 text-base leading-tight">{shopName}</p>
               {rcBranchName && <p className="text-gray-600 text-xs mt-0.5">{rcBranchName}</p>}
               {branchAddr && <p className="text-gray-500 text-xs">{branchAddr}</p>}
-              {branchPhone && <p className="text-gray-500 text-xs">Telp: {branchPhone}</p>}
+              {branchPhone && <p className="text-gray-500 text-xs">{t('pos.receiptPhonePrefix')}: {branchPhone}</p>}
             </div>
 
             <div className="border-t border-dashed border-gray-300 my-2" />
 
             <div className="text-xs text-gray-500 space-y-0.5 mb-2">
-              <div className="flex justify-between"><span>No</span><span className="font-medium text-gray-700">#{shortId8}</span></div>
-              <div className="flex justify-between"><span>Tanggal</span><span>{formatDateTimeInTz(tx.createdAt)}</span></div>
+              <div className="flex justify-between"><span>{t('pos.receiptNo')}</span><span className="font-medium text-gray-700">#{shortId8}</span></div>
+              <div className="flex justify-between"><span>{t('pos.receiptDate')}</span><span>{formatDateTimeInTz(tx.createdAt)}</span></div>
               {custName && custName !== 'Walk-in' && (
-                <div className="flex justify-between gap-3"><span>Pelanggan</span><span className="text-gray-700 text-right truncate">{custName}</span></div>
+                <div className="flex justify-between gap-3"><span>{t('pos.receiptCustomer')}</span><span className="text-gray-700 text-right truncate">{custName}</span></div>
               )}
-              <div className="flex justify-between"><span>Status</span><span className="text-gray-700">{meta.label}</span></div>
+              <div className="flex justify-between"><span>{t('common.status')}</span><span className="text-gray-700">{statusLabel(t, tx.status)}</span></div>
             </div>
 
             <div className="border-t border-dashed border-gray-300 my-2" />
@@ -993,32 +1016,32 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
             <div className="border-t border-dashed border-gray-300 my-2" />
 
             <div className="space-y-1 text-xs">
-              <div className="flex justify-between text-gray-600"><span>Subtotal</span><span className="tabular-nums">{formatRupiah(subtotal)}</span></div>
+              <div className="flex justify-between text-gray-600"><span>{t('pos.receiptSubtotal')}</span><span className="tabular-nums">{formatRupiah(subtotal)}</span></div>
               {discount > 0 && (
-                <div className="flex justify-between text-green-700"><span>Diskon{tx.voucherCode ? ` (${tx.voucherCode})` : ''}</span><span className="tabular-nums">-{formatRupiah(discount)}</span></div>
+                <div className="flex justify-between text-green-700"><span>{t('pos.receiptDiscount')}{tx.voucherCode ? ` (${tx.voucherCode})` : ''}</span><span className="tabular-nums">-{formatRupiah(discount)}</span></div>
               )}
               {tx.pointsRedeemed > 0 && (
-                <div className="flex justify-between text-gray-600 italic text-[10px]"><span>Poin dipakai ({tx.pointsRedeemed} pt)</span><span className="tabular-nums">-{formatRupiah(calcRedeemValue(tx.pointsRedeemed))}</span></div>
+                <div className="flex justify-between text-gray-600 italic text-[10px]"><span>{t('pos.receiptPointsRedeemed', { points: tx.pointsRedeemed })}</span><span className="tabular-nums">-{formatRupiah(calcRedeemValue(tx.pointsRedeemed))}</span></div>
               )}
               {tax > 0 && (
-                <div className="flex justify-between text-gray-600"><span>Pajak</span><span className="tabular-nums">{formatRupiah(tax)}</span></div>
+                <div className="flex justify-between text-gray-600"><span>{t('pos.receiptTax')}</span><span className="tabular-nums">{formatRupiah(tax)}</span></div>
               )}
-              <div className="flex justify-between font-bold text-sm text-gray-900 border-t border-gray-200 pt-1 mt-1"><span>TOTAL</span><span className="tabular-nums">{formatRupiah(tx.total)}</span></div>
-              <div className="flex justify-between text-gray-600"><span>Bayar</span><span>{PAYMENT_LABELS[tx.paymentMethod] || tx.paymentMethod || '—'}</span></div>
+              <div className="flex justify-between font-bold text-sm text-gray-900 border-t border-gray-200 pt-1 mt-1"><span>{t('pos.receiptTotalUpper')}</span><span className="tabular-nums">{formatRupiah(tx.total)}</span></div>
+              <div className="flex justify-between text-gray-600"><span>{t('pos.receiptPay')}</span><span>{paymentLabel(t, tx.paymentMethod)}</span></div>
               {tx.paymentMethod === 'cash' && cashReceived > 0 && (
                 <>
-                  <div className="flex justify-between text-gray-600"><span>Diterima</span><span className="tabular-nums">{formatRupiah(cashReceived)}</span></div>
-                  <div className="flex justify-between font-semibold text-gray-800"><span>Kembalian</span><span className="tabular-nums">{formatRupiah(change)}</span></div>
+                  <div className="flex justify-between text-gray-600"><span>{t('pos.receiptReceived')}</span><span className="tabular-nums">{formatRupiah(cashReceived)}</span></div>
+                  <div className="flex justify-between font-semibold text-gray-800"><span>{t('pos.receiptChange')}</span><span className="tabular-nums">{formatRupiah(change)}</span></div>
                 </>
               )}
               {tx.loyaltyPointsEarned > 0 && (
-                <div className="flex justify-between text-gray-600"><span>Poin loyalti</span><span className="tabular-nums">+{tx.loyaltyPointsEarned}</span></div>
+                <div className="flex justify-between text-gray-600"><span>{t('transactions.loyaltyPoints')}</span><span className="tabular-nums">+{tx.loyaltyPointsEarned}</span></div>
               )}
             </div>
 
             <div className="border-t border-dashed border-gray-300 my-2" />
-            <p className="text-center text-xs text-gray-400">Terima kasih sudah berkunjung!</p>
-            <p className="text-center text-xs text-gray-400 mt-0.5">Powered by SembaPos</p>
+            <p className="text-center text-xs text-gray-400">{t('pos.receiptThanksLong')}</p>
+            <p className="text-center text-xs text-gray-400 mt-0.5">{t('pos.poweredBy')}</p>
           </div>
 
           {/* Header */}
@@ -1031,9 +1054,9 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
                 {tx.customer?.visitCount > 5 && (
                   <span
                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-brand/15 text-brand border border-brand/30 whitespace-nowrap"
-                    title={`Pelanggan tetap — ${tx.customer.visitCount} kunjungan`}
+                    title={t('transactions.regularCustomerTitle', { count: tx.customer.visitCount })}
                   >
-                    <Star className="w-3 h-3 fill-current" /> Pelanggan Tetap
+                    <Star className="w-3 h-3 fill-current" /> {t('transactions.regularCustomer')}
                   </span>
                 )}
               </div>
@@ -1045,7 +1068,7 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
             <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={onClose}
-                aria-label="Tutup"
+                aria-label={t('common.close')}
                 className="w-9 h-9 inline-flex items-center justify-center rounded-lg text-muted hover:text-off-white hover:bg-dark-card transition-colors"
               >
                 <XIcon className="w-4 h-4" />
@@ -1055,20 +1078,20 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
 
           {/* Meta grid */}
           <div className="px-6 py-4 grid grid-cols-2 gap-3 text-xs border-b border-dark-border">
-            <Meta icon={Store} label="Cabang" value={tx.branch?.name || '—'} />
-            <Meta icon={CreditCard} label="Bayar"
-              value={<Badge variant={getStatusBadge(tx.paymentMethod)}>{PAYMENT_LABELS[tx.paymentMethod] || tx.paymentMethod || '—'}</Badge>}
+            <Meta icon={Store} label={t('transactions.branch')} value={tx.branch?.name || '—'} />
+            <Meta icon={CreditCard} label={t('transactions.payShort')}
+              value={<Badge variant={getStatusBadge(tx.paymentMethod)}>{paymentLabel(t, tx.paymentMethod)}</Badge>}
             />
             {customerDisplayPhone(tx) && (
-              <Meta icon={Phone} label="Telepon" value={
+              <Meta icon={Phone} label={t('common.phone')} value={
                 <span className="font-mono">{customerDisplayPhone(tx)}</span>
               } className="col-span-2" />
             )}
             {tx.customer?.visitCount != null && (
-              <Meta icon={User} label="Kunjungan" value={`${tx.customer.visitCount}x`} />
+              <Meta icon={User} label={t('transactions.visits')} value={`${tx.customer.visitCount}x`} />
             )}
             {tx.customer?.loyaltyPoints != null && (
-              <Meta icon={Star} label="Poin Loyalty" value={tx.customer.loyaltyPoints.toLocaleString('id-ID')} />
+              <Meta icon={Star} label={t('transactions.loyaltyPointsLabel')} value={tx.customer.loyaltyPoints.toLocaleString(isEn ? 'en-US' : 'id-ID')} />
             )}
           </div>
 
@@ -1078,21 +1101,21 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
               <div className="flex items-center gap-2 mb-2">
                 <BookmarkCheck className="w-4 h-4 text-brand" />
                 <p className="text-[11px] font-semibold text-brand uppercase tracking-wider">
-                  Asal Booking · {tx.booking.source === 'online' ? 'Online' : 'Walk-in'}
+                  {t('transactions.bookingOrigin')} · {tx.booking.source === 'online' ? t('bookings.sourceOnline') : t('bookings.sourceWalkIn')}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
-                <Meta icon={Calendar} label="Jadwal" value={
+                <Meta icon={Calendar} label={t('transactions.schedule')} value={
                   `${tx.booking.date || '—'}${tx.booking.time ? ` · ${tx.booking.time}` : ''}`
                 } />
-                <Meta icon={Clock} label="Dibuat" value={
+                <Meta icon={Clock} label={t('transactions.createdAt')} value={
                   tx.booking.createdAt ? formatDateTimeInTz(tx.booking.createdAt) : '—'
                 } />
                 {tx.booking.serviceName && (
-                  <Meta icon={Receipt} label="Layanan" value={tx.booking.serviceName} className="col-span-2" />
+                  <Meta icon={Receipt} label={t('transactions.headerServices')} value={tx.booking.serviceName} className="col-span-2" />
                 )}
                 {tx.booking.barberName && (
-                  <Meta icon={User} label="Barber" value={tx.booking.barberName} className="col-span-2" />
+                  <Meta icon={User} label={t('shift.tableBarber')} value={tx.booking.barberName} className="col-span-2" />
                 )}
                 {tx.booking.notes && (
                   <p className="col-span-2 text-muted italic">"{tx.booking.notes}"</p>
@@ -1104,15 +1127,15 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
           {/* Items — cap tinggi hanya di desktop; di HP biarkan mengalir (hindari
               nested-scroll yang membingungkan: cukup modalnya saja yang menggulir). */}
           <div className="px-6 py-4 border-b border-dark-border md:max-h-72 md:overflow-y-auto">
-            <p className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-3">Item</p>
+            <p className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-3">{t('transactions.csvItem')}</p>
             <div className="space-y-2">
-              {items.length === 0 && <p className="text-sm text-muted italic">Tidak ada item</p>}
+              {items.length === 0 && <p className="text-sm text-muted italic">{t('transactions.noItems')}</p>}
               {items.map((it, idx) => (
                 <div key={it.id || idx} className="flex items-start justify-between gap-3 text-sm">
                   <div className="min-w-0">
                     <p className="text-off-white font-medium leading-tight">{it.name}</p>
                     {it.barberName && (
-                      <p className="text-[11px] text-muted mt-0.5">Barber: {it.barberName}</p>
+                      <p className="text-[11px] text-muted mt-0.5">{t('shift.tableBarber')}: {it.barberName}</p>
                     )}
                     {it.service?.category && (
                       <p className="text-[11px] text-muted">{it.service.category}</p>
@@ -1128,47 +1151,47 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
 
           {/* Totals */}
           <div className="px-6 py-4 space-y-1.5 text-sm">
-            <Row label="Subtotal" value={formatRupiah(subtotal)} />
+            <Row label={t('pos.receiptSubtotal')} value={formatRupiah(subtotal)} />
             {discount > 0 && (
               <Row
-                label={`Diskon${tx.voucherCode ? ` (${tx.voucherCode})` : ''}`}
+                label={`${t('pos.receiptDiscount')}${tx.voucherCode ? ` (${tx.voucherCode})` : ''}`}
                 value={`- ${formatRupiah(discount)}`}
                 valueClass="text-red-400"
               />
             )}
-            {tax > 0 && <Row label="Pajak" value={formatRupiah(tax)} />}
+            {tax > 0 && <Row label={t('pos.receiptTax')} value={formatRupiah(tax)} />}
             <div className="border-t border-dark-border my-2" />
             <Row
-              label={<span className="text-base font-semibold text-off-white">Total</span>}
+              label={<span className="text-base font-semibold text-off-white">{t('common.total')}</span>}
               value={<span className="text-lg font-bold text-brand tabular-nums">{formatRupiah(tx.total)}</span>}
             />
             {tx.paymentMethod === 'cash' && cashReceived > 0 && (
               <>
                 <div className="border-t border-dark-border my-2" />
-                <Row label="Diterima" value={formatRupiah(cashReceived)} />
-                <Row label="Kembalian" value={formatRupiah(change)} valueClass="text-emerald-400 font-semibold" />
+                <Row label={t('pos.receiptReceived')} value={formatRupiah(cashReceived)} />
+                <Row label={t('pos.receiptChange')} value={formatRupiah(change)} valueClass="text-emerald-400 font-semibold" />
               </>
             )}
             {tx.loyaltyPointsEarned > 0 && (
-              <Row label="Poin loyalti" value={`+${tx.loyaltyPointsEarned}`} valueClass="text-blue-300" />
+              <Row label={t('transactions.loyaltyPoints')} value={`+${tx.loyaltyPointsEarned}`} valueClass="text-blue-300" />
             )}
           </div>
 
           {/* Cetak ulang struk — dialog cetak browser atau printer thermal Bluetooth */}
           <div className="px-6 py-4 border-t border-dark-border no-print space-y-3">
-            <p className="text-[11px] font-semibold text-muted uppercase tracking-wider">Cetak Struk</p>
+            <p className="text-[11px] font-semibold text-muted uppercase tracking-wider">{t('transactions.printReceipt')}</p>
             {bt.supported && (
               <div className="flex items-center justify-between gap-2 text-xs">
                 <span className="text-muted truncate min-w-0">
                   {bt.connected
-                    ? <>Printer: <b className="text-off-white">{bt.deviceName}</b> · <button type="button" onClick={bt.disconnect} className="text-brand hover:underline">putuskan</button></>
-                    : 'Printer Bluetooth belum tersambung'}
+                    ? <>{t('transactions.printerLabel')}: <b className="text-off-white">{bt.deviceName}</b> · <button type="button" onClick={bt.disconnect} className="text-brand hover:underline">{t('transactions.disconnect')}</button></>
+                    : t('transactions.printerNotConnected')}
                 </span>
                 <select
                   value={paperWidth}
                   onChange={(e) => { const v = Number(e.target.value); setPaperWidth(v); try { localStorage.setItem('btPaperWidth', String(v)) } catch { /* noop */ } }}
                   className="bg-dark-bg border border-dark-border rounded-lg px-2 py-1 text-xs text-off-white shrink-0"
-                  aria-label="Lebar kertas struk"
+                  aria-label={t('transactions.paperWidth')}
                 >
                   <option value={58}>58mm</option>
                   <option value={80}>80mm</option>
@@ -1183,19 +1206,19 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
                   className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-brand text-dark-bg text-sm font-semibold hover:bg-brand/90 disabled:opacity-50 transition-colors"
                 >
                   <Bluetooth className="w-4 h-4" />
-                  {btBusy ? 'Mencetak…' : (bt.connected ? 'Cetak Bluetooth' : 'Hubungkan & Cetak')}
+                  {btBusy ? t('transactions.printing') : (bt.connected ? t('transactions.printBluetooth') : t('transactions.connectAndPrint'))}
                 </button>
               )}
               <button
                 onClick={() => window.print()}
                 className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-dark-card border border-dark-border text-off-white text-sm font-semibold hover:border-brand/40 transition-colors"
               >
-                <Printer className="w-4 h-4" /> Cetak
+                <Printer className="w-4 h-4" /> {t('transactions.print')}
               </button>
             </div>
             {!bt.supported && (
               <p className="text-[11px] text-muted leading-snug">
-                Untuk cetak ke printer thermal Bluetooth, buka halaman ini lewat Chrome di Android.
+                {t('transactions.btHint')}
               </p>
             )}
           </div>
@@ -1204,7 +1227,7 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
           {ratings.length > 0 && (
             <div className="px-6 py-4 border-t border-dark-border bg-brand/[0.02]">
               <p className="text-[11px] font-semibold text-muted uppercase tracking-wider mb-3 inline-flex items-center gap-2">
-                <Star className="w-3 h-3 text-brand fill-brand" /> Rating Barber
+                <Star className="w-3 h-3 text-brand fill-brand" /> {t('transactions.barberRating')}
               </p>
               <div className="space-y-2">
                 {ratings.map(r => {
@@ -1230,11 +1253,11 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
                       <div className="flex items-center gap-2 mt-1.5 text-[10px] text-muted flex-wrap">
                         <span>{formatDateTimeInTz(r.createdAt)}</span>
                         {r.publishStatus === 'published' && (
-                          <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-semibold uppercase tracking-wide">Live di /book</span>
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-semibold uppercase tracking-wide">{t('transactions.liveOnBook')}</span>
                         )}
                         {r.ticketId && (
                           <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-semibold uppercase tracking-wide inline-flex items-center gap-0.5">
-                            <AlertTriangle className="w-2.5 h-2.5" /> Tiket dibuat
+                            <AlertTriangle className="w-2.5 h-2.5" /> {t('transactions.ticketCreated')}
                           </span>
                         )}
                       </div>
@@ -1253,21 +1276,21 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
                 disabled={updateStatus.isPending}
                 className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/40 text-amber-400 text-sm font-semibold hover:bg-amber-500/20 disabled:opacity-50 transition-colors"
               >
-                <RefreshCcw className="w-4 h-4" /> Refund
+                <RefreshCcw className="w-4 h-4" /> {t('transactions.refund')}
               </button>
               <button
                 onClick={() => setConfirmAction('cancel')}
                 disabled={updateStatus.isPending}
                 className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/40 text-red-400 text-sm font-semibold hover:bg-red-500/20 disabled:opacity-50 transition-colors"
               >
-                <Ban className="w-4 h-4" /> Batalkan
+                <Ban className="w-4 h-4" /> {t('transactions.cancelAction')}
               </button>
             </div>
           )}
           {!isCompleted && (
             <div className="px-6 pb-5 pt-3 border-t border-dark-border flex items-center gap-2 text-xs text-muted">
               <CheckCircle2 className="w-4 h-4" />
-              Transaksi ini sudah berstatus <span className="font-semibold">{meta.label}</span>.
+              {t('transactions.alreadyStatus', { status: statusLabel(t, tx.status) })}
             </div>
           )}
         </div>
@@ -1279,11 +1302,11 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
         onConfirm={() => doStatusChange('cancelled')}
         variant="danger"
         icon={AlertTriangle}
-        title="Batalkan transaksi?"
-        description="Transaksi ditandai DIBATALKAN dan dikeluarkan dari perhitungan omzet. Poin loyalti & kunjungan pelanggan, poin yang ditukar, serta kuota voucher otomatis dikembalikan. Tindakan ini final — tidak bisa diurungkan."
+        title={t('transactions.cancelConfirmTitle')}
+        description={t('transactions.cancelConfirmDesc')}
         highlight={`#${shortId}`}
-        confirmText="Ya, Batalkan"
-        cancelText="Tidak, Kembali"
+        confirmText={t('transactions.confirmCancel')}
+        cancelText={t('transactions.confirmBack')}
       />
       <ConfirmDialog
         isOpen={confirmAction === 'refund'}
@@ -1291,11 +1314,11 @@ function TransactionDetailModal({ tx, loading, onClose, onChanged }) {
         onConfirm={() => doStatusChange('refunded')}
         variant="warning"
         icon={RefreshCcw}
-        title="Refund transaksi?"
-        description="Transaksi ditandai REFUND dan dikeluarkan dari perhitungan omzet. Poin loyalti & kunjungan pelanggan, poin yang ditukar, serta kuota voucher otomatis dikembalikan. Pastikan dana sudah dikembalikan ke pelanggan. Tindakan ini final."
+        title={t('transactions.refundConfirmTitle')}
+        description={t('transactions.refundConfirmDesc')}
         highlight={`#${shortId}`}
-        confirmText="Ya, Refund"
-        cancelText="Tidak, Kembali"
+        confirmText={t('transactions.confirmRefund')}
+        cancelText={t('transactions.confirmBack')}
       />
     </>
   )

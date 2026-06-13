@@ -39,15 +39,17 @@ function KpiTile({ label, value, sub }) {
   )
 }
 
-function fmtDate(d) {
+function fmtDate(d, locale = 'id-ID') {
   if (!d) return '—'
-  return new Date(d).toLocaleString('id-ID', {
+  return new Date(d).toLocaleString(locale, {
     day: 'numeric', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
   })
 }
 
 function ShopRatingList({ items, loading }) {
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language === 'en' ? 'en-US' : 'id-ID'
   if (loading && !items.length) {
     return (
       <div className="space-y-2">
@@ -60,7 +62,7 @@ function ShopRatingList({ items, loading }) {
   if (!items.length) {
     return (
       <div className="rounded-xl border border-dark-border bg-dark-card p-8 text-center text-muted text-sm">
-        Belum ada rating dari pelanggan.
+        {t('ratingsReport.noShopRatings')}
       </div>
     )
   }
@@ -73,7 +75,7 @@ function ShopRatingList({ items, loading }) {
               <div className="flex items-center gap-2">
                 <Stars value={r.rating} />
                 <span className="text-xs text-muted">
-                  {r.transaction?.customerName || 'Pelanggan'}
+                  {r.transaction?.customerName || t('ratingsReport.customerFallback')}
                 </span>
               </div>
               {r.comment && (
@@ -84,7 +86,7 @@ function ShopRatingList({ items, loading }) {
               )}
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[11px] text-muted">
                 <span className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3" /> {fmtDate(r.createdAt)}
+                  <Calendar className="w-3 h-3" /> {fmtDate(r.createdAt, locale)}
                 </span>
                 {r.branch?.name && (
                   <span className="flex items-center gap-1">
@@ -101,6 +103,8 @@ function ShopRatingList({ items, loading }) {
 }
 
 function BarberRatingList({ items, loading }) {
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language === 'en' ? 'en-US' : 'id-ID'
   if (loading && !items.length) {
     return (
       <div className="space-y-2">
@@ -113,7 +117,7 @@ function BarberRatingList({ items, loading }) {
   if (!items.length) {
     return (
       <div className="rounded-xl border border-dark-border bg-dark-card p-8 text-center text-muted text-sm">
-        Belum ada rating per barber.
+        {t('ratingsReport.noBarberRatings')}
       </div>
     )
   }
@@ -140,7 +144,7 @@ function BarberRatingList({ items, loading }) {
               )}
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[11px] text-muted">
                 <span className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3" /> {fmtDate(r.createdAt)}
+                  <Calendar className="w-3 h-3" /> {fmtDate(r.createdAt, locale)}
                 </span>
               </div>
             </div>
@@ -152,11 +156,13 @@ function BarberRatingList({ items, loading }) {
 }
 
 export default function RatingsReport({
-  title = 'Rating',
+  title,
   subtitle,
   showShopTab = true,
 }) {
+  const { t } = useTranslation()
   const [tab, setTab] = useState(showShopTab ? 'shop' : 'barber')
+  const heading = title ?? t('ratingsReport.defaultTitle')
 
   const shopStats = useShopRatingStats({})
   const shopRatings = useShopRatings({ limit: 50 })
@@ -174,28 +180,28 @@ export default function RatingsReport({
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold text-off-white">{title}</h1>
+        <h1 className="text-xl font-semibold text-off-white">{heading}</h1>
         {subtitle && <p className="text-sm text-muted mt-1">{subtitle}</p>}
       </div>
 
       {(shopStats.isError || shopRatings.isError || barberRatings.isError) && (
         <div className="flex items-center justify-between gap-3 p-3 rounded-xl border border-red-400/30 bg-red-400/5">
-          <p className="text-sm text-red-400">Gagal memuat data rating. Periksa koneksi lalu coba lagi.</p>
+          <p className="text-sm text-red-400">{t('ratingsReport.loadError')}</p>
           <button
             type="button"
             onClick={() => { shopStats.refetch?.(); shopRatings.refetch?.(); barberRatings.refetch?.() }}
             className="px-3 py-1.5 rounded-lg text-xs font-medium border border-dark-border text-off-white hover:bg-dark-card transition-colors whitespace-nowrap"
           >
-            Coba Lagi
+            {t('common.retry')}
           </button>
         </div>
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <KpiTile label="Rating Toko" value={shopAvg.toFixed(1)} sub={`${shopTotal} ulasan`} />
-        <KpiTile label="Rating Barber" value={barberAvg.toFixed(1)} sub={`${barberTotal} penilaian`} />
-        <KpiTile label="Ulasan Bintang 5" value={shopStats.data?.distribution?.[5] || 0} sub="Toko" />
-        <KpiTile label="Bintang ≤ 2" value={(shopStats.data?.distribution?.[1] || 0) + (shopStats.data?.distribution?.[2] || 0)} sub="Perlu ditinjau" />
+        <KpiTile label={t('ratingsReport.kpiShopRating')} value={shopAvg.toFixed(1)} sub={t('ratingsReport.kpiReviewsCount', { count: shopTotal })} />
+        <KpiTile label={t('ratingsReport.kpiBarberRating')} value={barberAvg.toFixed(1)} sub={t('ratingsReport.kpiRatingsCount', { count: barberTotal })} />
+        <KpiTile label={t('ratingsReport.kpiFiveStar')} value={shopStats.data?.distribution?.[5] || 0} sub={t('ratingsReport.kpiShop')} />
+        <KpiTile label={t('ratingsReport.kpiLowStar')} value={(shopStats.data?.distribution?.[1] || 0) + (shopStats.data?.distribution?.[2] || 0)} sub={t('ratingsReport.kpiNeedReview')} />
       </div>
 
       {showShopTab && (
@@ -209,7 +215,7 @@ export default function RatingsReport({
                 : 'border-transparent text-muted hover:text-off-white'
             }`}
           >
-            Rating Toko
+            {t('ratingsReport.tabShop')}
           </button>
           <button
             type="button"
@@ -220,7 +226,7 @@ export default function RatingsReport({
                 : 'border-transparent text-muted hover:text-off-white'
             }`}
           >
-            Per Barber
+            {t('ratingsReport.tabBarber')}
           </button>
         </div>
       )}

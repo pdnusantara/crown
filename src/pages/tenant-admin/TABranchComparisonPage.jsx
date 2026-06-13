@@ -82,13 +82,13 @@ export default function TABranchComparisonPage() {
   ]
 
   const handleExport = () => {
-    const headers = `Metrik,${branchA?.name || 'A'},${branchB?.name || 'B'}\n`
+    const headers = `${t('tenantAdmin.branchComparison.csvMetric')},${branchA?.name || 'A'},${branchB?.name || 'B'}\n`
     const rows = metrics.map(m => `${m.label},${m.aVal},${m.bVal}`).join('\n')
     const blob = new Blob([headers + rows], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `perbandingan-cabang-${format(new Date(), 'yyyy-MM-dd')}.csv`
+    a.download = `${t('tenantAdmin.branchComparison.csvFileName')}-${format(new Date(), 'yyyy-MM-dd')}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -102,8 +102,8 @@ export default function TABranchComparisonPage() {
         </div>
         <Card className="p-10 text-center">
           <GitCompare className="w-10 h-10 text-muted/30 mx-auto mb-3" />
-          <p className="text-off-white font-medium">Minimal 2 cabang diperlukan</p>
-          <p className="text-muted text-sm mt-1">Tambahkan cabang kedua untuk mulai membandingkan performa antar cabang.</p>
+          <p className="text-off-white font-medium">{t('tenantAdmin.branchComparison.minBranchesTitle')}</p>
+          <p className="text-muted text-sm mt-1">{t('tenantAdmin.branchComparison.minBranchesDesc')}</p>
         </Card>
       </div>
     )

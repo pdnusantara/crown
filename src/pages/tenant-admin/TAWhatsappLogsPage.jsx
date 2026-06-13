@@ -12,56 +12,42 @@ import { Select } from '../../components/ui/Select.jsx'
 import { Modal } from '../../components/ui/Modal.jsx'
 import LiveBadge from '../../components/ui/LiveBadge.jsx'
 import { useToast } from '../../components/ui/Toast.jsx'
+import { useTranslation } from 'react-i18next'
 import { formatDateTimeInTz } from '../../utils/timezone.js'
 
 // ── Konfigurasi tampilan ────────────────────────────────────────────────────
 // Warna pakai shade -400 (punya light-mode override di index.css) supaya aman
 // di tema terang & gelap.
 const STATUS_CFG = {
-  queued:    { label: 'Antre',    icon: Clock,      cls: 'text-amber-400 bg-amber-400/10 border-amber-400/20' },
-  sent:      { label: 'Terkirim', icon: Check,      cls: 'text-blue-400 bg-blue-400/10 border-blue-400/20' },
-  delivered: { label: 'Sampai',   icon: CheckCheck, cls: 'text-green-400 bg-green-400/10 border-green-400/20' },
-  read:      { label: 'Dibaca',   icon: CheckCheck, cls: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' },
-  failed:    { label: 'Gagal',    icon: XCircle,    cls: 'text-red-400 bg-red-400/10 border-red-400/20' },
-  skipped:   { label: 'Dilewati', icon: Ban,        cls: 'text-muted bg-dark-card border-dark-border' },
+  queued:    { labelKey: 'tenantAdmin.whatsappLogs.statusQueued',    icon: Clock,      cls: 'text-amber-400 bg-amber-400/10 border-amber-400/20' },
+  sent:      { labelKey: 'tenantAdmin.whatsappLogs.statusSent',      icon: Check,      cls: 'text-blue-400 bg-blue-400/10 border-blue-400/20' },
+  delivered: { labelKey: 'tenantAdmin.whatsappLogs.statusDelivered', icon: CheckCheck, cls: 'text-green-400 bg-green-400/10 border-green-400/20' },
+  read:      { labelKey: 'tenantAdmin.whatsappLogs.statusRead',      icon: CheckCheck, cls: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' },
+  failed:    { labelKey: 'tenantAdmin.whatsappLogs.statusFailed',    icon: XCircle,    cls: 'text-red-400 bg-red-400/10 border-red-400/20' },
+  skipped:   { labelKey: 'tenantAdmin.whatsappLogs.statusSkipped',   icon: Ban,        cls: 'text-muted bg-dark-card border-dark-border' },
 }
-const CATEGORY_LABEL = {
-  transaction_admin: 'Notif transaksi · admin',
-  transaction_customer: 'Notif transaksi · pelanggan',
-  rating: 'Link rating',
-  test: 'Pesan tes',
-  system: 'Sistem',
+const CATEGORY_LABEL_KEY = {
+  transaction_admin: 'tenantAdmin.whatsappLogs.categoryTransactionAdmin',
+  transaction_customer: 'tenantAdmin.whatsappLogs.categoryTransactionCustomer',
+  rating: 'tenantAdmin.whatsappLogs.categoryRating',
+  test: 'tenantAdmin.whatsappLogs.categoryTest',
+  system: 'tenantAdmin.whatsappLogs.categorySystem',
 }
-const REASON_LABEL = {
-  not_connected: 'WhatsApp tidak tersambung',
-  invalid_phone: 'Nomor tidak valid',
-  disabled: 'Notifikasi dimatikan',
-  gateway_error: 'Gateway gagal merespons',
+const REASON_LABEL_KEY = {
+  not_connected: 'tenantAdmin.whatsappLogs.reasonNotConnected',
+  invalid_phone: 'tenantAdmin.whatsappLogs.reasonInvalidPhone',
+  disabled: 'tenantAdmin.whatsappLogs.reasonDisabled',
+  gateway_error: 'tenantAdmin.whatsappLogs.reasonGatewayError',
 }
-
-const STATUS_OPTIONS = [
-  { value: '', label: 'Semua status' },
-  { value: 'sent', label: 'Terkirim' },
-  { value: 'delivered', label: 'Sampai' },
-  { value: 'read', label: 'Dibaca' },
-  { value: 'failed', label: 'Gagal' },
-  { value: 'queued', label: 'Antre' },
-]
-const CATEGORY_OPTIONS = [
-  { value: '', label: 'Semua jenis' },
-  { value: 'transaction_admin', label: 'Notif transaksi · admin' },
-  { value: 'transaction_customer', label: 'Notif transaksi · pelanggan' },
-  { value: 'rating', label: 'Link rating' },
-  { value: 'test', label: 'Pesan tes' },
-  { value: 'system', label: 'Sistem' },
-]
 
 const PAGE_LIMIT = 25
 const csvEscape = (v) => {
   const s = v == null ? '' : String(v)
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
-const reasonText = (r) => (r ? (REASON_LABEL[r] || r) : '')
+const reasonText = (r, t) => (r ? (REASON_LABEL_KEY[r] ? t(REASON_LABEL_KEY[r]) : r) : '')
+const categoryLabel = (c, t) => (CATEGORY_LABEL_KEY[c] ? t(CATEGORY_LABEL_KEY[c]) : c)
+const statusLabel = (st, t) => (STATUS_CFG[st]?.labelKey ? t(STATUS_CFG[st].labelKey) : st)
 
 function KpiCard({ label, value, sub, accent = 'text-off-white' }) {
   return (
@@ -74,16 +60,34 @@ function KpiCard({ label, value, sub, accent = 'text-off-white' }) {
 }
 
 function StatusBadge({ status }) {
+  const { t } = useTranslation()
   const cfg = STATUS_CFG[status] || STATUS_CFG.skipped
   const Icon = cfg.icon
   return (
     <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full border ${cfg.cls}`}>
-      <Icon size={11} /> {cfg.label}
+      <Icon size={11} /> {statusLabel(status in STATUS_CFG ? status : 'skipped', t)}
     </span>
   )
 }
 
 export default function TAWhatsappLogsPage() {
+  const { t } = useTranslation()
+  const STATUS_OPTIONS = [
+    { value: '', label: t('tenantAdmin.whatsappLogs.allStatuses') },
+    { value: 'sent', label: t('tenantAdmin.whatsappLogs.statusSent') },
+    { value: 'delivered', label: t('tenantAdmin.whatsappLogs.statusDelivered') },
+    { value: 'read', label: t('tenantAdmin.whatsappLogs.statusRead') },
+    { value: 'failed', label: t('tenantAdmin.whatsappLogs.statusFailed') },
+    { value: 'queued', label: t('tenantAdmin.whatsappLogs.statusQueued') },
+  ]
+  const CATEGORY_OPTIONS = [
+    { value: '', label: t('tenantAdmin.whatsappLogs.allCategories') },
+    { value: 'transaction_admin', label: t('tenantAdmin.whatsappLogs.categoryTransactionAdmin') },
+    { value: 'transaction_customer', label: t('tenantAdmin.whatsappLogs.categoryTransactionCustomer') },
+    { value: 'rating', label: t('tenantAdmin.whatsappLogs.categoryRating') },
+    { value: 'test', label: t('tenantAdmin.whatsappLogs.categoryTest') },
+    { value: 'system', label: t('tenantAdmin.whatsappLogs.categorySystem') },
+  ]
   const [status, setStatus] = useState('')
   const [category, setCategory] = useState('')
   const [searchInput, setSearchInput] = useState('')
@@ -137,14 +141,14 @@ export default function TAWhatsappLogsPage() {
     if (!resendTarget) return
     const phone = resendPhone.trim()
     const msg = resendMsg.trim()
-    if (!msg) { toast.error('Isi pesan tidak boleh kosong'); return }
+    if (!msg) { toast.error(t('tenantAdmin.whatsappLogs.messageEmpty')); return }
     const phoneChanged = phone && phone !== resendTarget.recipient
     try {
       await resend.mutateAsync({ id: resendTarget.id, recipient: phoneChanged ? phone : undefined, message: msg })
-      toast.success('Pesan dikirim ulang')
+      toast.success(t('tenantAdmin.whatsappLogs.resentSuccess'))
       setResendTarget(null); setResendPhone(''); setResendMsg('')
     } catch (e) {
-      toast.error(e?.response?.data?.error || 'Gagal mengirim ulang pesan')
+      toast.error(e?.response?.data?.error || t('tenantAdmin.whatsappLogs.resendFailed'))
     }
   }
 
@@ -154,13 +158,20 @@ export default function TAWhatsappLogsPage() {
       const res = await api.get('/whatsapp/messages', { params: { ...listParams, page: 1, limit: 1000 } })
       const rows = (res.data?.data?.data || []).map((m) => [
         formatDateTimeInTz(m.createdAt),
-        CATEGORY_LABEL[m.category] || m.category,
+        categoryLabel(m.category, t),
         m.recipient,
-        STATUS_CFG[m.status]?.label || m.status,
-        reasonText(m.reason),
+        statusLabel(m.status, t),
+        reasonText(m.reason, t),
         (m.preview || '').replace(/\s+/g, ' '),
       ])
-      const header = ['Waktu', 'Jenis', 'Nomor', 'Status', 'Keterangan', 'Pesan']
+      const header = [
+        t('tenantAdmin.whatsappLogs.csvTime'),
+        t('tenantAdmin.whatsappLogs.csvType'),
+        t('tenantAdmin.whatsappLogs.csvNumber'),
+        t('tenantAdmin.whatsappLogs.csvStatus'),
+        t('tenantAdmin.whatsappLogs.csvReason'),
+        t('tenantAdmin.whatsappLogs.csvMessage'),
+      ]
       const csv = [header, ...rows].map((r) => r.map(csvEscape).join(',')).join('\r\n')
       const blob = new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' })
       const url = URL.createObjectURL(blob)
@@ -180,24 +191,24 @@ export default function TAWhatsappLogsPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="font-display text-2xl font-bold text-off-white">Pesan WhatsApp</h1>
+            <h1 className="font-display text-2xl font-bold text-off-white">{t('tenantAdmin.whatsappLogs.title')}</h1>
             <LiveBadge className="hidden sm:inline-flex" />
           </div>
-          <p className="text-muted text-sm mt-1">Pantau status pengiriman notifikasi WhatsApp ke admin & pelanggan.</p>
+          <p className="text-muted text-sm mt-1">{t('tenantAdmin.whatsappLogs.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => refetch()}
             disabled={isFetching}
-            aria-label="Muat ulang"
-            title="Muat ulang"
+            aria-label={t('tenantAdmin.whatsappLogs.reload')}
+            title={t('tenantAdmin.whatsappLogs.reload')}
             className="p-2 rounded-lg border border-dark-border text-muted hover:text-off-white hover:bg-dark-card transition-colors disabled:opacity-50"
           >
             <RefreshCw size={16} className={isFetching ? 'animate-spin' : ''} />
           </button>
           <Button variant="secondary" size="sm" icon={Download} onClick={handleExport} disabled={exporting || total === 0}>
-            {exporting ? 'Menyiapkan...' : 'Ekspor CSV'}
+            {exporting ? t('tenantAdmin.whatsappLogs.preparing') : t('tenantAdmin.whatsappLogs.exportCsv')}
           </Button>
         </div>
       </div>
@@ -206,25 +217,25 @@ export default function TAWhatsappLogsPage() {
       <div className="flex items-start gap-2 p-3 rounded-xl border border-blue-400/20 bg-blue-400/5">
         <Info size={14} className="text-blue-400 flex-shrink-0 mt-0.5" />
         <p className="text-xs text-muted leading-relaxed">
-          <span className="text-off-white font-medium">Terkirim</span> = diterima server WhatsApp ·{' '}
-          <span className="text-off-white font-medium">Sampai</span> = masuk ke HP pelanggan ·{' '}
-          <span className="text-off-white font-medium">Gagal</span> = tidak terkirim (cek keterangannya).
+          <span className="text-off-white font-medium">{t('tenantAdmin.whatsappLogs.statusSent')}</span> = {t('tenantAdmin.whatsappLogs.explainSent')} ·{' '}
+          <span className="text-off-white font-medium">{t('tenantAdmin.whatsappLogs.statusDelivered')}</span> = {t('tenantAdmin.whatsappLogs.explainDelivered')} ·{' '}
+          <span className="text-off-white font-medium">{t('tenantAdmin.whatsappLogs.statusFailed')}</span> = {t('tenantAdmin.whatsappLogs.explainFailed')}
         </p>
       </div>
 
       {/* KPI */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiCard label="Total Pesan" value={s.total ?? 0} sub="pada rentang dipilih" />
-        <KpiCard label="Berhasil" value={s.success ?? 0} sub={`${s.successRate ?? 0}% tingkat sukses`} accent="text-green-400" />
-        <KpiCard label="Sampai ke HP" value={s.delivered ?? 0} sub="delivered / dibaca" accent="text-emerald-400" />
-        <KpiCard label="Gagal" value={s.failed ?? 0} sub="perlu ditinjau" accent="text-red-400" />
+        <KpiCard label={t('tenantAdmin.whatsappLogs.kpiTotal')} value={s.total ?? 0} sub={t('tenantAdmin.whatsappLogs.kpiTotalSub')} />
+        <KpiCard label={t('tenantAdmin.whatsappLogs.kpiSuccess')} value={s.success ?? 0} sub={t('tenantAdmin.whatsappLogs.kpiSuccessSub', { rate: s.successRate ?? 0 })} accent="text-green-400" />
+        <KpiCard label={t('tenantAdmin.whatsappLogs.kpiDelivered')} value={s.delivered ?? 0} sub={t('tenantAdmin.whatsappLogs.kpiDeliveredSub')} accent="text-emerald-400" />
+        <KpiCard label={t('tenantAdmin.whatsappLogs.kpiFailed')} value={s.failed ?? 0} sub={t('tenantAdmin.whatsappLogs.kpiFailedSub')} accent="text-red-400" />
       </div>
 
       {/* Filter */}
       <Card className="p-3">
         <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-end">
           <div className="relative col-span-2 sm:flex-1 sm:min-w-[180px]">
-            <label className="block text-sm font-medium text-muted mb-1.5">Cari nomor</label>
+            <label className="block text-sm font-medium text-muted mb-1.5">{t('tenantAdmin.whatsappLogs.searchNumber')}</label>
             <Search size={15} className="absolute left-3 bottom-2.5 text-muted pointer-events-none" />
             <input
               type="text"
@@ -236,24 +247,24 @@ export default function TAWhatsappLogsPage() {
             />
           </div>
           <div className="col-span-1 sm:w-[150px]">
-            <Select label="Status" options={STATUS_OPTIONS} value={status} onChange={(e) => setStatus(e.target.value)} placeholder={null} />
+            <Select label={t('common.status')} options={STATUS_OPTIONS} value={status} onChange={(e) => setStatus(e.target.value)} placeholder={null} />
           </div>
           <div className="col-span-1 sm:w-[190px]">
-            <Select label="Jenis" options={CATEGORY_OPTIONS} value={category} onChange={(e) => setCategory(e.target.value)} placeholder={null} />
+            <Select label={t('tenantAdmin.whatsappLogs.type')} options={CATEGORY_OPTIONS} value={category} onChange={(e) => setCategory(e.target.value)} placeholder={null} />
           </div>
           <div className="col-span-1 sm:w-auto">
-            <label className="block text-sm font-medium text-muted mb-1.5">Dari</label>
+            <label className="block text-sm font-medium text-muted mb-1.5">{t('common.from')}</label>
             <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} max={to || undefined}
               className="w-full appearance-none rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-sm text-off-white focus:outline-none focus:border-brand/50" />
           </div>
           <div className="col-span-1 sm:w-auto">
-            <label className="block text-sm font-medium text-muted mb-1.5">Sampai</label>
+            <label className="block text-sm font-medium text-muted mb-1.5">{t('common.to')}</label>
             <input type="date" value={to} onChange={(e) => setTo(e.target.value)} min={from || undefined}
               className="w-full appearance-none rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-sm text-off-white focus:outline-none focus:border-brand/50" />
           </div>
           {hasFilter && (
             <button type="button" onClick={resetFilters} className="col-span-2 sm:w-auto text-left text-xs text-muted hover:text-off-white underline py-1 sm:py-2">
-              Reset filter
+              {t('tenantAdmin.whatsappLogs.resetFilter')}
             </button>
           )}
         </div>
@@ -269,18 +280,18 @@ export default function TAWhatsappLogsPage() {
       {!isLoading && isError && (
         <Card className="p-10 text-center border-red-400/30 bg-red-400/5">
           <AlertTriangle className="w-9 h-9 text-red-400 mx-auto mb-3" />
-          <p className="text-off-white font-medium">Gagal memuat log pesan</p>
-          <p className="text-muted text-sm mt-1">Periksa koneksi lalu coba lagi.</p>
-          <Button size="sm" className="mt-4" icon={RefreshCw} variant="secondary" onClick={() => refetch()}>Coba Lagi</Button>
+          <p className="text-off-white font-medium">{t('tenantAdmin.whatsappLogs.loadFailed')}</p>
+          <p className="text-muted text-sm mt-1">{t('tenantAdmin.whatsappLogs.loadFailedHint')}</p>
+          <Button size="sm" className="mt-4" icon={RefreshCw} variant="secondary" onClick={() => refetch()}>{t('common.retry')}</Button>
         </Card>
       )}
 
       {!isLoading && !isError && items.length === 0 && (
         <Card className="p-12 text-center">
           <MessageSquare className="w-10 h-10 text-muted/30 mx-auto mb-3" />
-          <p className="text-off-white font-medium">{hasFilter ? 'Tidak ada pesan sesuai filter' : 'Belum ada pesan terkirim'}</p>
+          <p className="text-off-white font-medium">{hasFilter ? t('tenantAdmin.whatsappLogs.emptyFiltered') : t('tenantAdmin.whatsappLogs.emptyNone')}</p>
           <p className="text-muted text-sm mt-1">
-            {hasFilter ? 'Coba ubah atau reset filter.' : 'Pesan WhatsApp yang dikirim sistem akan muncul di sini.'}
+            {hasFilter ? t('tenantAdmin.whatsappLogs.emptyFilteredHint') : t('tenantAdmin.whatsappLogs.emptyNoneHint')}
           </p>
         </Card>
       )}
@@ -297,11 +308,11 @@ export default function TAWhatsappLogsPage() {
                 </div>
                 {/* Nomor tujuan + jenis */}
                 <p className="text-sm text-off-white font-semibold mt-2 font-mono truncate">{m.recipient}</p>
-                <p className="text-[11px] text-muted mt-0.5">{CATEGORY_LABEL[m.category] || m.category}</p>
+                <p className="text-[11px] text-muted mt-0.5">{categoryLabel(m.category, t)}</p>
                 {m.preview && <p className="text-xs text-muted mt-1.5 line-clamp-2 leading-snug">{m.preview}</p>}
                 {m.status === 'failed' && m.reason && (
                   <p className="text-[11px] text-red-400 mt-1.5 flex items-center gap-1">
-                    <AlertTriangle size={11} className="flex-shrink-0" /> {reasonText(m.reason)}
+                    <AlertTriangle size={11} className="flex-shrink-0" /> {reasonText(m.reason, t)}
                   </p>
                 )}
                 {(m.status === 'failed' || m.status === 'skipped') && (
@@ -311,7 +322,7 @@ export default function TAWhatsappLogsPage() {
                       onClick={() => openResend(m)}
                       className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-brand/30 text-brand hover:bg-brand/10 transition-colors"
                     >
-                      <Send size={12} /> Kirim ulang
+                      <Send size={12} /> {t('tenantAdmin.whatsappLogs.resend')}
                     </button>
                   </div>
                 )}
@@ -325,7 +336,7 @@ export default function TAWhatsappLogsPage() {
       {!isLoading && !isError && total > PAGE_LIMIT && (
         <div className="flex items-center justify-between pt-1">
           <p className="text-xs text-muted">
-            Halaman {page} dari {totalPages} · {total} pesan
+            {t('tenantAdmin.whatsappLogs.pageInfo', { page, totalPages, total })}
           </p>
           <div className="flex items-center gap-2">
             <button
@@ -349,17 +360,17 @@ export default function TAWhatsappLogsPage() {
       )}
 
       {/* Modal kirim ulang */}
-      <Modal isOpen={!!resendTarget} onClose={closeResend} title="Kirim ulang pesan" size="md">
+      <Modal isOpen={!!resendTarget} onClose={closeResend} title={t('tenantAdmin.whatsappLogs.resendTitle')} size="md">
         {resendTarget && (
           <div className="space-y-4">
             <div className="flex items-start gap-2 p-3 rounded-xl border border-amber-400/20 bg-amber-400/5">
               <Info size={14} className="text-amber-400 flex-shrink-0 mt-0.5" />
               <p className="text-xs text-muted leading-relaxed">
-                Pesan dikirim ulang dengan isi yang sama. Pastikan WhatsApp toko <span className="text-off-white font-medium">tersambung</span> (tab WhatsApp Beta) — bila putus, pengiriman akan gagal lagi.
+                {t('tenantAdmin.whatsappLogs.resendNotePre')}<span className="text-off-white font-medium">{t('tenantAdmin.whatsappLogs.resendNoteBold')}</span>{t('tenantAdmin.whatsappLogs.resendNotePost')}
               </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-muted mb-1.5">Nomor tujuan</label>
+              <label className="block text-sm font-medium text-muted mb-1.5">{t('tenantAdmin.whatsappLogs.recipientNumber')}</label>
               <input
                 type="tel"
                 inputMode="numeric"
@@ -368,10 +379,10 @@ export default function TAWhatsappLogsPage() {
                 placeholder="08xxx / 62xxx"
                 className="w-full appearance-none rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-sm text-off-white placeholder-muted focus:outline-none focus:border-brand/50 font-mono"
               />
-              <p className="text-[11px] text-muted mt-1">Bisa diubah bila nomor sebelumnya keliru.</p>
+              <p className="text-[11px] text-muted mt-1">{t('tenantAdmin.whatsappLogs.recipientHint')}</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-muted mb-1.5">Isi pesan</label>
+              <label className="block text-sm font-medium text-muted mb-1.5">{t('tenantAdmin.whatsappLogs.messageBody')}</label>
               <textarea
                 value={resendMsg}
                 onChange={(e) => setResendMsg(e.target.value)}
@@ -382,14 +393,14 @@ export default function TAWhatsappLogsPage() {
               {!resendTarget.body && (
                 <p className="text-[11px] text-amber-400 mt-1 flex items-start gap-1">
                   <AlertTriangle size={11} className="flex-shrink-0 mt-0.5" />
-                  Pesan ini terkirim sebelum fitur kirim ulang aktif, jadi hanya tersimpan ringkasannya. Lengkapi isinya sebelum mengirim.
+                  {t('tenantAdmin.whatsappLogs.legacyBodyWarning')}
                 </p>
               )}
             </div>
             <div className="flex justify-end gap-2 pt-1">
-              <Button variant="secondary" size="sm" onClick={closeResend} disabled={resend.isPending}>Batal</Button>
+              <Button variant="secondary" size="sm" onClick={closeResend} disabled={resend.isPending}>{t('common.cancel')}</Button>
               <Button size="sm" icon={Send} onClick={confirmResend} disabled={resend.isPending || !resendPhone.trim() || !resendMsg.trim()}>
-                {resend.isPending ? 'Mengirim...' : 'Kirim ulang'}
+                {resend.isPending ? t('tenantAdmin.whatsappLogs.sending') : t('tenantAdmin.whatsappLogs.resend')}
               </Button>
             </div>
           </div>

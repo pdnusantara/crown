@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   CalendarDays, Clock, User, Check, X as XIcon, Phone,
@@ -21,7 +22,7 @@ import Modal from '../../components/ui/Modal.jsx'
 import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx'
 import LiveBadge from '../../components/ui/LiveBadge.jsx'
 import { format, addDays } from 'date-fns'
-import { id as idLocale } from 'date-fns/locale'
+import { id as idLocale, enUS as enLocale } from 'date-fns/locale'
 import { getBranchSlug } from '../../utils/branchSlug.js'
 import { getTenantTimezone, formatYmdInTz } from '../../utils/timezone.js'
 
@@ -29,27 +30,29 @@ import { getTenantTimezone, formatYmdInTz } from '../../utils/timezone.js'
 const SEARCH_DEBOUNCE_MS = 350
 
 // ── helpers ────────────────────────────────────────────────────────────────
-function formatDateLabel(dateStr) {
+function formatDateLabel(dateStr, locale = idLocale) {
   if (!dateStr) return '—'
   try {
     const [y, m, d] = String(dateStr).split('-').map(Number)
-    return format(new Date(y, m - 1, d), 'd MMM yyyy', { locale: idLocale })
+    return format(new Date(y, m - 1, d), 'd MMM yyyy', { locale })
   } catch { return dateStr }
 }
-function formatDayLabel(dateStr) {
+function formatDayLabel(dateStr, locale = idLocale) {
   if (!dateStr) return '—'
   try {
     const [y, m, d] = String(dateStr).split('-').map(Number)
-    return format(new Date(y, m - 1, d), 'EEEE', { locale: idLocale })
+    return format(new Date(y, m - 1, d), 'EEEE', { locale })
   } catch { return '' }
 }
 
-const STATUS_LABEL = {
-  pending:     'Menunggu',
-  confirmed:   'Terkonfirmasi',
-  in_progress: 'Berlangsung',
-  done:        'Selesai',
-  cancelled:   'Dibatalkan',
+// status code → i18n key (bookings namespace). 'in_progress' tak ada di katalog →
+// kunci baru bookings.inProgress.
+const STATUS_LABEL_KEY = {
+  pending:     'bookings.pending',
+  confirmed:   'bookings.confirmed',
+  in_progress: 'bookings.inProgress',
+  done:        'bookings.done',
+  cancelled:   'bookings.cancelled',
 }
 
 // Indonesia phone → WA wa.me link
@@ -103,30 +106,31 @@ function useIsMobile() {
   return isMobile
 }
 
-// ── filter chips ──────────────────────────────────────────────────────────
+// ── filter chips (label di-resolve via t saat render) ───────────────────────
 const DATE_FILTERS = [
-  { id: 'upcoming', label: 'Mendatang' },
-  { id: 'today',    label: 'Hari Ini'   },
-  { id: 'tomorrow', label: 'Besok'      },
-  { id: 'past',     label: 'Lalu'       },
-  { id: 'all',      label: 'Semua'      },
+  { id: 'upcoming', labelKey: 'bookings.upcoming' },
+  { id: 'today',    labelKey: 'bookings.today'    },
+  { id: 'tomorrow', labelKey: 'bookings.tomorrow' },
+  { id: 'past',     labelKey: 'bookings.past'     },
+  { id: 'all',      labelKey: 'bookings.all'      },
 ]
 
 const STATUS_FILTERS = [
-  { id: 'all',         label: 'Semua Status' },
-  { id: 'pending',     label: 'Menunggu' },
-  { id: 'confirmed',   label: 'Terkonfirmasi' },
-  { id: 'in_progress', label: 'Berlangsung' },
-  { id: 'done',        label: 'Selesai' },
-  { id: 'cancelled',   label: 'Dibatalkan' },
+  { id: 'all',         labelKey: 'bookings.allStatus' },
+  { id: 'pending',     labelKey: 'bookings.pending' },
+  { id: 'confirmed',   labelKey: 'bookings.confirmed' },
+  { id: 'in_progress', labelKey: 'bookings.inProgress' },
+  { id: 'done',        labelKey: 'bookings.done' },
+  { id: 'cancelled',   labelKey: 'bookings.cancelled' },
 ]
 
 // Subtle pulse — booking baru masuk dalam 5 menit terakhir.
 function FreshBadge() {
+  const { t } = useTranslation()
   return (
     <span className="relative inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand text-dark whitespace-nowrap shadow-brand">
       <Sparkles className="w-2.5 h-2.5" />
-      BARU
+      {t('bookings.freshBadge')}
       <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-brand animate-ping" />
     </span>
   )
@@ -134,6 +138,7 @@ function FreshBadge() {
 
 // Booking yang waktu mulainya tinggal sebentar — beri reminder pakai countdown.
 function SoonBadge({ time }) {
+  const { t } = useTranslation()
   const minsAway = (() => {
     if (!time) return null
     try {
@@ -146,10 +151,10 @@ function SoonBadge({ time }) {
   return (
     <span
       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30 whitespace-nowrap"
-      title="Waktu booking sudah dekat — segera siapkan"
+      title={t('bookings.soonTitle')}
     >
       <Zap className="w-2.5 h-2.5" />
-      {minsAway != null && minsAway >= 0 ? `${minsAway}m lagi` : 'Segera'}
+      {minsAway != null && minsAway >= 0 ? t('bookings.minsAway', { n: minsAway }) : t('bookings.soon')}
     </span>
   )
 }
@@ -180,6 +185,10 @@ export default function BookingsPage() {
   const toast = useToast()
   const navigate = useNavigate()
   const isMobile = useIsMobile()
+  const { t, i18n } = useTranslation()
+  const isEn = i18n.language === 'en'
+  const dfLocale = isEn ? enLocale : idLocale
+  const statusText = useCallback((s) => STATUS_LABEL_KEY[s] ? t(STATUS_LABEL_KEY[s]) : s, [t])
 
   const tz = useMemo(() => getTenantTimezone(), [])
   const today    = useMemo(() => formatYmdInTz(new Date(), tz), [tz])
@@ -320,9 +329,9 @@ export default function BookingsPage() {
   const doConfirm = async (booking) => {
     try {
       await updateBooking.mutateAsync({ id: booking.id, status: 'confirmed' })
-      toast.success(`Booking ${booking.customerName} dikonfirmasi`)
+      toast.success(t('bookings.confirmedToastNamed', { name: booking.customerName }))
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal mengkonfirmasi booking')
+      toast.error(err?.response?.data?.error || t('bookings.confirmFailed'))
     }
   }
 
@@ -330,9 +339,9 @@ export default function BookingsPage() {
     if (!cancelTarget) return
     try {
       await deleteBooking.mutateAsync(cancelTarget.id)
-      toast.success('Booking dibatalkan')
+      toast.success(t('bookings.cancelledToast'))
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal membatalkan booking')
+      toast.error(err?.response?.data?.error || t('bookings.cancelFailed'))
     }
   }
 
@@ -344,9 +353,9 @@ export default function BookingsPage() {
       // ini ke antrian, backend kembalikan alreadyQueued=true — beri pesan beda
       // supaya kasir paham tidak terjadi pembuatan tiket duplikat.
       if (res?.alreadyQueued) {
-        toast.info(`${checkInTarget.customerName} sudah ada di antrian`)
+        toast.info(t('bookings.alreadyQueued', { name: checkInTarget.customerName }))
       } else {
-        toast.success(`${checkInTarget.customerName} masuk antrian`)
+        toast.success(t('bookings.enteredQueue', { name: checkInTarget.customerName }))
       }
       closeDetail()
       // Navigate ke halaman antrian supaya kasir langsung melihat tiket
@@ -354,7 +363,7 @@ export default function BookingsPage() {
       navigate(`/${slug}/kasir/queue`)
       return res
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal check-in booking')
+      toast.error(err?.response?.data?.error || t('bookings.checkInFailed'))
     }
   }
 
@@ -363,10 +372,10 @@ export default function BookingsPage() {
     if (!ids.length) return
     try {
       const res = await bulkBooking.mutateAsync({ ids, action: 'confirm' })
-      toast.success(`${res?.count || 0} booking dikonfirmasi`)
+      toast.success(t('bookings.bulkConfirmed', { count: res?.count || 0 }))
       clearSelection()
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal konfirmasi massal')
+      toast.error(err?.response?.data?.error || t('bookings.bulkConfirmFailed'))
     }
   }
 
@@ -375,10 +384,10 @@ export default function BookingsPage() {
     if (!ids.length) return
     try {
       const res = await bulkBooking.mutateAsync({ ids, action: 'cancel' })
-      toast.success(`${res?.count || 0} booking dibatalkan`)
+      toast.success(t('bookings.bulkCancelled', { count: res?.count || 0 }))
       clearSelection()
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal pembatalan massal')
+      toast.error(err?.response?.data?.error || t('bookings.bulkCancelFailed'))
     }
   }
 
@@ -386,9 +395,9 @@ export default function BookingsPage() {
     if (!phone) return
     try {
       await navigator.clipboard.writeText(phone)
-      toast.success('Nomor disalin')
+      toast.success(t('bookings.phoneCopied'))
     } catch {
-      toast.error('Tidak bisa menyalin')
+      toast.error(t('bookings.copyFailed'))
     }
   }
 
@@ -399,23 +408,28 @@ export default function BookingsPage() {
       const { page: _p, limit: _l, ...exportFilters } = apiFilters
       const all = await fetchAllBookings({ tenantId: user.tenantId, ...exportFilters })
       if (!all.length) {
-        toast.error('Tidak ada data untuk diekspor')
+        toast.error(t('bookings.noExportData'))
         return
       }
-      const header = ['ID', 'Status', 'Sumber', 'Pelanggan', 'Telepon', 'Layanan', 'Barber', 'Tanggal', 'Hari', 'Waktu', 'Catatan', 'Dibuat']
+      const header = [
+        t('bookings.csvId'), t('bookings.csvStatus'), t('bookings.csvSource'),
+        t('bookings.csvCustomer'), t('bookings.csvPhone'), t('bookings.csvService'),
+        t('bookings.csvBarber'), t('bookings.csvDate'), t('bookings.csvDay'),
+        t('bookings.csvTime'), t('bookings.csvNotes'), t('bookings.csvCreated'),
+      ]
       const rows = all.map(b => [
         b.id,
-        STATUS_LABEL[b.status] || b.status,
-        (b.source || 'online') === 'online' ? 'Online' : 'Walk-in',
+        statusText(b.status),
+        (b.source || 'online') === 'online' ? t('bookings.sourceOnline') : t('bookings.sourceWalkIn'),
         b.customerName || '',
         b.customerPhone || '',
         b.serviceName || '',
         b.barberName || '',
         b.date || '',
-        formatDayLabel(b.date),
+        formatDayLabel(b.date, dfLocale),
         b.time || '',
         b.notes || '',
-        b.createdAt ? new Date(b.createdAt).toLocaleString('id-ID') : '',
+        b.createdAt ? new Date(b.createdAt).toLocaleString(isEn ? 'en-US' : 'id-ID') : '',
       ])
       const csv = [header, ...rows].map(r => r.map(escapeCsv).join(',')).join('\r\n')
       const blob = new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' })
@@ -425,9 +439,9 @@ export default function BookingsPage() {
       a.download = `booking-${today}.csv`
       a.click()
       URL.revokeObjectURL(url)
-      toast.success(`Berhasil ekspor ${all.length} booking`)
+      toast.success(t('bookings.exportSuccess', { count: all.length }))
     } catch (err) {
-      toast.error('Gagal ekspor: ' + (err?.response?.data?.error || err.message))
+      toast.error(t('bookings.exportFailed', { error: err?.response?.data?.error || err.message }))
     } finally {
       setExporting(false)
     }
@@ -436,7 +450,7 @@ export default function BookingsPage() {
   // ── renderers ────────────────────────────────────────────────────────────
   const renderStatusBadge = (b) => (
     <Badge variant={getStatusBadge(b.status) || 'muted'} dot>
-      {STATUS_LABEL[b.status] || b.status}
+      {statusText(b.status)}
     </Badge>
   )
 
@@ -447,16 +461,16 @@ export default function BookingsPage() {
     return isOnline ? (
       <span
         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/30 whitespace-nowrap"
-        title="Booking dibuat oleh pelanggan dari aplikasi/halaman online"
+        title={t('bookings.sourceOnlineTitle')}
       >
-        <Globe className="w-2.5 h-2.5" /> Online
+        <Globe className="w-2.5 h-2.5" /> {t('bookings.sourceOnline')}
       </span>
     ) : (
       <span
         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-400 border border-amber-500/30 whitespace-nowrap"
-        title="Walk-in — booking diinput langsung oleh kasir di counter"
+        title={t('bookings.sourceWalkInTitle')}
       >
-        <Footprints className="w-2.5 h-2.5" /> Walk-in
+        <Footprints className="w-2.5 h-2.5" /> {t('bookings.sourceWalkIn')}
       </span>
     )
   }
@@ -467,7 +481,7 @@ export default function BookingsPage() {
         <button
           onClick={() => doConfirm(b)}
           disabled={updateBooking.isPending}
-          title="Konfirmasi" aria-label={`Konfirmasi booking ${b.customerName}`}
+          title={t('bookings.confirm')} aria-label={t('bookings.confirmAria', { name: b.customerName })}
           className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 hover:bg-green-500/20 transition disabled:opacity-50"
         >
           <Check className="w-4 h-4" />
@@ -476,7 +490,7 @@ export default function BookingsPage() {
       {(b.status === 'pending' || b.status === 'confirmed') && (
         <button
           onClick={() => setCheckInTarget(b)}
-          title="Masukkan ke Antrian" aria-label={`Masukkan ${b.customerName} ke antrian`}
+          title={t('bookings.addToQueue')} aria-label={t('bookings.addToQueueAria', { name: b.customerName })}
           className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-brand/10 border border-brand/20 text-brand hover:bg-brand/20 transition"
         >
           <LogIn className="w-4 h-4" />
@@ -484,9 +498,9 @@ export default function BookingsPage() {
       )}
       {b.customerPhone && (
         <a
-          href={waLink(b.customerPhone, `Halo ${b.customerName}, ini konfirmasi booking Anda di ${b.branch?.name || ''} pada ${formatDateLabel(b.date)} pukul ${b.time}.`)}
+          href={waLink(b.customerPhone, t('bookings.waMessage', { name: b.customerName, branch: b.branch?.name || '', date: formatDateLabel(b.date, dfLocale), time: b.time }))}
           target="_blank" rel="noreferrer"
-          title="Hubungi via WhatsApp" aria-label={`Hubungi ${b.customerName} via WhatsApp`}
+          title={t('bookings.contactWhatsapp')} aria-label={t('bookings.contactWhatsappAria', { name: b.customerName })}
           className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition"
         >
           <MessageCircle className="w-4 h-4" />
@@ -494,7 +508,7 @@ export default function BookingsPage() {
       )}
       <button
         onClick={() => openDetail(b)}
-        title="Detail" aria-label={`Lihat detail booking ${b.customerName}`}
+        title={t('common.details')} aria-label={t('bookings.detailAria', { name: b.customerName })}
         className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-dark-card border border-dark-border text-muted hover:text-off-white hover:border-brand/40 transition"
       >
         <Eye className="w-4 h-4" />
@@ -503,7 +517,7 @@ export default function BookingsPage() {
         <button
           onClick={() => setCancelTarget(b)}
           disabled={deleteBooking.isPending}
-          title="Batalkan" aria-label={`Batalkan booking ${b.customerName}`}
+          title={t('bookings.cancel')} aria-label={t('bookings.cancelAria', { name: b.customerName })}
           className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition disabled:opacity-50"
         >
           <XIcon className="w-4 h-4" />
@@ -519,38 +533,38 @@ export default function BookingsPage() {
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white">Booking</h1>
+            <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white">{t('bookings.title')}</h1>
             <LiveBadge />
             {isFetching && !isLoading && (
               <span className="inline-flex items-center gap-1 text-[11px] text-muted">
-                <Loader2 className="w-3 h-3 animate-spin" /> Memuat…
+                <Loader2 className="w-3 h-3 animate-spin" /> {t('bookings.loading')}
               </span>
             )}
           </div>
           <p className="text-muted text-xs sm:text-sm mt-1">
-            {stats.today ?? '–'} hari ini · {stats.pending ?? '–'} menunggu konfirmasi · {stats.total ?? '–'} total
+            {t('bookings.statsLine', { today: stats.today ?? '–', pending: stats.pending ?? '–', total: stats.total ?? '–' })}
           </p>
         </div>
         <div className="flex items-center gap-2">
           {/* Sort toggle */}
           <button
             onClick={() => setSortBy(s => s === 'recent' ? 'schedule' : 'recent')}
-            title={sortBy === 'recent' ? 'Urutkan berdasarkan jadwal' : 'Urutkan berdasarkan terbaru'}
-            aria-label="Ubah urutan"
+            title={sortBy === 'recent' ? t('bookings.sortBySchedule') : t('bookings.sortByRecent')}
+            aria-label={t('bookings.changeSort')}
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-dark-card border border-dark-border text-muted hover:text-off-white text-xs sm:text-sm transition-colors"
           >
             {sortBy === 'recent' ? <ArrowDownNarrowWide className="w-4 h-4" /> : <ArrowDownAZ className="w-4 h-4" />}
-            <span className="hidden sm:inline">{sortBy === 'recent' ? 'Terbaru' : 'Jadwal'}</span>
+            <span className="hidden sm:inline">{sortBy === 'recent' ? t('bookings.sortRecent') : t('bookings.sortSchedule')}</span>
           </button>
           {/* Export CSV */}
           <button
             onClick={handleExport}
             disabled={exporting}
-            title="Ekspor CSV" aria-label="Ekspor booking ke CSV"
+            title={t('bookings.exportCsv')} aria-label={t('bookings.exportCsvAria')}
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-dark-card border border-dark-border text-muted hover:text-off-white text-xs sm:text-sm transition-colors disabled:opacity-50"
           >
             {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            <span className="hidden sm:inline">{exporting ? 'Mengekspor…' : 'Ekspor'}</span>
+            <span className="hidden sm:inline">{exporting ? t('bookings.exporting') : t('bookings.export')}</span>
           </button>
           {/* Add booking */}
           <button
@@ -558,8 +572,8 @@ export default function BookingsPage() {
             className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl bg-brand text-dark text-xs sm:text-sm font-semibold hover:bg-brand-light transition-colors"
           >
             <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Tambah Booking</span>
-            <span className="sm:hidden">Booking</span>
+            <span className="hidden sm:inline">{t('bookings.addBooking')}</span>
+            <span className="sm:hidden">{t('bookings.title')}</span>
           </button>
         </div>
       </div>
@@ -567,9 +581,9 @@ export default function BookingsPage() {
       {/* Stat cards */}
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
         {[
-          { label: 'Hari Ini',            value: stats.today,   color: 'text-brand' },
-          { label: 'Menunggu Konfirmasi', value: stats.pending, color: 'text-amber-400' },
-          { label: 'Total',               value: stats.total,   color: 'text-off-white' },
+          { label: t('bookings.today'),               value: stats.today,   color: 'text-brand' },
+          { label: t('bookings.waitingConfirmation'), value: stats.pending, color: 'text-amber-400' },
+          { label: t('common.total'),                 value: stats.total,   color: 'text-off-white' },
         ].map(s => (
           <Card key={s.label} className="p-3 sm:p-4 text-center min-w-0">
             <p className={`text-lg sm:text-2xl font-bold ${s.color} truncate`}>{s.value ?? '–'}</p>
@@ -585,14 +599,14 @@ export default function BookingsPage() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            aria-label="Cari booking"
-            placeholder="Cari nama, nomor HP, layanan, barber…"
+            aria-label={t('bookings.searchAria')}
+            placeholder={t('bookings.searchPlaceholder')}
             className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-10 pr-9 py-2.5 text-sm outline-none focus:border-brand/60 transition-colors"
           />
           {search && (
             <button
               onClick={() => setSearch('')}
-              aria-label="Hapus pencarian"
+              aria-label={t('bookings.clearSearch')}
               className="absolute right-2.5 top-1/2 -translate-y-1/2 w-7 h-7 inline-flex items-center justify-center rounded-md text-muted hover:text-off-white hover:bg-dark-card transition-colors"
             >
               <XIcon className="w-3.5 h-3.5" />
@@ -604,11 +618,11 @@ export default function BookingsPage() {
           <select
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
-            aria-label="Filter status"
+            aria-label={t('bookings.filterStatus')}
             className="w-full appearance-none bg-dark-surface border border-dark-border text-off-white rounded-xl pl-9 pr-8 py-2.5 text-sm outline-none focus:border-brand/60 cursor-pointer"
           >
             {STATUS_FILTERS.map(s => (
-              <option key={s.id} value={s.id}>{s.label}</option>
+              <option key={s.id} value={s.id}>{t(s.labelKey)}</option>
             ))}
           </select>
           <ChevronRight className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted rotate-90 pointer-events-none" />
@@ -618,7 +632,7 @@ export default function BookingsPage() {
             onClick={() => { setSearch(''); setStatusFilter('all'); setSourceFilter('all'); setDateFilter('upcoming') }}
             className="px-3 py-2.5 rounded-xl text-xs font-semibold text-muted hover:text-off-white hover:bg-dark-card transition-colors whitespace-nowrap"
           >
-            Reset ({activeFilters})
+            {t('bookings.resetCount', { count: activeFilters })}
           </button>
         )}
       </div>
@@ -636,7 +650,7 @@ export default function BookingsPage() {
                 : 'bg-dark-card border border-dark-border text-muted hover:text-off-white'
             }`}
           >
-            {f.label}
+            {t(f.labelKey)}
           </button>
         ))}
       </div>
@@ -644,9 +658,9 @@ export default function BookingsPage() {
       {/* Source filter pills */}
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {[
-          { id: 'all',     label: 'Semua Sumber', icon: null },
-          { id: 'online',  label: 'Online',       icon: Globe },
-          { id: 'walk_in', label: 'Walk-in',      icon: Footprints },
+          { id: 'all',     label: t('bookings.allSources'),  icon: null },
+          { id: 'online',  label: t('bookings.sourceOnline'), icon: Globe },
+          { id: 'walk_in', label: t('bookings.sourceWalkIn'), icon: Footprints },
         ].map(f => {
           const Icon = f.icon
           const isActive = sourceFilter === f.id
@@ -683,13 +697,13 @@ export default function BookingsPage() {
       {!isLoading && isError && (
         <Card className="p-10 sm:p-14 text-center">
           <AlertTriangle className="w-12 h-12 text-red-400 mx-auto mb-3 opacity-70" />
-          <p className="text-off-white font-medium">Gagal memuat booking</p>
-          <p className="text-muted text-sm mt-1">Periksa koneksi lalu coba lagi.</p>
+          <p className="text-off-white font-medium">{t('bookings.loadError')}</p>
+          <p className="text-muted text-sm mt-1">{t('bookings.loadErrorHint')}</p>
           <button
             onClick={() => refetch()}
             className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand text-dark text-sm font-semibold hover:bg-brand-light transition-colors"
           >
-            <RefreshCw className="w-4 h-4" /> Coba Lagi
+            <RefreshCw className="w-4 h-4" /> {t('bookings.retry')}
           </button>
         </Card>
       )}
@@ -698,8 +712,8 @@ export default function BookingsPage() {
       {!isLoading && !isError && sorted.length === 0 && (
         <Card className="p-10 sm:p-14 text-center">
           <Inbox className="w-12 h-12 text-muted mx-auto mb-3 opacity-50" />
-          <p className="text-off-white font-medium">Tidak ada booking</p>
-          <p className="text-muted text-sm mt-1">Coba ubah filter atau kata pencarian.</p>
+          <p className="text-off-white font-medium">{t('bookings.emptyTitle')}</p>
+          <p className="text-muted text-sm mt-1">{t('bookings.emptyHint')}</p>
         </Card>
       )}
 
@@ -712,17 +726,17 @@ export default function BookingsPage() {
                 <tr className="text-left">
                   <th className="px-3 py-3 w-10">
                     {selectableIds.length > 0 && (
-                      <SelectBox checked={allSelected} onChange={toggleSelectAll} label="Pilih semua booking di halaman ini" />
+                      <SelectBox checked={allSelected} onChange={toggleSelectAll} label={t('bookings.selectAll')} />
                     )}
                   </th>
-                  <th className="px-4 py-3 font-semibold text-muted text-xs uppercase tracking-wider">Status</th>
-                  <th className="px-4 py-3 font-semibold text-muted text-xs uppercase tracking-wider">Sumber</th>
-                  <th className="px-4 py-3 font-semibold text-muted text-xs uppercase tracking-wider">ID</th>
-                  <th className="px-4 py-3 font-semibold text-muted text-xs uppercase tracking-wider">Pelanggan</th>
-                  <th className="px-4 py-3 font-semibold text-muted text-xs uppercase tracking-wider">Layanan</th>
-                  <th className="px-4 py-3 font-semibold text-muted text-xs uppercase tracking-wider">Barber</th>
-                  <th className="px-4 py-3 font-semibold text-muted text-xs uppercase tracking-wider whitespace-nowrap">Tanggal · Waktu</th>
-                  <th className="px-4 py-3 font-semibold text-muted text-xs uppercase tracking-wider text-right">Aksi</th>
+                  <th className="px-4 py-3 font-semibold text-muted text-xs uppercase tracking-wider">{t('common.status')}</th>
+                  <th className="px-4 py-3 font-semibold text-muted text-xs uppercase tracking-wider">{t('bookings.csvSource')}</th>
+                  <th className="px-4 py-3 font-semibold text-muted text-xs uppercase tracking-wider">{t('bookings.csvId')}</th>
+                  <th className="px-4 py-3 font-semibold text-muted text-xs uppercase tracking-wider">{t('bookings.csvCustomer')}</th>
+                  <th className="px-4 py-3 font-semibold text-muted text-xs uppercase tracking-wider">{t('bookings.csvService')}</th>
+                  <th className="px-4 py-3 font-semibold text-muted text-xs uppercase tracking-wider">{t('bookings.csvBarber')}</th>
+                  <th className="px-4 py-3 font-semibold text-muted text-xs uppercase tracking-wider whitespace-nowrap">{t('bookings.dateTimeHeader')}</th>
+                  <th className="px-4 py-3 font-semibold text-muted text-xs uppercase tracking-wider text-right">{t('common.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dark-border/60">
@@ -742,7 +756,7 @@ export default function BookingsPage() {
                       >
                         <td className="px-3 py-3 align-middle">
                           {selectable && (
-                            <SelectBox checked={checked} onChange={() => toggleSelect(b.id)} label={`Pilih booking ${b.customerName}`} />
+                            <SelectBox checked={checked} onChange={() => toggleSelect(b.id)} label={t('bookings.selectBooking', { name: b.customerName })} />
                           )}
                         </td>
                         <td className="px-4 py-3 align-middle">
@@ -764,7 +778,7 @@ export default function BookingsPage() {
                             <button
                               onClick={() => copyPhone(b.customerPhone)}
                               className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted hover:text-off-white transition-colors group"
-                              title="Salin nomor" aria-label={`Salin nomor ${b.customerName}`}
+                              title={t('bookings.copyPhone')} aria-label={t('bookings.copyPhoneAria', { name: b.customerName })}
                             >
                               <Phone className="w-3 h-3" />
                               <span className="font-mono">{b.customerPhone}</span>
@@ -783,8 +797,8 @@ export default function BookingsPage() {
                           </p>
                         </td>
                         <td className="px-4 py-3 align-middle whitespace-nowrap">
-                          <p className="text-off-white text-sm">{formatDateLabel(b.date)}</p>
-                          <p className="text-muted text-xs">{formatDayLabel(b.date)} · {b.time}</p>
+                          <p className="text-off-white text-sm">{formatDateLabel(b.date, dfLocale)}</p>
+                          <p className="text-muted text-xs">{formatDayLabel(b.date, dfLocale)} · {b.time}</p>
                         </td>
                         <td className="px-4 py-3 align-middle text-right">
                           {renderActions(b)}
@@ -820,7 +834,7 @@ export default function BookingsPage() {
                   }`}>
                     <div className="flex gap-2.5">
                       {selectable && (
-                        <SelectBox checked={checked} onChange={() => toggleSelect(b.id)} label={`Pilih booking ${b.customerName}`} />
+                        <SelectBox checked={checked} onChange={() => toggleSelect(b.id)} label={t('bookings.selectBooking', { name: b.customerName })} />
                       )}
                       <button
                         onClick={() => openDetail(b)}
@@ -838,7 +852,7 @@ export default function BookingsPage() {
                           </div>
                           <span className="text-[11px] text-muted whitespace-nowrap flex items-center gap-1">
                             <CalendarDays className="w-3 h-3" />
-                            {formatDateLabel(b.date)}
+                            {formatDateLabel(b.date, dfLocale)}
                           </span>
                         </div>
 
@@ -883,28 +897,27 @@ export default function BookingsPage() {
       {!isLoading && !isError && sorted.length > 0 && totalPages > 1 && (
         <div className="flex items-center justify-between gap-3 pt-2">
           <p className="text-xs text-muted">
-            Halaman <span className="text-off-white font-semibold">{meta?.page || page}</span> dari{' '}
-            <span className="text-off-white font-semibold">{totalPages}</span>
+            {t('bookings.pageOf', { page: meta?.page || page, total: totalPages })}
             {meta?.total != null && (
-              <> · <span className="text-off-white font-semibold">{meta.total}</span> booking</>
+              <> · {t('bookings.totalCount', { count: meta.total })}</>
             )}
           </p>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page <= 1 || isFetching}
-              aria-label="Halaman sebelumnya"
+              aria-label={t('bookings.prevPage')}
               className="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-sm bg-dark-card border border-dark-border text-off-white hover:border-brand/40 transition disabled:opacity-40"
             >
-              <ChevronLeft className="w-4 h-4" /> Sebelum
+              <ChevronLeft className="w-4 h-4" /> {t('bookings.prev')}
             </button>
             <button
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages || isFetching}
-              aria-label="Halaman berikutnya"
+              aria-label={t('bookings.nextPage')}
               className="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-sm bg-dark-card border border-dark-border text-off-white hover:border-brand/40 transition disabled:opacity-40"
             >
-              Lanjut <ChevronRight className="w-4 h-4" />
+              {t('bookings.next')} <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -921,7 +934,7 @@ export default function BookingsPage() {
           >
             <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 rounded-2xl bg-dark-surface border border-brand/30 shadow-xl shadow-black/40">
               <span className="text-sm text-off-white font-semibold whitespace-nowrap">
-                {selectedIds.size} dipilih
+                {t('bookings.selectedCount', { count: selectedIds.size })}
               </span>
               <div className="flex items-center gap-2 ml-auto">
                 <button
@@ -929,18 +942,18 @@ export default function BookingsPage() {
                   disabled={bulkBooking.isPending}
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-green-500/15 border border-green-500/30 text-green-400 text-sm font-semibold hover:bg-green-500/25 transition disabled:opacity-50"
                 >
-                  <Check className="w-4 h-4" /> Konfirmasi
+                  <Check className="w-4 h-4" /> {t('bookings.confirm')}
                 </button>
                 <button
                   onClick={() => setBulkCancelOpen(true)}
                   disabled={bulkBooking.isPending}
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-semibold hover:bg-red-500/20 transition disabled:opacity-50"
                 >
-                  <XIcon className="w-4 h-4" /> Batalkan
+                  <XIcon className="w-4 h-4" /> {t('bookings.cancel')}
                 </button>
                 <button
                   onClick={clearSelection}
-                  aria-label="Bersihkan pilihan"
+                  aria-label={t('bookings.clearSelection')}
                   className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-dark-card border border-dark-border text-muted hover:text-off-white transition"
                 >
                   <XIcon className="w-4 h-4" />
@@ -952,7 +965,7 @@ export default function BookingsPage() {
       </AnimatePresence>
 
       {/* Detail modal */}
-      <Modal isOpen={!!detail} onClose={closeDetail} title={detail ? `Detail Booking` : ''} size="md">
+      <Modal isOpen={!!detail} onClose={closeDetail} title={detail ? t('bookings.detailTitle') : ''} size="md">
         {detail && (
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -964,9 +977,9 @@ export default function BookingsPage() {
                 {detail.customer?.visitCount > 5 && (
                   <span
                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-brand/15 text-brand border border-brand/30"
-                    title={`Pelanggan tetap — ${detail.customer.visitCount} kunjungan`}
+                    title={t('bookings.regularCustomerTitle', { count: detail.customer.visitCount })}
                   >
-                    <Star className="w-2.5 h-2.5 fill-current" /> Pelanggan Tetap
+                    <Star className="w-2.5 h-2.5 fill-current" /> {t('bookings.regularCustomer')}
                   </span>
                 )}
               </div>
@@ -974,7 +987,7 @@ export default function BookingsPage() {
             </div>
 
             <div>
-              <p className="text-xs text-muted">Pelanggan</p>
+              <p className="text-xs text-muted">{t('bookings.csvCustomer')}</p>
               <p className="text-off-white font-semibold text-lg leading-tight">{detail.customerName}</p>
               {detail.customerPhone && (
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
@@ -983,14 +996,14 @@ export default function BookingsPage() {
                     onClick={() => copyPhone(detail.customerPhone)}
                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] bg-dark-card text-muted hover:text-off-white border border-dark-border transition"
                   >
-                    <Copy className="w-3 h-3" /> Salin
+                    <Copy className="w-3 h-3" /> {t('bookings.copy')}
                   </button>
                   <a
-                    href={waLink(detail.customerPhone, `Halo ${detail.customerName}, ini konfirmasi booking Anda di ${detail.branch?.name || ''} pada ${formatDateLabel(detail.date)} pukul ${detail.time}.`)}
+                    href={waLink(detail.customerPhone, t('bookings.waMessage', { name: detail.customerName, branch: detail.branch?.name || '', date: formatDateLabel(detail.date, dfLocale), time: detail.time }))}
                     target="_blank" rel="noreferrer"
                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition"
                   >
-                    <MessageCircle className="w-3 h-3" /> WhatsApp
+                    <MessageCircle className="w-3 h-3" /> {t('bookings.whatsapp')}
                   </a>
                 </div>
               )}
@@ -998,12 +1011,12 @@ export default function BookingsPage() {
 
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
-                <p className="text-xs text-muted mb-0.5">Tanggal</p>
-                <p className="text-off-white">{formatDateLabel(detail.date)}</p>
-                <p className="text-muted text-xs">{formatDayLabel(detail.date)}</p>
+                <p className="text-xs text-muted mb-0.5">{t('bookings.csvDate')}</p>
+                <p className="text-off-white">{formatDateLabel(detail.date, dfLocale)}</p>
+                <p className="text-muted text-xs">{formatDayLabel(detail.date, dfLocale)}</p>
               </div>
               <div>
-                <p className="text-xs text-muted mb-0.5">Waktu</p>
+                <p className="text-xs text-muted mb-0.5">{t('bookings.csvTime')}</p>
                 <p className="text-off-white">{detail.time}</p>
               </div>
               {(() => {
@@ -1012,7 +1025,7 @@ export default function BookingsPage() {
                 const list = (detail.serviceName || '').split(' + ').map(s => s.trim()).filter(Boolean)
                 return (
                   <div className="col-span-2">
-                    <p className="text-xs text-muted mb-1">Layanan{list.length > 1 ? ` (${list.length})` : ''}</p>
+                    <p className="text-xs text-muted mb-1">{t('bookings.csvService')}{list.length > 1 ? ` (${list.length})` : ''}</p>
                     {list.length ? (
                       <div className="flex flex-wrap gap-1.5">
                         {list.map((name, i) => (
@@ -1026,18 +1039,18 @@ export default function BookingsPage() {
                 )
               })()}
               <div className="col-span-2">
-                <p className="text-xs text-muted mb-0.5">Barber</p>
-                <p className="text-off-white">{detail.barberName || <span className="text-muted">Belum ditentukan</span>}</p>
+                <p className="text-xs text-muted mb-0.5">{t('bookings.csvBarber')}</p>
+                <p className="text-off-white">{detail.barberName || <span className="text-muted">{t('bookings.notAssigned')}</span>}</p>
               </div>
               {detail.branch?.name && (
                 <div className="col-span-2">
-                  <p className="text-xs text-muted mb-0.5">Cabang</p>
+                  <p className="text-xs text-muted mb-0.5">{t('bookings.branch')}</p>
                   <p className="text-off-white">{detail.branch.name}</p>
                 </div>
               )}
               {detail.notes && (
                 <div className="col-span-2">
-                  <p className="text-xs text-muted mb-0.5">Catatan</p>
+                  <p className="text-xs text-muted mb-0.5">{t('bookings.notes')}</p>
                   <p className="text-off-white italic">"{detail.notes}"</p>
                 </div>
               )}
@@ -1050,7 +1063,7 @@ export default function BookingsPage() {
                   disabled={updateBooking.isPending}
                   className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-green-500/15 border border-green-500/30 text-green-400 font-semibold text-sm hover:bg-green-500/25 transition disabled:opacity-50"
                 >
-                  <Check className="w-4 h-4" /> Konfirmasi
+                  <Check className="w-4 h-4" /> {t('bookings.confirm')}
                 </button>
               )}
               {(detail.status === 'pending' || detail.status === 'confirmed') && (
@@ -1058,7 +1071,7 @@ export default function BookingsPage() {
                   onClick={() => setCheckInTarget(detail)}
                   className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand/15 border border-brand/30 text-brand font-semibold text-sm hover:bg-brand/25 transition"
                 >
-                  <LogIn className="w-4 h-4" /> Masuk Antrian
+                  <LogIn className="w-4 h-4" /> {t('bookings.enterQueue')}
                 </button>
               )}
               {(detail.status === 'pending' || detail.status === 'confirmed') && (
@@ -1066,14 +1079,14 @@ export default function BookingsPage() {
                   onClick={() => setCancelTarget(detail)}
                   className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-semibold text-sm hover:bg-red-500/20 transition"
                 >
-                  <XIcon className="w-4 h-4" /> Batalkan
+                  <XIcon className="w-4 h-4" /> {t('bookings.cancel')}
                 </button>
               )}
               <button
                 onClick={closeDetail}
                 className="px-4 py-2.5 rounded-xl bg-dark-card border border-dark-border text-muted hover:text-off-white text-sm transition"
               >
-                Tutup
+                {t('common.close')}
               </button>
             </div>
           </div>
@@ -1086,11 +1099,11 @@ export default function BookingsPage() {
         onClose={() => setCancelTarget(null)}
         onConfirm={doCancel}
         variant="danger"
-        title="Batalkan booking?"
-        description={cancelTarget ? `Booking #${cancelTarget.id.slice(-6).toUpperCase()} akan dibatalkan.` : ''}
+        title={t('bookings.cancelConfirmTitle')}
+        description={cancelTarget ? t('bookings.cancelConfirmDesc', { id: cancelTarget.id.slice(-6).toUpperCase() }) : ''}
         highlight={cancelTarget?.customerName}
-        confirmText="Ya, Batalkan"
-        cancelText="Tidak"
+        confirmText={t('bookings.confirmCancel')}
+        cancelText={t('common.no')}
       />
 
       {/* Bulk cancel confirm */}
@@ -1099,10 +1112,10 @@ export default function BookingsPage() {
         onClose={() => setBulkCancelOpen(false)}
         onConfirm={doBulkCancel}
         variant="danger"
-        title="Batalkan booking terpilih?"
-        description={`${selectedIds.size} booking yang masih aktif akan dibatalkan.`}
-        confirmText="Ya, Batalkan Semua"
-        cancelText="Tidak"
+        title={t('bookings.bulkCancelTitle')}
+        description={t('bookings.bulkCancelDesc', { count: selectedIds.size })}
+        confirmText={t('bookings.confirmCancelAll')}
+        cancelText={t('common.no')}
       />
 
       {/* Check-in confirm */}
@@ -1111,15 +1124,15 @@ export default function BookingsPage() {
         onClose={() => setCheckInTarget(null)}
         onConfirm={doCheckIn}
         variant="warning"
-        title="Masukkan ke antrian?"
+        title={t('bookings.checkInConfirmTitle')}
         description={
           checkInTarget
-            ? `Pelanggan akan dibuatkan tiket antrian hari ini di cabang ${checkInTarget.branch?.name || ''}.`
+            ? t('bookings.checkInConfirmDesc', { branch: checkInTarget.branch?.name || '' })
             : ''
         }
         highlight={checkInTarget?.customerName}
-        confirmText="Ya, Masuk Antrian"
-        cancelText="Batal"
+        confirmText={t('bookings.confirmEnterQueue')}
+        cancelText={t('common.cancel')}
       />
 
       {/* Tambah booking modal */}
@@ -1143,6 +1156,7 @@ export default function BookingsPage() {
 // ── Tambah booking (walk-in) modal ─────────────────────────────────────────
 function CreateBookingModal({ isOpen, onClose, branchId, defaultDate, onCreated, onCheckedIn, createBooking, checkInBooking }) {
   const toast = useToast()
+  const { t } = useTranslation()
   // Fetch hanya saat modal terbuka — hindari request idle di background.
   const { data: services = [] } = useServices({ isActive: 'true', enabled: isOpen })
   const { data: barbers = [] } = useUsers({ role: 'barber', branchId, enabled: isOpen && !!branchId })
@@ -1171,11 +1185,11 @@ function CreateBookingModal({ isOpen, onClose, branchId, defaultDate, onCreated,
   // checkIn=true → buat booking lalu langsung check-in jadi tiket antrian.
   const submit = async (checkIn = false) => {
     if (busy) return
-    if (!form.customerName.trim()) return toast.error('Nama pelanggan wajib diisi')
-    if (!form.customerPhone.trim()) return toast.error('Nomor HP wajib diisi')
-    if (!/\d{6,}/.test(form.customerPhone.replace(/\D/g, ''))) return toast.error('Nomor HP tidak valid')
-    if (!form.serviceId) return toast.error('Pilih layanan')
-    if (!form.date || !form.time) return toast.error('Tanggal dan waktu wajib diisi')
+    if (!form.customerName.trim()) return toast.error(t('bookings.errNameRequired'))
+    if (!form.customerPhone.trim()) return toast.error(t('bookings.errPhoneRequired'))
+    if (!/\d{6,}/.test(form.customerPhone.replace(/\D/g, ''))) return toast.error(t('bookings.errPhoneInvalid'))
+    if (!form.serviceId) return toast.error(t('bookings.errServiceRequired'))
+    if (!form.date || !form.time) return toast.error(t('bookings.errDateTimeRequired'))
 
     const name = form.customerName.trim()
     let booking
@@ -1192,7 +1206,7 @@ function CreateBookingModal({ isOpen, onClose, branchId, defaultDate, onCreated,
         source: 'walk_in',
       })
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal menambahkan booking')
+      toast.error(err?.response?.data?.error || t('bookings.addFailed'))
       return
     }
 
@@ -1201,34 +1215,33 @@ function CreateBookingModal({ isOpen, onClose, branchId, defaultDate, onCreated,
         await checkInBooking.mutateAsync(booking.id)
       } catch (err) {
         // Booking sudah tersimpan — kasir tinggal check-in manual dari daftar.
-        toast.error('Booking tersimpan, tapi gagal masuk antrian: ' +
-          (err?.response?.data?.error || 'coba lagi dari daftar'))
+        toast.error(t('bookings.savedButQueueFailed', { error: err?.response?.data?.error || t('bookings.retryFromList') }))
         onCreated?.()
         return
       }
-      toast.success(`${name} ditambahkan & masuk antrian`)
+      toast.success(t('bookings.addedAndQueued', { name }))
       onCheckedIn?.()
       return
     }
 
-    toast.success(`Booking ${name} ditambahkan`)
+    toast.success(t('bookings.addedToast', { name }))
     onCreated?.()
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Tambah Booking (Walk-in)" size="md">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('bookings.addWalkInTitle')} size="md">
       <div className="space-y-3">
         <div>
-          <label className="block text-xs font-medium text-muted mb-1.5">Nama Pelanggan *</label>
+          <label className="block text-xs font-medium text-muted mb-1.5">{t('bookings.customerNameRequired')}</label>
           <input
             value={form.customerName}
             onChange={e => set('customerName', e.target.value)}
-            placeholder="Nama pelanggan"
+            placeholder={t('bookings.customerNamePlaceholder')}
             className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60 transition-colors"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-muted mb-1.5">Nomor HP *</label>
+          <label className="block text-xs font-medium text-muted mb-1.5">{t('bookings.phoneRequired')}</label>
           <input
             inputMode="tel"
             value={form.customerPhone}
@@ -1238,13 +1251,13 @@ function CreateBookingModal({ isOpen, onClose, branchId, defaultDate, onCreated,
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-muted mb-1.5">Layanan *</label>
+          <label className="block text-xs font-medium text-muted mb-1.5">{t('bookings.serviceRequired')}</label>
           <select
             value={form.serviceId}
             onChange={e => set('serviceId', e.target.value)}
             className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60 cursor-pointer"
           >
-            <option value="">Pilih layanan…</option>
+            <option value="">{t('bookings.selectService')}</option>
             {services.map(s => (
               <option key={s.id} value={s.id}>
                 {s.name} {s.duration ? `— ${s.duration}m` : ''}
@@ -1253,19 +1266,19 @@ function CreateBookingModal({ isOpen, onClose, branchId, defaultDate, onCreated,
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-muted mb-1.5">Barber (opsional)</label>
+          <label className="block text-xs font-medium text-muted mb-1.5">{t('bookings.barberOptional')}</label>
           <select
             value={form.barberId}
             onChange={e => set('barberId', e.target.value)}
             className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60 cursor-pointer"
           >
-            <option value="">Belum ditentukan</option>
+            <option value="">{t('bookings.notAssigned')}</option>
             {barbers.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="block text-xs font-medium text-muted mb-1.5">Tanggal</label>
+            <label className="block text-xs font-medium text-muted mb-1.5">{t('bookings.csvDate')}</label>
             <input
               type="date"
               value={form.date}
@@ -1274,7 +1287,7 @@ function CreateBookingModal({ isOpen, onClose, branchId, defaultDate, onCreated,
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-muted mb-1.5">Waktu</label>
+            <label className="block text-xs font-medium text-muted mb-1.5">{t('bookings.csvTime')}</label>
             <input
               type="time"
               value={form.time}
@@ -1284,12 +1297,12 @@ function CreateBookingModal({ isOpen, onClose, branchId, defaultDate, onCreated,
           </div>
         </div>
         <div>
-          <label className="block text-xs font-medium text-muted mb-1.5">Catatan (opsional)</label>
+          <label className="block text-xs font-medium text-muted mb-1.5">{t('bookings.notesOptional')}</label>
           <textarea
             value={form.notes}
             onChange={e => set('notes', e.target.value)}
             rows={2}
-            placeholder="Permintaan khusus, dll."
+            placeholder={t('bookings.notesPlaceholder')}
             className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-4 py-2.5 text-sm outline-none focus:border-brand/60 resize-none"
           />
         </div>
@@ -1301,7 +1314,7 @@ function CreateBookingModal({ isOpen, onClose, branchId, defaultDate, onCreated,
               className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand text-dark font-semibold text-sm hover:bg-brand-light transition disabled:opacity-50"
             >
               <LogIn className="w-4 h-4" />
-              {busy ? 'Memproses…' : 'Simpan & Masuk Antrian'}
+              {busy ? t('bookings.processing') : t('bookings.saveAndQueue')}
             </button>
           )}
           <div className="flex gap-2">
@@ -1310,7 +1323,7 @@ function CreateBookingModal({ isOpen, onClose, branchId, defaultDate, onCreated,
               disabled={busy}
               className="flex-1 px-4 py-2.5 rounded-xl bg-dark-card border border-dark-border text-off-white text-sm hover:border-brand/40 transition disabled:opacity-50"
             >
-              Batal
+              {t('common.cancel')}
             </button>
             <button
               onClick={() => submit(false)}
@@ -1321,12 +1334,12 @@ function CreateBookingModal({ isOpen, onClose, branchId, defaultDate, onCreated,
                   : 'bg-brand text-dark hover:bg-brand-light'
               }`}
             >
-              {busy ? 'Menyimpan…' : 'Simpan Booking'}
+              {busy ? t('bookings.saving') : t('bookings.saveBooking')}
             </button>
           </div>
           {isToday && (
             <p className="text-[11px] text-muted text-center leading-tight">
-              "Masuk Antrian" membuat tiket antrian hari ini sekaligus.
+              {t('bookings.queueHint')}
             </p>
           )}
         </div>

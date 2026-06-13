@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { AlertTriangle, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useTranslation } from 'react-i18next'
 import Button from './Button.jsx'
 
 const VARIANT = {
@@ -28,16 +29,20 @@ export default function ConfirmDialog({
   isOpen,
   onClose,
   onConfirm,
-  title = 'Konfirmasi',
+  title,
   description,
-  confirmText = 'Ya, Lanjutkan',
-  cancelText = 'Batal',
+  confirmText,
+  cancelText,
   variant = 'danger',
   icon: Icon = AlertTriangle,
   highlight,
 }) {
+  const { t } = useTranslation()
   const [loading, setLoading] = useState(false)
   const v = VARIANT[variant] || VARIANT.danger
+  const resolvedTitle = title ?? t('common.confirm')
+  const resolvedConfirmText = confirmText ?? t('common.confirmContinue')
+  const resolvedCancelText = cancelText ?? t('common.cancel')
 
   const handleConfirm = async () => {
     try {
@@ -73,7 +78,7 @@ export default function ConfirmDialog({
             <button
               onClick={onClose}
               disabled={loading}
-              aria-label="Tutup"
+              aria-label={t('common.close')}
               className="absolute top-3 right-3 p-2 rounded-lg text-muted hover:text-off-white hover:bg-dark-card transition-all disabled:opacity-40"
             >
               <X className="w-4 h-4" />
@@ -83,7 +88,7 @@ export default function ConfirmDialog({
               <div className={`mx-auto w-14 h-14 rounded-full flex items-center justify-center ring-8 ${v.iconBg} ${v.ring} mb-4`}>
                 <Icon className={`w-6 h-6 ${v.iconColor}`} strokeWidth={2.2} />
               </div>
-              <h3 className="font-display text-lg font-semibold text-off-white mb-1.5">{title}</h3>
+              <h3 className="font-display text-lg font-semibold text-off-white mb-1.5">{resolvedTitle}</h3>
               {description && (
                 <p className="text-sm text-muted leading-relaxed">
                   {description}
@@ -96,14 +101,14 @@ export default function ConfirmDialog({
 
             <div className="flex flex-col-reverse sm:flex-row gap-2 px-6 pb-6">
               <Button variant="outline" fullWidth onClick={onClose} disabled={loading}>
-                {cancelText}
+                {resolvedCancelText}
               </Button>
               <button
                 onClick={handleConfirm}
                 disabled={loading}
                 className={`w-full px-4 py-2.5 rounded-xl font-semibold text-sm transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed ${v.confirmBtn}`}
               >
-                {loading ? 'Memproses…' : confirmText}
+                {loading ? t('common.processing') : resolvedConfirmText}
               </button>
             </div>
           </motion.div>

@@ -27,13 +27,13 @@ const DEFAULT_CATEGORIES = ['Potong Rambut', 'Perawatan', 'Warna', 'Combo', 'Cuk
 const PAGE_SIZE = 12
 
 const SORT_OPTIONS = [
-  { value: 'recent',     label: 'Terbaru',       sortBy: 'createdAt', sortDir: 'desc' },
-  { value: 'name-asc',   label: 'Nama A→Z',      sortBy: 'name',      sortDir: 'asc'  },
-  { value: 'name-desc',  label: 'Nama Z→A',      sortBy: 'name',      sortDir: 'desc' },
-  { value: 'price-asc',  label: 'Harga termurah',sortBy: 'price',     sortDir: 'asc'  },
-  { value: 'price-desc', label: 'Harga termahal',sortBy: 'price',     sortDir: 'desc' },
-  { value: 'dur-asc',    label: 'Durasi tercepat',sortBy: 'duration', sortDir: 'asc' },
-  { value: 'dur-desc',   label: 'Durasi terlama',sortBy: 'duration',  sortDir: 'desc' },
+  { value: 'recent',     labelKey: 'sortRecent',    sortBy: 'createdAt', sortDir: 'desc' },
+  { value: 'name-asc',   labelKey: 'sortNameAsc',   sortBy: 'name',      sortDir: 'asc'  },
+  { value: 'name-desc',  labelKey: 'sortNameDesc',  sortBy: 'name',      sortDir: 'desc' },
+  { value: 'price-asc',  labelKey: 'sortPriceAsc',  sortBy: 'price',     sortDir: 'asc'  },
+  { value: 'price-desc', labelKey: 'sortPriceDesc', sortBy: 'price',     sortDir: 'desc' },
+  { value: 'dur-asc',    labelKey: 'sortDurAsc',    sortBy: 'duration',  sortDir: 'asc' },
+  { value: 'dur-desc',   labelKey: 'sortDurDesc',   sortBy: 'duration',  sortDir: 'desc' },
 ]
 
 const csvEscape = (v) => {
@@ -90,6 +90,7 @@ function StatTile({ icon: Icon, label, value, valueShort, accent = 'gold', hint,
 
 // ─── Service card (grid item) ───────────────────────────────────────────────
 function ServiceCard({ svc, selected, onToggleSelect, onEdit, onDelete, onToggleActive, busyId }) {
+  const { t } = useTranslation()
   const isBusy = busyId === svc.id
   const inactive = !svc.isActive
   return (
@@ -108,7 +109,7 @@ function ServiceCard({ svc, selected, onToggleSelect, onEdit, onDelete, onToggle
             type="button"
             onClick={() => onToggleSelect(svc.id)}
             className="shrink-0 mt-0.5 p-0.5 text-muted hover:text-brand transition-colors"
-            aria-label={selected ? 'Batal pilih' : 'Pilih'}
+            aria-label={selected ? t('tenantAdmin.services.deselect') : t('tenantAdmin.services.selectAria')}
           >
             {selected
               ? <CheckSquare className="w-4 h-4 text-brand" />
@@ -124,13 +125,13 @@ function ServiceCard({ svc, selected, onToggleSelect, onEdit, onDelete, onToggle
               <h3 className="font-medium text-off-white leading-tight truncate flex-1 min-w-0">{svc.name}</h3>
               {inactive && (
                 <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300 shrink-0">
-                  <Pause className="w-2.5 h-2.5" /> Off
+                  <Pause className="w-2.5 h-2.5" /> {t('tenantAdmin.services.offBadge')}
                 </span>
               )}
             </div>
             <div className="flex flex-wrap items-center gap-1 mt-1">
               <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-dark-card/80 border border-dark-border/60 text-muted">
-                <Tag className="w-2.5 h-2.5" /> {svc.category || 'Lainnya'}
+                <Tag className="w-2.5 h-2.5" /> {svc.category || t('tenantAdmin.services.categoryOther')}
               </span>
             </div>
             {svc.description && (
@@ -156,7 +157,7 @@ function ServiceCard({ svc, selected, onToggleSelect, onEdit, onDelete, onToggle
               type="button"
               disabled={isBusy}
               onClick={() => onToggleActive(svc)}
-              title={inactive ? 'Aktifkan' : 'Nonaktifkan'}
+              title={inactive ? t('tenantAdmin.services.activate') : t('tenantAdmin.services.deactivate')}
               className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 ${
                 inactive
                   ? 'text-muted hover:text-emerald-400'
@@ -168,7 +169,7 @@ function ServiceCard({ svc, selected, onToggleSelect, onEdit, onDelete, onToggle
             <button
               type="button"
               onClick={() => onEdit(svc)}
-              title="Edit"
+              title={t('common.edit')}
               className="p-1.5 rounded-lg text-muted hover:text-blue-400 transition-colors"
             >
               <Edit2 className="w-3.5 h-3.5" />
@@ -176,7 +177,7 @@ function ServiceCard({ svc, selected, onToggleSelect, onEdit, onDelete, onToggle
             <button
               type="button"
               onClick={() => onDelete(svc)}
-              title="Hapus"
+              title={t('common.delete')}
               className="p-1.5 rounded-lg text-muted hover:text-red-400 transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -190,6 +191,7 @@ function ServiceCard({ svc, selected, onToggleSelect, onEdit, onDelete, onToggle
 
 // ─── Service Form Modal ─────────────────────────────────────────────────────
 function ServiceFormModal({ open, onClose, editService, knownCategories, onSave, saving }) {
+  const { t } = useTranslation()
   const [form, setForm] = useState({
     name: '', category: '', price: '', duration: '', description: '', icon: '✂️', isActive: true,
   })
@@ -227,12 +229,12 @@ function ServiceFormModal({ open, onClose, editService, knownCategories, onSave,
 
   const validate = () => {
     const e = {}
-    if (!form.name.trim()) e.name = 'Nama wajib diisi'
-    if (!form.category.trim()) e.category = 'Kategori wajib dipilih'
+    if (!form.name.trim()) e.name = t('tenantAdmin.services.errNameRequired')
+    if (!form.category.trim()) e.category = t('tenantAdmin.services.errCategoryRequired')
     const price = Number(form.price)
-    if (!Number.isFinite(price) || price < 0) e.price = 'Harga harus angka ≥ 0'
+    if (!Number.isFinite(price) || price < 0) e.price = t('tenantAdmin.services.errPriceInvalid')
     const duration = Number(form.duration)
-    if (!Number.isFinite(duration) || duration < 1) e.duration = 'Durasi minimal 1 menit'
+    if (!Number.isFinite(duration) || duration < 1) e.duration = t('tenantAdmin.services.errDurationMin')
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -269,11 +271,11 @@ function ServiceFormModal({ open, onClose, editService, knownCategories, onSave,
     .sort((a, b) => a.localeCompare(b, 'id'))
 
   return (
-    <Modal isOpen={open} onClose={onClose} title={editService ? 'Edit Layanan' : 'Tambah Layanan'} size="md">
+    <Modal isOpen={open} onClose={onClose} title={editService ? t('tenantAdmin.services.editService') : t('tenantAdmin.services.addService')} size="md">
       <div ref={formRef} className="space-y-4">
         {/* Icon picker */}
         <div>
-          <label className="block text-sm font-medium text-muted mb-1.5">Ikon</label>
+          <label className="block text-sm font-medium text-muted mb-1.5">{t('tenantAdmin.services.iconLabel')}</label>
           <div className="grid grid-cols-6 sm:grid-cols-8 gap-1.5">
             {ICON_OPTIONS.map(emoji => (
               <button
@@ -293,30 +295,30 @@ function ServiceFormModal({ open, onClose, editService, knownCategories, onSave,
         </div>
 
         <Input
-          label="Nama Layanan *"
+          label={`${t('tenantAdmin.services.serviceName')} *`}
           value={form.name}
           onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-          placeholder="Potong Reguler"
+          placeholder={t('tenantAdmin.services.namePlaceholder')}
           error={errors.name}
         />
 
         {/* Category — combobox (select existing OR custom new) */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-sm font-medium text-muted">Kategori *</label>
+            <label className="text-sm font-medium text-muted">{`${t('common.category')} *`}</label>
             <button
               type="button"
               onClick={() => setCustomCategory(c => !c)}
               className="text-xs text-brand hover:underline"
             >
-              {customCategory ? 'Pilih dari daftar' : '+ Kategori baru'}
+              {customCategory ? t('tenantAdmin.services.pickFromList') : t('tenantAdmin.services.newCategory')}
             </button>
           </div>
           {customCategory ? (
             <Input
               value={form.category}
               onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-              placeholder="Misal: VIP, Express, Pijat Refleksi…"
+              placeholder={t('tenantAdmin.services.customCategoryPlaceholder')}
               error={errors.category}
             />
           ) : (
@@ -325,7 +327,7 @@ function ServiceFormModal({ open, onClose, editService, knownCategories, onSave,
                 value={form.category}
                 onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
                 options={allOptions.map(c => ({ value: c, label: c }))}
-                placeholder="Pilih kategori..."
+                placeholder={t('tenantAdmin.services.selectCategory')}
                 error={errors.category}
               />
               {errors.category && !customCategory && (
@@ -337,7 +339,7 @@ function ServiceFormModal({ open, onClose, editService, knownCategories, onSave,
 
         <div className="grid grid-cols-2 gap-3">
           <Input
-            label="Harga (Rp) *"
+            label={`${t('tenantAdmin.services.priceLabel')} *`}
             type="number"
             inputMode="numeric"
             min={0}
@@ -349,7 +351,7 @@ function ServiceFormModal({ open, onClose, editService, knownCategories, onSave,
             error={errors.price}
           />
           <Input
-            label="Durasi (menit) *"
+            label={`${t('tenantAdmin.services.duration')} *`}
             type="number"
             inputMode="numeric"
             min={1}
@@ -361,21 +363,21 @@ function ServiceFormModal({ open, onClose, editService, knownCategories, onSave,
         </div>
 
         <Input
-          label="Deskripsi"
+          label={t('tenantAdmin.services.descriptionLabel')}
           value={form.description}
           onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-          placeholder="Deskripsi singkat layanan…"
-          hint="Opsional · ditampilkan ke pelanggan saat booking"
+          placeholder={t('tenantAdmin.services.descriptionFormPlaceholder')}
+          hint={t('tenantAdmin.services.descriptionHint')}
         />
 
         {/* Active toggle */}
         <label className="flex items-center justify-between gap-3 p-3 rounded-xl bg-dark-card/40 border border-dark-border/60 cursor-pointer">
           <div className="min-w-0">
             <p className="text-sm font-medium text-off-white inline-flex items-center gap-2">
-              <Power className="w-4 h-4 text-brand" /> Status Layanan
+              <Power className="w-4 h-4 text-brand" /> {t('tenantAdmin.services.statusLabel')}
             </p>
             <p className="text-[11px] text-muted mt-0.5">
-              {form.isActive ? 'Aktif: muncul di POS, booking, dan halaman publik.' : 'Nonaktif: tersimpan tapi tidak bisa dipilih.'}
+              {form.isActive ? t('tenantAdmin.services.statusActiveDesc') : t('tenantAdmin.services.statusInactiveDesc')}
             </p>
           </div>
           <button
@@ -394,9 +396,9 @@ function ServiceFormModal({ open, onClose, editService, knownCategories, onSave,
         </label>
 
         <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
-          <Button variant="outline" fullWidth onClick={onClose} disabled={saving}>Batal</Button>
+          <Button variant="outline" fullWidth onClick={onClose} disabled={saving}>{t('common.cancel')}</Button>
           <Button fullWidth onClick={submit} loading={saving}>
-            {editService ? 'Simpan Perubahan' : 'Tambah Layanan'}
+            {editService ? t('tenantAdmin.services.saveChanges') : t('tenantAdmin.services.addService')}
           </Button>
         </div>
       </div>
@@ -501,14 +503,14 @@ export default function TAServicesPage() {
     try {
       if (editService) {
         await updateM.mutateAsync({ id: editService.id, ...payload })
-        toast.success('Layanan berhasil diperbarui')
+        toast.success(t('tenantAdmin.services.serviceUpdated'))
       } else {
         await createM.mutateAsync(payload)
-        toast.success('Layanan baru ditambahkan')
+        toast.success(t('tenantAdmin.services.serviceAdded'))
       }
       setShowForm(false)
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal menyimpan layanan')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.services.saveFailed'))
     }
   }
 
@@ -516,9 +518,9 @@ export default function TAServicesPage() {
     setBusyId(svc.id)
     try {
       await updateM.mutateAsync({ id: svc.id, isActive: !svc.isActive })
-      toast.success(svc.isActive ? `${svc.name} dinonaktifkan` : `${svc.name} diaktifkan`)
+      toast.success(svc.isActive ? t('tenantAdmin.services.toggledOff', { name: svc.name }) : t('tenantAdmin.services.toggledOn', { name: svc.name }))
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal mengubah status')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.services.toggleFailed'))
     } finally {
       setBusyId(null)
     }
@@ -529,10 +531,10 @@ export default function TAServicesPage() {
     if (!confirmDel) return
     try {
       await deleteM.mutateAsync(confirmDel.id)
-      toast.success('Layanan dihapus')
+      toast.success(t('tenantAdmin.services.serviceDeleted'))
       setSelected(s => { const n = new Set(s); n.delete(confirmDel.id); return n })
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal menghapus layanan')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.services.deleteFailed'))
     }
   }
 
@@ -551,27 +553,34 @@ export default function TAServicesPage() {
         try { await updateM.mutateAsync({ id, isActive: target }); ok++ } catch { fail++ }
       }
     }
-    if (ok)   toast.success(`${ok} layanan diproses`)
-    if (fail) toast.error(`${fail} gagal diproses`)
+    if (ok)   toast.success(t('tenantAdmin.services.bulkProcessed', { count: ok }))
+    if (fail) toast.error(t('tenantAdmin.services.bulkFailed', { count: fail }))
     clearSelection()
   }
 
   const exportCSV = () => {
     if (!items.length) {
-      toast.error('Tidak ada data untuk diekspor')
+      toast.error(t('tenantAdmin.services.noExportData'))
       return
     }
-    const header = ['Nama', 'Kategori', 'Harga', 'Durasi (menit)', 'Status', 'Deskripsi']
+    const header = [
+      t('tenantAdmin.services.csvName'),
+      t('common.category'),
+      t('common.price'),
+      t('tenantAdmin.services.csvDuration'),
+      t('common.status'),
+      t('tenantAdmin.services.descriptionLabel'),
+    ]
     const rows = items.map(s => [
       s.name,
       s.category || '',
       s.price ?? 0,
       s.duration ?? 0,
-      s.isActive ? 'Aktif' : 'Nonaktif',
+      s.isActive ? t('common.active') : t('common.inactive'),
       s.description || '',
     ])
     downloadCSV(`layanan-${new Date().toISOString().slice(0, 10)}.csv`, header, rows)
-    toast.success(`Berhasil ekspor ${rows.length} layanan`)
+    toast.success(t('tenantAdmin.services.exportSuccess', { count: rows.length }))
   }
 
   const resetFilters = () => {
@@ -585,8 +594,8 @@ export default function TAServicesPage() {
       <div className="mx-auto w-full max-w-3xl">
         <Card className="p-8 text-center">
           <Package className="w-10 h-10 text-brand/60 mx-auto mb-3" />
-          <h2 className="font-display text-xl font-bold text-off-white">Tenant belum dikenali</h2>
-          <p className="text-muted text-sm mt-2">Pastikan Anda login sebagai admin tenant.</p>
+          <h2 className="font-display text-xl font-bold text-off-white">{t('tenantAdmin.services.tenantUnknown')}</h2>
+          <p className="text-muted text-sm mt-2">{t('tenantAdmin.services.tenantUnknownHint')}</p>
         </Card>
       </div>
     )
@@ -598,12 +607,12 @@ export default function TAServicesPage() {
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white inline-flex items-center gap-2">
-            <Package className="w-5 h-5 text-brand" /> Layanan
+            <Package className="w-5 h-5 text-brand" /> {t('tenantAdmin.services.title')}
           </h1>
           <p className="text-muted text-xs sm:text-sm mt-1">
-            {totalItems} layanan
-            {category ? ` di "${category}"` : ''}
-            {activeFilter === 'true' ? ' · aktif' : activeFilter === 'false' ? ' · nonaktif' : ''}
+            {t('tenantAdmin.services.countLabel', { count: totalItems })}
+            {category ? t('tenantAdmin.services.inCategory', { category }) : ''}
+            {activeFilter === 'true' ? t('tenantAdmin.services.suffixActive') : activeFilter === 'false' ? t('tenantAdmin.services.suffixInactive') : ''}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -614,20 +623,20 @@ export default function TAServicesPage() {
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-dark-card/60 border border-dark-border text-muted text-xs font-medium hover:text-off-white hover:border-brand/40 disabled:opacity-50 transition-colors"
           >
             <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">Ekspor CSV</span>
+            <span className="hidden sm:inline">{t('tenantAdmin.services.exportCsv')}</span>
           </button>
-          <Button icon={Plus} onClick={openAdd}>Tambah Layanan</Button>
+          <Button icon={Plus} onClick={openAdd}>{t('tenantAdmin.services.addService')}</Button>
         </div>
       </div>
 
       {/* ── Stats ──────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3">
-        <StatTile icon={Package}     label="Total"        value={stats.total}      accent="gold"  delay={0.02} />
-        <StatTile icon={BadgeCheck}  label="Aktif"        value={stats.active}     accent="green" delay={0.04} />
-        <StatTile icon={Pause}       label="Nonaktif"     value={stats.inactive}   accent="amber" delay={0.06} />
+        <StatTile icon={Package}     label={t('common.total')}                 value={stats.total}      accent="gold"  delay={0.02} />
+        <StatTile icon={BadgeCheck}  label={t('common.active')}                value={stats.active}     accent="green" delay={0.04} />
+        <StatTile icon={Pause}       label={t('common.inactive')}              value={stats.inactive}   accent="amber" delay={0.06} />
         <StatTile
           icon={TrendingUp}
-          label="Harga Rata2"
+          label={t('tenantAdmin.services.avgPrice')}
           value={formatRupiah(stats.avgPrice)}
           valueShort={formatRupiahShort(stats.avgPrice)}
           accent="blue"
@@ -635,10 +644,10 @@ export default function TAServicesPage() {
         />
         <StatTile
           icon={Layers}
-          label="Kategori"
+          label={t('common.category')}
           value={stats.categories}
           accent="rose"
-          hint={`Avg ${stats.avgDuration} mnt`}
+          hint={t('tenantAdmin.services.avgDuration', { count: stats.avgDuration })}
           delay={0.1}
         />
       </div>
@@ -652,7 +661,7 @@ export default function TAServicesPage() {
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Cari nama layanan…"
+                placeholder={t('tenantAdmin.services.searchPlaceholder')}
                 className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl pl-10 pr-9 py-2.5 text-sm outline-none focus:border-brand/60 focus:ring-2 focus:ring-brand/15"
               />
               {search && (
@@ -660,7 +669,7 @@ export default function TAServicesPage() {
                   type="button"
                   onClick={() => setSearch('')}
                   className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted hover:text-off-white"
-                  aria-label="Hapus pencarian"
+                  aria-label={t('tenantAdmin.services.clearSearch')}
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -672,7 +681,7 @@ export default function TAServicesPage() {
               className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60"
             >
               {SORT_OPTIONS.map(o => (
-                <option key={o.value} value={o.value}>{o.label}</option>
+                <option key={o.value} value={o.value}>{t(`tenantAdmin.services.${o.labelKey}`)}</option>
               ))}
             </select>
             <select
@@ -680,9 +689,9 @@ export default function TAServicesPage() {
               onChange={e => setActiveFilter(e.target.value)}
               className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60"
             >
-              <option value="">Semua Status</option>
-              <option value="true">Aktif</option>
-              <option value="false">Nonaktif</option>
+              <option value="">{t('tenantAdmin.services.allStatuses')}</option>
+              <option value="true">{t('common.active')}</option>
+              <option value="false">{t('common.inactive')}</option>
             </select>
             {activeFilterCount > 0 && (
               <button
@@ -690,7 +699,7 @@ export default function TAServicesPage() {
                 onClick={resetFilters}
                 className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs hover:bg-amber-500/20"
               >
-                <X className="w-3.5 h-3.5" /> Reset ({activeFilterCount})
+                <X className="w-3.5 h-3.5" /> {t('tenantAdmin.services.resetCount', { count: activeFilterCount })}
               </button>
             )}
           </div>
@@ -706,7 +715,7 @@ export default function TAServicesPage() {
                   : 'bg-dark-card/60 border border-dark-border text-muted hover:text-off-white'
               }`}
             >
-              Semua <span className="opacity-70 ml-0.5">({stats.total})</span>
+              {t('common.all')} <span className="opacity-70 ml-0.5">({stats.total})</span>
             </button>
             {(categoriesQuery.data || []).map(c => (
               <button
@@ -740,9 +749,9 @@ export default function TAServicesPage() {
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-2 text-sm">
                   <CheckSquare className="w-4 h-4 text-brand" />
-                  <span className="text-off-white font-medium">{selected.size} dipilih</span>
+                  <span className="text-off-white font-medium">{t('tenantAdmin.services.selectedCount', { count: selected.size })}</span>
                   <button type="button" onClick={clearSelection} className="text-xs text-muted hover:text-off-white">
-                    Batal
+                    {t('common.cancel')}
                   </button>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
@@ -751,21 +760,21 @@ export default function TAServicesPage() {
                     onClick={() => setConfirmBulk('activate')}
                     className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-medium hover:bg-emerald-500/20"
                   >
-                    <Eye className="w-3.5 h-3.5" /> Aktifkan
+                    <Eye className="w-3.5 h-3.5" /> {t('tenantAdmin.services.activate')}
                   </button>
                   <button
                     type="button"
                     onClick={() => setConfirmBulk('deactivate')}
                     className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-medium hover:bg-amber-500/20"
                   >
-                    <EyeOff className="w-3.5 h-3.5" /> Nonaktifkan
+                    <EyeOff className="w-3.5 h-3.5" /> {t('tenantAdmin.services.deactivate')}
                   </button>
                   <button
                     type="button"
                     onClick={() => setConfirmBulk('delete')}
                     className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium hover:bg-red-500/20"
                   >
-                    <Trash2 className="w-3.5 h-3.5" /> Hapus
+                    <Trash2 className="w-3.5 h-3.5" /> {t('common.delete')}
                   </button>
                 </div>
               </div>
@@ -785,11 +794,11 @@ export default function TAServicesPage() {
             {allOnPageSelected
               ? <CheckSquare className="w-4 h-4 text-brand" />
               : <Square className="w-4 h-4" />}
-            Pilih semua di halaman ini
+            {t('tenantAdmin.services.selectAllOnPage')}
           </button>
           {(servicesQuery.isFetching) && (
             <span className="text-xs text-muted inline-flex items-center gap-1">
-              <RefreshCw className="w-3 h-3 animate-spin" /> Sinkron…
+              <RefreshCw className="w-3 h-3 animate-spin" /> {t('tenantAdmin.services.syncing')}
             </span>
           )}
         </div>
@@ -806,18 +815,18 @@ export default function TAServicesPage() {
         <Card className="p-10 text-center">
           <div className="text-5xl mb-3">✂️</div>
           <h3 className="font-display text-lg font-semibold text-off-white">
-            {activeFilterCount > 0 ? 'Tidak ada layanan cocok dengan filter' : 'Belum ada layanan'}
+            {activeFilterCount > 0 ? t('tenantAdmin.services.emptyFilteredTitle') : t('tenantAdmin.services.emptyTitle')}
           </h3>
           <p className="text-muted text-sm mt-1 max-w-md mx-auto">
             {activeFilterCount > 0
-              ? 'Coba reset filter atau ubah kata kunci pencarian.'
-              : 'Layanan akan dipakai di POS, queue, dan booking publik. Mulai dengan menambahkan satu layanan utama Anda.'}
+              ? t('tenantAdmin.services.emptyFilteredDesc')
+              : t('tenantAdmin.services.emptyDesc')}
           </p>
           <div className="mt-4 flex items-center justify-center gap-2">
             {activeFilterCount > 0 && (
-              <Button variant="outline" onClick={resetFilters}>Reset Filter</Button>
+              <Button variant="outline" onClick={resetFilters}>{t('tenantAdmin.services.resetFilter')}</Button>
             )}
-            <Button icon={Plus} onClick={openAdd}>Tambah Layanan</Button>
+            <Button icon={Plus} onClick={openAdd}>{t('tenantAdmin.services.addService')}</Button>
           </div>
         </Card>
       ) : (
@@ -860,7 +869,7 @@ export default function TAServicesPage() {
             className="inline-flex items-center gap-0.5 px-2 py-1.5 rounded-md text-xs text-muted border border-dark-border bg-dark-card/40 disabled:opacity-40 hover:text-off-white"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Sebelumnya</span>
+            <span className="hidden sm:inline">{t('tenantAdmin.services.prevPage')}</span>
           </button>
           <span className="px-3 py-1.5 text-xs text-off-white tabular-nums">
             {page} / {totalPages}
@@ -871,7 +880,7 @@ export default function TAServicesPage() {
             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
             className="inline-flex items-center gap-0.5 px-2 py-1.5 rounded-md text-xs text-muted border border-dark-border bg-dark-card/40 disabled:opacity-40 hover:text-off-white"
           >
-            <span className="hidden sm:inline">Berikutnya</span>
+            <span className="hidden sm:inline">{t('tenantAdmin.services.nextPage')}</span>
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
           <button
@@ -899,9 +908,9 @@ export default function TAServicesPage() {
         isOpen={!!confirmDel}
         onClose={() => setConfirmDel(null)}
         onConfirm={confirmDelete}
-        title="Hapus Layanan?"
-        description={`Layanan "${confirmDel?.name || ''}" akan dihapus. Transaksi lama tetap utuh, tapi layanan ini tidak akan muncul lagi di POS / booking.`}
-        confirmText="Ya, Hapus"
+        title={t('tenantAdmin.services.deleteConfirmTitle')}
+        description={t('tenantAdmin.services.deleteConfirmDesc', { name: confirmDel?.name || '' })}
+        confirmText={t('tenantAdmin.services.confirmDelete')}
         variant="danger"
       />
 
@@ -910,18 +919,20 @@ export default function TAServicesPage() {
         onClose={() => setConfirmBulk(null)}
         onConfirm={runBulk}
         title={
-          confirmBulk === 'delete'     ? 'Hapus banyak layanan?' :
-          confirmBulk === 'activate'   ? 'Aktifkan banyak layanan?' :
-          confirmBulk === 'deactivate' ? 'Nonaktifkan banyak layanan?' :
-          'Konfirmasi'
+          confirmBulk === 'delete'     ? t('tenantAdmin.services.bulkDeleteTitle') :
+          confirmBulk === 'activate'   ? t('tenantAdmin.services.bulkActivateTitle') :
+          confirmBulk === 'deactivate' ? t('tenantAdmin.services.bulkDeactivateTitle') :
+          t('common.confirm')
         }
         description={
           confirmBulk === 'delete'
-            ? `${selected.size} layanan akan dihapus. Transaksi lama tetap utuh.`
-            : `${selected.size} layanan akan ${confirmBulk === 'activate' ? 'diaktifkan' : 'dinonaktifkan'}.`
+            ? t('tenantAdmin.services.bulkDeleteDesc', { count: selected.size })
+            : confirmBulk === 'activate'
+              ? t('tenantAdmin.services.bulkActivateDesc', { count: selected.size })
+              : t('tenantAdmin.services.bulkDeactivateDesc', { count: selected.size })
         }
         confirmText={
-          confirmBulk === 'delete' ? 'Ya, Hapus Semua' : 'Ya, Lanjutkan'
+          confirmBulk === 'delete' ? t('tenantAdmin.services.confirmDeleteAll') : t('tenantAdmin.services.confirmContinue')
         }
         variant={confirmBulk === 'delete' ? 'danger' : 'warning'}
       />
@@ -929,7 +940,7 @@ export default function TAServicesPage() {
       {servicesQuery.isFetching && !servicesQuery.isLoading && (
         <div className="fixed bottom-20 sm:bottom-6 right-4 z-30 inline-flex items-center gap-2 px-3 py-2 rounded-full bg-dark-card/90 border border-dark-border text-xs text-muted shadow-card backdrop-blur">
           <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-          Sinkronisasi…
+          {t('tenantAdmin.services.syncing')}
         </div>
       )}
     </div>

@@ -37,13 +37,13 @@ export default function TASettingsPage() {
   useEffect(() => { if (user?.name) setAccountName(user.name) }, [user?.name])
   const handleSaveAccount = async () => {
     const name = accountName.trim()
-    if (!name) { toast.error('Nama akun tidak boleh kosong'); return }
+    if (!name) { toast.error(t('tenantAdmin.settings.accountNameEmpty')); return }
     setSavingAccount(true)
     try {
       await updateProfile({ name })   // PATCH /auth/me → update user di store → sapaan dashboard ikut berubah
-      toast.success('Nama akun diperbarui')
+      toast.success(t('tenantAdmin.settings.accountNameUpdated'))
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal memperbarui nama akun')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.settings.accountNameUpdateFailed'))
     } finally {
       setSavingAccount(false)
     }
@@ -68,7 +68,7 @@ export default function TASettingsPage() {
       setPwdForm({ current: '', next: '', confirm: '' })
       setShowPwd(false)
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal mengubah password')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.settings.pwdChangeFailed'))
     } finally {
       setSavingPwd(false)
     }
@@ -84,9 +84,9 @@ export default function TASettingsPage() {
   const handleStartTrial = async () => {
     try {
       const data = await startTrial.mutateAsync()
-      toast.success(`Trial WhatsApp aktif! Nikmati semua fitur WA gratis ${data?.durationDays || 14} hari.`)
+      toast.success(t('tenantAdmin.settings.waTrialActivated', { days: data?.durationDays || 14 }))
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal memulai trial WhatsApp')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.settings.waTrialStartFailed'))
     }
   }
   // Tab WA tampil bila paket punya fitur (termasuk saat trial aktif → flag on),
@@ -142,11 +142,7 @@ export default function TASettingsPage() {
   }, [tenant?.transactionMessages])
 
   // ── Rating otomatis via WhatsApp setelah transaksi ─────────────────────────
-  const DEFAULT_RATING_TEMPLATE =
-    'Halo {nama}! Terima kasih sudah berkunjung ke {toko}.\n\n' +
-    'Bagaimana pengalamanmu hari ini? Bantu kami dengan beri rating singkat di link berikut:\n' +
-    '{link}\n\n' +
-    'Hanya butuh 30 detik. Masukan Anda sangat berarti untuk kami.'
+  const DEFAULT_RATING_TEMPLATE = t('tenantAdmin.settings.defaultRatingTemplate')
   const [ratingForm, setRatingForm] = useState({
     enabled: false, autoSendMinutes: 15, messageTemplate: '',
   })
@@ -173,9 +169,9 @@ export default function TASettingsPage() {
           messageTemplate: tpl || null,
         },
       })
-      toast.success('Pengaturan rating tersimpan')
+      toast.success(t('tenantAdmin.settings.ratingSaved'))
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal menyimpan')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.settings.saveFailed'))
     } finally {
       setRatingSaving(false)
     }
@@ -245,10 +241,10 @@ export default function TASettingsPage() {
       })
       // Selaraskan kembali nilai yang dinormalisasi ke form.
       setReminderForm(f => ({ ...f, minDelaySec: lo, maxDelaySec: hi }))
-      toast.success('Pengaturan pengingat kunjungan tersimpan')
+      toast.success(t('tenantAdmin.settings.reminderSaved'))
       loadReminderPreview()
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal menyimpan')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.settings.saveFailed'))
     } finally {
       setReminderSaving(false)
     }
@@ -261,13 +257,13 @@ export default function TASettingsPage() {
       const res = await api.post('/customers/visit-reminder/run', {})
       const d = res.data?.data || {}
       if (d.started) {
-        toast.success(`Pengiriman dimulai di latar belakang — ${d.eligible} pelanggan akan diingatkan bertahap dengan jeda acak.`)
+        toast.success(t('tenantAdmin.settings.reminderRunStarted', { count: d.eligible }))
       } else {
-        toast.success('Tidak ada pelanggan yang memenuhi kriteria pengingat saat ini.')
+        toast.success(t('tenantAdmin.settings.reminderRunNone'))
       }
       loadReminderPreview()
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal mengirim pengingat')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.settings.reminderRunFailed'))
     } finally {
       setReminderRunning(false)
     }
@@ -320,7 +316,7 @@ export default function TASettingsPage() {
       const url = await uploadBookingImage(file)
       if (url) setBookingForm(f => ({ ...f, heroImage: url }))
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal mengunggah gambar')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.settings.imageUploadFailed'))
     } finally {
       setHeroUploading(false)
     }
@@ -337,7 +333,7 @@ export default function TASettingsPage() {
       }
       if (urls.length) setBookingForm(f => ({ ...f, gallery: [...f.gallery, ...urls].slice(0, 12) }))
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal mengunggah gambar')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.settings.imageUploadFailed'))
     } finally {
       setGalleryUploading(false)
     }
@@ -371,9 +367,9 @@ export default function TASettingsPage() {
         testimonials:  bookingForm.testimonials,
       }
       await updateMyTenant.mutateAsync({ bookingPage: payload })
-      toast.success('Pengaturan halaman booking tersimpan')
+      toast.success(t('tenantAdmin.settings.bookingPageSaved'))
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal menyimpan')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.settings.saveFailed'))
     } finally {
       setBookingSaving(false)
     }
@@ -436,7 +432,7 @@ export default function TASettingsPage() {
       })
       toast.success(t('tenantAdmin.settings.settingsSaved'))
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal menyimpan pengaturan')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.settings.settingsSaveFailed'))
     }
   }
 
@@ -452,9 +448,9 @@ export default function TASettingsPage() {
           waShareMessage:    clean(txMsgForm.waShareMessage),
         },
       })
-      toast.success('Pesan transaksi tersimpan')
+      toast.success(t('tenantAdmin.settings.txMsgSaved'))
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal menyimpan')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.settings.saveFailed'))
     } finally {
       setTxMsgSaving(false)
     }
@@ -467,9 +463,9 @@ export default function TASettingsPage() {
         npwp:        form.npwp || null,
         taxAddress:  form.taxAddress || null,
       })
-      toast.success('Data faktur tersimpan')
+      toast.success(t('tenantAdmin.settings.taxInfoSaved'))
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal menyimpan')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.settings.saveFailed'))
     }
   }
 
@@ -505,9 +501,9 @@ export default function TASettingsPage() {
       a.download = `crown-backup-${tenant?.slug || 'tenant'}-${format(new Date(), 'yyyy-MM-dd')}.json`
       a.click()
       URL.revokeObjectURL(url)
-      toast.success(`Backup terunduh — ${payload.branches.length} cabang, ${payload.services.length} layanan, ${payload.staff.length} staf, ${payload.customers.length} pelanggan`)
+      toast.success(t('tenantAdmin.settings.backupDownloadedDetail', { branches: payload.branches.length, services: payload.services.length, staff: payload.staff.length, customers: payload.customers.length }))
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal mengunduh backup')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.settings.backupDownloadFailed'))
     } finally {
       setExporting(false)
     }
@@ -520,8 +516,8 @@ export default function TASettingsPage() {
     try {
       const res = await api.get('/audit-logs', { params: { ...auditQueryParams, page: 1, limit: 1000 } })
       const rows = res.data?.data?.data || []
-      if (rows.length === 0) { toast.error('Tidak ada log untuk diekspor'); return }
-      const header = ['Waktu', 'Pengguna', 'Aksi', 'Tingkat', 'Detail']
+      if (rows.length === 0) { toast.error(t('tenantAdmin.settings.noLogsToExport')); return }
+      const header = [t('tenantAdmin.settings.csvTime'), t('tenantAdmin.settings.csvUser'), t('tenantAdmin.settings.csvAction'), t('tenantAdmin.settings.csvLevel'), t('tenantAdmin.settings.csvDetail')]
       const escape = (v) => {
         const s = String(v ?? '')
         return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
@@ -535,9 +531,9 @@ export default function TASettingsPage() {
       a.download = `log-aktivitas-${format(new Date(), 'yyyy-MM-dd')}.csv`
       a.click()
       URL.revokeObjectURL(url)
-      toast.success(`Berhasil ekspor ${rows.length} log`)
+      toast.success(t('tenantAdmin.settings.exportLogSuccess', { count: rows.length }))
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal mengekspor log')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.settings.exportLogFailed'))
     } finally {
       setAuditExporting(false)
     }
@@ -589,7 +585,7 @@ export default function TASettingsPage() {
       }))
     } catch (err) {
       if (!silent) setWaState(prev => ({ ...prev, loading: false }))
-      if (!silent) toast.error(err?.response?.data?.error || 'Gagal memuat status WhatsApp')
+      if (!silent) toast.error(err?.response?.data?.error || t('tenantAdmin.settings.waStatusLoadFailed'))
     }
   }
 
@@ -598,10 +594,10 @@ export default function TASettingsPage() {
       setWaState(prev => ({ ...prev, loading: true }))
       await api.patch('/whatsapp/settings', waState.settings)
       await loadWhatsAppStatus()
-      toast.success('Pengaturan WhatsApp disimpan')
+      toast.success(t('tenantAdmin.settings.waSettingsSaved'))
     } catch (err) {
       setWaState(prev => ({ ...prev, loading: false }))
-      toast.error(err?.response?.data?.error || 'Gagal menyimpan pengaturan WhatsApp')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.settings.waSettingsSaveFailed'))
     }
   }
 
@@ -616,13 +612,13 @@ export default function TASettingsPage() {
     // ini ada celah ~0.5–2 detik antara click dan loadWhatsAppStatus selesai
     // di mana user mengira tak jalan dan klik lagi.
     setWaState(prev => ({ ...prev, loading: true, status: 'connecting', lastError: null }))
-    toast.success('Memulai koneksi WhatsApp…')
+    toast.success(t('tenantAdmin.settings.waConnecting'))
     try {
       await api.post('/whatsapp/connect')
       waActionLockRef.current = false
       await loadWhatsAppStatus()
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal memulai koneksi WhatsApp')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.settings.waConnectFailed'))
       connectIntentUntilRef.current = 0
       waActionLockRef.current = false
       try { await loadWhatsAppStatus({ silent: true }) } catch {}
@@ -636,16 +632,16 @@ export default function TASettingsPage() {
     // Putuskan koneksi → otomatis batalkan intent connect aktif.
     connectIntentUntilRef.current = 0
     setWaState(prev => ({ ...prev, loading: true }))
-    toast.success('Memutuskan koneksi WhatsApp…')
+    toast.success(t('tenantAdmin.settings.waDisconnecting'))
     try {
       await api.post('/whatsapp/disconnect')
       waActionLockRef.current = false
       await loadWhatsAppStatus()
-      toast.success('WhatsApp terputus')
+      toast.success(t('tenantAdmin.settings.waDisconnected'))
     } catch (err) {
       waActionLockRef.current = false
       setWaState(prev => ({ ...prev, loading: false }))
-      toast.error(err?.response?.data?.error || 'Gagal memutus koneksi WhatsApp')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.settings.waDisconnectFailed'))
     }
   }
 
@@ -653,9 +649,9 @@ export default function TASettingsPage() {
     try {
       setWaState(prev => ({ ...prev, loading: true }))
       await api.post('/whatsapp/test', {})
-      toast.success('Pesan tes terkirim. Cek WhatsApp admin.')
+      toast.success(t('tenantAdmin.settings.waTestSent'))
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal mengirim pesan tes')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.settings.waTestFailed'))
     } finally {
       setWaState(prev => ({ ...prev, loading: false }))
     }
@@ -687,11 +683,11 @@ export default function TASettingsPage() {
 
   const TABS = [
     { id: 'general', label: t('tenantAdmin.settings.tabGeneral') },
-    { id: 'bookingPage', label: 'Halaman Booking' },
-    ...(showWaTab ? [{ id: 'whatsapp', label: 'WhatsApp Beta' }] : []),
-    { id: 'transactionMsg', label: 'Pesan Transaksi' },
-    ...(whatsappEnabled ? [{ id: 'visitReminder', label: 'Pengingat Kunjungan' }] : []),
-    ...(whatsappEnabled ? [{ id: 'ratingAuto', label: 'Rating Otomatis' }] : []),
+    { id: 'bookingPage', label: t('tenantAdmin.settings.tabBookingPage') },
+    ...(showWaTab ? [{ id: 'whatsapp', label: t('tenantAdmin.settings.tabWhatsappBeta') }] : []),
+    { id: 'transactionMsg', label: t('tenantAdmin.settings.tabTransactionMsg') },
+    ...(whatsappEnabled ? [{ id: 'visitReminder', label: t('tenantAdmin.settings.tabVisitReminder') }] : []),
+    ...(whatsappEnabled ? [{ id: 'ratingAuto', label: t('tenantAdmin.settings.tabRatingAuto') }] : []),
     { id: 'backup', label: t('tenantAdmin.settings.tabBackup') },
     { id: 'audit', label: t('tenantAdmin.settings.tabAudit') },
   ]
@@ -734,18 +730,18 @@ export default function TASettingsPage() {
               <div>
                 <Input label={t('tenantAdmin.settings.tenantName')} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
                 <p className="mt-1 text-[11px] text-muted leading-snug">
-                  Nama bisnis yang tampil di <b className="text-off-white">struk POS</b>, halaman <b className="text-off-white">booking publik</b> /book, dan email transaksi. Beda dari "Nama Akun" (sapaan dashboard owner) di bawah.
+                  {t('tenantAdmin.settings.businessNameHintPre')} <b className="text-off-white">{t('tenantAdmin.settings.businessNameHintPos')}</b>, {t('tenantAdmin.settings.businessNameHintMid')} <b className="text-off-white">{t('tenantAdmin.settings.businessNameHintBooking')}</b> {t('tenantAdmin.settings.businessNameHintPost')}
                 </p>
               </div>
-              <Input label="Telepon kontak" type="tel" placeholder="08xxxxxxxxxx" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
-              <Input label="Alamat" placeholder="Alamat usaha" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
+              <Input label={t('tenantAdmin.settings.contactPhone')} type="tel" placeholder="08xxxxxxxxxx" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+              <Input label={t('tenantAdmin.settings.address')} placeholder={t('tenantAdmin.settings.addressPlaceholder')} value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
               <div className="grid grid-cols-2 gap-3">
                 <Input label={t('tenantAdmin.settings.defaultOpenTime')} type="time" value={form.openTime} onChange={e => setForm(f => ({ ...f, openTime: e.target.value }))} />
                 <Input label={t('tenantAdmin.settings.defaultCloseTime')} type="time" value={form.closeTime} onChange={e => setForm(f => ({ ...f, closeTime: e.target.value }))} />
               </div>
               <Input label={t('tenantAdmin.settings.taxPercent')} type="number" value={form.taxRate} onChange={e => setForm(f => ({ ...f, taxRate: e.target.value }))} />
               <div>
-                <label className="block text-xs text-muted mb-1.5">Zona Waktu</label>
+                <label className="block text-xs text-muted mb-1.5">{t('tenantAdmin.settings.timezone')}</label>
                 <select
                   value={form.timezone}
                   onChange={e => setForm(f => ({ ...f, timezone: e.target.value }))}
@@ -756,7 +752,7 @@ export default function TASettingsPage() {
                   ))}
                 </select>
                 <p className="text-xs text-muted/70 mt-1">
-                  Zona waktu menentukan batas hari pada laporan, jam transaksi, dan pengelompokan harian. Pastikan sesuai lokasi cabang.
+                  {t('tenantAdmin.settings.timezoneHint')}
                 </p>
               </div>
               <Button onClick={handleSave} fullWidth loading={updateMyTenant.isPending}>{t('tenantAdmin.settings.saveSettings')}</Button>
@@ -768,21 +764,21 @@ export default function TASettingsPage() {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Shield className="w-5 h-5 text-brand" />
-                <h3 className="font-semibold text-off-white">Akun Saya</h3>
+                <h3 className="font-semibold text-off-white">{t('tenantAdmin.settings.myAccount')}</h3>
               </div>
             </CardHeader>
             <CardBody className="space-y-4">
               <Input
-                label="Nama akun"
-                placeholder="Nama Anda"
+                label={t('tenantAdmin.settings.accountName')}
+                placeholder={t('tenantAdmin.settings.accountNamePlaceholder')}
                 value={accountName}
                 onChange={e => setAccountName(e.target.value)}
               />
               <p className="text-xs text-muted">
-                Nama ini dipakai untuk sapaan di dashboard (&ldquo;Selamat Pagi, …&rdquo;) dan inisial avatar Anda. <span className="text-amber-300">TIDAK muncul di struk POS atau halaman booking publik</span> — itu pakai <span className="text-off-white">Nama Bisnis</span> di kartu di atas. Email &amp; peran akun tidak bisa diubah dari sini.
+                {t('tenantAdmin.settings.accountNameHintPre')} <span className="text-amber-300">{t('tenantAdmin.settings.accountNameHintWarn')}</span> {t('tenantAdmin.settings.accountNameHintMid')} <span className="text-off-white">{t('tenantAdmin.settings.businessNameLabel')}</span> {t('tenantAdmin.settings.accountNameHintPost')}
               </p>
               <Button variant="secondary" onClick={handleSaveAccount} fullWidth loading={savingAccount}>
-                Simpan Nama Akun
+                {t('tenantAdmin.settings.saveAccountName')}
               </Button>
             </CardBody>
           </Card>
@@ -792,15 +788,15 @@ export default function TASettingsPage() {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-brand" />
-                <h3 className="font-semibold text-off-white">Data Faktur (Opsional)</h3>
+                <h3 className="font-semibold text-off-white">{t('tenantAdmin.settings.taxInfoTitle')}</h3>
               </div>
             </CardHeader>
             <CardBody className="space-y-4">
               <p className="text-xs text-muted">
-                Diisi jika usaha Anda berbentuk PT/CV dan butuh nama perusahaan + NPWP tercetak di invoice. Boleh dikosongkan kalau tidak relevan.
+                {t('tenantAdmin.settings.taxInfoDesc')}
               </p>
               <Input
-                label="Nama perusahaan"
+                label={t('tenantAdmin.settings.companyName')}
                 placeholder="PT/CV/UD ..."
                 value={form.companyName}
                 onChange={e => setForm(f => ({ ...f, companyName: e.target.value }))}
@@ -812,13 +808,13 @@ export default function TASettingsPage() {
                 onChange={e => setForm(f => ({ ...f, npwp: e.target.value }))}
               />
               <Input
-                label="Alamat NPWP / faktur"
-                placeholder="Sesuai SK NPWP"
+                label={t('tenantAdmin.settings.taxAddressLabel')}
+                placeholder={t('tenantAdmin.settings.taxAddressPlaceholder')}
                 value={form.taxAddress}
                 onChange={e => setForm(f => ({ ...f, taxAddress: e.target.value }))}
               />
               <Button variant="secondary" onClick={handleSaveTaxInfo} fullWidth loading={updateMyTenant.isPending}>
-                Simpan Data Faktur
+                {t('tenantAdmin.settings.saveTaxInfo')}
               </Button>
             </CardBody>
           </Card>
@@ -909,17 +905,17 @@ export default function TASettingsPage() {
               {sub ? (() => {
                 const daysLeft = differenceInDays(new Date(sub.endDate), new Date())
                 const dayLabel = daysLeft < 0
-                  ? `Telat ${Math.abs(daysLeft)} hari`
-                  : daysLeft === 0 ? 'Berakhir hari ini' : `${daysLeft} hari lagi`
+                  ? t('tenantAdmin.settings.subOverdue', { days: Math.abs(daysLeft) })
+                  : daysLeft === 0 ? t('tenantAdmin.settings.subEndsToday') : t('tenantAdmin.settings.subDaysLeft', { days: daysLeft })
                 const dayColor = daysLeft < 0 ? 'text-red-400' : daysLeft <= 7 ? 'text-amber-400' : 'text-green-400'
                 return (
                   <>
                     <div className="p-4 bg-brand/10 border border-brand/20 rounded-xl mb-4">
                       <div className="flex items-center justify-between gap-3 mb-3">
                         <div>
-                          <p className="font-semibold text-brand">Paket {sub.package}</p>
+                          <p className="font-semibold text-brand">{t('tenantAdmin.settings.packageName', { name: sub.package })}</p>
                           <p className="text-xs text-muted mt-0.5">
-                            Aktif hingga {format(new Date(sub.endDate), 'dd MMM yyyy')}
+                            {t('tenantAdmin.settings.activeUntil', { date: format(new Date(sub.endDate), 'dd MMM yyyy') })}
                             <span className={`ml-1 ${dayColor}`}>· {dayLabel}</span>
                           </p>
                         </div>
@@ -936,7 +932,7 @@ export default function TASettingsPage() {
                 )
               })() : (
                 <div className="p-4 bg-dark-surface border border-dark-border rounded-xl mb-4 text-sm text-muted">
-                  Memuat data langganan…
+                  {t('tenantAdmin.settings.loadingSubscription')}
                 </div>
               )}
               <Button
@@ -945,10 +941,10 @@ export default function TASettingsPage() {
                 icon={ArrowUpRight}
                 onClick={() => navigate('/admin/billing')}
               >
-                Kelola langganan & upgrade paket
+                {t('tenantAdmin.settings.manageSubscription')}
               </Button>
               <p className="text-xs text-muted mt-2 text-center">
-                Perpanjang masa langganan dan upgrade paket dilakukan di halaman <span className="text-off-white">Billing</span>.
+                {t('tenantAdmin.settings.manageSubscriptionHintPre')} <span className="text-off-white">{t('tenantAdmin.settings.billingLabel')}</span>{t('tenantAdmin.settings.manageSubscriptionHintPost')}
               </p>
             </CardBody>
           </Card>
@@ -1011,23 +1007,23 @@ export default function TASettingsPage() {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <MessageCircle className="w-5 h-5 text-brand" />
-                <h3 className="font-semibold text-off-white">Pesan Otomatis Setelah Transaksi</h3>
+                <h3 className="font-semibold text-off-white">{t('tenantAdmin.settings.txMsgTitle')}</h3>
               </div>
             </CardHeader>
             <CardBody className="space-y-6">
               <p className="text-sm text-muted">
-                Sesuaikan teks pesan WhatsApp ke pelanggan setelah transaksi.
-                Gunakan <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{nama}'}</code> untuk
-                menyisipkan nama pelanggan dan <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{toko}'}</code> untuk
-                nama toko.
+                {t('tenantAdmin.settings.txMsgDescPre')}{' '}
+                <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{nama}'}</code>{' '}
+                {t('tenantAdmin.settings.txMsgDescMid')}{' '}
+                <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{toko}'}</code>{' '}
+                {t('tenantAdmin.settings.txMsgDescPost')}
               </p>
 
               {!whatsappEnabled && (
                 <div className="flex items-start gap-2 bg-amber-400/10 border border-amber-400/30 rounded-xl p-3 text-amber-200 text-xs leading-relaxed">
                   <AlertTriangle size={14} className="mt-0.5 flex-shrink-0 text-amber-400" />
                   <p>
-                    <span className="font-semibold">Pengiriman otomatis</span> ke WhatsApp pelanggan butuh fitur <span className="font-semibold">WhatsApp Beta</span> (tersedia di paket lebih tinggi).
-                    Di paket kamu yang aktif adalah <span className="font-semibold">Share manual</span> — kasir mengirim struk ke WhatsApp pelanggan satu klik dari halaman kasir (kolom kedua di bawah).
+                    <span className="font-semibold">{t('tenantAdmin.settings.txMsgAutoSend')}</span> {t('tenantAdmin.settings.txMsgAutoSendPre')} <span className="font-semibold">{t('tenantAdmin.settings.tabWhatsappBeta')}</span> {t('tenantAdmin.settings.txMsgAutoSendMid')} <span className="font-semibold">{t('tenantAdmin.settings.txMsgShareManual')}</span> {t('tenantAdmin.settings.txMsgAutoSendPost')}
                   </p>
                 </div>
               )}
@@ -1035,9 +1031,9 @@ export default function TASettingsPage() {
               {/* Pesan WA otomatis ke pelanggan */}
               <div className="space-y-1.5">
                 <label className="flex items-center gap-2 text-sm font-medium text-off-white">
-                  Pesan WhatsApp otomatis ke pelanggan
+                  {t('tenantAdmin.settings.txMsgCustomerLabel')}
                   {!whatsappEnabled && (
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30">Perlu WhatsApp Beta</span>
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30">{t('tenantAdmin.settings.needWhatsappBeta')}</span>
                   )}
                 </label>
                 <textarea
@@ -1045,14 +1041,13 @@ export default function TASettingsPage() {
                   onChange={e => setTxMsgForm(f => ({ ...f, waCustomerMessage: e.target.value }))}
                   rows={3}
                   maxLength={500}
-                  placeholder="Terima kasih sudah bertransaksi."
+                  placeholder={t('tenantAdmin.settings.txMsgCustomerPlaceholder')}
                   className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/60 resize-none"
                 />
                 <div className="flex justify-between gap-3">
                   <p className="text-[11px] text-muted">
-                    Kalimat pembuka notifikasi otomatis. Rincian transaksi (total, cabang, waktu)
-                    ditambahkan otomatis di bawahnya.
-                    {!whatsappEnabled && ' Memerlukan fitur WhatsApp Beta aktif & notifikasi pelanggan dinyalakan.'}
+                    {t('tenantAdmin.settings.txMsgCustomerHint')}
+                    {!whatsappEnabled && ' ' + t('tenantAdmin.settings.txMsgCustomerHintExtra')}
                   </p>
                   <span className="text-[11px] text-muted flex-shrink-0 tabular-nums">{txMsgForm.waCustomerMessage.length}/500</span>
                 </div>
@@ -1061,9 +1056,9 @@ export default function TASettingsPage() {
               {/* Penutup pesan WA share manual */}
               <div className="space-y-1.5">
                 <label className="flex items-center gap-2 text-sm font-medium text-off-white">
-                  Penutup pesan WhatsApp share manual (kasir)
+                  {t('tenantAdmin.settings.txMsgShareLabel')}
                   {!whatsappEnabled && (
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-green-500/15 text-green-300 border border-green-500/30">Aktif di paketmu</span>
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-green-500/15 text-green-300 border border-green-500/30">{t('tenantAdmin.settings.activeInPackage')}</span>
                   )}
                 </label>
                 <textarea
@@ -1071,14 +1066,12 @@ export default function TASettingsPage() {
                   onChange={e => setTxMsgForm(f => ({ ...f, waShareMessage: e.target.value }))}
                   rows={3}
                   maxLength={500}
-                  placeholder="Terima kasih sudah berkunjung! 🙏"
+                  placeholder={t('tenantAdmin.settings.txMsgSharePlaceholder')}
                   className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/60 resize-none"
                 />
                 <div className="flex justify-between gap-3">
                   <p className="text-[11px] text-muted">
-                    Kalimat penutup saat kasir membagikan struk lewat tombol WhatsApp di halaman kasir.
-                    Tombol share manual otomatis disembunyikan bila notifikasi otomatis di atas sudah aktif —
-                    agar pelanggan tak menerima dua pesan.
+                    {t('tenantAdmin.settings.txMsgShareHint')}
                   </p>
                   <span className="text-[11px] text-muted flex-shrink-0 tabular-nums">{txMsgForm.waShareMessage.length}/500</span>
                 </div>
@@ -1090,7 +1083,7 @@ export default function TASettingsPage() {
                 loading={txMsgSaving}
                 disabled={txMsgSaving}
               >
-                Simpan Pesan
+                {t('tenantAdmin.settings.saveMessage')}
               </Button>
             </CardBody>
           </Card>
@@ -1103,14 +1096,12 @@ export default function TASettingsPage() {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Bell className="w-5 h-5 text-brand" />
-                <h3 className="font-semibold text-off-white">Pengingat Kunjungan Otomatis</h3>
+                <h3 className="font-semibold text-off-white">{t('tenantAdmin.settings.reminderTitle')}</h3>
               </div>
             </CardHeader>
             <CardBody className="space-y-6">
               <p className="text-sm text-muted">
-                Kirim pesan WhatsApp otomatis ke pelanggan yang sudah lama tidak berkunjung,
-                agar mereka kembali. Pesan dikirim dari nomor WhatsApp toko yang tersambung
-                di tab WhatsApp Beta.
+                {t('tenantAdmin.settings.reminderDesc')}
               </p>
 
               {/* Aktifkan */}
@@ -1122,8 +1113,8 @@ export default function TASettingsPage() {
                   className="mt-0.5 accent-brand"
                 />
                 <div className="text-sm">
-                  <p className="text-off-white font-medium">Aktifkan pengingat kunjungan</p>
-                  <p className="text-xs text-muted mt-0.5">Job berjalan otomatis tiap hari pada jam yang Anda tentukan.</p>
+                  <p className="text-off-white font-medium">{t('tenantAdmin.settings.reminderEnableLabel')}</p>
+                  <p className="text-xs text-muted mt-0.5">{t('tenantAdmin.settings.reminderEnableDesc')}</p>
                 </div>
               </label>
 
@@ -1131,7 +1122,7 @@ export default function TASettingsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="block text-sm font-medium text-off-white">
-                    Ingatkan setelah tidak berkunjung
+                    {t('tenantAdmin.settings.reminderInactiveLabel')}
                   </label>
                   <div className="flex items-center gap-2">
                     <input
@@ -1142,13 +1133,13 @@ export default function TASettingsPage() {
                       onChange={e => setReminderForm(f => ({ ...f, inactiveDays: e.target.value }))}
                       className="w-24 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/60"
                     />
-                    <span className="text-sm text-muted">hari</span>
+                    <span className="text-sm text-muted">{t('tenantAdmin.settings.daysUnit')}</span>
                   </div>
-                  <p className="text-[11px] text-muted">Mis. 30 = pelanggan yang sudah 30 hari tak datang.</p>
+                  <p className="text-[11px] text-muted">{t('tenantAdmin.settings.reminderInactiveHint')}</p>
                 </div>
                 <div className="space-y-1.5">
                   <label className="block text-sm font-medium text-off-white">
-                    Jam kirim (zona waktu toko)
+                    {t('tenantAdmin.settings.reminderSendHourLabel')}
                   </label>
                   <select
                     value={reminderForm.sendHour}
@@ -1159,17 +1150,17 @@ export default function TASettingsPage() {
                       <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
                     ))}
                   </select>
-                  <p className="text-[11px] text-muted">Zona waktu toko: {tenant?.timezone || DEFAULT_TZ}.</p>
+                  <p className="text-[11px] text-muted">{t('tenantAdmin.settings.reminderTimezone', { tz: tenant?.timezone || DEFAULT_TZ })}</p>
                 </div>
               </div>
 
               {/* Mode frekuensi */}
               <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-off-white">Frekuensi pengingat</label>
+                <label className="block text-sm font-medium text-off-white">{t('tenantAdmin.settings.reminderFrequencyLabel')}</label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {[
-                    { val: false, title: 'Sekali saja', desc: 'Diingatkan 1× per masa nonaktif. Anti-spam.' },
-                    { val: true,  title: 'Berulang',   desc: `Kirim ulang tiap ${reminderForm.inactiveDays || 30} hari selama nonaktif.` },
+                    { val: false, title: t('tenantAdmin.settings.reminderFreqOnceTitle'), desc: t('tenantAdmin.settings.reminderFreqOnceDesc') },
+                    { val: true,  title: t('tenantAdmin.settings.reminderFreqRepeatTitle'), desc: t('tenantAdmin.settings.reminderFreqRepeatDesc', { days: reminderForm.inactiveDays || 30 }) },
                   ].map(opt => (
                     <button
                       key={String(opt.val)}
@@ -1186,7 +1177,7 @@ export default function TASettingsPage() {
 
               {/* Jeda acak antar pesan — anti-blokir WhatsApp */}
               <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-off-white">Jeda acak antar pesan</label>
+                <label className="block text-sm font-medium text-off-white">{t('tenantAdmin.settings.reminderDelayLabel')}</label>
                 <div className="flex items-center gap-2 flex-wrap">
                   <input
                     type="number"
@@ -1196,7 +1187,7 @@ export default function TASettingsPage() {
                     onChange={e => setReminderForm(f => ({ ...f, minDelaySec: e.target.value }))}
                     className="w-24 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/60"
                   />
-                  <span className="text-sm text-muted">sampai</span>
+                  <span className="text-sm text-muted">{t('tenantAdmin.settings.toWord')}</span>
                   <input
                     type="number"
                     min={1}
@@ -1205,32 +1196,27 @@ export default function TASettingsPage() {
                     onChange={e => setReminderForm(f => ({ ...f, maxDelaySec: e.target.value }))}
                     className="w-24 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/60"
                   />
-                  <span className="text-sm text-muted">detik</span>
+                  <span className="text-sm text-muted">{t('tenantAdmin.settings.secondsUnit')}</span>
                 </div>
                 <p className="text-[11px] text-muted">
-                  Tiap pesan dikirim dengan jeda <span className="text-off-white">acak</span> dalam rentang ini —
-                  mencegah pola pengiriman beruntun yang berisiko memicu blokir nomor WhatsApp.
-                  Disarankan minimal 5 detik. Untuk daftar penerima besar, gunakan jeda lebih panjang.
+                  {t('tenantAdmin.settings.reminderDelayHintPre')} <span className="text-off-white">{t('tenantAdmin.settings.reminderDelayHintWord')}</span> {t('tenantAdmin.settings.reminderDelayHintPost')}
                 </p>
               </div>
 
               {/* Teks pesan */}
               <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-off-white">Teks pesan pengingat</label>
+                <label className="block text-sm font-medium text-off-white">{t('tenantAdmin.settings.reminderMessageLabel')}</label>
                 <textarea
                   value={reminderForm.message}
                   onChange={e => setReminderForm(f => ({ ...f, message: e.target.value }))}
                   rows={4}
                   maxLength={600}
-                  placeholder="Halo {nama}! Sudah {hari} hari sejak kunjungan terakhir Anda di {toko}. Kami tunggu kunjungan Anda berikutnya 😊"
+                  placeholder={t('tenantAdmin.settings.reminderMessagePlaceholder')}
                   className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/60 resize-none"
                 />
                 <div className="flex justify-between gap-3">
                   <p className="text-[11px] text-muted">
-                    Placeholder: <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{nama}'}</code> nama
-                    pelanggan, <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{toko}'}</code> nama
-                    toko, <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{hari}'}</code> jumlah hari
-                    sejak kunjungan terakhir. Dikosongkan = pakai teks bawaan.
+                    {t('tenantAdmin.settings.placeholderWord')}: <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{nama}'}</code> {t('tenantAdmin.settings.phCustomerName')}, <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{toko}'}</code> {t('tenantAdmin.settings.phStoreName')}, <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{hari}'}</code> {t('tenantAdmin.settings.phDaysSince')}. {t('tenantAdmin.settings.emptyUseDefault')}
                   </p>
                   <span className="text-[11px] text-muted flex-shrink-0 tabular-nums">{reminderForm.message.length}/600</span>
                 </div>
@@ -1240,7 +1226,7 @@ export default function TASettingsPage() {
               {reminderConnected === false && (
                 <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-sm text-amber-300">
                   <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                  <span>WhatsApp toko belum tersambung — pengingat tidak akan terkirim sampai WhatsApp dihubungkan di tab WhatsApp Beta.</span>
+                  <span>{t('tenantAdmin.settings.reminderNotConnected')}</span>
                 </div>
               )}
 
@@ -1249,16 +1235,16 @@ export default function TASettingsPage() {
                 <Bell className="w-4 h-4 text-brand flex-shrink-0" />
                 <span className="text-muted">
                   {reminderPreviewLoading
-                    ? 'Menghitung perkiraan penerima…'
+                    ? t('tenantAdmin.settings.reminderPreviewLoading')
                     : reminderPreview == null
-                      ? 'Perkiraan penerima belum tersedia.'
-                      : <>Saat ini <span className="text-off-white font-semibold">{reminderPreview} pelanggan</span> memenuhi kriteria pengingat (berdasarkan pengaturan tersimpan).</>}
+                      ? t('tenantAdmin.settings.reminderPreviewUnavailable')
+                      : <>{t('tenantAdmin.settings.reminderPreviewPre')} <span className="text-off-white font-semibold">{t('tenantAdmin.settings.reminderPreviewCount', { count: reminderPreview })}</span> {t('tenantAdmin.settings.reminderPreviewPost')}</>}
                 </span>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-2">
                 <Button onClick={handleSaveReminder} loading={reminderSaving} disabled={reminderSaving}>
-                  Simpan Pengaturan
+                  {t('tenantAdmin.settings.saveSettings')}
                 </Button>
                 <Button
                   variant="secondary"
@@ -1267,12 +1253,11 @@ export default function TASettingsPage() {
                   loading={reminderRunning}
                   disabled={reminderRunning}
                 >
-                  Kirim Pengingat Sekarang
+                  {t('tenantAdmin.settings.reminderRunNow')}
                 </Button>
               </div>
               <p className="text-[11px] text-muted -mt-2">
-                "Kirim Sekarang" mengirim langsung ke pelanggan yang memenuhi kriteria tersimpan,
-                tanpa menunggu jadwal. WhatsApp toko harus tersambung.
+                {t('tenantAdmin.settings.reminderRunHint')}
               </p>
             </CardBody>
           </Card>
@@ -1285,22 +1270,19 @@ export default function TASettingsPage() {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Star className="w-5 h-5 text-brand" />
-                <h3 className="font-semibold text-off-white">Rating Otomatis via WhatsApp</h3>
+                <h3 className="font-semibold text-off-white">{t('tenantAdmin.settings.ratingTitle')}</h3>
               </div>
             </CardHeader>
             <CardBody className="space-y-5">
               <p className="text-sm text-muted">
-                Aktifkan fitur ini supaya sistem otomatis mengirim link rating ke pelanggan
-                setelah transaksi selesai. Pelanggan akan diarahkan ke halaman publik untuk
-                memberi bintang & komentar — Anda bisa melihatnya di halaman <strong>Rating</strong>.
-                Gunakan placeholder <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{nama}'}</code>,{' '}
-                <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{toko}'}</code>, dan{' '}
+                {t('tenantAdmin.settings.ratingDescPre')} <strong>{t('tenantAdmin.settings.ratingPageLabel')}</strong>.
+                {' '}{t('tenantAdmin.settings.ratingDescMid')}{' '}
+                <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{nama}'}</code>,{' '}
+                <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{toko}'}</code>, {t('tenantAdmin.settings.andWord')}{' '}
                 <code className="text-brand bg-dark-surface px-1 py-0.5 rounded">{'{link}'}</code>.
               </p>
               <div className="rounded-lg border border-brand/20 bg-brand/5 px-3 py-2 text-[12px] text-off-white">
-                <strong className="text-brand">Catatan:</strong> hanya transaksi yang selesai{' '}
-                <em>setelah</em> fitur diaktifkan yang akan menerima link. Transaksi lama tidak akan
-                dikirimi link supaya pelanggan tidak terganggu.
+                <strong className="text-brand">{t('tenantAdmin.settings.noteWord')}:</strong> {t('tenantAdmin.settings.ratingNote')}
               </div>
 
               <label className="flex items-start gap-3 cursor-pointer">
@@ -1311,16 +1293,16 @@ export default function TASettingsPage() {
                   className="mt-1 w-4 h-4 accent-brand"
                 />
                 <span className="text-sm text-off-white">
-                  Aktifkan kirim link rating otomatis ke pelanggan
+                  {t('tenantAdmin.settings.ratingEnableLabel')}
                   <span className="block text-[11px] text-muted">
-                    Hanya pelanggan dengan nomor HP yang menerima link. WhatsApp toko harus tersambung.
+                    {t('tenantAdmin.settings.ratingEnableDesc')}
                   </span>
                 </span>
               </label>
 
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-off-white">
-                  Kirim setelah (menit)
+                  {t('tenantAdmin.settings.ratingSendAfterLabel')}
                 </label>
                 <input
                   type="number"
@@ -1331,14 +1313,13 @@ export default function TASettingsPage() {
                   className="w-32 bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-2 text-sm outline-none focus:border-brand/60"
                 />
                 <p className="text-[11px] text-muted">
-                  Jeda antara transaksi selesai dan link dikirim. Default 15 menit — beri waktu
-                  pelanggan meninggalkan toko dulu supaya tidak canggung.
+                  {t('tenantAdmin.settings.ratingSendAfterHint')}
                 </p>
               </div>
 
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-off-white">
-                  Template pesan WhatsApp
+                  {t('tenantAdmin.settings.ratingTemplateLabel')}
                 </label>
                 <textarea
                   value={ratingForm.messageTemplate}
@@ -1350,7 +1331,7 @@ export default function TASettingsPage() {
                 />
                 <div className="flex justify-between gap-3">
                   <p className="text-[11px] text-muted">
-                    Kosongkan untuk pakai template default. Variabel:{' '}
+                    {t('tenantAdmin.settings.ratingTemplateHint')}{' '}
                     <code className="text-brand">{'{nama}'}</code>{' '}
                     <code className="text-brand">{'{toko}'}</code>{' '}
                     <code className="text-brand">{'{link}'}</code>
@@ -1367,7 +1348,7 @@ export default function TASettingsPage() {
                 loading={ratingSaving}
                 disabled={ratingSaving}
               >
-                Simpan Pengaturan
+                {t('tenantAdmin.settings.saveSettings')}
               </Button>
             </CardBody>
           </Card>
@@ -1385,12 +1366,10 @@ export default function TASettingsPage() {
             </CardHeader>
             <CardBody className="space-y-4">
               <p className="text-sm text-muted">
-                Unduh seluruh data toko (cabang, layanan, staf, pelanggan) sebagai
-                berkas JSON untuk arsip atau cadangan. Data diambil langsung dari
-                server — selalu yang terbaru.
+                {t('tenantAdmin.settings.exportDataFullDesc')}
               </p>
               <Button icon={Download} fullWidth onClick={handleExport} loading={exporting} disabled={exporting}>
-                {exporting ? 'Menyiapkan…' : t('tenantAdmin.settings.downloadBackup')}
+                {exporting ? t('tenantAdmin.settings.preparing') : t('tenantAdmin.settings.downloadBackup')}
               </Button>
             </CardBody>
           </Card>
@@ -1413,7 +1392,7 @@ export default function TASettingsPage() {
               {auditSearchInput && (
                 <button
                   onClick={() => setAuditSearchInput('')}
-                  aria-label="Hapus pencarian"
+                  aria-label={t('tenantAdmin.settings.clearSearch')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-off-white"
                 >
                   <X size={15} />
@@ -1423,7 +1402,7 @@ export default function TASettingsPage() {
             <select
               value={auditFilter.action}
               onChange={e => setAuditFilter(f => ({ ...f, action: e.target.value }))}
-              aria-label="Filter aksi"
+              aria-label={t('tenantAdmin.settings.filterAction')}
               className="bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-brand/60 max-w-[170px]"
             >
               <option value="">{t('tenantAdmin.settings.allActions')}</option>
@@ -1435,7 +1414,7 @@ export default function TASettingsPage() {
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-sm text-muted hover:border-brand/30 hover:text-off-white transition-all disabled:opacity-40"
             >
               <RefreshCw size={14} className={auditFetching ? 'animate-spin' : ''} />
-              <span className="hidden sm:inline">Refresh</span>
+              <span className="hidden sm:inline">{t('tenantAdmin.settings.refresh')}</span>
             </button>
             <Button
               variant="secondary"
@@ -1462,9 +1441,9 @@ export default function TASettingsPage() {
             ) : auditError ? (
               <div className="flex flex-col items-center justify-center py-14 gap-3 text-center px-4">
                 <AlertTriangle className="w-9 h-9 text-red-400" />
-                <p className="text-sm text-muted">Gagal memuat log aktivitas</p>
+                <p className="text-sm text-muted">{t('tenantAdmin.settings.auditLoadFailed')}</p>
                 <Button variant="outline" size="sm" icon={RefreshCw} onClick={() => refetchAudit()}>
-                  Coba lagi
+                  {t('common.retry')}
                 </Button>
               </div>
             ) : auditLogs.length === 0 ? (
@@ -1472,7 +1451,7 @@ export default function TASettingsPage() {
                 <FileText className="w-9 h-9 text-muted/40" />
                 <p className="text-sm text-muted">
                   {auditFilter.search || auditFilter.action
-                    ? 'Tidak ada log yang cocok dengan filter'
+                    ? t('tenantAdmin.settings.noLogsMatchFilter')
                     : t('tenantAdmin.settings.noAuditLogs')}
                 </p>
               </div>
@@ -1533,14 +1512,14 @@ export default function TASettingsPage() {
             {!auditLoading && !auditError && auditTotalPages > 1 && (
               <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-dark-border">
                 <span className="text-xs text-muted">
-                  Hal <span className="text-off-white">{auditPage}</span> / {auditTotalPages}
-                  <span className="hidden sm:inline"> · {auditTotal} log</span>
+                  {t('tenantAdmin.settings.pageWord')} <span className="text-off-white">{auditPage}</span> / {auditTotalPages}
+                  <span className="hidden sm:inline"> · {t('tenantAdmin.settings.logsCount', { count: auditTotal })}</span>
                 </span>
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => setAuditPage(p => Math.max(1, p - 1))}
                     disabled={auditPage <= 1}
-                    aria-label="Halaman sebelumnya"
+                    aria-label={t('tenantAdmin.settings.prevPage')}
                     className="p-1.5 rounded-lg border border-dark-border text-muted hover:text-off-white hover:border-brand/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <ChevronLeft size={15} />
@@ -1548,7 +1527,7 @@ export default function TASettingsPage() {
                   <button
                     onClick={() => setAuditPage(p => Math.min(auditTotalPages, p + 1))}
                     disabled={auditPage >= auditTotalPages}
-                    aria-label="Halaman berikutnya"
+                    aria-label={t('tenantAdmin.settings.nextPage')}
                     className="p-1.5 rounded-lg border border-dark-border text-muted hover:text-off-white hover:border-brand/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <ChevronRight size={15} />
@@ -1568,17 +1547,17 @@ export default function TASettingsPage() {
 // whatsapp-web.js cukup teknis (awaiting_qr, auth_failed, dll) — UI menerjemahkannya
 // agar admin tidak perlu menebak.
 const WA_STATUS_META = {
-  idle:               { label: 'Belum aktif',                                      color: 'text-muted',     bg: 'bg-dark-surface',    border: 'border-dark-border',     Icon: PowerOff },
-  connecting:         { label: 'Memulai…',                                         color: 'text-blue-400',  bg: 'bg-blue-500/10',     border: 'border-blue-500/30',     Icon: Loader2,     spin: true },
-  awaiting_qr:        { label: 'Menunggu scan QR',                                 color: 'text-amber-400', bg: 'bg-amber-500/10',    border: 'border-amber-500/30',    Icon: QrCode },
-  authenticated:      { label: 'Tertaut, memuat data…',                            color: 'text-blue-400',  bg: 'bg-blue-500/10',     border: 'border-blue-500/30',     Icon: Loader2,     spin: true },
-  loading:            { label: 'Memuat data WhatsApp…',                            color: 'text-blue-400',  bg: 'bg-blue-500/10',     border: 'border-blue-500/30',     Icon: Loader2,     spin: true },
-  connected:          { label: 'Terhubung',                                        color: 'text-green-400', bg: 'bg-emerald-500/10',  border: 'border-emerald-500/30',  Icon: CheckCircle2 },
-  idle_sleeping:      { label: 'Standby (otomatis bangun saat ada notifikasi)',    color: 'text-muted',     bg: 'bg-dark-surface',    border: 'border-dark-border',     Icon: PowerOff },
-  auth_failed:        { label: 'Gagal autentikasi',                                color: 'text-red-400',   bg: 'bg-red-500/10',      border: 'border-red-500/30',      Icon: XCircle },
-  disconnected:       { label: 'Terputus',                                         color: 'text-muted',     bg: 'bg-dark-surface',    border: 'border-dark-border',     Icon: PowerOff },
-  capacity_exceeded:  { label: 'Server penuh — coba lagi nanti',                   color: 'text-amber-400', bg: 'bg-amber-500/10',    border: 'border-amber-500/30',    Icon: AlertTriangle },
-  error:              { label: 'Error',                                            color: 'text-red-400',   bg: 'bg-red-500/10',      border: 'border-red-500/30',      Icon: XCircle },
+  idle:               { labelKey: 'tenantAdmin.settings.waStatusIdle',             color: 'text-muted',     bg: 'bg-dark-surface',    border: 'border-dark-border',     Icon: PowerOff },
+  connecting:         { labelKey: 'tenantAdmin.settings.waStatusConnecting',       color: 'text-blue-400',  bg: 'bg-blue-500/10',     border: 'border-blue-500/30',     Icon: Loader2,     spin: true },
+  awaiting_qr:        { labelKey: 'tenantAdmin.settings.waStatusAwaitingQr',       color: 'text-amber-400', bg: 'bg-amber-500/10',    border: 'border-amber-500/30',    Icon: QrCode },
+  authenticated:      { labelKey: 'tenantAdmin.settings.waStatusAuthenticated',    color: 'text-blue-400',  bg: 'bg-blue-500/10',     border: 'border-blue-500/30',     Icon: Loader2,     spin: true },
+  loading:            { labelKey: 'tenantAdmin.settings.waStatusLoading',          color: 'text-blue-400',  bg: 'bg-blue-500/10',     border: 'border-blue-500/30',     Icon: Loader2,     spin: true },
+  connected:          { labelKey: 'tenantAdmin.settings.waStatusConnected',        color: 'text-green-400', bg: 'bg-emerald-500/10',  border: 'border-emerald-500/30',  Icon: CheckCircle2 },
+  idle_sleeping:      { labelKey: 'tenantAdmin.settings.waStatusSleeping',         color: 'text-muted',     bg: 'bg-dark-surface',    border: 'border-dark-border',     Icon: PowerOff },
+  auth_failed:        { labelKey: 'tenantAdmin.settings.waStatusAuthFailed',       color: 'text-red-400',   bg: 'bg-red-500/10',      border: 'border-red-500/30',      Icon: XCircle },
+  disconnected:       { labelKey: 'tenantAdmin.settings.waStatusDisconnected',     color: 'text-muted',     bg: 'bg-dark-surface',    border: 'border-dark-border',     Icon: PowerOff },
+  capacity_exceeded:  { labelKey: 'tenantAdmin.settings.waStatusCapacityExceeded', color: 'text-amber-400', bg: 'bg-amber-500/10',    border: 'border-amber-500/30',    Icon: AlertTriangle },
+  error:              { labelKey: 'tenantAdmin.settings.waStatusError',            color: 'text-red-400',   bg: 'bg-red-500/10',      border: 'border-red-500/30',      Icon: XCircle },
 }
 
 function getWaStatusMeta(status) {
@@ -1589,17 +1568,18 @@ function getWaStatusMeta(status) {
 // Selain itu: minimal 9 digit angka setelah stripping non-digit, dan diawali
 // 0 / 62 / 8.
 function validatePhone(raw) {
-  if (!raw) return { valid: true, message: null }
+  if (!raw) return { valid: true, messageKey: null }
   const digits = String(raw).replace(/\D/g, '')
-  if (digits.length < 9) return { valid: false, message: 'Nomor terlalu pendek (minimal 9 digit).' }
+  if (digits.length < 9) return { valid: false, messageKey: 'tenantAdmin.settings.phoneTooShort' }
   if (!/^(0|62|8)/.test(digits)) {
-    return { valid: false, message: 'Format harus diawali 0, 62, atau 8.' }
+    return { valid: false, messageKey: 'tenantAdmin.settings.phoneBadFormat' }
   }
-  return { valid: true, message: null }
+  return { valid: true, messageKey: null }
 }
 
 // Banner saat trial WA sedang berjalan — tampil di atas WhatsAppCard.
 function WaTrialActiveBanner({ daysLeft, endsAt, onUpgrade }) {
+  const { t } = useTranslation()
   return (
     <Card className="p-4 border-brand/30 bg-gradient-to-br from-brand/10 to-transparent">
       <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -1607,16 +1587,15 @@ function WaTrialActiveBanner({ daysLeft, endsAt, onUpgrade }) {
           <div className="p-2 rounded-xl bg-brand/15 flex-shrink-0"><Gift size={18} className="text-brand" /></div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="font-semibold text-off-white">Mode Trial WhatsApp</p>
-              <Badge variant={daysLeft <= 3 ? 'warning' : 'info'}>Sisa {daysLeft} hari</Badge>
+              <p className="font-semibold text-off-white">{t('tenantAdmin.settings.waTrialMode')}</p>
+              <Badge variant={daysLeft <= 3 ? 'warning' : 'info'}>{t('tenantAdmin.settings.waTrialDaysLeft', { days: daysLeft })}</Badge>
             </div>
             <p className="text-xs text-muted mt-1">
-              Berakhir {endsAt ? formatDateTime(endsAt) : '—'}. Setelah itu fitur WhatsApp terkunci otomatis
-              kecuali Anda upgrade ke Pro.
+              {t('tenantAdmin.settings.waTrialEnds', { date: endsAt ? formatDateTime(endsAt) : '—' })}
             </p>
           </div>
         </div>
-        <Button icon={ArrowUpRight} onClick={onUpgrade}>Upgrade ke Pro</Button>
+        <Button icon={ArrowUpRight} onClick={onUpgrade}>{t('tenantAdmin.settings.upgradeToPro')}</Button>
       </div>
     </Card>
   )
@@ -1624,27 +1603,27 @@ function WaTrialActiveBanner({ daysLeft, endsAt, onUpgrade }) {
 
 // CTA mulai trial — untuk paket tanpa WA (mis. Basic) yang belum pernah trial.
 function WaTrialCta({ durationDays, loading, onStart, onUpgrade }) {
+  const { t } = useTranslation()
   return (
     <Card className="p-6 border-brand/30 bg-gradient-to-br from-brand/10 to-transparent text-center max-w-2xl">
       <div className="mx-auto w-12 h-12 rounded-2xl bg-brand/15 flex items-center justify-center mb-3">
         <MessageCircle size={24} className="text-brand" />
       </div>
-      <h3 className="font-display text-xl font-bold text-off-white">Coba WhatsApp gratis {durationDays} hari</h3>
+      <h3 className="font-display text-xl font-bold text-off-white">{t('tenantAdmin.settings.waTryFree', { days: durationDays })}</h3>
       <p className="text-sm text-muted mt-2 max-w-md mx-auto">
-        Kirim struk, pengingat kunjungan & link rating otomatis ke pelanggan lewat WhatsApp.
-        Aktifkan sekarang — tanpa biaya, tanpa kartu. Trial hanya bisa diambil sekali.
+        {t('tenantAdmin.settings.waTryFreeDesc')}
       </p>
       <ul className="text-xs text-muted mt-4 space-y-1.5 inline-block text-left">
-        <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-green-400 flex-shrink-0" /> Struk WhatsApp otomatis dari POS</li>
-        <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-green-400 flex-shrink-0" /> Pengingat pelanggan yang lama tak datang</li>
-        <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-green-400 flex-shrink-0" /> Link rating otomatis + laporan status pesan</li>
+        <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-green-400 flex-shrink-0" /> {t('tenantAdmin.settings.waBenefitReceipt')}</li>
+        <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-green-400 flex-shrink-0" /> {t('tenantAdmin.settings.waBenefitReminder')}</li>
+        <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-green-400 flex-shrink-0" /> {t('tenantAdmin.settings.waBenefitRating')}</li>
       </ul>
       <div className="mt-5">
-        <Button icon={Gift} loading={loading} onClick={onStart}>Mulai trial {durationDays} hari</Button>
+        <Button icon={Gift} loading={loading} onClick={onStart}>{t('tenantAdmin.settings.waStartTrial', { days: durationDays })}</Button>
       </div>
       <p className="text-[11px] text-muted mt-3">
-        Ingin langsung permanen?{' '}
-        <button onClick={onUpgrade} className="text-brand hover:underline">Upgrade ke Pro</button>
+        {t('tenantAdmin.settings.waWantPermanent')}{' '}
+        <button onClick={onUpgrade} className="text-brand hover:underline">{t('tenantAdmin.settings.upgradeToPro')}</button>
       </p>
     </Card>
   )
@@ -1652,24 +1631,25 @@ function WaTrialCta({ durationDays, loading, onStart, onUpgrade }) {
 
 // State setelah trial habis & tenant tidak upgrade — upsell ke Pro.
 function WaTrialExpired({ onUpgrade }) {
+  const { t } = useTranslation()
   return (
     <Card className="p-6 border-amber-500/30 bg-amber-500/5 text-center max-w-2xl">
       <div className="mx-auto w-12 h-12 rounded-2xl bg-amber-500/15 flex items-center justify-center mb-3">
         <Lock size={22} className="text-amber-400" />
       </div>
-      <h3 className="font-display text-xl font-bold text-off-white">Trial WhatsApp Anda sudah berakhir</h3>
+      <h3 className="font-display text-xl font-bold text-off-white">{t('tenantAdmin.settings.waTrialExpiredTitle')}</h3>
       <p className="text-sm text-muted mt-2 max-w-md mx-auto">
-        Masa coba gratis sudah habis. Upgrade ke Pro untuk mengaktifkan kembali struk WhatsApp,
-        pengingat kunjungan & link rating otomatis — plus Laporan Lanjutan, Heatmap, CLV & Laporan Wilayah.
+        {t('tenantAdmin.settings.waTrialExpiredDesc')}
       </p>
       <div className="mt-5">
-        <Button icon={ArrowUpRight} onClick={onUpgrade}>Upgrade ke Pro</Button>
+        <Button icon={ArrowUpRight} onClick={onUpgrade}>{t('tenantAdmin.settings.upgradeToPro')}</Button>
       </div>
     </Card>
   )
 }
 
 function WhatsAppCard({ waState, setWaState, onConnect, onDisconnect, onSaveSettings, onSendTest }) {
+  const { t } = useTranslation()
   const meta = getWaStatusMeta(waState.status)
   const StatusIcon = meta.Icon
   const phoneCheck = validatePhone(waState.settings.notifyAdminPhone)
@@ -1691,14 +1671,14 @@ function WhatsAppCard({ waState, setWaState, onConnect, onDisconnect, onSaveSett
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <MessageCircle className="w-5 h-5 text-brand" />
-            <h3 className="font-semibold text-off-white">WhatsApp Notifikasi</h3>
+            <h3 className="font-semibold text-off-white">{t('tenantAdmin.settings.waCardTitle')}</h3>
           </div>
-          <Badge variant="warning">Beta</Badge>
+          <Badge variant="warning">{t('tenantAdmin.settings.betaWord')}</Badge>
         </div>
       </CardHeader>
       <CardBody className="space-y-5">
         <p className="text-sm text-muted">
-          Hubungkan satu nomor WhatsApp untuk menerima pemberitahuan transaksi otomatis. Cara kerjanya seperti WhatsApp Web — scan QR sekali, lalu sesi tersimpan di server.
+          {t('tenantAdmin.settings.waCardDesc')}
         </p>
 
         {/* Status pill */}
@@ -1706,23 +1686,23 @@ function WhatsAppCard({ waState, setWaState, onConnect, onDisconnect, onSaveSett
           <StatusIcon className={`w-5 h-5 flex-shrink-0 ${meta.color} ${meta.spin ? 'animate-spin' : ''}`} />
           <div className="flex-1 min-w-0">
             <p className={`text-sm font-medium ${meta.color}`}>
-              {meta.label}
+              {t(meta.labelKey)}
               {waState.status === 'loading' && waState.loadingPercent != null && (
                 <span className="ml-1 text-muted font-normal">({waState.loadingPercent}%)</span>
               )}
             </p>
             {isConnected && lastConnectedLabel && (
-              <p className="text-xs text-muted mt-0.5">Tersambung {lastConnectedLabel}</p>
+              <p className="text-xs text-muted mt-0.5">{t('tenantAdmin.settings.waConnectedSince', { time: lastConnectedLabel })}</p>
             )}
             {waState.status === 'awaiting_qr' && (
-              <p className="text-xs text-muted mt-0.5">QR akan otomatis di-refresh setiap beberapa detik.</p>
+              <p className="text-xs text-muted mt-0.5">{t('tenantAdmin.settings.waQrRefreshNote')}</p>
             )}
             {waState.status === 'authenticated' && (
-              <p className="text-xs text-muted mt-0.5">Scan berhasil — WhatsApp Web sedang memuat data…</p>
+              <p className="text-xs text-muted mt-0.5">{t('tenantAdmin.settings.waScanSuccess')}</p>
             )}
             {waState.status === 'loading' && (
               <p className="text-xs text-muted mt-0.5">
-                {waState.loadingMessage || 'Memuat daftar chat…'} (bisa makan 30–60 detik untuk akun besar)
+                {(waState.loadingMessage || t('tenantAdmin.settings.waLoadingChats'))} {t('tenantAdmin.settings.waLoadingChatsExtra')}
               </p>
             )}
             {waState.lastError && !isConnected && (
@@ -1744,22 +1724,22 @@ function WhatsAppCard({ waState, setWaState, onConnect, onDisconnect, onSaveSett
         {/* QR display — disembunyikan sekali sudah authenticated/loading */}
         {waState.qrDataUrl && waState.status === 'awaiting_qr' && (
           <div className="flex flex-col sm:flex-row items-start gap-4 p-4 bg-dark-surface rounded-xl border border-dark-border">
-            <img src={waState.qrDataUrl} alt="WhatsApp QR" className="w-48 h-48 rounded-lg bg-white p-2 flex-shrink-0" />
+            <img src={waState.qrDataUrl} alt={t('tenantAdmin.settings.waQrAlt')} className="w-48 h-48 rounded-lg bg-white p-2 flex-shrink-0" />
             <div className="text-sm space-y-2 flex-1">
               <p className="text-off-white font-medium flex items-center gap-2">
                 <Smartphone className="w-4 h-4 text-brand" />
-                Scan dari WhatsApp di HP
+                {t('tenantAdmin.settings.waScanTitle')}
               </p>
               <ol className="text-xs text-muted space-y-1 list-decimal list-inside">
-                <li>Buka WhatsApp di HP yang akan dipakai sebagai nomor server.</li>
-                <li>Ketuk menu <span className="text-off-white">Setelan / Settings</span>.</li>
-                <li>Pilih <span className="text-off-white">Perangkat tertaut / Linked Devices</span>.</li>
-                <li>Tap <span className="text-off-white">Tautkan perangkat / Link a Device</span>.</li>
-                <li>Arahkan kamera ke QR di samping.</li>
+                <li>{t('tenantAdmin.settings.waScanStep1')}</li>
+                <li>{t('tenantAdmin.settings.waScanStep2Pre')} <span className="text-off-white">{t('tenantAdmin.settings.waScanStep2Bold')}</span>.</li>
+                <li>{t('tenantAdmin.settings.waScanStep3Pre')} <span className="text-off-white">{t('tenantAdmin.settings.waScanStep3Bold')}</span>.</li>
+                <li>{t('tenantAdmin.settings.waScanStep4Pre')} <span className="text-off-white">{t('tenantAdmin.settings.waScanStep4Bold')}</span>.</li>
+                <li>{t('tenantAdmin.settings.waScanStep5')}</li>
               </ol>
               <p className="text-xs text-amber-400 flex items-start gap-1">
                 <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                Jangan pakai nomor pribadi — gunakan nomor khusus operasional.
+                {t('tenantAdmin.settings.waScanWarn')}
               </p>
             </div>
           </div>
@@ -1768,16 +1748,16 @@ function WhatsAppCard({ waState, setWaState, onConnect, onDisconnect, onSaveSett
         {/* Settings form */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input
-            label="Nomor admin penerima notifikasi"
-            placeholder="contoh: 08123456789"
+            label={t('tenantAdmin.settings.waAdminPhoneLabel')}
+            placeholder={t('tenantAdmin.settings.waAdminPhonePlaceholder')}
             icon={Phone}
             value={waState.settings.notifyAdminPhone}
             onChange={e => setSettings({ notifyAdminPhone: e.target.value })}
-            error={waState.settings.notifyAdminPhone && !phoneCheck.valid ? phoneCheck.message : null}
+            error={waState.settings.notifyAdminPhone && !phoneCheck.valid ? t(phoneCheck.messageKey) : null}
             hint={
               phoneCheck.valid && waState.notifyAdminPhoneNormalized
-                ? `Akan dikirim ke +${waState.notifyAdminPhoneNormalized}`
-                : 'Boleh format 08… / 62… / 8…'
+                ? t('tenantAdmin.settings.waPhoneWillSend', { phone: waState.notifyAdminPhoneNormalized })
+                : t('tenantAdmin.settings.waPhoneFormatHint')
             }
           />
           <div className="space-y-3">
@@ -1789,8 +1769,8 @@ function WhatsAppCard({ waState, setWaState, onConnect, onDisconnect, onSaveSett
                 className="mt-0.5 accent-brand"
               />
               <div className="text-sm">
-                <p className="text-off-white font-medium">Notifikasi transaksi otomatis</p>
-                <p className="text-xs text-muted mt-0.5">Setiap transaksi POS langsung dikirim ke nomor admin.</p>
+                <p className="text-off-white font-medium">{t('tenantAdmin.settings.waAutoNotifyLabel')}</p>
+                <p className="text-xs text-muted mt-0.5">{t('tenantAdmin.settings.waAutoNotifyDesc')}</p>
               </div>
             </label>
             <label className="flex items-start gap-2.5 p-3 bg-dark-surface rounded-xl border border-dark-border cursor-pointer hover:border-brand/30 transition-colors">
@@ -1801,8 +1781,8 @@ function WhatsAppCard({ waState, setWaState, onConnect, onDisconnect, onSaveSett
                 className="mt-0.5 accent-brand"
               />
               <div className="text-sm">
-                <p className="text-off-white font-medium">Kirim juga ke pelanggan</p>
-                <p className="text-xs text-muted mt-0.5">Hanya jika nomor pelanggan terdaftar di transaksi.</p>
+                <p className="text-off-white font-medium">{t('tenantAdmin.settings.waNotifyCustomerLabel')}</p>
+                <p className="text-xs text-muted mt-0.5">{t('tenantAdmin.settings.waNotifyCustomerDesc')}</p>
               </div>
             </label>
           </div>
@@ -1812,31 +1792,31 @@ function WhatsAppCard({ waState, setWaState, onConnect, onDisconnect, onSaveSett
         <div className="flex flex-wrap gap-2 pt-1 border-t border-dark-border/50">
           {!isConnected && !isInProgress && !isSleeping && (
             <Button onClick={onConnect} loading={waState.loading} icon={QrCode} disabled={waState.loading}>
-              {waState.loading ? 'Menghubungkan…' : 'Hubungkan WhatsApp'}
+              {waState.loading ? t('tenantAdmin.settings.waConnectingBtn') : t('tenantAdmin.settings.waConnectBtn')}
             </Button>
           )}
           {isSleeping && (
             <Button onClick={onSendTest} loading={waState.loading} icon={Send} disabled={!phoneOk || waState.loading}>
-              {waState.loading ? 'Mengirim…' : 'Bangunkan & Kirim Tes'}
+              {waState.loading ? t('tenantAdmin.settings.waSending') : t('tenantAdmin.settings.waWakeAndTest')}
             </Button>
           )}
           {isInProgress && (
             <Button onClick={onDisconnect} loading={waState.loading} variant="outline" icon={PowerOff} disabled={waState.loading}>
-              {waState.loading ? 'Memproses…' : 'Batalkan'}
+              {waState.loading ? t('tenantAdmin.settings.waProcessing') : t('tenantAdmin.settings.waCancel')}
             </Button>
           )}
           {isConnected && (
             <>
               <Button onClick={onSendTest} loading={waState.loading} icon={Send} disabled={!phoneOk || waState.loading}>
-                {waState.loading ? 'Mengirim…' : 'Kirim Pesan Tes'}
+                {waState.loading ? t('tenantAdmin.settings.waSending') : t('tenantAdmin.settings.waSendTest')}
               </Button>
               <Button onClick={onDisconnect} loading={waState.loading} variant="outline" icon={PowerOff} disabled={waState.loading}>
-                {waState.loading ? 'Memutuskan…' : 'Putuskan Koneksi'}
+                {waState.loading ? t('tenantAdmin.settings.waDisconnectingBtn') : t('tenantAdmin.settings.waDisconnectBtn')}
               </Button>
             </>
           )}
           <Button onClick={onSaveSettings} loading={waState.loading} variant="secondary" icon={RefreshCw} disabled={!phoneCheck.valid || waState.loading}>
-            {waState.loading ? 'Menyimpan…' : 'Simpan Pengaturan'}
+            {waState.loading ? t('tenantAdmin.settings.waSaving') : t('tenantAdmin.settings.saveSettings')}
           </Button>
         </div>
 
@@ -1844,7 +1824,7 @@ function WhatsAppCard({ waState, setWaState, onConnect, onDisconnect, onSaveSett
         <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl">
           <p className="text-xs text-amber-400 font-semibold mb-1.5 flex items-center gap-1.5">
             <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-            Batasan fase Beta:
+            {t('tenantAdmin.settings.waBetaLimitations')}
           </p>
           <ul className="text-xs text-off-white space-y-1 list-disc list-inside marker:text-amber-400">
             {(waState.limitations || []).map((item, idx) => (
@@ -1859,6 +1839,7 @@ function WhatsAppCard({ waState, setWaState, onConnect, onDisconnect, onSaveSett
 
 // ── Booking Page configuration tab ────────────────────────────────────────────
 function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave, onPickHero, onAddGalleryFiles, onRemoveGallery, heroUploading, galleryUploading }) {
+  const { t } = useTranslation()
   const heroInputRef = React.useRef(null)
   const galleryInputRef = React.useRef(null)
   const set = (patch) => setForm(f => ({ ...f, ...patch }))
@@ -1873,15 +1854,15 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
           <CardHeader>
             <div className="flex items-center gap-2">
               <Palette className="w-5 h-5 text-brand" />
-              <h3 className="font-semibold text-off-white">Tema Tampilan</h3>
+              <h3 className="font-semibold text-off-white">{t('tenantAdmin.settings.bpThemeTitle')}</h3>
             </div>
           </CardHeader>
           <CardBody>
-            <p className="text-xs text-muted mb-3">Pilih tampilan halaman booking publik. Pelanggan akan melihat sesuai pilihan ini.</p>
+            <p className="text-xs text-muted mb-3">{t('tenantAdmin.settings.bpThemeDesc')}</p>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { id: 'dark',  title: 'Dark',  subtitle: 'Hitam matte premium', preview: { bg: '#111', surface: '#1A1A1A', text: '#F0F0F0' } },
-                { id: 'light', title: 'Light', subtitle: 'Putih bersih elegan', preview: { bg: '#FAFAFA', surface: '#FFFFFF', text: '#111' } },
+                { id: 'dark',  title: 'Dark',  subtitle: t('tenantAdmin.settings.bpThemeDarkSub'), preview: { bg: '#111', surface: '#1A1A1A', text: '#F0F0F0' } },
+                { id: 'light', title: 'Light', subtitle: t('tenantAdmin.settings.bpThemeLightSub'), preview: { bg: '#FAFAFA', surface: '#FFFFFF', text: '#111' } },
               ].map(opt => {
                 const active = (form.mode || 'dark') === opt.id
                 return (
@@ -1915,39 +1896,39 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
           <CardHeader>
             <div className="flex items-center gap-2">
               <Palette className="w-5 h-5 text-brand" />
-              <h3 className="font-semibold text-off-white">Hero & Branding</h3>
+              <h3 className="font-semibold text-off-white">{t('tenantAdmin.settings.bpHeroTitle')}</h3>
             </div>
           </CardHeader>
           <CardBody className="space-y-4">
             <div>
-              <label className="text-xs text-muted block mb-1">Tagline (muncul di bawah nama bisnis)</label>
+              <label className="text-xs text-muted block mb-1">{t('tenantAdmin.settings.bpTaglineLabel')}</label>
               <Input
                 value={form.tagline || ''}
                 onChange={e => set({ tagline: e.target.value })}
-                placeholder="Mis. Premium Barbershop · Open Daily 09–21"
+                placeholder={t('tenantAdmin.settings.bpTaglinePlaceholder')}
                 maxLength={140}
               />
             </div>
             <div>
-              <label className="text-xs text-muted block mb-1">Deskripsi singkat</label>
+              <label className="text-xs text-muted block mb-1">{t('tenantAdmin.settings.bpDescLabel')}</label>
               <textarea
                 rows={3}
                 value={form.description || ''}
                 onChange={e => set({ description: e.target.value })}
-                placeholder="Ceritakan barbershop kamu dalam 1–2 paragraf…"
+                placeholder={t('tenantAdmin.settings.bpDescPlaceholder')}
                 className="w-full bg-dark-surface border border-dark-border rounded-xl px-3 py-2.5 text-sm text-off-white placeholder-muted resize-none focus:outline-none focus:border-brand/50"
                 maxLength={2000}
               />
             </div>
             <div>
-              <label className="text-xs text-muted block mb-2">Hero image (banner di atas halaman booking)</label>
+              <label className="text-xs text-muted block mb-2">{t('tenantAdmin.settings.bpHeroImageLabel')}</label>
               {form.heroImage ? (
                 <div className="relative group">
-                  <img src={form.heroImage} alt="Hero preview" className="w-full h-48 object-cover rounded-xl border border-dark-border" />
+                  <img src={form.heroImage} alt={t('tenantAdmin.settings.bpHeroPreviewAlt')} className="w-full h-48 object-cover rounded-xl border border-dark-border" />
                   <button
                     onClick={() => set({ heroImage: null })}
                     className="absolute top-2 right-2 px-2.5 py-1 rounded-lg bg-red-500/80 backdrop-blur text-white text-xs font-medium hover:bg-red-500"
-                  >Hapus</button>
+                  >{t('common.remove')}</button>
                 </div>
               ) : (
                 <button
@@ -1958,12 +1939,12 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
                   {heroUploading ? (
                     <>
                       <Loader2 className="w-6 h-6 animate-spin text-brand" />
-                      <p className="text-sm">Mengunggah…</p>
+                      <p className="text-sm">{t('tenantAdmin.settings.uploading')}</p>
                     </>
                   ) : (
                     <>
                       <Upload className="w-6 h-6" />
-                      <p className="text-sm">Klik untuk unggah foto (JPG/PNG/WebP, maks 5 MB)</p>
+                      <p className="text-sm">{t('tenantAdmin.settings.bpUploadHero')}</p>
                     </>
                   )}
                 </button>
@@ -1974,7 +1955,7 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
               />
             </div>
             <div>
-              <label className="text-xs text-muted block mb-1">Warna aksen (brand default)</label>
+              <label className="text-xs text-muted block mb-1">{t('tenantAdmin.settings.bpAccentColorLabel')}</label>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
@@ -1999,7 +1980,7 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Settings className="w-5 h-5 text-brand" />
-                <h3 className="font-semibold text-off-white">Galeri Foto</h3>
+                <h3 className="font-semibold text-off-white">{t('tenantAdmin.settings.bpGalleryTitle')}</h3>
               </div>
               <span className="text-xs text-muted">{form.gallery.length}/12</span>
             </div>
@@ -2012,7 +1993,7 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
                   <button
                     onClick={() => onRemoveGallery(i)}
                     className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 rounded-lg flex items-center justify-center text-red-400 text-xs font-medium transition-opacity"
-                  >Hapus</button>
+                  >{t('common.remove')}</button>
                 </div>
               ))}
               {form.gallery.length < 12 && (
@@ -2024,18 +2005,18 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
                   {galleryUploading ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin text-brand" />
-                      <span className="text-[10px]">Mengunggah…</span>
+                      <span className="text-[10px]">{t('tenantAdmin.settings.uploading')}</span>
                     </>
                   ) : (
                     <>
                       <Upload className="w-5 h-5" />
-                      <span className="text-[10px]">Tambah</span>
+                      <span className="text-[10px]">{t('common.add')}</span>
                     </>
                   )}
                 </button>
               )}
             </div>
-            <p className="text-xs text-muted">Galeri tampil sebagai grid foto di halaman booking publik. Bisa upload banyak file sekaligus.</p>
+            <p className="text-xs text-muted">{t('tenantAdmin.settings.bpGalleryHint')}</p>
             <input
               ref={galleryInputRef} type="file" accept="image/*" multiple hidden
               onChange={e => { onAddGalleryFiles(e.target.files); e.target.value = '' }}
@@ -2048,7 +2029,7 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
           <CardHeader>
             <div className="flex items-center gap-2">
               <Send className="w-5 h-5 text-brand" />
-              <h3 className="font-semibold text-off-white">Sosial Media & Kontak</h3>
+              <h3 className="font-semibold text-off-white">{t('tenantAdmin.settings.bpSocialTitle')}</h3>
             </div>
           </CardHeader>
           <CardBody className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2073,28 +2054,28 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <MessageCircle className="w-5 h-5 text-brand" />
-                <h3 className="font-semibold text-off-white">Testimoni Pelanggan</h3>
+                <h3 className="font-semibold text-off-white">{t('tenantAdmin.settings.bpTestimonialsTitle')}</h3>
               </div>
               <Button
                 variant="outline" size="sm"
                 onClick={() => set({ testimonials: [...form.testimonials, { name: '', text: '', rating: 5 }] })}
                 disabled={form.testimonials.length >= 20}
-              >Tambah</Button>
+              >{t('common.add')}</Button>
             </div>
           </CardHeader>
           <CardBody className="space-y-3">
             {form.testimonials.length === 0 && (
-              <p className="text-xs text-muted text-center py-4">Belum ada testimoni. Tambahkan untuk meningkatkan trust pelanggan baru.</p>
+              <p className="text-xs text-muted text-center py-4">{t('tenantAdmin.settings.bpTestimonialsEmpty')}</p>
             )}
-            {form.testimonials.map((t, idx) => (
+            {form.testimonials.map((item, idx) => (
               <div key={idx} className="bg-dark-surface border border-dark-border rounded-xl p-3 space-y-2">
                 <div className="flex items-center gap-2">
                   <Input
-                    value={t.name} placeholder="Nama pelanggan"
+                    value={item.name} placeholder={t('tenantAdmin.settings.bpTestimonialNamePlaceholder')}
                     onChange={e => set({ testimonials: form.testimonials.map((x, i) => i === idx ? { ...x, name: e.target.value } : x) })}
                   />
                   <select
-                    value={t.rating || 5}
+                    value={item.rating || 5}
                     onChange={e => set({ testimonials: form.testimonials.map((x, i) => i === idx ? { ...x, rating: Number(e.target.value) } : x) })}
                     className="bg-dark-card border border-dark-border rounded-xl px-3 py-2 text-sm text-off-white focus:outline-none focus:border-brand/40"
                   >
@@ -2103,10 +2084,10 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
                   <button
                     onClick={() => set({ testimonials: form.testimonials.filter((_, i) => i !== idx) })}
                     className="px-2.5 py-1.5 rounded-lg text-xs text-muted hover:text-red-400"
-                  >Hapus</button>
+                  >{t('common.remove')}</button>
                 </div>
                 <textarea
-                  rows={2} value={t.text} placeholder="Komentar pelanggan…"
+                  rows={2} value={item.text} placeholder={t('tenantAdmin.settings.bpTestimonialTextPlaceholder')}
                   onChange={e => set({ testimonials: form.testimonials.map((x, i) => i === idx ? { ...x, text: e.target.value } : x) })}
                   className="w-full bg-dark-card border border-dark-border rounded-xl px-3 py-2 text-sm text-off-white placeholder-muted resize-none focus:outline-none focus:border-brand/40"
                   maxLength={500}
@@ -2121,15 +2102,15 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
           <CardHeader>
             <div className="flex items-center gap-2">
               <Bell className="w-5 h-5 text-brand" />
-              <h3 className="font-semibold text-off-white">Tampilkan/Sembunyikan Section</h3>
+              <h3 className="font-semibold text-off-white">{t('tenantAdmin.settings.bpVisibilityTitle')}</h3>
             </div>
           </CardHeader>
           <CardBody className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {[
-              ['showLogo',    'Logo barbershop'],
-              ['showHero',    'Hero image'],
-              ['showGallery', 'Galeri foto'],
-              ['showSocial',  'Sosial media'],
+              ['showLogo',    t('tenantAdmin.settings.bpToggleLogo')],
+              ['showHero',    t('tenantAdmin.settings.bpToggleHero')],
+              ['showGallery', t('tenantAdmin.settings.bpToggleGallery')],
+              ['showSocial',  t('tenantAdmin.settings.bpToggleSocial')],
             ].map(([k, label]) => (
               <label key={k} className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl border border-dark-border hover:border-brand/30 cursor-pointer">
                 <span className="text-sm text-off-white">{label}</span>
@@ -2141,14 +2122,14 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
 
         <div className="flex items-center gap-3">
           <Button onClick={onSave} loading={saving} icon={CheckCircle2}>
-            Simpan Pengaturan
+            {t('tenantAdmin.settings.saveSettings')}
           </Button>
           {subdomainUrl && (
             <a
               href={subdomainUrl} target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-dark-border text-muted hover:text-brand hover:border-brand/40 text-sm transition-colors"
             >
-              Buka halaman booking <ArrowUpRight className="w-3.5 h-3.5" />
+              {t('tenantAdmin.settings.bpOpenBookingPage')} <ArrowUpRight className="w-3.5 h-3.5" />
             </a>
           )}
         </div>
@@ -2159,8 +2140,8 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-off-white text-sm">Preview</h3>
-              <span className="text-[10px] text-muted">Tampilan publik</span>
+              <h3 className="font-semibold text-off-white text-sm">{t('tenantAdmin.settings.bpPreview')}</h3>
+              <span className="text-[10px] text-muted">{t('tenantAdmin.settings.bpPublicView')}</span>
             </div>
           </CardHeader>
           <CardBody>
@@ -2185,7 +2166,7 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
                       <img src={tenantLogo} alt="logo" className="w-12 h-12 rounded-xl border-2 object-cover mb-2"
                         style={{ borderColor: form.primaryColor || '#6366F1', background: previewBg }} />
                     )}
-                    <p className="font-bold text-sm" style={{ color: previewText }}>Nama bisnis</p>
+                    <p className="font-bold text-sm" style={{ color: previewText }}>{t('tenantAdmin.settings.bpBusinessNamePreview')}</p>
                     {form.tagline && <p className="text-[11px]" style={{ color: form.primaryColor || '#6366F1' }}>{form.tagline}</p>}
                     {form.description && <p className="text-[10px] mt-1 line-clamp-3" style={{ color: previewMuted }}>{form.description}</p>}
                     {form.showGallery && form.gallery.length > 0 && (
@@ -2199,7 +2180,7 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
                 </div>
               )
             })()}
-            <p className="text-[10px] text-muted mt-2">Preview hanya menunjukkan section yang relevan; halaman publik penuh tampil di {subdomainUrl || '/book'}.</p>
+            <p className="text-[10px] text-muted mt-2">{t('tenantAdmin.settings.bpPreviewFootnote', { url: subdomainUrl || '/book' })}</p>
           </CardBody>
         </Card>
       </div>

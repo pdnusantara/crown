@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -10,7 +11,7 @@ import {
   Building2, Home, Sparkles, ArrowUpRight, ArrowDownRight, Minus,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
-import { id as idLocale } from 'date-fns/locale'
+import { id as idLocale, enUS as enLocale } from 'date-fns/locale'
 import { useAuthStore } from '../../store/authStore.js'
 import { useIsFeatureEnabled } from '../../hooks/useFeatureFlags.js'
 import { Link } from 'react-router-dom'
@@ -24,19 +25,19 @@ import { useChartTheme } from '../../utils/chartTheme.js'
 import { formatRupiah, formatRupiahShort } from '../../utils/format.js'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const PERIODS = [
-  { value: 'yesterday', label: 'Kemarin' },
-  { value: 'today',     label: 'Hari Ini' },
-  { value: 'month',     label: 'Bulan Ini' },
-  { value: 'all',       label: 'Semua' },
+const PERIODS = (t) => [
+  { value: 'yesterday', label: t('common.yesterday') },
+  { value: 'today',     label: t('common.today') },
+  { value: 'month',     label: t('common.thisMonth') },
+  { value: 'all',       label: t('tenantAdmin.wilayahReport.periodAll') },
 ]
 
 // Label pembanding chip perubahan — per periode kalender. 'all' tanpa pembanding.
-const PREV_LABELS = {
-  today:     'vs kemarin',
-  yesterday: 'vs hari sebelumnya',
-  month:     'vs bulan lalu',
-}
+const PREV_LABELS = (t) => ({
+  today:     t('tenantAdmin.wilayahReport.vsYesterday'),
+  yesterday: t('tenantAdmin.wilayahReport.vsDayBefore'),
+  month:     t('tenantAdmin.wilayahReport.vsLastMonth'),
+})
 
 const BAR_COLORS = [
   '#E0A82E', '#10B981', '#F59E0B', '#EBC877', '#34D399',
@@ -139,6 +140,7 @@ function StatCard({ icon: Icon, label, value, prev, changeValue, color = 'text-b
 // Wilayah fokus toko disimpan SERVER-SIDE (Tenant.wilayah) — dipakai bersama
 // oleh laporan ini, pemilih kecamatan di kasir, dan halaman booking.
 function ConfigPanel({ initial, onSaved, onCancel }) {
+  const { t } = useTranslation()
   const { data: provinces = [] } = useProvinces()
   const patchTenant = useAuthStore(s => s.patchTenant)
   const toast = useToast()
@@ -161,10 +163,10 @@ function ConfigPanel({ initial, onSaved, onCancel }) {
     try {
       await api.patch('/tenants/me', { wilayah: cfg })
       patchTenant({ wilayah: cfg })
-      toast.success('Wilayah toko disimpan')
+      toast.success(t('tenantAdmin.wilayahReport.areaSaved'))
       onSaved(cfg)
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal menyimpan wilayah toko')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.wilayahReport.areaSaveFailed'))
     } finally {
       setSaving(false)
     }
@@ -178,31 +180,31 @@ function ConfigPanel({ initial, onSaved, onCancel }) {
         </div>
         <div>
           <h3 className="font-semibold text-off-white">
-            {initial ? 'Ganti Kabupaten/Kota' : 'Pilih Kabupaten/Kota Fokus'}
+            {initial ? t('tenantAdmin.wilayahReport.changeRegency') : t('tenantAdmin.wilayahReport.pickRegency')}
           </h3>
           <p className="text-xs text-muted mt-0.5">
-            Acuan wilayah toko — dipakai laporan ini sekaligus pemilih kecamatan di kasir & booking
+            {t('tenantAdmin.wilayahReport.regencyHint')}
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
         <div>
-          <label className="block text-xs font-medium text-muted mb-1.5">Provinsi</label>
+          <label className="block text-xs font-medium text-muted mb-1.5">{t('tenantAdmin.wilayahReport.province')}</label>
           <div className="relative">
             <select
               value={provinsiId}
               onChange={handleProvinsi}
               className="w-full appearance-none bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 pr-8 text-sm outline-none focus:border-brand/60 transition-all"
             >
-              <option value="">Pilih Provinsi</option>
+              <option value="">{t('tenantAdmin.wilayahReport.selectProvince')}</option>
               {provinces.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
             <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
           </div>
         </div>
         <div>
-          <label className="block text-xs font-medium text-muted mb-1.5">Kabupaten / Kota</label>
+          <label className="block text-xs font-medium text-muted mb-1.5">{t('tenantAdmin.wilayahReport.regency')}</label>
           <div className="relative">
             <select
               value={kabupatenId}
@@ -210,7 +212,7 @@ function ConfigPanel({ initial, onSaved, onCancel }) {
               disabled={!provinsiId}
               className="w-full appearance-none bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 pr-8 text-sm outline-none focus:border-brand/60 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
-              <option value="">{provinsiId ? 'Pilih Kabupaten/Kota' : 'Pilih provinsi dulu'}</option>
+              <option value="">{provinsiId ? t('tenantAdmin.wilayahReport.selectRegency') : t('tenantAdmin.wilayahReport.selectProvinceFirst')}</option>
               {regencies.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
             <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
@@ -224,10 +226,10 @@ function ConfigPanel({ initial, onSaved, onCancel }) {
           disabled={!kabupatenId || saving}
           className="flex-1 sm:flex-none"
         >
-          {saving ? 'Menyimpan…' : initial ? 'Simpan Perubahan' : 'Mulai Analisis'}
+          {saving ? t('tenantAdmin.wilayahReport.saving') : initial ? t('tenantAdmin.wilayahReport.saveChanges') : t('tenantAdmin.wilayahReport.startAnalysis')}
         </Button>
         {onCancel && (
-          <Button variant="secondary" onClick={onCancel} disabled={saving}>Batal</Button>
+          <Button variant="secondary" onClick={onCancel} disabled={saving}>{t('common.cancel')}</Button>
         )}
       </div>
     </Card>
@@ -236,20 +238,22 @@ function ConfigPanel({ initial, onSaved, onCancel }) {
 
 // ── Custom Tooltip for recharts ────────────────────────────────────────────────
 function CustomTooltip({ active, payload }) {
+  const { t } = useTranslation()
   if (!active || !payload?.length) return null
   const d = payload[0].payload
   return (
     <div className="bg-dark-card border border-dark-border rounded-xl px-3 py-2 text-xs shadow-xl">
       <p className="font-semibold text-off-white mb-1">{d.kecamatan}</p>
-      <p className="text-muted">Kunjungan: <span className="text-off-white font-medium">{d.visitCount}</span></p>
-      <p className="text-muted">Pelanggan: <span className="text-off-white font-medium">{d.customerCount}</span></p>
-      <p className="text-muted">Pendapatan: <span className="text-brand font-medium">{formatRupiah(d.revenue)}</span></p>
+      <p className="text-muted">{t('tenantAdmin.wilayahReport.visits')}: <span className="text-off-white font-medium">{d.visitCount}</span></p>
+      <p className="text-muted">{t('tenantAdmin.wilayahReport.customers')}: <span className="text-off-white font-medium">{d.customerCount}</span></p>
+      <p className="text-muted">{t('tenantAdmin.wilayahReport.revenue')}: <span className="text-brand font-medium">{formatRupiah(d.revenue)}</span></p>
     </div>
   )
 }
 
 // ── Kecamatan Row ─────────────────────────────────────────────────────────────
 function KecamatanRow({ kec, rank, totalVisits, isExpanded, onToggle }) {
+  const { t } = useTranslation()
   const pct = totalVisits > 0 ? (kec.visitCount / totalVisits * 100).toFixed(1) : 0
 
   return (
@@ -265,7 +269,7 @@ function KecamatanRow({ kec, rank, totalVisits, isExpanded, onToggle }) {
             </span>
             <div>
               <p className="text-sm font-medium text-off-white leading-none">{kec.kecamatan}</p>
-              <p className="text-xs text-muted mt-0.5">{kec.kelurahan.length} desa/kel</p>
+              <p className="text-xs text-muted mt-0.5">{t('tenantAdmin.wilayahReport.villagesCount', { count: kec.kelurahan.length })}</p>
             </div>
           </div>
         </td>
@@ -308,11 +312,11 @@ function KecamatanRow({ kec, rank, totalVisits, isExpanded, onToggle }) {
                 <table className="w-full">
                   <thead>
                     <tr className="text-xs text-muted border-b border-dark-border/50">
-                      <th className="py-2 px-8 text-left font-medium">Desa / Kelurahan</th>
-                      <th className="py-2 px-4 text-center font-medium">Pelanggan</th>
-                      <th className="py-2 px-4 text-center font-medium">Kunjungan</th>
-                      <th className="py-2 px-4 text-right font-medium">Pendapatan</th>
-                      <th className="py-2 px-4 text-center font-medium">Rata-rata</th>
+                      <th className="py-2 px-8 text-left font-medium">{t('tenantAdmin.wilayahReport.village')}</th>
+                      <th className="py-2 px-4 text-center font-medium">{t('tenantAdmin.wilayahReport.customers')}</th>
+                      <th className="py-2 px-4 text-center font-medium">{t('tenantAdmin.wilayahReport.visits')}</th>
+                      <th className="py-2 px-4 text-right font-medium">{t('tenantAdmin.wilayahReport.revenue')}</th>
+                      <th className="py-2 px-4 text-center font-medium">{t('tenantAdmin.wilayahReport.average')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -323,7 +327,7 @@ function KecamatanRow({ kec, rank, totalVisits, isExpanded, onToggle }) {
                             <Home size={12} className="text-muted flex-shrink-0" />
                             <span className="text-sm text-off-white">{kel.kelurahan}</span>
                             {i === 0 && (
-                              <span className="text-[10px] px-1.5 py-0.5 bg-brand/10 text-brand border border-brand/20 rounded-full">Terbanyak</span>
+                              <span className="text-[10px] px-1.5 py-0.5 bg-brand/10 text-brand border border-brand/20 rounded-full">{t('tenantAdmin.wilayahReport.highest')}</span>
                             )}
                           </div>
                         </td>
@@ -346,6 +350,7 @@ function KecamatanRow({ kec, rank, totalVisits, isExpanded, onToggle }) {
 
 // ── Insights ──────────────────────────────────────────────────────────────────
 function InsightsPanel({ byKecamatan }) {
+  const { t } = useTranslation()
   if (!byKecamatan?.length) return null
 
   const top        = byKecamatan[0]
@@ -358,15 +363,15 @@ function InsightsPanel({ byKecamatan }) {
       icon: TrendingUp,
       color: 'text-brand',
       bg: 'bg-brand/10',
-      title: 'Area Paling Aktif',
+      title: t('tenantAdmin.wilayahReport.insightMostActive'),
       value: top?.kecamatan,
-      sub: `${top?.visitCount} kunjungan dari ${top?.customerCount} pelanggan`,
+      sub: t('tenantAdmin.wilayahReport.insightMostActiveSub', { visits: top?.visitCount, customers: top?.customerCount }),
     },
     {
       icon: DollarSign,
       color: 'text-green-400',
       bg: 'bg-green-400/10',
-      title: 'Area Pendapatan Tertinggi',
+      title: t('tenantAdmin.wilayahReport.insightHighestRevenue'),
       value: highestRev?.kecamatan,
       sub: formatRupiah(highestRev?.revenue),
     },
@@ -374,17 +379,17 @@ function InsightsPanel({ byKecamatan }) {
       icon: Repeat2,
       color: 'text-purple-400',
       bg: 'bg-purple-400/10',
-      title: 'Area Loyalitas Tertinggi',
+      title: t('tenantAdmin.wilayahReport.insightMostLoyal'),
       value: mostLoyal?.kecamatan,
-      sub: `Rata-rata ${mostLoyal?.avgVisitPerCustomer}x kunjungan/pelanggan`,
+      sub: t('tenantAdmin.wilayahReport.insightMostLoyalSub', { avg: mostLoyal?.avgVisitPerCustomer }),
     },
     {
       icon: Home,
       color: 'text-blue-400',
       bg: 'bg-blue-400/10',
-      title: 'Desa Tersibuk',
+      title: t('tenantAdmin.wilayahReport.insightBusiestVillage'),
       value: topKel?.kelurahan || '—',
-      sub: topKel ? `${topKel.visitCount} kunjungan · ${top?.kecamatan}` : 'Tidak ada data kecamatan',
+      sub: topKel ? t('tenantAdmin.wilayahReport.insightBusiestVillageSub', { visits: topKel.visitCount, kecamatan: top?.kecamatan }) : t('tenantAdmin.wilayahReport.noKecamatanData'),
     },
   ]
 
@@ -393,7 +398,7 @@ function InsightsPanel({ byKecamatan }) {
       <CardHeader>
         <div className="flex items-center gap-2">
           <Sparkles size={15} className="text-brand" />
-          <h3 className="font-semibold text-off-white">Insight Wilayah</h3>
+          <h3 className="font-semibold text-off-white">{t('tenantAdmin.wilayahReport.areaInsights')}</h3>
         </div>
       </CardHeader>
       <CardBody>
@@ -418,6 +423,7 @@ function InsightsPanel({ byKecamatan }) {
 
 // ── Mobile Kecamatan Card ─────────────────────────────────────────────────────
 function KecamatanMobileCard({ kec, rank, totalVisits, isExpanded, onToggle }) {
+  const { t } = useTranslation()
   const pct = totalVisits > 0 ? (kec.visitCount / totalVisits * 100).toFixed(1) : 0
 
   return (
@@ -435,8 +441,8 @@ function KecamatanMobileCard({ kec, rank, totalVisits, isExpanded, onToggle }) {
             <ChangeChip cur={kec.visitCount} prev={kec.prevVisitCount} />
           </div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-muted">
-            <span><span className="text-off-white font-medium">{kec.visitCount}</span> kunjungan</span>
-            <span><span className="text-off-white font-medium">{kec.customerCount}</span> pelanggan</span>
+            <span><span className="text-off-white font-medium">{kec.visitCount}</span> {t('tenantAdmin.wilayahReport.visitsLower')}</span>
+            <span><span className="text-off-white font-medium">{kec.customerCount}</span> {t('tenantAdmin.wilayahReport.customersLower')}</span>
             <span className="text-brand font-medium">{formatRupiahShort(kec.revenue)}</span>
           </div>
           <div className="mt-2 h-1.5 bg-dark-surface rounded-full overflow-hidden">
@@ -463,9 +469,9 @@ function KecamatanMobileCard({ kec, rank, totalVisits, isExpanded, onToggle }) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm text-off-white truncate">{kel.kelurahan}</span>
-                      {i === 0 && <span className="text-[10px] px-1 py-0.5 bg-brand/10 text-brand border border-brand/20 rounded">Top</span>}
+                      {i === 0 && <span className="text-[10px] px-1 py-0.5 bg-brand/10 text-brand border border-brand/20 rounded">{t('tenantAdmin.wilayahReport.top')}</span>}
                     </div>
-                    <p className="text-xs text-muted">{kel.visitCount} kunjungan · {kel.customerCount} pelanggan</p>
+                    <p className="text-xs text-muted">{t('tenantAdmin.wilayahReport.visitsCustomersLine', { visits: kel.visitCount, customers: kel.customerCount })}</p>
                   </div>
                   <span className="text-xs text-brand flex-shrink-0">{formatRupiahShort(kel.revenue)}</span>
                 </div>
@@ -480,17 +486,18 @@ function KecamatanMobileCard({ kec, rank, totalVisits, isExpanded, onToggle }) {
 
 // ── Empty / No Data ───────────────────────────────────────────────────────────
 function EmptyData({ kabupaten }) {
+  const { t } = useTranslation()
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
       <div className="w-14 h-14 rounded-2xl bg-dark-card border border-dark-border flex items-center justify-center mb-4">
         <MapPin size={24} className="text-muted" />
       </div>
-      <h3 className="font-semibold text-off-white mb-1">Tidak Ada Data</h3>
+      <h3 className="font-semibold text-off-white mb-1">{t('tenantAdmin.wilayahReport.noData')}</h3>
       <p className="text-sm text-muted max-w-xs">
-        Belum ada pelanggan dari <span className="text-off-white">{kabupaten}</span> dengan data kunjungan pada periode ini.
+        {t('tenantAdmin.wilayahReport.noDataDescPart1')} <span className="text-off-white">{kabupaten}</span> {t('tenantAdmin.wilayahReport.noDataDescPart2')}
       </p>
       <p className="text-xs text-muted mt-2">
-        Pastikan pelanggan sudah mengisi data wilayah lengkap saat pendaftaran.
+        {t('tenantAdmin.wilayahReport.noDataHint')}
       </p>
     </div>
   )
@@ -501,6 +508,7 @@ function EmptyData({ kabupaten }) {
 // Akses langsung via URL pada paket tanpa fitur ini → layar "belum aktif",
 // bukan kebocoran fitur. Inner di-render hanya saat flag aktif (rule-of-hooks aman).
 export default function TAWilayahReportPage() {
+  const { t } = useTranslation()
   const { user } = useAuthStore()
   const enabled = useIsFeatureEnabled(user?.tenantId, 'wilayah_report')
   if (!enabled) {
@@ -511,13 +519,12 @@ export default function TAWilayahReportPage() {
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-brand/10 border border-brand/20 mb-4">
               <MapPin className="w-7 h-7 text-brand" />
             </div>
-            <h2 className="font-display text-xl font-semibold text-off-white mb-2">Laporan Wilayah belum aktif</h2>
+            <h2 className="font-display text-xl font-semibold text-off-white mb-2">{t('tenantAdmin.wilayahReport.featureOffTitle')}</h2>
             <p className="text-sm text-muted leading-relaxed max-w-sm mx-auto">
-              Analisis kunjungan & omzet per kecamatan/kelurahan tersedia di paket yang lebih tinggi.
-              Upgrade paket untuk membuka fitur ini.
+              {t('tenantAdmin.wilayahReport.featureOffDesc')}
             </p>
             <Link to="/admin/billing" className="inline-flex mt-5">
-              <Button>Lihat Paket & Upgrade</Button>
+              <Button>{t('tenantAdmin.wilayahReport.viewPackagesUpgrade')}</Button>
             </Link>
           </CardBody>
         </Card>
@@ -528,6 +535,8 @@ export default function TAWilayahReportPage() {
 }
 
 function WilayahReportInner() {
+  const { t, i18n } = useTranslation()
+  const dfLocale = i18n.language === 'en' ? enLocale : idLocale
   const { user } = useAuthStore()
   const toast = useToast()
   const chart = useChartTheme()
@@ -550,6 +559,7 @@ function WilayahReportInner() {
 
   const summary      = data?.summary
   const byKecamatan  = data?.byKecamatan || []
+  const prevLabel    = PREV_LABELS(t)[period]
 
   // Daftar kecamatan ter-sort untuk tabel & kartu (chart tetap urut kunjungan).
   const sortedKecamatan = useMemo(() => {
@@ -595,13 +605,13 @@ function WilayahReportInner() {
   // diikuti baris tiap desa/kelurahan di bawahnya.
   function handleExport() {
     if (!byKecamatan.length) {
-      toast.error('Tidak ada data untuk diekspor')
+      toast.error(t('tenantAdmin.wilayahReport.noDataToExport'))
       return
     }
-    const header = ['Kecamatan', 'Desa/Kelurahan', 'Pelanggan', 'Kunjungan', 'Pendapatan', 'Rata-rata kunjungan/pelanggan']
+    const header = [t('tenantAdmin.wilayahReport.csvKecamatan'), t('tenantAdmin.wilayahReport.csvVillage'), t('tenantAdmin.wilayahReport.csvCustomers'), t('tenantAdmin.wilayahReport.csvVisits'), t('tenantAdmin.wilayahReport.csvRevenue'), t('tenantAdmin.wilayahReport.csvAvgVisits')]
     const rows = []
     byKecamatan.forEach(kec => {
-      rows.push([kec.kecamatan, '— Total kecamatan —', kec.customerCount, kec.visitCount, kec.revenue, kec.avgVisitPerCustomer])
+      rows.push([kec.kecamatan, t('tenantAdmin.wilayahReport.csvKecamatanTotal'), kec.customerCount, kec.visitCount, kec.revenue, kec.avgVisitPerCustomer])
       kec.kelurahan.forEach(kel => {
         rows.push([kec.kecamatan, kel.kelurahan, kel.customerCount, kel.visitCount, kel.revenue, kel.avgVisitPerCustomer])
       })
@@ -618,7 +628,7 @@ function WilayahReportInner() {
     a.download = `laporan-wilayah-${config?.kabupaten || 'area'}-${period}.csv`
     a.click()
     URL.revokeObjectURL(url)
-    toast.success(`Berhasil ekspor ${byKecamatan.length} kecamatan`)
+    toast.success(t('tenantAdmin.wilayahReport.exportSuccess', { count: byKecamatan.length }))
   }
 
   // ── Setup screen ────────────────────────────────────────────────────────────
@@ -626,19 +636,17 @@ function WilayahReportInner() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-display font-bold brand-text">Laporan Wilayah</h1>
-          <p className="text-muted text-sm mt-1">Analisis kunjungan pelanggan berdasarkan kecamatan dan desa</p>
+          <h1 className="text-2xl font-display font-bold brand-text">{t('tenantAdmin.wilayahReport.pageTitle')}</h1>
+          <p className="text-muted text-sm mt-1">{t('tenantAdmin.wilayahReport.pageSubtitle')}</p>
         </div>
 
         <div className="max-w-2xl">
           <div className="flex items-start gap-4 p-4 rounded-2xl bg-blue-500/5 border border-blue-500/20 mb-6">
             <AlertCircle size={18} className="text-blue-400 flex-shrink-0 mt-0.5" />
             <div className="text-sm">
-              <p className="font-medium text-off-white mb-1">Konfigurasi Sekali, Pakai Selamanya</p>
+              <p className="font-medium text-off-white mb-1">{t('tenantAdmin.wilayahReport.configOnceTitle')}</p>
               <p className="text-muted">
-                Pilih kabupaten/kota fokus. Laporan menampilkan breakdown kecamatan dan desa otomatis.
-                Wilayah ini tersimpan di akun toko — sekaligus jadi acuan pemilih kecamatan saat kasir
-                & pelanggan booking mengisi data. Bisa diubah kapan pun.
+                {t('tenantAdmin.wilayahReport.configOnceDesc')}
               </p>
             </div>
           </div>
@@ -654,7 +662,7 @@ function WilayahReportInner() {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-display font-bold brand-text">Laporan Wilayah</h1>
+          <h1 className="text-2xl font-display font-bold brand-text">{t('tenantAdmin.wilayahReport.pageTitle')}</h1>
           <div className="flex items-center gap-2 mt-1">
             <MapPin size={13} className="text-brand" />
             <p className="text-sm text-muted">
@@ -666,7 +674,7 @@ function WilayahReportInner() {
         <div className="flex flex-wrap items-center gap-2">
           {dataUpdatedAt > 0 && !isLoading && (
             <span className="text-[11px] text-muted/70 self-center mr-0.5">
-              Diperbarui {formatDistanceToNow(dataUpdatedAt, { addSuffix: true, locale: idLocale })}
+              {t('tenantAdmin.wilayahReport.updatedPrefix')} {formatDistanceToNow(dataUpdatedAt, { addSuffix: true, locale: dfLocale })}
             </span>
           )}
           <button
@@ -674,7 +682,7 @@ function WilayahReportInner() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-dark-border text-xs text-muted hover:border-brand/30 hover:text-off-white transition-all"
           >
             <Settings2 size={13} />
-            Ganti Kabupaten
+            {t('tenantAdmin.wilayahReport.changeRegencyShort')}
           </button>
           <button
             onClick={handleExport}
@@ -682,7 +690,7 @@ function WilayahReportInner() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-dark-border text-xs text-muted hover:border-brand/30 hover:text-off-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Download size={13} />
-            Ekspor CSV
+            {t('tenantAdmin.wilayahReport.exportCsv')}
           </button>
           <button
             onClick={() => refetch()}
@@ -690,7 +698,7 @@ function WilayahReportInner() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-dark-border text-xs text-muted hover:border-brand/30 hover:text-off-white transition-all disabled:opacity-40"
           >
             <RefreshCw size={13} className={isLoading ? 'animate-spin' : ''} />
-            Refresh
+            {t('tenantAdmin.wilayahReport.refresh')}
           </button>
         </div>
       </div>
@@ -710,7 +718,7 @@ function WilayahReportInner() {
 
       {/* Period selector */}
       <div className="flex flex-wrap gap-1 p-1 bg-dark-card border border-dark-border rounded-xl w-fit max-w-full">
-        {PERIODS.map(p => (
+        {PERIODS(t).map(p => (
           <button
             key={p.value}
             onClick={() => setPeriod(p.value)}
@@ -729,7 +737,7 @@ function WilayahReportInner() {
       {isError && (
         <div className="flex items-center gap-3 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-sm text-red-400">
           <AlertCircle size={16} />
-          <span>Gagal memuat data. <button onClick={() => refetch()} className="underline">Coba lagi</button></span>
+          <span>{t('tenantAdmin.wilayahReport.loadFailed')} <button onClick={() => refetch()} className="underline">{t('common.retry')}</button></span>
         </div>
       )}
 
@@ -737,22 +745,22 @@ function WilayahReportInner() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard
           icon={Users}
-          label="Total Pelanggan"
+          label={t('tenantAdmin.wilayahReport.totalCustomers')}
           value={isLoading ? '—' : (summary?.totalCustomers ?? 0)}
           color="text-blue-400"
         />
         <StatCard
           icon={Repeat2}
-          label="Total Kunjungan"
+          label={t('tenantAdmin.wilayahReport.totalVisits')}
           value={isLoading ? '—' : (summary?.totalVisits ?? 0)}
           changeValue={summary?.totalVisits ?? 0}
-          prev={PREV_LABELS[period] ? summary?.prevVisits : undefined}
+          prev={prevLabel ? summary?.prevVisits : undefined}
           color="text-brand"
-          sub={PREV_LABELS[period]}
+          sub={prevLabel}
         />
         <StatCard
           icon={DollarSign}
-          label="Total Pendapatan"
+          label={t('tenantAdmin.wilayahReport.totalRevenue')}
           value={isLoading ? '—' : (
             <>
               <span className="sm:hidden">{formatRupiahShort(summary?.totalRevenue ?? 0)}</span>
@@ -760,16 +768,16 @@ function WilayahReportInner() {
             </>
           )}
           changeValue={summary?.totalRevenue ?? 0}
-          prev={PREV_LABELS[period] ? summary?.prevRevenue : undefined}
+          prev={prevLabel ? summary?.prevRevenue : undefined}
           color="text-green-400"
-          sub={PREV_LABELS[period]}
+          sub={prevLabel}
         />
         <StatCard
           icon={TrendingUp}
-          label="Rata-rata Kunjungan"
+          label={t('tenantAdmin.wilayahReport.avgVisits')}
           value={isLoading ? '—' : `${summary?.avgVisitPerCustomer ?? 0}x`}
           color="text-purple-400"
-          sub="per pelanggan"
+          sub={t('tenantAdmin.wilayahReport.perCustomer')}
         />
       </div>
 
@@ -796,8 +804,8 @@ function WilayahReportInner() {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Building2 size={15} className="text-brand" />
-                <h3 className="font-semibold text-off-white">Kunjungan per Kecamatan</h3>
-                <span className="text-xs text-muted">(top {Math.min(chartData.length, 10)})</span>
+                <h3 className="font-semibold text-off-white">{t('tenantAdmin.wilayahReport.visitsPerKecamatan')}</h3>
+                <span className="text-xs text-muted">{t('tenantAdmin.wilayahReport.topN', { count: Math.min(chartData.length, 10) })}</span>
               </div>
             </CardHeader>
             <CardBody>
@@ -838,20 +846,20 @@ function WilayahReportInner() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <MapPin size={15} className="text-brand" />
-                  <h3 className="font-semibold text-off-white">Detail per Kecamatan</h3>
+                  <h3 className="font-semibold text-off-white">{t('tenantAdmin.wilayahReport.detailPerKecamatan')}</h3>
                 </div>
-                <p className="text-xs text-muted">{byKecamatan.length} kecamatan ditemukan · Klik untuk lihat desa</p>
+                <p className="text-xs text-muted">{t('tenantAdmin.wilayahReport.kecamatanFoundHint', { count: byKecamatan.length })}</p>
               </div>
             </CardHeader>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-dark-border text-xs text-muted">
-                    <th className="py-3 px-4 text-left font-medium">Kecamatan</th>
-                    <SortHeader label="Pelanggan"  sortKey="customerCount"       sort={sort} onSort={toggleSort} align="center" />
-                    <SortHeader label="Kunjungan"  sortKey="visitCount"          sort={sort} onSort={toggleSort} align="left" />
-                    <SortHeader label="Pendapatan" sortKey="revenue"             sort={sort} onSort={toggleSort} align="right" />
-                    <SortHeader label="Rata-rata"  sortKey="avgVisitPerCustomer" sort={sort} onSort={toggleSort} align="center" />
+                    <th className="py-3 px-4 text-left font-medium">{t('tenantAdmin.wilayahReport.kecamatan')}</th>
+                    <SortHeader label={t('tenantAdmin.wilayahReport.customers')}  sortKey="customerCount"       sort={sort} onSort={toggleSort} align="center" />
+                    <SortHeader label={t('tenantAdmin.wilayahReport.visits')}  sortKey="visitCount"          sort={sort} onSort={toggleSort} align="left" />
+                    <SortHeader label={t('tenantAdmin.wilayahReport.revenue')} sortKey="revenue"             sort={sort} onSort={toggleSort} align="right" />
+                    <SortHeader label={t('tenantAdmin.wilayahReport.average')}  sortKey="avgVisitPerCustomer" sort={sort} onSort={toggleSort} align="center" />
                     <th className="py-3 px-4 w-8" />
                   </tr>
                 </thead>
@@ -874,18 +882,18 @@ function WilayahReportInner() {
           {/* Kecamatan Cards — mobile */}
           <div className="md:hidden space-y-3">
             <div className="flex items-center justify-between gap-2">
-              <h3 className="font-semibold text-off-white">Detail per Kecamatan</h3>
+              <h3 className="font-semibold text-off-white">{t('tenantAdmin.wilayahReport.detailPerKecamatan')}</h3>
               <div className="relative flex-shrink-0">
                 <select
                   value={sort.key}
                   onChange={e => setSort({ key: e.target.value, dir: 'desc' })}
                   className="appearance-none bg-dark-card border border-dark-border text-muted rounded-lg pl-2.5 pr-7 py-1.5 text-xs outline-none focus:border-brand/40"
-                  aria-label="Urutkan kecamatan"
+                  aria-label={t('tenantAdmin.wilayahReport.sortKecamatan')}
                 >
-                  <option value="visitCount">Urut: Kunjungan</option>
-                  <option value="customerCount">Urut: Pelanggan</option>
-                  <option value="revenue">Urut: Pendapatan</option>
-                  <option value="avgVisitPerCustomer">Urut: Loyalitas</option>
+                  <option value="visitCount">{t('tenantAdmin.wilayahReport.sortVisits')}</option>
+                  <option value="customerCount">{t('tenantAdmin.wilayahReport.sortCustomers')}</option>
+                  <option value="revenue">{t('tenantAdmin.wilayahReport.sortRevenue')}</option>
+                  <option value="avgVisitPerCustomer">{t('tenantAdmin.wilayahReport.sortLoyalty')}</option>
                 </select>
                 <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
               </div>
@@ -904,9 +912,9 @@ function WilayahReportInner() {
 
           {/* Summary footer */}
           <div className="flex flex-wrap gap-x-6 gap-y-1 px-1 text-xs text-muted">
-            <span>Total kecamatan: <span className="text-off-white">{summary?.kecamatanCount}</span></span>
-            <span>Total kelurahan/desa: <span className="text-off-white">{byKecamatan.reduce((s, k) => s + k.kelurahan.length, 0)}</span></span>
-            <span>Rata-rata kunjungan: <span className="text-off-white">{summary?.avgVisitPerCustomer}x</span> per pelanggan</span>
+            <span>{t('tenantAdmin.wilayahReport.totalKecamatan')}: <span className="text-off-white">{summary?.kecamatanCount}</span></span>
+            <span>{t('tenantAdmin.wilayahReport.totalVillages')}: <span className="text-off-white">{byKecamatan.reduce((s, k) => s + k.kelurahan.length, 0)}</span></span>
+            <span>{t('tenantAdmin.wilayahReport.avgVisitsLabel')}: <span className="text-off-white">{summary?.avgVisitPerCustomer}x</span> {t('tenantAdmin.wilayahReport.perCustomer')}</span>
           </div>
         </>
       )}

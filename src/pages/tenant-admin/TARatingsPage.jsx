@@ -20,6 +20,7 @@
 //  - ErrorBoundary wrapper
 // =============================================================================
 import React, { useState, useMemo, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Star, Search, X, AlertTriangle, Eye, EyeOff, Trash2, ExternalLink,
@@ -57,6 +58,7 @@ function useDebounced(value, ms = 400) {
 }
 
 function StarsRow({ value, size = 'sm' }) {
+  const { t } = useTranslation()
   const isLow = value <= 2
   const isHigh = value >= 4
   const cls = size === 'lg' ? 'text-lg' : size === 'md' ? 'text-base' : 'text-sm'
@@ -64,7 +66,7 @@ function StarsRow({ value, size = 'sm' }) {
   return (
     <span
       role="img"
-      aria-label={`Rating ${value} dari 5 bintang`}
+      aria-label={t('tenantAdmin.ratings.starsAria', { value })}
       className={`tabular-nums whitespace-nowrap ${cls} ${color}`}
     >
       {'★'.repeat(value)}{'☆'.repeat(5 - value)}
@@ -73,24 +75,26 @@ function StarsRow({ value, size = 'sm' }) {
 }
 
 function StatusBadge({ status }) {
+  const { t } = useTranslation()
   if (status === 'published') return (
     <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 font-semibold uppercase tracking-wide">
-      <CheckCircle className="w-2.5 h-2.5" /> Live
+      <CheckCircle className="w-2.5 h-2.5" /> {t('tenantAdmin.ratings.statusLive')}
     </span>
   )
   if (status === 'hidden') return (
     <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-dark-card text-muted border border-dark-border font-semibold uppercase tracking-wide">
-      <EyeOff className="w-2.5 h-2.5" /> Hidden
+      <EyeOff className="w-2.5 h-2.5" /> {t('tenantAdmin.ratings.statusHidden')}
     </span>
   )
   return (
     <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/40 font-semibold uppercase tracking-wide">
-      Pending
+      {t('tenantAdmin.ratings.statusPending')}
     </span>
   )
 }
 
 function KpiTile({ icon: Icon, label, value, accent = 'gold', loading, onClick, active }) {
+  const { t } = useTranslation()
   const accents = {
     gold:    'bg-brand/10 border-brand/30 text-brand',
     emerald: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300',
@@ -120,7 +124,7 @@ function KpiTile({ icon: Icon, label, value, accent = 'gold', loading, onClick, 
         type="button"
         onClick={onClick}
         aria-pressed={active}
-        title={active ? 'Klik untuk hapus filter' : 'Klik untuk filter daftar'}
+        title={active ? t('tenantAdmin.ratings.clickToClearFilter') : t('tenantAdmin.ratings.clickToFilter')}
         className={`bg-dark-card rounded-2xl border p-3 sm:p-4 min-w-0 overflow-hidden text-left w-full transition-all hover:border-brand/40 hover:bg-dark-surface active:scale-[0.98] ${
           active ? 'border-brand/60 ring-2 ring-brand/30' : 'border-dark-border'
         }`}
@@ -136,6 +140,8 @@ function KpiTile({ icon: Icon, label, value, accent = 'gold', loading, onClick, 
 
 // ---- Main ------------------------------------------------------------------
 function TARatingsPageInner() {
+  const { t, i18n } = useTranslation()
+  const numLocale = i18n.language === 'en' ? 'en-US' : 'id-ID'
   const { user } = useAuthStore()
   const tenantId = user?.tenantId
   const navigate = useNavigate()
@@ -207,9 +213,9 @@ function TARatingsPageInner() {
   const handlePublish = async (id, newStatus) => {
     try {
       await publishMut.mutateAsync({ id, status: newStatus })
-      toast.success(newStatus === 'published' ? 'Testimoni dipublikasi' : newStatus === 'hidden' ? 'Testimoni disembunyikan' : 'Status diubah')
+      toast.success(newStatus === 'published' ? t('tenantAdmin.ratings.testimonialPublished') : newStatus === 'hidden' ? t('tenantAdmin.ratings.testimonialHidden') : t('tenantAdmin.ratings.statusChanged'))
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal mengubah status')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.ratings.statusChangeFailed'))
     }
   }
 
@@ -219,18 +225,18 @@ function TARatingsPageInner() {
     try {
       if (confirmAction === 'bulk-publish') {
         const r = await bulkPubMut.mutateAsync(ids)
-        toast.success(`Berhasil publish ${r.affected}${r.skipped ? `, ${r.skipped} dilewati` : ''}`)
+        toast.success(t('tenantAdmin.ratings.bulkPublished', { count: r.affected }) + (r.skipped ? t('tenantAdmin.ratings.bulkSkippedSuffix', { count: r.skipped }) : ''))
       } else if (confirmAction === 'bulk-hide') {
         const r = await bulkHideMut.mutateAsync(ids)
-        toast.success(`Berhasil sembunyikan ${r.affected}`)
+        toast.success(t('tenantAdmin.ratings.bulkHidden', { count: r.affected }))
       } else if (confirmAction === 'bulk-delete') {
         const r = await bulkDelMut.mutateAsync(ids)
-        toast.success(`Berhasil hapus ${r.deleted}`)
+        toast.success(t('tenantAdmin.ratings.bulkDeleted', { count: r.deleted }))
       }
       setSelected(new Set())
       setConfirmAction(null)
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Operasi gagal')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.ratings.operationFailed'))
     }
   }
 
@@ -246,9 +252,9 @@ function TARatingsPageInner() {
       a.download = `ratings-${new Date().toISOString().slice(0, 10)}.csv`
       document.body.appendChild(a); a.click(); a.remove()
       URL.revokeObjectURL(url)
-      toast.success('Export berhasil diunduh')
+      toast.success(t('tenantAdmin.ratings.exportDownloaded'))
     } catch {
-      toast.error('Gagal export')
+      toast.error(t('tenantAdmin.ratings.exportFailed'))
     }
   }
 
@@ -282,9 +288,9 @@ function TARatingsPageInner() {
       <div className="space-y-5">
         <Card className="p-6 sm:p-10 text-center">
           <Star className="w-12 h-12 text-muted mx-auto mb-3 opacity-40" />
-          <h2 className="font-display text-lg font-bold text-off-white">Fitur Rating belum aktif</h2>
+          <h2 className="font-display text-lg font-bold text-off-white">{t('tenantAdmin.ratings.featureOffTitle')}</h2>
           <p className="text-sm text-muted mt-1.5 max-w-md mx-auto">
-            Aktifkan fitur "barber_rating" di pengaturan untuk mulai mengumpulkan rating pelanggan terhadap barber.
+            {t('tenantAdmin.ratings.featureOffDesc')}
           </p>
         </Card>
       </div>
@@ -299,17 +305,17 @@ function TARatingsPageInner() {
         <div className="min-w-0">
           <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white inline-flex items-center gap-2">
             <Star className="w-5 h-5 sm:w-6 sm:h-6 text-brand fill-brand" />
-            Rating Barber
+            {t('tenantAdmin.ratings.pageTitle')}
           </h1>
           <p className="text-muted text-xs sm:text-sm mt-1">
-            Moderasi rating, kelola testimoni publik, follow-up komplain pelanggan.
+            {t('tenantAdmin.ratings.pageSubtitle')}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <LiveBadge className="hidden sm:inline-flex" />
-          <Button variant="secondary" size="sm" icon={RefreshCw} onClick={() => refetch()} loading={isFetching && !isLoading} aria-label="Refresh" />
+          <Button variant="secondary" size="sm" icon={RefreshCw} onClick={() => refetch()} loading={isFetching && !isLoading} aria-label={t('tenantAdmin.ratings.refresh')} />
           <Button variant="secondary" size="sm" icon={Download} onClick={handleExport} disabled={items.length === 0}>
-            <span className="hidden md:inline">Export CSV</span>
+            <span className="hidden md:inline">{t('tenantAdmin.ratings.exportCsv')}</span>
           </Button>
         </div>
       </div>
@@ -318,22 +324,22 @@ function TARatingsPageInner() {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
         <KpiTile
           icon={Star}
-          label="Rata-rata (30 hari)"
+          label={t('tenantAdmin.ratings.kpiAvg')}
           value={stats?.avgRating != null ? `${stats.avgRating.toFixed(1)} ★` : '—'}
           accent="gold"
           loading={!stats}
         />
         <KpiTile
           icon={MessageSquare}
-          label="Total review (30 hari)"
-          value={stats?.totalRatings != null ? stats.totalRatings.toLocaleString('id-ID') : '—'}
+          label={t('tenantAdmin.ratings.kpiTotalReviews')}
+          value={stats?.totalRatings != null ? stats.totalRatings.toLocaleString(numLocale) : '—'}
           accent="blue"
           loading={!stats}
         />
         <KpiTile
           icon={Eye}
-          label="Live testimoni"
-          value={stats?.kpi?.publishedCount?.toLocaleString('id-ID') || '0'}
+          label={t('tenantAdmin.ratings.kpiLiveTestimonials')}
+          value={stats?.kpi?.publishedCount?.toLocaleString(numLocale) || '0'}
           accent="emerald"
           loading={!stats}
           active={status === 'published'}
@@ -341,8 +347,8 @@ function TARatingsPageInner() {
         />
         <KpiTile
           icon={AlertCircle}
-          label="Menunggu moderasi"
-          value={stats?.kpi?.pendingPublishCount?.toLocaleString('id-ID') || '0'}
+          label={t('tenantAdmin.ratings.kpiPendingModeration')}
+          value={stats?.kpi?.pendingPublishCount?.toLocaleString(numLocale) || '0'}
           accent="amber"
           loading={!stats}
           active={status === 'pending'}
@@ -350,8 +356,8 @@ function TARatingsPageInner() {
         />
         <KpiTile
           icon={AlertTriangle}
-          label="Rating rendah (30 hari)"
-          value={stats?.kpi?.lowRatingCount?.toLocaleString('id-ID') || '0'}
+          label={t('tenantAdmin.ratings.kpiLowRating')}
+          value={stats?.kpi?.lowRatingCount?.toLocaleString(numLocale) || '0'}
           accent="red"
           loading={!stats}
           active={ratingTab === 'low'}
@@ -370,15 +376,15 @@ function TARatingsPageInner() {
               role="searchbox"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Cari komentar atau nama barber…"
-              aria-label="Cari rating"
+              placeholder={t('tenantAdmin.ratings.searchPlaceholder')}
+              aria-label={t('tenantAdmin.ratings.searchAria')}
               className="flex-1 min-w-0 appearance-none bg-transparent border-0 text-off-white placeholder-muted text-sm outline-none"
             />
             {search && (
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                aria-label="Hapus pencarian"
+                aria-label={t('tenantAdmin.ratings.clearSearch')}
                 className="flex-shrink-0 -mr-1 p-1 rounded-md text-muted hover:text-off-white hover:bg-dark-card transition-colors"
               >
                 <X size={14} />
@@ -395,7 +401,7 @@ function TARatingsPageInner() {
             }`}
           >
             <Filter className="w-3.5 h-3.5" />
-            Filter
+            {t('common.filter')}
             {hasActiveFilter && (
               <span className="ml-1 w-4 h-4 rounded-full bg-brand text-dark text-[9px] font-bold flex items-center justify-center">
                 !
@@ -409,10 +415,10 @@ function TARatingsPageInner() {
             tak ada yang kepotong); satu baris di desktop. */}
         <div className="grid grid-cols-2 gap-1.5 mt-3 sm:flex sm:items-center">
           {[
-            { id: 'all',  label: 'Semua',         color: 'bg-dark-card text-off-white' },
-            { id: 'high', label: '★4-5 (Positif)', color: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' },
-            { id: 'mid',  label: '★3 (Netral)',   color: 'bg-amber-500/15 text-amber-300 border-amber-500/30' },
-            { id: 'low',  label: '★1-2 (Komplain)', color: 'bg-red-500/15 text-red-400 border-red-500/30' },
+            { id: 'all',  label: t('tenantAdmin.ratings.tabAll'),      color: 'bg-dark-card text-off-white' },
+            { id: 'high', label: t('tenantAdmin.ratings.tabPositive'), color: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' },
+            { id: 'mid',  label: t('tenantAdmin.ratings.tabNeutral'),  color: 'bg-amber-500/15 text-amber-300 border-amber-500/30' },
+            { id: 'low',  label: t('tenantAdmin.ratings.tabComplaint'), color: 'bg-red-500/15 text-red-400 border-red-500/30' },
           ].map(tab => {
             const isActive = ratingTab === tab.id
             return (
@@ -435,10 +441,10 @@ function TARatingsPageInner() {
         {/* Status pills — always visible */}
         <div className="flex items-center gap-1.5 mt-2 overflow-x-auto pb-0.5">
           {[
-            { id: 'all',       label: 'Semua status' },
-            { id: 'pending',   label: 'Pending' },
-            { id: 'published', label: 'Published' },
-            { id: 'hidden',    label: 'Hidden' },
+            { id: 'all',       label: t('tenantAdmin.ratings.statusAll') },
+            { id: 'pending',   label: t('tenantAdmin.ratings.statusPending') },
+            { id: 'published', label: t('tenantAdmin.ratings.statusPublished') },
+            { id: 'hidden',    label: t('tenantAdmin.ratings.statusHiddenLabel') },
           ].map(s => (
             <button
               key={s.id}
@@ -466,32 +472,32 @@ function TARatingsPageInner() {
               className="overflow-hidden"
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-3 pt-3 border-t border-dark-border">
-                <FilterSelect label="Periode" value={period} onChange={setPeriod} options={[
-                  ['7d', '7 hari'], ['30d', '30 hari'], ['90d', '90 hari'], ['all', 'Semua'],
+                <FilterSelect label={t('tenantAdmin.ratings.filterPeriod')} value={period} onChange={setPeriod} options={[
+                  ['7d', t('tenantAdmin.ratings.days7')], ['30d', t('tenantAdmin.ratings.days30')], ['90d', t('tenantAdmin.ratings.days90')], ['all', t('tenantAdmin.ratings.optAll')],
                 ]} />
                 {branches.length > 1 && (
-                  <FilterSelect label="Cabang" value={branchId} onChange={setBranchId} options={[
-                    ['all', 'Semua cabang'],
+                  <FilterSelect label={t('tenantAdmin.ratings.filterBranch')} value={branchId} onChange={setBranchId} options={[
+                    ['all', t('tenantAdmin.ratings.allBranches')],
                     ...branches.map(b => [b.id, b.name]),
                   ]} />
                 )}
-                <FilterSelect label="Barber" value={barberId} onChange={setBarberId} options={[
-                  ['all', 'Semua barber'],
+                <FilterSelect label={t('tenantAdmin.ratings.filterBarber')} value={barberId} onChange={setBarberId} options={[
+                  ['all', t('tenantAdmin.ratings.allBarbers')],
                   ...allBarbers.map(b => [b.id, b.name]),
                 ]} />
-                <FilterSelect label="Komentar" value={hasComment} onChange={setHasComment} options={[
-                  ['any', 'Semua'], ['true', 'Ada komentar'], ['false', 'Tanpa komentar'],
+                <FilterSelect label={t('tenantAdmin.ratings.filterComment')} value={hasComment} onChange={setHasComment} options={[
+                  ['any', t('tenantAdmin.ratings.optAll')], ['true', t('tenantAdmin.ratings.hasComment')], ['false', t('tenantAdmin.ratings.noComment')],
                 ]} />
-                <FilterSelect label="Tiket" value={hasTicket} onChange={setHasTicket} options={[
-                  ['any', 'Semua'], ['true', 'Ada tiket'], ['false', 'Tanpa tiket'],
+                <FilterSelect label={t('tenantAdmin.ratings.filterTicket')} value={hasTicket} onChange={setHasTicket} options={[
+                  ['any', t('tenantAdmin.ratings.optAll')], ['true', t('tenantAdmin.ratings.hasTicket')], ['false', t('tenantAdmin.ratings.noTicket')],
                 ]} />
-                <FilterSelect label="Urutkan" value={`${sortBy}-${sortDir}`}
+                <FilterSelect label={t('tenantAdmin.ratings.filterSort')} value={`${sortBy}-${sortDir}`}
                   onChange={(v) => { const [b, d] = v.split('-'); setSortBy(b); setSortDir(d) }}
                   options={[
-                    ['createdAt-desc', 'Terbaru'],
-                    ['createdAt-asc',  'Terlama'],
-                    ['rating-desc',    'Rating tertinggi'],
-                    ['rating-asc',     'Rating terendah'],
+                    ['createdAt-desc', t('tenantAdmin.ratings.sortNewest')],
+                    ['createdAt-asc',  t('tenantAdmin.ratings.sortOldest')],
+                    ['rating-desc',    t('tenantAdmin.ratings.sortRatingHigh')],
+                    ['rating-asc',     t('tenantAdmin.ratings.sortRatingLow')],
                   ]}
                 />
                 <div className="flex items-end">
@@ -501,7 +507,7 @@ function TARatingsPageInner() {
                     disabled={!hasActiveFilter}
                     className="w-full px-3 py-2 rounded-xl bg-dark-card border border-dark-border text-xs text-muted hover:text-off-white disabled:opacity-50 transition-colors"
                   >
-                    Reset filter
+                    {t('tenantAdmin.ratings.resetFilter')}
                   </button>
                 </div>
               </div>
@@ -522,19 +528,19 @@ function TARatingsPageInner() {
           >
             <div className="text-sm text-off-white inline-flex items-center gap-2">
               <CheckSquare className="w-4 h-4 text-brand" />
-              <span className="font-medium">{selected.size} dipilih</span>
+              <span className="font-medium">{t('tenantAdmin.ratings.selectedCount', { count: selected.size })}</span>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
-              <Button size="sm" variant="outline" onClick={selectAllOnPage}>Pilih semua hal. ini</Button>
-              <Button size="sm" variant="outline" onClick={clearSel}>Batal pilih</Button>
+              <Button size="sm" variant="outline" onClick={selectAllOnPage}>{t('tenantAdmin.ratings.selectAllPage')}</Button>
+              <Button size="sm" variant="outline" onClick={clearSel}>{t('tenantAdmin.ratings.deselect')}</Button>
               <Button size="sm" variant="secondary" icon={Eye} onClick={() => setConfirmAction('bulk-publish')} loading={bulkPubMut.isPending}>
-                <span className="hidden sm:inline">Publish</span>
+                <span className="hidden sm:inline">{t('tenantAdmin.ratings.publish')}</span>
               </Button>
               <Button size="sm" variant="secondary" icon={EyeOff} onClick={() => setConfirmAction('bulk-hide')} loading={bulkHideMut.isPending}>
-                <span className="hidden sm:inline">Sembunyikan</span>
+                <span className="hidden sm:inline">{t('tenantAdmin.ratings.hide')}</span>
               </Button>
               <Button size="sm" variant="danger" icon={Trash2} onClick={() => setConfirmAction('bulk-delete')} loading={bulkDelMut.isPending}>
-                <span className="hidden sm:inline">Hapus</span>
+                <span className="hidden sm:inline">{t('common.delete')}</span>
               </Button>
             </div>
           </motion.div>
@@ -545,9 +551,9 @@ function TARatingsPageInner() {
       {isError ? (
         <Card className="p-6 sm:p-8 flex flex-col items-center text-center">
           <AlertTriangle size={32} className="text-amber-400 mb-3" />
-          <h3 className="font-semibold text-off-white mb-1">Gagal memuat rating</h3>
+          <h3 className="font-semibold text-off-white mb-1">{t('tenantAdmin.ratings.loadFailed')}</h3>
           <Button variant="secondary" size="sm" icon={RefreshCw} onClick={() => refetch()} className="mt-4">
-            Coba lagi
+            {t('common.retry')}
           </Button>
         </Card>
       ) : isLoading ? (
@@ -560,15 +566,15 @@ function TARatingsPageInner() {
         <Card className="p-6 sm:p-10 text-center">
           <MessageSquare className="w-12 h-12 text-muted/40 mx-auto mb-3" />
           <h3 className="font-semibold text-off-white mb-1">
-            {hasActiveFilter ? 'Tidak ada rating yang cocok' : 'Belum ada rating'}
+            {hasActiveFilter ? t('tenantAdmin.ratings.noMatch') : t('tenantAdmin.ratings.noRatings')}
           </h3>
           <p className="text-xs text-muted max-w-md mx-auto">
             {hasActiveFilter
-              ? 'Coba ubah filter atau reset untuk lihat semua rating.'
-              : 'Rating akan muncul di sini setelah kasir submit rating dari modal pembayaran POS.'}
+              ? t('tenantAdmin.ratings.noMatchHint')
+              : t('tenantAdmin.ratings.noRatingsHint')}
           </p>
           {hasActiveFilter && (
-            <Button variant="outline" size="sm" onClick={resetFilters} className="mt-4">Reset filter</Button>
+            <Button variant="outline" size="sm" onClick={resetFilters} className="mt-4">{t('tenantAdmin.ratings.resetFilter')}</Button>
           )}
         </Card>
       ) : (
@@ -582,7 +588,7 @@ function TARatingsPageInner() {
                     <th className="px-3 py-2.5 w-10">
                       <button
                         onClick={() => selected.size === items.length ? clearSel() : selectAllOnPage()}
-                        aria-label="Pilih semua"
+                        aria-label={t('tenantAdmin.ratings.selectAllAria')}
                         className="text-muted hover:text-brand"
                       >
                         {selected.size === items.length && items.length > 0
@@ -590,10 +596,10 @@ function TARatingsPageInner() {
                           : <Square className="w-4 h-4" />}
                       </button>
                     </th>
-                    <th className="px-3 py-2.5 text-left text-[11px] uppercase tracking-wide text-muted font-medium">Rating & Barber</th>
-                    <th className="px-3 py-2.5 text-left text-[11px] uppercase tracking-wide text-muted font-medium">Komentar</th>
-                    <th className="px-3 py-2.5 text-left text-[11px] uppercase tracking-wide text-muted font-medium whitespace-nowrap">Info</th>
-                    <th className="px-3 py-2.5 text-right text-[11px] uppercase tracking-wide text-muted font-medium">Aksi</th>
+                    <th className="px-3 py-2.5 text-left text-[11px] uppercase tracking-wide text-muted font-medium">{t('tenantAdmin.ratings.colRatingBarber')}</th>
+                    <th className="px-3 py-2.5 text-left text-[11px] uppercase tracking-wide text-muted font-medium">{t('tenantAdmin.ratings.colComment')}</th>
+                    <th className="px-3 py-2.5 text-left text-[11px] uppercase tracking-wide text-muted font-medium whitespace-nowrap">{t('tenantAdmin.ratings.colInfo')}</th>
+                    <th className="px-3 py-2.5 text-right text-[11px] uppercase tracking-wide text-muted font-medium">{t('tenantAdmin.ratings.colActions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-dark-border">
@@ -634,12 +640,12 @@ function TARatingsPageInner() {
           {meta.hasMore && (
             <div className="flex justify-center pt-2">
               <Button variant="secondary" size="sm" onClick={() => setCursor(meta.nextCursor)} loading={isFetching}>
-                Muat lebih banyak
+                {t('tenantAdmin.ratings.loadMore')}
               </Button>
             </div>
           )}
           {!meta.hasMore && items.length >= 50 && (
-            <p className="text-center text-xs text-muted py-2">— Semua data sudah dimuat —</p>
+            <p className="text-center text-xs text-muted py-2">{t('tenantAdmin.ratings.allLoaded')}</p>
           )}
         </>
       )}
@@ -658,27 +664,27 @@ function TARatingsPageInner() {
         isOpen={confirmAction === 'bulk-publish'}
         onClose={() => setConfirmAction(null)}
         onConfirm={performBulk}
-        title="Publikasi rating terpilih?"
-        description={`${selected.size} rating akan dijadikan testimoni public di /book. Hanya rating ≥4★ dengan komentar yang akan diproses, sisanya dilewati.`}
-        confirmText="Ya, publikasikan"
+        title={t('tenantAdmin.ratings.bulkPublishTitle')}
+        description={t('tenantAdmin.ratings.bulkPublishDesc', { count: selected.size })}
+        confirmText={t('tenantAdmin.ratings.confirmPublish')}
         variant="primary"
       />
       <ConfirmDialog
         isOpen={confirmAction === 'bulk-hide'}
         onClose={() => setConfirmAction(null)}
         onConfirm={performBulk}
-        title="Sembunyikan rating terpilih?"
-        description={`${selected.size} rating akan disembunyikan dari testimoni public. Bisa dipublikasi ulang nanti.`}
-        confirmText="Ya, sembunyikan"
+        title={t('tenantAdmin.ratings.bulkHideTitle')}
+        description={t('tenantAdmin.ratings.bulkHideDesc', { count: selected.size })}
+        confirmText={t('tenantAdmin.ratings.confirmHide')}
         variant="warning"
       />
       <ConfirmDialog
         isOpen={confirmAction === 'bulk-delete'}
         onClose={() => setConfirmAction(null)}
         onConfirm={performBulk}
-        title="Hapus rating terpilih?"
-        description={`${selected.size} rating akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.`}
-        confirmText="Ya, hapus permanen"
+        title={t('tenantAdmin.ratings.bulkDeleteTitle')}
+        description={t('tenantAdmin.ratings.bulkDeleteDesc', { count: selected.size })}
+        confirmText={t('tenantAdmin.ratings.confirmDelete')}
         variant="danger"
       />
     </div>
@@ -702,6 +708,7 @@ function FilterSelect({ label, value, onChange, options }) {
 }
 
 function RatingTableRow({ rating: r, checked, onToggle, onDetail, onPublish, onViewTicket, publishing }) {
+  const { t } = useTranslation()
   const isPublishable = r.rating >= 4 && !!r.comment
   const published = r.publishStatus === 'published'
   return (
@@ -710,7 +717,7 @@ function RatingTableRow({ rating: r, checked, onToggle, onDetail, onPublish, onV
       published ? 'bg-emerald-500/[0.03]' : ''
     }`}>
       <td className="px-3 py-2.5">
-        <button onClick={onToggle} aria-label="Pilih" className="text-muted hover:text-brand">
+        <button onClick={onToggle} aria-label={t('tenantAdmin.ratings.selectAria')} className="text-muted hover:text-brand">
           {checked ? <CheckSquare className="w-4 h-4 text-brand" /> : <Square className="w-4 h-4" />}
         </button>
       </td>
@@ -724,7 +731,7 @@ function RatingTableRow({ rating: r, checked, onToggle, onDetail, onPublish, onV
         {r.comment ? (
           <p className="text-xs italic text-off-white line-clamp-2 leading-snug">"{r.comment}"</p>
         ) : (
-          <span className="text-xs text-muted italic">— tanpa komentar —</span>
+          <span className="text-xs text-muted italic">{t('tenantAdmin.ratings.noCommentDash')}</span>
         )}
         {r.customerName && (
           <p className="text-[10px] text-muted mt-0.5 truncate">— {r.customerName}</p>
@@ -740,7 +747,7 @@ function RatingTableRow({ rating: r, checked, onToggle, onDetail, onPublish, onV
             <StatusBadge status={r.publishStatus} />
             {r.ticketId && (
               <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/40 font-semibold uppercase tracking-wide">
-                <Ticket className="w-2.5 h-2.5" /> Tiket
+                <Ticket className="w-2.5 h-2.5" /> {t('tenantAdmin.ratings.ticket')}
               </span>
             )}
           </div>
@@ -751,8 +758,8 @@ function RatingTableRow({ rating: r, checked, onToggle, onDetail, onPublish, onV
           {r.ticketId && (
             <button
               onClick={onViewTicket}
-              title="Lihat tiket"
-              aria-label="Lihat tiket terkait"
+              title={t('tenantAdmin.ratings.viewTicket')}
+              aria-label={t('tenantAdmin.ratings.viewRelatedTicket')}
               className="p-1.5 rounded-lg text-amber-300 hover:bg-amber-500/10 transition-colors"
             >
               <Ticket className="w-3.5 h-3.5" />
@@ -762,8 +769,8 @@ function RatingTableRow({ rating: r, checked, onToggle, onDetail, onPublish, onV
             <button
               onClick={() => onPublish('published')}
               disabled={publishing}
-              title="Publish"
-              aria-label="Publikasikan testimoni"
+              title={t('tenantAdmin.ratings.publish')}
+              aria-label={t('tenantAdmin.ratings.publishTestimonial')}
               className="p-1.5 rounded-lg text-emerald-300 hover:bg-emerald-500/10 transition-colors disabled:opacity-50"
             >
               <Eye className="w-3.5 h-3.5" />
@@ -773,8 +780,8 @@ function RatingTableRow({ rating: r, checked, onToggle, onDetail, onPublish, onV
             <button
               onClick={() => onPublish('hidden')}
               disabled={publishing}
-              title="Sembunyikan"
-              aria-label="Sembunyikan testimoni"
+              title={t('tenantAdmin.ratings.hide')}
+              aria-label={t('tenantAdmin.ratings.hideTestimonial')}
               className="p-1.5 rounded-lg text-muted hover:text-off-white hover:bg-dark-card transition-colors disabled:opacity-50"
             >
               <EyeOff className="w-3.5 h-3.5" />
@@ -782,8 +789,8 @@ function RatingTableRow({ rating: r, checked, onToggle, onDetail, onPublish, onV
           )}
           <button
             onClick={onDetail}
-            title="Detail"
-            aria-label="Lihat detail rating"
+            title={t('common.details')}
+            aria-label={t('tenantAdmin.ratings.viewDetail')}
             className="p-1.5 rounded-lg text-muted hover:text-off-white hover:bg-dark-card transition-colors"
           >
             <ExternalLink className="w-3.5 h-3.5" />
@@ -795,6 +802,7 @@ function RatingTableRow({ rating: r, checked, onToggle, onDetail, onPublish, onV
 }
 
 function RatingMobileCard({ rating: r, checked, onToggle, onDetail, onPublish, onViewTicket, publishing }) {
+  const { t } = useTranslation()
   const isPublishable = r.rating >= 4 && !!r.comment
   const published = r.publishStatus === 'published'
   const isLow = r.rating <= 2
@@ -804,7 +812,7 @@ function RatingMobileCard({ rating: r, checked, onToggle, onDetail, onPublish, o
       published ? 'bg-emerald-500/[0.05] border-emerald-500/30' : ''
     }`}>
       <div className="flex items-start gap-2.5">
-        <button onClick={onToggle} aria-label="Pilih" className="flex-shrink-0 mt-0.5 text-muted hover:text-brand">
+        <button onClick={onToggle} aria-label={t('tenantAdmin.ratings.selectAria')} className="flex-shrink-0 mt-0.5 text-muted hover:text-brand">
           {checked ? <CheckSquare className="w-4 h-4 text-brand" /> : <Square className="w-4 h-4" />}
         </button>
         <div className="flex-1 min-w-0 space-y-1.5">
@@ -812,7 +820,7 @@ function RatingMobileCard({ rating: r, checked, onToggle, onDetail, onPublish, o
             <div className="min-w-0 flex-1">
               <p className="text-sm text-off-white font-medium truncate">{r.barber?.name || '—'}</p>
               {r.customerName && (
-                <p className="text-[10px] text-muted truncate">— oleh {r.customerName}</p>
+                <p className="text-[10px] text-muted truncate">{t('tenantAdmin.ratings.byCustomer', { name: r.customerName })}</p>
               )}
             </div>
             <StarsRow value={r.rating} size="md" />
@@ -824,7 +832,7 @@ function RatingMobileCard({ rating: r, checked, onToggle, onDetail, onPublish, o
             <StatusBadge status={r.publishStatus} />
             {r.ticketId && (
               <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/40 font-semibold uppercase tracking-wide">
-                <Ticket className="w-2.5 h-2.5" /> Tiket
+                <Ticket className="w-2.5 h-2.5" /> {t('tenantAdmin.ratings.ticket')}
               </span>
             )}
             <span className="text-[10px] text-muted ml-auto">{formatDateTime(r.createdAt)}</span>
@@ -833,20 +841,20 @@ function RatingMobileCard({ rating: r, checked, onToggle, onDetail, onPublish, o
           <div className="flex items-center gap-1.5 pt-1 flex-wrap">
             {r.ticketId && (
               <button onClick={onViewTicket} className="flex-1 min-w-0 text-[11px] px-2 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 inline-flex items-center justify-center gap-1">
-                <Ticket className="w-3 h-3" /> Tiket
+                <Ticket className="w-3 h-3" /> {t('tenantAdmin.ratings.ticket')}
               </button>
             )}
             {isPublishable && !published && (
               <button onClick={() => onPublish('published')} disabled={publishing} className="flex-1 min-w-0 text-[11px] px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 inline-flex items-center justify-center gap-1 disabled:opacity-50">
-                <Eye className="w-3 h-3" /> Publish
+                <Eye className="w-3 h-3" /> {t('tenantAdmin.ratings.publish')}
               </button>
             )}
             {published && (
               <button onClick={() => onPublish('hidden')} disabled={publishing} className="flex-1 min-w-0 text-[11px] px-2 py-1 rounded bg-dark-card border border-dark-border text-muted inline-flex items-center justify-center gap-1 disabled:opacity-50">
-                <EyeOff className="w-3 h-3" /> Sembunyikan
+                <EyeOff className="w-3 h-3" /> {t('tenantAdmin.ratings.hide')}
               </button>
             )}
-            <button onClick={onDetail} aria-label="Lihat detail rating" className="flex-shrink-0 text-[11px] px-2 py-1 rounded bg-dark-card border border-dark-border text-muted inline-flex items-center gap-1">
+            <button onClick={onDetail} aria-label={t('tenantAdmin.ratings.viewDetail')} className="flex-shrink-0 text-[11px] px-2 py-1 rounded bg-dark-card border border-dark-border text-muted inline-flex items-center gap-1">
               <ExternalLink className="w-3 h-3" />
             </button>
           </div>
@@ -857,40 +865,41 @@ function RatingMobileCard({ rating: r, checked, onToggle, onDetail, onPublish, o
 }
 
 function RatingDetailModal({ rating: r, onClose, onPublish, onViewTicket, publishing }) {
+  const { t } = useTranslation()
   if (!r) return null
   const isPublishable = r.rating >= 4 && !!r.comment
   const published = r.publishStatus === 'published'
   return (
-    <Modal isOpen={!!r} onClose={onClose} title="Detail Rating" size="md">
+    <Modal isOpen={!!r} onClose={onClose} title={t('tenantAdmin.ratings.detailTitle')} size="md">
       <div className="space-y-4">
         {/* Hero */}
         <div className="p-4 rounded-xl bg-dark-card border border-dark-border">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-wide text-muted">Barber</p>
+              <p className="text-[10px] uppercase tracking-wide text-muted">{t('tenantAdmin.ratings.barber')}</p>
               <p className="text-lg font-bold text-off-white truncate">{r.barber?.name || '—'}</p>
             </div>
             <StarsRow value={r.rating} size="lg" />
           </div>
           <div className="mt-3 pt-3 border-t border-dark-border space-y-1.5 text-sm">
-            {r.customerName && <Row label="Pelanggan" value={r.customerName} />}
-            {r.branchName   && <Row label="Cabang"    value={r.branchName} />}
-            {r.transaction  && <Row label="Transaksi" value={`#${r.transactionId?.slice(-8).toUpperCase()} · ${formatRupiah(r.transaction.total)}`} />}
-            <Row label="Diberikan" value={formatDateTime(r.createdAt)} />
-            {r.publishedAt && <Row label="Dipublikasi" value={formatDateTime(r.publishedAt)} />}
+            {r.customerName && <Row label={t('tenantAdmin.ratings.customer')} value={r.customerName} />}
+            {r.branchName   && <Row label={t('tenantAdmin.ratings.branch')}    value={r.branchName} />}
+            {r.transaction  && <Row label={t('tenantAdmin.ratings.transaction')} value={`#${r.transactionId?.slice(-8).toUpperCase()} · ${formatRupiah(r.transaction.total)}`} />}
+            <Row label={t('tenantAdmin.ratings.givenAt')} value={formatDateTime(r.createdAt)} />
+            {r.publishedAt && <Row label={t('tenantAdmin.ratings.publishedAt')} value={formatDateTime(r.publishedAt)} />}
           </div>
         </div>
 
         {/* Comment */}
         {r.comment ? (
           <div>
-            <p className="text-[10px] uppercase tracking-wide text-muted mb-1.5">Komentar Pelanggan</p>
+            <p className="text-[10px] uppercase tracking-wide text-muted mb-1.5">{t('tenantAdmin.ratings.customerComment')}</p>
             <div className="p-3 rounded-xl bg-dark-surface border border-dark-border italic text-sm text-off-white leading-relaxed">
               "{r.comment}"
             </div>
           </div>
         ) : (
-          <p className="text-xs text-muted text-center py-2">— Tanpa komentar —</p>
+          <p className="text-xs text-muted text-center py-2">{t('tenantAdmin.ratings.noCommentDash')}</p>
         )}
 
         {/* Status & flags */}
@@ -898,33 +907,33 @@ function RatingDetailModal({ rating: r, onClose, onPublish, onViewTicket, publis
           <StatusBadge status={r.publishStatus} />
           {r.ticketId && (
             <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/40 font-semibold uppercase tracking-wide">
-              <Ticket className="w-2.5 h-2.5" /> Tiket dibuat
+              <Ticket className="w-2.5 h-2.5" /> {t('tenantAdmin.ratings.ticketCreated')}
             </span>
           )}
         </div>
 
         {/* Actions */}
         <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
-          <Button variant="outline" fullWidth onClick={onClose}>Tutup</Button>
+          <Button variant="outline" fullWidth onClick={onClose}>{t('common.close')}</Button>
           {r.ticketId && (
             <Button variant="secondary" fullWidth icon={Ticket} onClick={onViewTicket}>
-              Lihat tiket
+              {t('tenantAdmin.ratings.viewTicket')}
             </Button>
           )}
           {published ? (
             <Button variant="secondary" fullWidth icon={EyeOff} onClick={() => onPublish('hidden')} loading={publishing}>
-              Sembunyikan
+              {t('tenantAdmin.ratings.hide')}
             </Button>
           ) : isPublishable ? (
             <Button variant="primary" fullWidth icon={Eye} onClick={() => onPublish('published')} loading={publishing}>
-              Publikasi
+              {t('tenantAdmin.ratings.publish')}
             </Button>
           ) : null}
         </div>
 
         {!isPublishable && r.publishStatus !== 'published' && (
           <p className="text-[11px] text-muted text-center">
-            Hanya rating ≥4★ dengan komentar yang bisa dipublikasi.
+            {t('tenantAdmin.ratings.publishableHint')}
           </p>
         )}
       </div>

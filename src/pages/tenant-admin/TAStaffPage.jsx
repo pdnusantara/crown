@@ -138,12 +138,12 @@ export default function TAStaffPage() {
 
   const validateForm = () => {
     const err = {}
-    if (!form.name) err.name = 'Wajib diisi'
-    if (!form.branchId) err.branchId = 'Pilih cabang'
+    if (!form.name) err.name = t('common.required')
+    if (!form.branchId) err.branchId = t('tenantAdmin.staff.selectBranch')
     if (!editStaff) {
       // Email hanya wajib saat membuat akun baru — login dipakai email.
-      if (!form.email) err.email = 'Email login wajib diisi'
-      else if (!/^\S+@\S+\.\S+$/.test(form.email)) err.email = 'Format email tidak valid'
+      if (!form.email) err.email = t('tenantAdmin.staff.emailLoginRequired')
+      else if (!/^\S+@\S+\.\S+$/.test(form.email)) err.email = t('tenantAdmin.staff.emailInvalid')
     }
     setFormError(err)
     return Object.keys(err).length === 0
@@ -276,8 +276,8 @@ export default function TAStaffPage() {
                   : 'bg-green-500/10 border-green-500/30 text-green-400'
               }`}>
                 <Users className="w-3 h-3" />
-                {staffUsed} / {staffQuota} staf
-                {overQuota && ` · over ${staffUsed - staffQuota}`}
+                {staffUsed} / {staffQuota} {t('tenantAdmin.staff.staffUnit')}
+                {overQuota && ` · ${t('tenantAdmin.staff.overBy', { count: staffUsed - staffQuota })}`}
               </span>
             )}
           </div>
@@ -302,7 +302,7 @@ export default function TAStaffPage() {
                   i18nKey="tenantAdmin.staff.overQuotaAddon"
                   values={{
                     price: formatRupiah(staffAddonPrice),
-                    unit:  staffAddonType === 'monthly' ? 'bln' : 'staf',
+                    unit:  staffAddonType === 'monthly' ? t('tenantAdmin.staff.unitMonth') : t('tenantAdmin.staff.unitStaff'),
                     over:  staffUsed - staffQuota,
                     pkg:   subscription?.package,
                     perInfo: bonusPerBranch > 0
@@ -327,7 +327,7 @@ export default function TAStaffPage() {
                 values={{
                   next:  staffQuota + 1,
                   price: formatRupiah(staffAddonPrice),
-                  unit:  staffAddonType === 'monthly' ? 'bln' : 'staf',
+                  unit:  staffAddonType === 'monthly' ? t('tenantAdmin.staff.unitMonth') : t('tenantAdmin.staff.unitStaff'),
                 }}
                 components={{ b: <b className="text-off-white" /> }}
               />
@@ -480,8 +480,8 @@ export default function TAStaffPage() {
                         <a
                           href={`tel:${member.phone.replace(/[^\d+]/g, '')}`}
                           onClick={e => e.stopPropagation()}
-                          title={`Telepon ${member.name}`}
-                          aria-label={`Telepon ${member.name}`}
+                          title={`${t('common.phone')} ${member.name}`}
+                          aria-label={`${t('common.phone')} ${member.name}`}
                           className="p-1 rounded-md text-brand hover:bg-brand/10 transition-colors"
                         >
                           <Phone className="w-3.5 h-3.5" />

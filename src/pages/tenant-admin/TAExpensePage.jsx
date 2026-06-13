@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -7,7 +8,7 @@ import {
   CopyPlus, ArrowUp, ArrowDown, Minus, Users, Check,
 } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, parseISO } from 'date-fns'
-import { id as idLocale } from 'date-fns/locale'
+import { id as idLocale, enUS as enLocale } from 'date-fns/locale'
 import { useAuthStore } from '../../store/authStore.js'
 import { useFeatureFlags } from '../../hooks/useFeatureFlags.js'
 import { useReportSummary, useStaffPayroll } from '../../hooks/useReports.js'
@@ -28,11 +29,11 @@ import { useToast } from '../../components/ui/Toast.jsx'
 // ── Constants ───────────────────────────────────────────────────────────────────
 const PAGE_LIMIT = 12
 
-const SORT_OPTIONS = [
-  { value: 'date-desc',   label: 'Terbaru' },
-  { value: 'date-asc',    label: 'Terlama' },
-  { value: 'amount-desc', label: 'Nominal ↓' },
-  { value: 'amount-asc',  label: 'Nominal ↑' },
+const SORT_OPTIONS = (t) => [
+  { value: 'date-desc',   label: t('tenantAdmin.expenses.sortNewest') },
+  { value: 'date-asc',    label: t('tenantAdmin.expenses.sortOldest') },
+  { value: 'amount-desc', label: t('tenantAdmin.expenses.sortAmountDesc') },
+  { value: 'amount-asc',  label: t('tenantAdmin.expenses.sortAmountAsc') },
 ]
 
 const EMPTY_FORM = () => ({
@@ -48,26 +49,26 @@ const EMPTY_FORM = () => ({
 // Tanggal pengeluaran disimpan UTC-midnight — ambil bagian kalender saja
 // supaya tidak bergeser hari karena timezone browser.
 const ymd = (iso) => (iso ? String(iso).slice(0, 10) : '')
-const fmtDate = (iso) => {
-  try { return format(parseISO(ymd(iso)), 'd MMM yyyy', { locale: idLocale }) }
+const fmtDate = (iso, locale = idLocale) => {
+  try { return format(parseISO(ymd(iso)), 'd MMM yyyy', { locale }) }
   catch { return '—' }
 }
 
 // ── Paywall ─────────────────────────────────────────────────────────────────────
 function Paywall() {
+  const { t } = useTranslation()
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center p-8">
       <div className="w-16 h-16 rounded-2xl bg-brand/10 border border-brand/20 flex items-center justify-center">
         <Wallet className="w-7 h-7 text-brand" />
       </div>
-      <h2 className="text-xl font-semibold text-off-white">Manajemen Pengeluaran</h2>
+      <h2 className="text-xl font-semibold text-off-white">{t('tenantAdmin.expenses.paywallTitle')}</h2>
       <p className="text-muted max-w-sm text-sm">
-        Fitur ini tersedia di paket <strong className="text-brand">Pro</strong> dan{' '}
-        <strong className="text-brand">Enterprise</strong>. Upgrade paket untuk mencatat biaya
-        operasional dan melihat laba bersih bisnis Anda.
+        {t('tenantAdmin.expenses.paywallDescPart1')} <strong className="text-brand">Pro</strong> {t('tenantAdmin.expenses.paywallAnd')}{' '}
+        <strong className="text-brand">Enterprise</strong>. {t('tenantAdmin.expenses.paywallDescPart2')}
       </p>
       <a href="/admin/billing" className="px-5 py-2.5 bg-brand text-dark rounded-xl font-semibold text-sm hover:bg-brand/90 transition-colors">
-        Lihat Paket
+        {t('tenantAdmin.expenses.viewPackages')}
       </a>
     </div>
   )
@@ -76,16 +77,17 @@ function Paywall() {
 // ── Delta chip — perubahan biaya vs bulan lalu ──────────────────────────────────
 // Untuk pengeluaran: KENAIKAN biaya = buruk (merah), penurunan = baik (hijau).
 function DeltaChip({ pct }) {
+  const { t } = useTranslation()
   if (pct == null) return null
   if (pct === 0) return (
-    <span title="Sama dengan bulan lalu"
+    <span title={t('tenantAdmin.expenses.sameAsLastMonth')}
       className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-dark-surface text-muted">
       <Minus size={10} />0%
     </span>
   )
   const up = pct > 0
   return (
-    <span title="Dibandingkan bulan lalu"
+    <span title={t('tenantAdmin.expenses.comparedToLastMonth')}
       className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
         up ? 'bg-red-500/15 text-red-400' : 'bg-green-500/15 text-green-400'
       }`}>
@@ -116,6 +118,7 @@ function SummaryCard({ label, value, sub, accent, icon: Icon, loading, delta }) 
 
 // ── Category breakdown ──────────────────────────────────────────────────────────
 function CategoryBreakdown({ byCategory, total }) {
+  const { t } = useTranslation()
   const sorted = useMemo(() => EXPENSE_CATEGORIES
     .map(c => ({ ...c, amount: byCategory?.[c.id] || 0 }))
     .filter(c => c.amount > 0)
@@ -125,7 +128,7 @@ function CategoryBreakdown({ byCategory, total }) {
 
   return (
     <div className="bg-dark-card border border-dark-border rounded-2xl p-4 space-y-3">
-      <p className="text-[11px] text-muted uppercase tracking-wider font-medium">Breakdown Kategori</p>
+      <p className="text-[11px] text-muted uppercase tracking-wider font-medium">{t('tenantAdmin.expenses.categoryBreakdown')}</p>
       {sorted.map(c => {
         const pct = Math.round((c.amount / total) * 100)
         return (
@@ -157,6 +160,7 @@ function CategoryBreakdown({ byCategory, total }) {
 
 // ── Expense form modal ──────────────────────────────────────────────────────────
 function ExpenseFormModal({ open, onClose, initial, branches, onSaved }) {
+  const { t } = useTranslation()
   const toast = useToast()
   const createExpense = useCreateExpense()
   const updateExpense = useUpdateExpense()
@@ -189,9 +193,9 @@ function ExpenseFormModal({ open, onClose, initial, branches, onSaved }) {
   const amountNum = Number(form.amount)
 
   const handleSave = async () => {
-    if (!form.description.trim()) return setError('Deskripsi wajib diisi')
-    if (!form.amount || isNaN(amountNum) || amountNum <= 0) return setError('Nominal harus lebih dari 0')
-    if (!form.date) return setError('Tanggal wajib diisi')
+    if (!form.description.trim()) return setError(t('tenantAdmin.expenses.descRequired'))
+    if (!form.amount || isNaN(amountNum) || amountNum <= 0) return setError(t('tenantAdmin.expenses.amountPositive'))
+    if (!form.date) return setError(t('tenantAdmin.expenses.dateRequired'))
     setError('')
 
     const payload = {
@@ -206,25 +210,25 @@ function ExpenseFormModal({ open, onClose, initial, branches, onSaved }) {
     try {
       if (initial?.id) {
         await updateExpense.mutateAsync({ id: initial.id, ...payload })
-        toast.success('Pengeluaran diperbarui')
+        toast.success(t('tenantAdmin.expenses.expenseUpdated'))
       } else {
         await createExpense.mutateAsync(payload)
-        toast.success('Pengeluaran ditambahkan')
+        toast.success(t('tenantAdmin.expenses.expenseAdded'))
       }
       onSaved?.()
       onClose()
     } catch (err) {
-      const msg = err?.response?.data?.error || 'Gagal menyimpan pengeluaran'
+      const msg = err?.response?.data?.error || t('tenantAdmin.expenses.saveFailed')
       setError(msg)
       toast.error(msg)
     }
   }
 
   return (
-    <Modal isOpen={open} onClose={onClose} title={initial?.id ? 'Edit Pengeluaran' : 'Tambah Pengeluaran'} size="sm">
+    <Modal isOpen={open} onClose={onClose} title={initial?.id ? t('tenantAdmin.expenses.editExpense') : t('tenantAdmin.expenses.addExpense')} size="sm">
       <div className="space-y-4">
         <div>
-          <label className="block text-xs text-muted mb-1.5">Tanggal</label>
+          <label className="block text-xs text-muted mb-1.5">{t('tenantAdmin.expenses.date')}</label>
           <input
             type="date"
             value={form.date}
@@ -234,7 +238,7 @@ function ExpenseFormModal({ open, onClose, initial, branches, onSaved }) {
         </div>
 
         <div>
-          <label className="block text-xs text-muted mb-1.5">Kategori</label>
+          <label className="block text-xs text-muted mb-1.5">{t('tenantAdmin.expenses.category')}</label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {EXPENSE_CATEGORIES.map(c => (
               <button
@@ -256,18 +260,18 @@ function ExpenseFormModal({ open, onClose, initial, branches, onSaved }) {
         </div>
 
         <div>
-          <label className="block text-xs text-muted mb-1.5">Deskripsi</label>
+          <label className="block text-xs text-muted mb-1.5">{t('tenantAdmin.expenses.description')}</label>
           <input
             value={form.description}
             onChange={e => set('description', e.target.value)}
             maxLength={200}
-            placeholder="Contoh: Gaji barber bulan Mei"
+            placeholder={t('tenantAdmin.expenses.descPlaceholder')}
             className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60"
           />
         </div>
 
         <div>
-          <label className="block text-xs text-muted mb-1.5">Nominal (Rp)</label>
+          <label className="block text-xs text-muted mb-1.5">{t('tenantAdmin.expenses.amountRp')}</label>
           <input
             type="number"
             inputMode="numeric"
@@ -285,14 +289,14 @@ function ExpenseFormModal({ open, onClose, initial, branches, onSaved }) {
         {branches.length > 0 && (
           <div>
             <label className="block text-xs text-muted mb-1.5">
-              Cabang <span className="opacity-50">(opsional)</span>
+              {t('tenantAdmin.expenses.branch')} <span className="opacity-50">({t('common.optional')})</span>
             </label>
             <select
               value={form.branchId}
               onChange={e => set('branchId', e.target.value)}
               className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60"
             >
-              <option value="">Semua Cabang</option>
+              <option value="">{t('tenantAdmin.expenses.allBranches')}</option>
               {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
@@ -300,13 +304,13 @@ function ExpenseFormModal({ open, onClose, initial, branches, onSaved }) {
 
         <div>
           <label className="block text-xs text-muted mb-1.5">
-            Catatan <span className="opacity-50">(opsional)</span>
+            {t('tenantAdmin.expenses.note')} <span className="opacity-50">({t('common.optional')})</span>
           </label>
           <input
             value={form.note}
             onChange={e => set('note', e.target.value)}
             maxLength={500}
-            placeholder="Catatan tambahan…"
+            placeholder={t('tenantAdmin.expenses.notePlaceholder')}
             className="w-full bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-xl px-3 py-2.5 text-sm outline-none focus:border-brand/60"
           />
         </div>
@@ -318,9 +322,9 @@ function ExpenseFormModal({ open, onClose, initial, branches, onSaved }) {
         )}
 
         <div className="flex gap-3 pt-1">
-          <Button variant="outline" fullWidth onClick={onClose} disabled={saving}>Batal</Button>
+          <Button variant="outline" fullWidth onClick={onClose} disabled={saving}>{t('common.cancel')}</Button>
           <Button fullWidth onClick={handleSave} loading={saving}>
-            {initial?.id ? 'Simpan' : 'Tambah'}
+            {initial?.id ? t('common.save') : t('common.add')}
           </Button>
         </div>
       </div>
@@ -334,13 +338,15 @@ function ExpenseFormModal({ open, onClose, initial, branches, onSaved }) {
 const EMPTY_ROWS = []
 
 function CopyMonthModal({ open, onClose, fromMonth, toMonth }) {
+  const { t, i18n } = useTranslation()
+  const dfLocale = i18n.language === 'en' ? enLocale : idLocale
   const toast = useToast()
   const copyMonth = useCopyMonthExpenses()
 
   const fromStart  = format(startOfMonth(fromMonth), 'yyyy-MM-dd')
   const fromEnd    = format(endOfMonth(fromMonth), 'yyyy-MM-dd')
-  const fromLabel  = format(fromMonth, 'MMMM yyyy', { locale: idLocale })
-  const toLabel    = format(toMonth, 'MMMM yyyy', { locale: idLocale })
+  const fromLabel  = format(fromMonth, 'MMMM yyyy', { locale: dfLocale })
+  const toLabel    = format(toMonth, 'MMMM yyyy', { locale: dfLocale })
   const toMonthStr = format(toMonth, 'yyyy-MM')
 
   const { data, isLoading, isError } = useQuery({
@@ -377,19 +383,18 @@ function CopyMonthModal({ open, onClose, fromMonth, toMonth }) {
     if (ids.length === 0) return
     try {
       const res = await copyMonth.mutateAsync({ ids, toMonth: toMonthStr })
-      toast.success(`${res?.created ?? ids.length} pengeluaran disalin ke ${toLabel}`)
+      toast.success(t('tenantAdmin.expenses.copiedToMonth', { count: res?.created ?? ids.length, month: toLabel }))
       onClose()
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal menyalin pengeluaran')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.expenses.copyFailed'))
     }
   }
 
   return (
-    <Modal isOpen={open} onClose={onClose} title="Salin Pengeluaran" size="md">
+    <Modal isOpen={open} onClose={onClose} title={t('tenantAdmin.expenses.copyExpenses')} size="md">
       <div className="space-y-3">
         <p className="text-xs text-muted">
-          Pilih pengeluaran dari <span className="text-off-white font-medium capitalize">{fromLabel}</span> untuk
-          disalin ke <span className="text-brand font-medium capitalize">{toLabel}</span>.
+          {t('tenantAdmin.expenses.copyIntroPart1')} <span className="text-off-white font-medium capitalize">{fromLabel}</span> {t('tenantAdmin.expenses.copyIntroPart2')} <span className="text-brand font-medium capitalize">{toLabel}</span>.
         </p>
 
         {isLoading ? (
@@ -399,14 +404,14 @@ function CopyMonthModal({ open, onClose, fromMonth, toMonth }) {
         ) : isError ? (
           <div className="flex flex-col items-center gap-2 py-10 text-center">
             <AlertCircle size={22} className="text-red-400" />
-            <p className="text-sm text-muted">Gagal memuat data bulan lalu</p>
+            <p className="text-sm text-muted">{t('tenantAdmin.expenses.loadLastMonthFailed')}</p>
           </div>
         ) : rows.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-10 text-center">
             <div className="w-12 h-12 rounded-2xl bg-dark-surface border border-dark-border flex items-center justify-center">
               <Receipt size={22} className="text-muted" />
             </div>
-            <p className="text-sm text-muted capitalize">Tidak ada pengeluaran di {fromLabel}</p>
+            <p className="text-sm text-muted capitalize">{t('tenantAdmin.expenses.noExpensesInMonth', { month: fromLabel })}</p>
           </div>
         ) : (
           <>
@@ -416,7 +421,7 @@ function CopyMonthModal({ open, onClose, fromMonth, toMonth }) {
               className="flex items-center gap-2 text-xs text-muted hover:text-off-white transition-colors"
             >
               {allSelected ? <CheckSquare size={15} className="text-brand" /> : <Square size={15} />}
-              {allSelected ? 'Batalkan semua' : 'Pilih semua'}
+              {allSelected ? t('tenantAdmin.expenses.deselectAll') : t('tenantAdmin.expenses.selectAll')}
             </button>
 
             <div className="max-h-[44vh] overflow-y-auto -mx-1 divide-y divide-dark-border">
@@ -441,7 +446,7 @@ function CopyMonthModal({ open, onClose, fromMonth, toMonth }) {
                       <p className="text-[10px] text-muted">
                         {cat.label}
                         {r.branch?.name && ` · ${r.branch.name}`}
-                        {' · '}{fmtDate(r.date)}
+                        {' · '}{fmtDate(r.date, dfLocale)}
                       </p>
                     </div>
                     <span className="text-sm font-semibold text-red-400 flex-shrink-0 tabular-nums">
@@ -454,7 +459,7 @@ function CopyMonthModal({ open, onClose, fromMonth, toMonth }) {
 
             <div className="flex items-center justify-between gap-2 pt-1 text-xs">
               <span className="text-muted">
-                <span className="text-off-white font-medium">{selected.size}</span> dipilih
+                <span className="text-off-white font-medium">{selected.size}</span> {t('tenantAdmin.expenses.selectedLabel')}
               </span>
               <span className="text-red-400 font-semibold tabular-nums">{formatRupiah(selectedTotal)}</span>
             </div>
@@ -463,7 +468,7 @@ function CopyMonthModal({ open, onClose, fromMonth, toMonth }) {
 
         <div className="flex gap-3 pt-1">
           <Button variant="outline" fullWidth onClick={onClose} disabled={copyMonth.isPending}>
-            Batal
+            {t('common.cancel')}
           </Button>
           <Button
             fullWidth
@@ -472,7 +477,7 @@ function CopyMonthModal({ open, onClose, fromMonth, toMonth }) {
             loading={copyMonth.isPending}
             disabled={selected.size === 0 || isLoading}
           >
-            Salin {selected.size > 0 ? `(${selected.size})` : ''}
+            {t('tenantAdmin.expenses.copy')} {selected.size > 0 ? `(${selected.size})` : ''}
           </Button>
         </div>
       </div>
@@ -482,6 +487,7 @@ function CopyMonthModal({ open, onClose, fromMonth, toMonth }) {
 
 // ── Expense list item (desktop row + mobile card share this) ────────────────────
 function ExpenseItem({ expense, selected, onToggleSelect, onEdit, onDelete }) {
+  const { t, i18n } = useTranslation()
   const cat = catById(expense.category)
   const branchName = expense.branch?.name
 
@@ -490,7 +496,7 @@ function ExpenseItem({ expense, selected, onToggleSelect, onEdit, onDelete }) {
       <button
         type="button"
         onClick={() => onToggleSelect(expense.id)}
-        aria-label={selected ? 'Batal pilih' : 'Pilih'}
+        aria-label={selected ? t('tenantAdmin.expenses.deselect') : t('tenantAdmin.expenses.selectAria')}
         className="flex-shrink-0 text-muted hover:text-brand transition-colors"
       >
         {selected ? <CheckSquare size={18} className="text-brand" /> : <Square size={18} />}
@@ -505,7 +511,7 @@ function ExpenseItem({ expense, selected, onToggleSelect, onEdit, onDelete }) {
         <div className="flex items-center gap-x-2 gap-y-0.5 mt-0.5 flex-wrap">
           <span className={`text-[10px] font-medium ${cat.color}`}>{cat.label}</span>
           {branchName && <span className="text-[10px] text-muted">· {branchName}</span>}
-          <span className="text-[10px] text-muted">· {fmtDate(expense.date)}</span>
+          <span className="text-[10px] text-muted">· {fmtDate(expense.date, i18n.language === 'en' ? enLocale : idLocale)}</span>
         </div>
       </div>
 
@@ -518,7 +524,7 @@ function ExpenseItem({ expense, selected, onToggleSelect, onEdit, onDelete }) {
         <button
           type="button"
           onClick={() => onEdit(expense)}
-          aria-label="Edit pengeluaran"
+          aria-label={t('tenantAdmin.expenses.editAria')}
           className="p-1.5 rounded-lg text-muted hover:text-brand hover:bg-dark-surface transition-colors"
         >
           <Pencil size={14} />
@@ -526,7 +532,7 @@ function ExpenseItem({ expense, selected, onToggleSelect, onEdit, onDelete }) {
         <button
           type="button"
           onClick={() => onDelete(expense)}
-          aria-label="Hapus pengeluaran"
+          aria-label={t('tenantAdmin.expenses.deleteAria')}
           className="p-1.5 rounded-lg text-muted hover:text-red-400 hover:bg-dark-surface transition-colors"
         >
           <Trash2 size={14} />
@@ -559,15 +565,16 @@ function ListSkeleton() {
 // modal ini menampilkan komisi tiap barber periode berjalan, lalu "Catat" mengisi
 // form pengeluaran (kategori Gaji & Honor) otomatis untuk di-review & disimpan.
 // Rincian per skema gaji untuk modal Gaji Staf.
-function payDetail(s) {
-  if (s.salaryType === 'fixed') return 'Gaji pokok bulanan tetap'
+function payDetail(s, t) {
+  if (s.salaryType === 'fixed') return t('tenantAdmin.expenses.payDetailFixed')
   if (s.salaryType === 'hybrid') {
-    return `Pokok ${formatRupiahShort(s.baseSalary)} + komisi ${formatRupiahShort(s.commission)}`
+    return t('tenantAdmin.expenses.payDetailHybrid', { base: formatRupiahShort(s.baseSalary), commission: formatRupiahShort(s.commission) })
   }
-  return `Omzet ${formatRupiahShort(s.revenue)} · ${Math.round((s.commissionRate || 0) * 100)}% · ${s.servicesCount} layanan`
+  return t('tenantAdmin.expenses.payDetailCommission', { revenue: formatRupiahShort(s.revenue), pct: Math.round((s.commissionRate || 0) * 100), count: s.servicesCount })
 }
 
 function StaffPayrollModal({ open, onClose, monthLabel, startDate, endDate, onPick }) {
+  const { t } = useTranslation()
   const { user } = useAuthStore()
   const { data, isLoading, isError } = useStaffPayroll(
     open ? user?.tenantId : undefined,
@@ -596,12 +603,10 @@ function StaffPayrollModal({ open, onClose, monthLabel, startDate, endDate, onPi
   const paidCount = staff.filter(s => paidIds.has(s.barberId)).length
 
   return (
-    <Modal isOpen={open} onClose={onClose} title="Gaji Staf" size="md">
+    <Modal isOpen={open} onClose={onClose} title={t('tenantAdmin.expenses.staffSalary')} size="md">
       <div className="space-y-3">
         <p className="text-xs text-muted">
-          Gaji tiap staf (barber &amp; kasir) untuk <span className="text-off-white font-medium capitalize">{monthLabel}</span> sesuai
-          skema masing-masing. Klik <span className="text-brand">Catat</span> untuk mengisi form pengeluaran
-          otomatis. Tanda <span className="text-green-400">✓ Dicatat</span> = sudah masuk pengeluaran bulan ini.
+          {t('tenantAdmin.expenses.payrollIntroPart1')} <span className="text-off-white font-medium capitalize">{monthLabel}</span> {t('tenantAdmin.expenses.payrollIntroPart2')} <span className="text-brand">{t('tenantAdmin.expenses.record')}</span> {t('tenantAdmin.expenses.payrollIntroPart3')} <span className="text-green-400">{t('tenantAdmin.expenses.recordedCheck')}</span> {t('tenantAdmin.expenses.payrollIntroPart4')}
         </p>
 
         {isLoading ? (
@@ -611,14 +616,14 @@ function StaffPayrollModal({ open, onClose, monthLabel, startDate, endDate, onPi
         ) : isError ? (
           <div className="flex flex-col items-center gap-2 py-10 text-center">
             <AlertCircle size={22} className="text-red-400" />
-            <p className="text-sm text-muted">Gagal memuat data gaji staf</p>
+            <p className="text-sm text-muted">{t('tenantAdmin.expenses.loadPayrollFailed')}</p>
           </div>
         ) : staff.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-10 text-center">
             <div className="w-12 h-12 rounded-2xl bg-dark-surface border border-dark-border flex items-center justify-center">
               <Users size={20} className="text-muted" />
             </div>
-            <p className="text-sm text-muted capitalize">Belum ada gaji staf untuk dibayar di {monthLabel}</p>
+            <p className="text-sm text-muted capitalize">{t('tenantAdmin.expenses.noPayrollInMonth', { month: monthLabel })}</p>
           </div>
         ) : (
           <>
@@ -637,17 +642,17 @@ function StaffPayrollModal({ open, onClose, monthLabel, startDate, endDate, onPi
                         <span className={`text-[9px] px-1.5 py-0.5 rounded flex-shrink-0 whitespace-nowrap ${
                           isKasir ? 'bg-blue-400/15 text-blue-300' : 'bg-dark-surface text-muted'
                         }`}>
-                          {isKasir ? 'Kasir' : 'Barber'}
+                          {isKasir ? t('tenantAdmin.expenses.roleKasir') : t('tenantAdmin.expenses.roleBarber')}
                         </span>
                       </div>
-                      <p className="text-[10px] text-muted truncate">{payDetail(s)}</p>
+                      <p className="text-[10px] text-muted truncate">{payDetail(s, t)}</p>
                       {s.attendance && (s.attendance.present + s.attendance.late + s.attendance.absent + s.attendance.leave) > 0 && (
                         <p className="text-[10px] truncate">
-                          <span className="text-muted">Absensi: </span>
-                          <span className="text-green-400">{s.attendance.present + s.attendance.late} hadir</span>
-                          {s.attendance.late > 0 && <span className="text-amber-400"> · {s.attendance.late} telat</span>}
-                          {s.attendance.absent > 0 && <span className="text-red-400"> · {s.attendance.absent} alpa</span>}
-                          {s.attendance.leave > 0 && <span className="text-blue-400"> · {s.attendance.leave} izin</span>}
+                          <span className="text-muted">{t('tenantAdmin.expenses.attendanceLabel')} </span>
+                          <span className="text-green-400">{t('tenantAdmin.expenses.attPresent', { count: s.attendance.present + s.attendance.late })}</span>
+                          {s.attendance.late > 0 && <span className="text-amber-400"> · {t('tenantAdmin.expenses.attLate', { count: s.attendance.late })}</span>}
+                          {s.attendance.absent > 0 && <span className="text-red-400"> · {t('tenantAdmin.expenses.attAbsent', { count: s.attendance.absent })}</span>}
+                          {s.attendance.leave > 0 && <span className="text-blue-400"> · {t('tenantAdmin.expenses.attLeave', { count: s.attendance.leave })}</span>}
                         </p>
                       )}
                     </div>
@@ -656,11 +661,11 @@ function StaffPayrollModal({ open, onClose, monthLabel, startDate, endDate, onPi
                     </span>
                     {paid ? (
                       <span className="inline-flex items-center gap-1 text-[10px] font-medium text-green-400 bg-green-500/10 border border-green-500/20 px-2 py-1 rounded-lg flex-shrink-0">
-                        <Check size={12} /> Dicatat
+                        <Check size={12} /> {t('tenantAdmin.expenses.recorded')}
                       </span>
                     ) : (
                       <Button size="xs" variant="secondary" onClick={() => onPick(s)} className="flex-shrink-0">
-                        Catat
+                        {t('tenantAdmin.expenses.record')}
                       </Button>
                     )}
                   </div>
@@ -669,11 +674,11 @@ function StaffPayrollModal({ open, onClose, monthLabel, startDate, endDate, onPi
             </div>
             <div className="flex items-center justify-between gap-2 pt-2 text-xs border-t border-dark-border">
               <span className="text-muted">
-                {staff.length} staf
-                {paidCount > 0 && <span className="text-green-400"> · {paidCount} sudah dicatat</span>}
+                {t('tenantAdmin.expenses.staffCount', { count: staff.length })}
+                {paidCount > 0 && <span className="text-green-400"> · {t('tenantAdmin.expenses.recordedCount', { count: paidCount })}</span>}
               </span>
               <span className="text-off-white font-semibold tabular-nums">
-                Total gaji {formatRupiah(totalPay)}
+                {t('tenantAdmin.expenses.totalSalary', { amount: formatRupiah(totalPay) })}
               </span>
             </div>
           </>
@@ -685,6 +690,8 @@ function StaffPayrollModal({ open, onClose, monthLabel, startDate, endDate, onPi
 
 // ── Main page ───────────────────────────────────────────────────────────────────
 function ExpensePageInner() {
+  const { t, i18n } = useTranslation()
+  const dfLocale = i18n.language === 'en' ? enLocale : idLocale
   const { user } = useAuthStore()
   const toast = useToast()
   const tenantId = user?.tenantId
@@ -698,7 +705,7 @@ function ExpensePageInner() {
   const [activeMonth, setActiveMonth] = useState(() => new Date())
   const startDate = useMemo(() => format(startOfMonth(activeMonth), 'yyyy-MM-dd'), [activeMonth])
   const endDate   = useMemo(() => format(endOfMonth(activeMonth),   'yyyy-MM-dd'), [activeMonth])
-  const monthLabel = format(activeMonth, 'MMMM yyyy', { locale: idLocale })
+  const monthLabel = format(activeMonth, 'MMMM yyyy', { locale: dfLocale })
   const isCurrentMonth = format(activeMonth, 'yyyy-MM') === format(new Date(), 'yyyy-MM')
 
   // Filter & search (debounced).
@@ -791,15 +798,15 @@ function ExpensePageInner() {
     const ratePct = Math.round((staff.commissionRate || 0) * 100)
     let note
     if (staff.salaryType === 'fixed') {
-      note = 'Gaji pokok bulanan'
+      note = t('tenantAdmin.expenses.noteFixed')
     } else if (staff.salaryType === 'hybrid') {
-      note = `Gaji pokok ${formatRupiah(staff.baseSalary || 0)} + komisi ${ratePct}% (${formatRupiah(staff.commission || 0)})`
+      note = t('tenantAdmin.expenses.noteHybrid', { base: formatRupiah(staff.baseSalary || 0), pct: ratePct, commission: formatRupiah(staff.commission || 0) })
     } else {
-      note = `Komisi ${ratePct}% dari omzet ${formatRupiah(staff.revenue || 0)}`
+      note = t('tenantAdmin.expenses.noteCommission', { pct: ratePct, revenue: formatRupiah(staff.revenue || 0) })
     }
     setEditTarget({
       category: 'gaji',
-      description: `Gaji ${staff.barberName} ${monthLabel}`,
+      description: t('tenantAdmin.expenses.salaryDescription', { name: staff.barberName, month: monthLabel }),
       amount: String(staff.pay || 0),
       // Tanggal akhir bulan → masuk laporan bulan tsb & terdeteksi "sudah dicatat".
       date: endDate,
@@ -814,9 +821,9 @@ function ExpensePageInner() {
     if (!deleteTarget) return
     try {
       await deleteExpense.mutateAsync(deleteTarget.id)
-      toast.success('Pengeluaran dihapus')
+      toast.success(t('tenantAdmin.expenses.expenseDeleted'))
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal menghapus')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.expenses.deleteFailed'))
     } finally {
       setDeleteTarget(null)
     }
@@ -827,10 +834,10 @@ function ExpensePageInner() {
     if (ids.length === 0) return
     try {
       const res = await bulkDeleteExpenses.mutateAsync(ids)
-      toast.success(`${res?.deleted ?? ids.length} pengeluaran dihapus`)
+      toast.success(t('tenantAdmin.expenses.bulkDeleted', { count: res?.deleted ?? ids.length }))
       setSelected(new Set())
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal menghapus massal')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.expenses.bulkDeleteFailed'))
     } finally {
       setBulkConfirm(false)
     }
@@ -840,19 +847,19 @@ function ExpensePageInner() {
 
   // Export CSV — ambil seluruh baris periode (dengan filter aktif), bukan 1 halaman.
   const handleExport = async () => {
-    if (total === 0) { toast.error('Tidak ada data untuk diekspor'); return }
+    if (total === 0) { toast.error(t('tenantAdmin.expenses.noDataToExport')); return }
     setExporting(true)
     try {
       const res = await api.get('/expenses', {
         params: { ...filters, page: 1, limit: 1000 },
       })
       const rows = res.data?.data?.data || []
-      const header = ['Tanggal', 'Kategori', 'Deskripsi', 'Cabang', 'Nominal', 'Catatan']
+      const header = [t('tenantAdmin.expenses.csvDate'), t('tenantAdmin.expenses.csvCategory'), t('tenantAdmin.expenses.csvDescription'), t('tenantAdmin.expenses.csvBranch'), t('tenantAdmin.expenses.csvAmount'), t('tenantAdmin.expenses.csvNote')]
       const body = rows.map(e => [
         ymd(e.date),
         catById(e.category).label,
         e.description,
-        e.branch?.name || 'Semua Cabang',
+        e.branch?.name || t('tenantAdmin.expenses.allBranches'),
         e.amount,
         e.note || '',
       ])
@@ -868,9 +875,9 @@ function ExpensePageInner() {
       a.download = `pengeluaran-${format(activeMonth, 'yyyy-MM')}.csv`
       a.click()
       URL.revokeObjectURL(url)
-      toast.success(`Berhasil ekspor ${rows.length} pengeluaran`)
+      toast.success(t('tenantAdmin.expenses.exportSuccess', { count: rows.length }))
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal mengekspor')
+      toast.error(err?.response?.data?.error || t('tenantAdmin.expenses.exportFailed'))
     } finally {
       setExporting(false)
     }
@@ -894,11 +901,11 @@ function ExpensePageInner() {
       <div className="flex flex-col gap-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold text-off-white">Pengeluaran</h1>
-            <p className="text-sm text-muted mt-0.5">Kelola biaya operasional &amp; hitung laba bersih</p>
+            <h1 className="text-xl font-semibold text-off-white">{t('tenantAdmin.expenses.pageTitle')}</h1>
+            <p className="text-sm text-muted mt-0.5">{t('tenantAdmin.expenses.pageSubtitle')}</p>
           </div>
           <Button icon={Plus} onClick={openCreate} className="flex-shrink-0">
-            <span className="hidden sm:inline">Tambah</span>
+            <span className="hidden sm:inline">{t('common.add')}</span>
           </Button>
         </div>
 
@@ -907,7 +914,7 @@ function ExpensePageInner() {
           <div className="flex items-center gap-1 bg-dark-card border border-dark-border rounded-xl px-1 py-1">
             <button
               onClick={() => setActiveMonth(m => subMonths(m, 1))}
-              aria-label="Bulan sebelumnya"
+              aria-label={t('tenantAdmin.expenses.prevMonth')}
               className="p-1.5 text-muted hover:text-off-white transition-colors rounded-lg hover:bg-dark-surface"
             >
               <ChevronLeft size={16} />
@@ -918,7 +925,7 @@ function ExpensePageInner() {
             <button
               onClick={() => setActiveMonth(m => addMonths(m, 1))}
               disabled={isCurrentMonth}
-              aria-label="Bulan berikutnya"
+              aria-label={t('tenantAdmin.expenses.nextMonth')}
               className="p-1.5 text-muted hover:text-off-white transition-colors rounded-lg hover:bg-dark-surface disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <ChevronRight size={16} />
@@ -930,16 +937,16 @@ function ExpensePageInner() {
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-brand/30 text-xs text-brand hover:bg-brand/10 transition-all"
           >
             <CopyPlus size={13} />
-            <span className="hidden sm:inline">Salin Bulan Lalu</span>
-            <span className="sm:hidden">Salin</span>
+            <span className="hidden sm:inline">{t('tenantAdmin.expenses.copyLastMonth')}</span>
+            <span className="sm:hidden">{t('tenantAdmin.expenses.copy')}</span>
           </button>
           <button
             onClick={() => setPayrollOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs text-muted hover:border-brand/30 hover:text-off-white transition-all"
           >
             <Users size={13} />
-            <span className="hidden sm:inline">Gaji Staf</span>
-            <span className="sm:hidden">Gaji</span>
+            <span className="hidden sm:inline">{t('tenantAdmin.expenses.staffSalary')}</span>
+            <span className="sm:hidden">{t('tenantAdmin.expenses.salaryShort')}</span>
           </button>
           <button
             onClick={handleRefresh}
@@ -947,7 +954,7 @@ function ExpensePageInner() {
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs text-muted hover:border-brand/30 hover:text-off-white transition-all disabled:opacity-40"
           >
             <RefreshCw size={13} className={isFetching ? 'animate-spin' : ''} />
-            <span>Refresh</span>
+            <span>{t('tenantAdmin.expenses.refresh')}</span>
           </button>
           <button
             onClick={handleExport}
@@ -955,8 +962,8 @@ function ExpensePageInner() {
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs text-muted hover:border-brand/30 hover:text-off-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {exporting ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
-            <span className="hidden sm:inline">Ekspor CSV</span>
-            <span className="sm:hidden">Ekspor</span>
+            <span className="hidden sm:inline">{t('tenantAdmin.expenses.exportCsv')}</span>
+            <span className="sm:hidden">{t('tenantAdmin.expenses.exportShort')}</span>
           </button>
         </div>
       </div>
@@ -964,26 +971,26 @@ function ExpensePageInner() {
       {/* ── Summary cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <SummaryCard
-          label="Total Pengeluaran"
+          label={t('tenantAdmin.expenses.totalExpenses')}
           value={formatRupiah(totalExpenses)}
-          sub={`${stats?.count ?? 0} item bulan ini`}
+          sub={t('tenantAdmin.expenses.itemsThisMonth', { count: stats?.count ?? 0 })}
           accent="text-red-400"
           icon={TrendingDown}
           delta={<DeltaChip pct={expenseDeltaPct} />}
         />
         <SummaryCard
-          label="Total Pemasukan"
+          label={t('tenantAdmin.expenses.totalIncome')}
           value={totalRevenue != null ? formatRupiah(totalRevenue) : '—'}
-          sub={totalRevenue == null ? 'Memuat data…' : 'dari transaksi'}
+          sub={totalRevenue == null ? t('tenantAdmin.expenses.loadingData') : t('tenantAdmin.expenses.fromTransactions')}
           accent="text-green-400"
           icon={TrendingUp}
           loading={totalRevenue == null}
         />
         <SummaryCard
-          label="Laba Bersih"
+          label={t('tenantAdmin.expenses.netProfit')}
           value={netProfit == null ? '—' : formatRupiah(netProfit)}
-          sub={netProfit == null ? 'Memuat…'
-            : netProfit >= 0 ? 'Bisnis kamu profitable 🎉' : 'Pengeluaran melebihi pemasukan'}
+          sub={netProfit == null ? t('tenantAdmin.expenses.loadingShort')
+            : netProfit >= 0 ? t('tenantAdmin.expenses.profitable') : t('tenantAdmin.expenses.expenseOverIncome')}
           accent={netProfit == null ? 'text-muted' : netProfit >= 0 ? 'text-brand' : 'text-red-400'}
           icon={Wallet}
           loading={netProfit == null}
@@ -998,7 +1005,7 @@ function ExpensePageInner() {
         {/* Toolbar */}
         <div className="flex flex-col gap-2 px-3 sm:px-4 py-3 border-b border-dark-border sm:flex-row sm:items-center sm:flex-wrap">
           <p className="text-sm font-medium text-off-white sm:mr-auto">
-            Daftar Pengeluaran
+            {t('tenantAdmin.expenses.expenseList')}
             {total > 0 && <span className="text-muted font-normal"> · {total}</span>}
           </p>
           <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-2">
@@ -1009,13 +1016,13 @@ function ExpensePageInner() {
                 inputMode="search"
                 value={searchInput}
                 onChange={e => setSearchInput(e.target.value)}
-                placeholder="Cari deskripsi…"
+                placeholder={t('tenantAdmin.expenses.searchPlaceholder')}
                 className="bg-dark-surface border border-dark-border text-off-white placeholder-muted rounded-lg pl-8 pr-7 py-1.5 text-xs outline-none focus:border-brand/50 w-full sm:w-44"
               />
               {searchInput && (
                 <button
                   onClick={() => setSearchInput('')}
-                  aria-label="Hapus pencarian"
+                  aria-label={t('tenantAdmin.expenses.clearSearch')}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-off-white"
                 >
                   <X size={13} />
@@ -1025,30 +1032,30 @@ function ExpensePageInner() {
             <select
               value={catFilter}
               onChange={e => setCatFilter(e.target.value)}
-              aria-label="Filter kategori"
+              aria-label={t('tenantAdmin.expenses.filterCategory')}
               className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-brand/50 w-full sm:w-auto"
             >
-              <option value="all">Semua Kategori</option>
+              <option value="all">{t('tenantAdmin.expenses.allCategories')}</option>
               {EXPENSE_CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.icon} {c.label}</option>)}
             </select>
             {branches.length > 0 && (
               <select
                 value={branchFilter}
                 onChange={e => setBranchFilter(e.target.value)}
-                aria-label="Filter cabang"
+                aria-label={t('tenantAdmin.expenses.filterBranch')}
                 className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-brand/50 w-full sm:w-auto"
               >
-                <option value="all">Semua Cabang</option>
+                <option value="all">{t('tenantAdmin.expenses.allBranches')}</option>
                 {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
             )}
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value)}
-              aria-label="Urutkan"
+              aria-label={t('tenantAdmin.expenses.sortAria')}
               className={`bg-dark-surface border border-dark-border text-off-white rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-brand/50 w-full sm:w-auto ${branches.length > 0 ? '' : 'col-span-2 sm:col-span-1'}`}
             >
-              {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              {SORT_OPTIONS(t).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
         </div>
@@ -1063,12 +1070,12 @@ function ExpensePageInner() {
               className="overflow-hidden bg-brand/5 border-b border-brand/20"
             >
               <div className="flex items-center gap-3 px-3 sm:px-4 py-2.5">
-                <span className="text-xs text-brand font-medium">{selected.size} dipilih</span>
+                <span className="text-xs text-brand font-medium">{t('tenantAdmin.expenses.selectedCount', { count: selected.size })}</span>
                 <button
                   onClick={() => setSelected(new Set())}
                   className="text-xs text-muted hover:text-off-white"
                 >
-                  Batal
+                  {t('common.cancel')}
                 </button>
                 <Button
                   variant="danger"
@@ -1078,7 +1085,7 @@ function ExpensePageInner() {
                   loading={bulkDeleteExpenses.isPending}
                   onClick={() => setBulkConfirm(true)}
                 >
-                  Hapus
+                  {t('common.delete')}
                 </Button>
               </div>
             </motion.div>
@@ -1096,7 +1103,7 @@ function ExpensePageInner() {
               {allOnPageSelected
                 ? <CheckSquare size={15} className="text-brand" />
                 : <Square size={15} />}
-              Pilih semua di halaman ini
+              {t('tenantAdmin.expenses.selectAllOnPage')}
             </button>
           </div>
         )}
@@ -1109,8 +1116,8 @@ function ExpensePageInner() {
             <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
               <AlertCircle size={22} className="text-red-400" />
             </div>
-            <p className="text-sm text-muted">Gagal memuat data pengeluaran</p>
-            <Button variant="outline" size="sm" icon={RefreshCw} onClick={() => refetch()}>Coba lagi</Button>
+            <p className="text-sm text-muted">{t('tenantAdmin.expenses.loadFailed')}</p>
+            <Button variant="outline" size="sm" icon={RefreshCw} onClick={() => refetch()}>{t('common.retry')}</Button>
           </div>
         ) : expenses.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-14 gap-3 text-center px-4">
@@ -1119,19 +1126,19 @@ function ExpensePageInner() {
             </div>
             <p className="text-muted text-sm">
               {hasFilter
-                ? 'Tidak ada pengeluaran yang cocok dengan filter'
-                : `Belum ada pengeluaran dicatat di ${monthLabel}`}
+                ? t('tenantAdmin.expenses.noMatchFilter')
+                : t('tenantAdmin.expenses.noExpensesRecorded', { month: monthLabel })}
             </p>
             {hasFilter ? (
               <button
                 onClick={() => { setSearchInput(''); setCatFilter('all'); setBranchFilter('all') }}
                 className="text-xs text-brand hover:text-brand/80 transition-colors"
               >
-                Reset filter
+                {t('tenantAdmin.expenses.resetFilter')}
               </button>
             ) : (
               <button onClick={openCreate} className="text-xs text-brand hover:text-brand/80 transition-colors">
-                + Tambah pengeluaran pertama
+                {t('tenantAdmin.expenses.addFirstExpense')}
               </button>
             )}
           </div>
@@ -1157,13 +1164,13 @@ function ExpensePageInner() {
         {!isLoading && !isError && totalPages > 1 && (
           <div className="flex items-center justify-between gap-3 px-3 sm:px-4 py-3 border-t border-dark-border bg-dark-surface/40">
             <span className="text-xs text-muted">
-              Hal <span className="text-off-white">{page}</span> / {totalPages}
+              {t('tenantAdmin.expenses.pageLabel')} <span className="text-off-white">{page}</span> / {totalPages}
             </span>
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page <= 1}
-                aria-label="Halaman sebelumnya"
+                aria-label={t('tenantAdmin.expenses.prevPage')}
                 className="p-1.5 rounded-lg border border-dark-border text-muted hover:text-off-white hover:border-brand/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <ChevronLeft size={15} />
@@ -1171,7 +1178,7 @@ function ExpensePageInner() {
               <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
-                aria-label="Halaman berikutnya"
+                aria-label={t('tenantAdmin.expenses.nextPage')}
                 className="p-1.5 rounded-lg border border-dark-border text-muted hover:text-off-white hover:border-brand/30 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <ChevronRight size={15} />
@@ -1209,10 +1216,10 @@ function ExpensePageInner() {
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
-        title="Hapus Pengeluaran?"
-        description="Tindakan ini tidak dapat dibatalkan."
+        title={t('tenantAdmin.expenses.deleteConfirmTitle')}
+        description={t('tenantAdmin.expenses.deleteConfirmDesc')}
         highlight={deleteTarget?.description}
-        confirmText="Ya, Hapus"
+        confirmText={t('tenantAdmin.expenses.confirmDelete')}
         variant="danger"
       />
 
@@ -1220,9 +1227,9 @@ function ExpensePageInner() {
         isOpen={bulkConfirm}
         onClose={() => setBulkConfirm(false)}
         onConfirm={handleBulkDelete}
-        title="Hapus Pengeluaran Terpilih?"
-        description={`${selected.size} pengeluaran akan dihapus permanen.`}
-        confirmText={`Hapus ${selected.size} item`}
+        title={t('tenantAdmin.expenses.bulkDeleteTitle')}
+        description={t('tenantAdmin.expenses.bulkDeleteDesc', { count: selected.size })}
+        confirmText={t('tenantAdmin.expenses.bulkDeleteConfirm', { count: selected.size })}
         variant="danger"
       />
     </div>

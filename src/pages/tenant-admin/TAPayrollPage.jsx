@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Wallet, Download, Printer, Scissors, Users } from 'lucide-react'
 import { subDays } from 'date-fns'
 import { useAuthStore } from '../../store/authStore.js'
@@ -11,15 +12,18 @@ import { Card, CardBody } from '../../components/ui/Card.jsx'
 import Button from '../../components/ui/Button.jsx'
 
 const PERIODS = [
-  { id: 'thisMonth', label: 'Bulan Ini' },
-  { id: 'lastMonth', label: 'Bulan Lalu' },
-  { id: 'last30',    label: '30 Hari' },
-  { id: 'last7',     label: '7 Hari' },
+  { id: 'thisMonth', labelKey: 'tenantAdmin.payroll.periodThisMonth' },
+  { id: 'lastMonth', labelKey: 'tenantAdmin.payroll.periodLastMonth' },
+  { id: 'last30',    labelKey: 'tenantAdmin.payroll.period30Days' },
+  { id: 'last7',     labelKey: 'tenantAdmin.payroll.period7Days' },
 ]
 
 const fmtYmd = (d) => d.toISOString().split('T')[0]
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
-const dLabel = (s) => { const [y, m, d] = s.split('-'); return `${Number(d)} ${MONTHS[Number(m) - 1]} ${y}` }
+const dLabel = (s, locale) => {
+  const [y, m, d] = s.split('-')
+  const date = new Date(Number(y), Number(m) - 1, Number(d))
+  return date.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' })
+}
 
 function rangeFor(period) {
   const now = new Date()
@@ -40,6 +44,7 @@ const num = (v) => { const n = Number(String(v).replace(/[^\d]/g, '')); return N
 const csvEscape = (v) => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s }
 
 export default function TAPayrollPage() {
+  const { t } = useTranslation()
   const { user } = useAuthStore()
   const enabled = useIsFeatureEnabled(user?.tenantId, 'payroll')
   if (!enabled) {
@@ -50,12 +55,12 @@ export default function TAPayrollPage() {
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-brand/10 border border-brand/20 mb-4">
               <Wallet className="w-7 h-7 text-brand" />
             </div>
-            <h2 className="font-display text-xl font-semibold text-off-white mb-2">Komisi &amp; Payroll belum aktif</h2>
+            <h2 className="font-display text-xl font-semibold text-off-white mb-2">{t('tenantAdmin.payroll.notActiveTitle')}</h2>
             <p className="text-sm text-muted leading-relaxed max-w-sm mx-auto">
-              Hitung komisi &amp; gaji barber per periode otomatis, lengkap dengan slip dan export — tersedia di paket Enterprise.
+              {t('tenantAdmin.payroll.notActiveDesc')}
             </p>
             <Link to="/admin/billing" className="inline-flex mt-5">
-              <Button>Lihat Paket &amp; Upgrade</Button>
+              <Button>{t('tenantAdmin.payroll.viewPackagesUpgrade')}</Button>
             </Link>
           </CardBody>
         </Card>
@@ -66,6 +71,8 @@ export default function TAPayrollPage() {
 }
 
 function PayrollInner({ user }) {
+  const { t, i18n } = useTranslation()
+  const locale = i18n.language === 'en' ? 'en-US' : 'id-ID'
   const tenantId = user?.tenantId
   const [period, setPeriod] = useState('thisMonth')
   const [branchId, setBranchId] = useState('')
@@ -79,6 +86,10 @@ function PayrollInner({ user }) {
   )
 
   const branchName = (id) => branches.find(b => b.id === id)?.name || '—'
+
+  const schemeLabel = (b) => b.salaryType === 'fixed'
+    ? t('tenantAdmin.payroll.fixedSalary')
+    : t('tenantAdmin.payroll.commissionPct', { pct: Math.round((b.commissionRate || 0) * 100) })
 
   // Take-home: barber komisi → komisi; barber gaji tetap → gaji pokok. + bonus − potongan.
   const rows = useMemo(() => barbers.map(b => {
@@ -100,17 +111,23 @@ function PayrollInner({ user }) {
   const setAdjField = (id, field, value) =>
     setAdj(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }))
 
-  const schemeLabel = (b) => b.salaryType === 'fixed'
-    ? 'Gaji tetap'
-    : `Komisi ${Math.round((b.commissionRate || 0) * 100)}%`
-
   const exportCsv = () => {
-    const header = ['Barber', 'Cabang', 'Layanan', 'Omzet', 'Skema', 'Komisi/Gaji Pokok', 'Bonus', 'Potongan', 'Dibayar']
+    const header = [
+      t('tenantAdmin.payroll.csvBarber'),
+      t('tenantAdmin.payroll.csvBranch'),
+      t('tenantAdmin.payroll.csvServices'),
+      t('tenantAdmin.payroll.csvRevenue'),
+      t('tenantAdmin.payroll.csvScheme'),
+      t('tenantAdmin.payroll.csvBasePay'),
+      t('tenantAdmin.payroll.csvBonus'),
+      t('tenantAdmin.payroll.csvDeduction'),
+      t('tenantAdmin.payroll.csvPaid'),
+    ]
     const lines = rows.map(r => [
       r.barberName, branchName(r.branchId), r.servicesCount || 0, r.revenue || 0,
       schemeLabel(r), r.basePay, r.bonus, r.deduction, r.takeHome,
     ])
-    const total = ['TOTAL', '', '', totals.revenue, '', totals.basePay, totals.bonus, totals.deduction, totals.takeHome]
+    const total = [t('tenantAdmin.payroll.csvTotal'), '', '', totals.revenue, '', totals.basePay, totals.bonus, totals.deduction, totals.takeHome]
     const csv = [header, ...lines, total].map(r => r.map(csvEscape).join(',')).join('\r\n')
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
@@ -127,15 +144,15 @@ function PayrollInner({ user }) {
       <div className="flex items-start justify-between gap-3 flex-wrap no-print">
         <div className="min-w-0">
           <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white inline-flex items-center gap-2">
-            <Wallet className="w-5 h-5 text-brand" /> Komisi &amp; Payroll
+            <Wallet className="w-5 h-5 text-brand" /> {t('tenantAdmin.payroll.title')}
           </h1>
           <p className="text-muted text-xs sm:text-sm mt-1">
-            Periode {dLabel(startDate)} – {dLabel(endDate)}
+            {t('tenantAdmin.payroll.periodRange', { start: dLabel(startDate, locale), end: dLabel(endDate, locale) })}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" icon={Download} onClick={exportCsv} disabled={rows.length === 0}>CSV</Button>
-          <Button variant="outline" icon={Printer} onClick={() => window.print()} disabled={rows.length === 0}>Cetak</Button>
+          <Button variant="outline" icon={Download} onClick={exportCsv} disabled={rows.length === 0}>{t('tenantAdmin.payroll.csv')}</Button>
+          <Button variant="outline" icon={Printer} onClick={() => window.print()} disabled={rows.length === 0}>{t('tenantAdmin.payroll.print')}</Button>
         </div>
       </div>
 
@@ -147,14 +164,14 @@ function PayrollInner({ user }) {
               className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
                 period === p.id ? 'bg-brand border-brand text-dark' : 'bg-dark-card border-dark-border text-muted hover:text-off-white hover:border-brand/40'
               }`}>
-              {p.label}
+              {t(p.labelKey)}
             </button>
           ))}
         </div>
         {branches.length > 1 && (
           <select value={branchId} onChange={e => setBranchId(e.target.value)}
             className="bg-dark-surface border border-dark-border text-off-white rounded-lg px-3 py-1.5 text-xs outline-none focus:border-brand/60">
-            <option value="">Semua cabang</option>
+            <option value="">{t('tenantAdmin.payroll.allBranches')}</option>
             {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
         )}
@@ -162,23 +179,23 @@ function PayrollInner({ user }) {
 
       {/* Summary tiles */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-        <SummaryTile label="Total Dibayar" value={formatRupiahShort(totals.takeHome)} title={formatRupiah(totals.takeHome)} highlight />
-        <SummaryTile label="Komisi/Gaji Pokok" value={formatRupiahShort(totals.basePay)} title={formatRupiah(totals.basePay)} />
-        <SummaryTile label="Bonus" value={formatRupiahShort(totals.bonus)} title={formatRupiah(totals.bonus)} />
-        <SummaryTile label="Potongan" value={formatRupiahShort(totals.deduction)} title={formatRupiah(totals.deduction)} />
+        <SummaryTile label={t('tenantAdmin.payroll.totalPaid')} value={formatRupiahShort(totals.takeHome)} title={formatRupiah(totals.takeHome)} highlight />
+        <SummaryTile label={t('tenantAdmin.payroll.basePay')} value={formatRupiahShort(totals.basePay)} title={formatRupiah(totals.basePay)} />
+        <SummaryTile label={t('tenantAdmin.payroll.bonus')} value={formatRupiahShort(totals.bonus)} title={formatRupiah(totals.bonus)} />
+        <SummaryTile label={t('tenantAdmin.payroll.deduction')} value={formatRupiahShort(totals.deduction)} title={formatRupiah(totals.deduction)} />
       </div>
 
       {isError ? (
         <Card><CardBody className="text-center py-8">
-          <p className="text-sm text-red-400 mb-3">Gagal memuat data payroll.</p>
-          <Button size="sm" variant="secondary" onClick={() => refetch()}>Coba Lagi</Button>
+          <p className="text-sm text-red-400 mb-3">{t('tenantAdmin.payroll.loadError')}</p>
+          <Button size="sm" variant="secondary" onClick={() => refetch()}>{t('common.retry')}</Button>
         </CardBody></Card>
       ) : isLoading ? (
         <Card><CardBody><div className="space-y-2">{[...Array(4)].map((_, i) => <div key={i} className="h-12 rounded-lg bg-dark-card animate-pulse" />)}</div></CardBody></Card>
       ) : rows.length === 0 ? (
         <Card><CardBody className="text-center py-10 text-muted">
           <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">Belum ada transaksi barber pada periode ini.</p>
+          <p className="text-sm">{t('tenantAdmin.payroll.emptyState')}</p>
         </CardBody></Card>
       ) : (
         <Card className="overflow-hidden">
@@ -187,13 +204,13 @@ function PayrollInner({ user }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-dark-border text-xs uppercase tracking-wider text-muted">
-                  <th className="px-4 py-3 text-left">Barber</th>
-                  <th className="px-4 py-3 text-right">Layanan</th>
-                  <th className="px-4 py-3 text-right">Omzet</th>
-                  <th className="px-4 py-3 text-right">Komisi / Gaji</th>
-                  <th className="px-4 py-3 text-right">Bonus</th>
-                  <th className="px-4 py-3 text-right">Potongan</th>
-                  <th className="px-4 py-3 text-right">Dibayar</th>
+                  <th className="px-4 py-3 text-left">{t('tenantAdmin.payroll.colBarber')}</th>
+                  <th className="px-4 py-3 text-right">{t('tenantAdmin.payroll.colServices')}</th>
+                  <th className="px-4 py-3 text-right">{t('tenantAdmin.payroll.colRevenue')}</th>
+                  <th className="px-4 py-3 text-right">{t('tenantAdmin.payroll.colCommissionSalary')}</th>
+                  <th className="px-4 py-3 text-right">{t('tenantAdmin.payroll.bonus')}</th>
+                  <th className="px-4 py-3 text-right">{t('tenantAdmin.payroll.deduction')}</th>
+                  <th className="px-4 py-3 text-right">{t('tenantAdmin.payroll.colPaid')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -214,7 +231,7 @@ function PayrollInner({ user }) {
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-dark-border font-semibold">
-                  <td className="px-4 py-3 text-off-white">Total ({rows.length} barber)</td>
+                  <td className="px-4 py-3 text-off-white">{t('tenantAdmin.payroll.totalBarbers', { count: rows.length })}</td>
                   <td className="px-4 py-3" />
                   <td className="px-4 py-3 text-right text-off-white tabular-nums whitespace-nowrap">{formatRupiah(totals.revenue)}</td>
                   <td className="px-4 py-3 text-right text-brand tabular-nums whitespace-nowrap">{formatRupiah(totals.basePay)}</td>
@@ -239,19 +256,19 @@ function PayrollInner({ user }) {
                   </div>
                   <div className="text-right flex-shrink-0">
                     <p title={formatRupiah(r.takeHome)} className="text-base font-bold text-green-400 tabular-nums leading-none whitespace-nowrap">{formatRupiah(r.takeHome)}</p>
-                    <p className="text-[10px] text-muted mt-0.5">dibayar</p>
+                    <p className="text-[10px] text-muted mt-0.5">{t('tenantAdmin.payroll.paidLower')}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 mt-2 text-[11px]">
-                  <div className="min-w-0"><p className="text-muted">Layanan</p><p className="text-off-white font-medium">{r.servicesCount || 0}</p></div>
-                  <div className="min-w-0"><p className="text-muted">Omzet</p><p title={formatRupiah(r.revenue || 0)} className="text-off-white font-medium truncate">{formatRupiahShort(r.revenue || 0)}</p></div>
-                  <div className="min-w-0"><p className="text-muted">Komisi/Gaji</p><p title={formatRupiah(r.basePay)} className="text-brand font-medium truncate">{formatRupiahShort(r.basePay)}</p></div>
+                  <div className="min-w-0"><p className="text-muted">{t('tenantAdmin.payroll.colServices')}</p><p className="text-off-white font-medium">{r.servicesCount || 0}</p></div>
+                  <div className="min-w-0"><p className="text-muted">{t('tenantAdmin.payroll.colRevenue')}</p><p title={formatRupiah(r.revenue || 0)} className="text-off-white font-medium truncate">{formatRupiahShort(r.revenue || 0)}</p></div>
+                  <div className="min-w-0"><p className="text-muted">{t('tenantAdmin.payroll.colCommissionSalary')}</p><p title={formatRupiah(r.basePay)} className="text-brand font-medium truncate">{formatRupiahShort(r.basePay)}</p></div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 mt-2 no-print">
-                  <label className="text-[11px] text-muted">Bonus
+                  <label className="text-[11px] text-muted">{t('tenantAdmin.payroll.bonus')}
                     <AdjInput value={adj[r.barberId]?.bonus} onChange={v => setAdjField(r.barberId, 'bonus', v)} full />
                   </label>
-                  <label className="text-[11px] text-muted">Potongan
+                  <label className="text-[11px] text-muted">{t('tenantAdmin.payroll.deduction')}
                     <AdjInput value={adj[r.barberId]?.deduction} onChange={v => setAdjField(r.barberId, 'deduction', v)} full />
                   </label>
                 </div>
@@ -262,7 +279,7 @@ function PayrollInner({ user }) {
       )}
 
       <p className="text-[11px] text-muted no-print">
-        Komisi dihitung dari omzet layanan yang dikerjakan barber pada periode terpilih. Barber gaji tetap memakai gaji pokok (asumsi periode 1 bulan). Bonus/potongan tidak tersimpan — isi saat akan membayar lalu export/cetak.
+        {t('tenantAdmin.payroll.footnote')}
       </p>
     </div>
   )

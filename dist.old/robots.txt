@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /kasir
+Disallow: /barber
+Disallow: /customer
+Disallow: /super-admin
+Disallow: /api
+
+Sitemap: https://sembapos.com/sitemap.xml

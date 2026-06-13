@@ -19,7 +19,7 @@ import Card from '../../components/ui/Card.jsx'
 import Avatar from '../../components/ui/Avatar.jsx'
 import { formatRupiah, formatRupiahShort, formatDateTime } from '../../utils/format.js'
 import { format, subDays, parseISO, differenceInDays } from 'date-fns'
-import { id as idLocale } from 'date-fns/locale'
+import { id as idLocale, enUS as enLocale } from 'date-fns/locale'
 
 const PAGE_SIZE = 8
 
@@ -28,10 +28,10 @@ const isoDay = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,
 const todayISO = () => isoDay(new Date())
 
 const PRESETS = [
-  { id: 'today',     label: 'Hari Ini',     range: () => ({ start: todayISO(),               end: todayISO() }) },
-  { id: 'yesterday', label: 'Kemarin',      range: () => ({ start: isoDay(subDays(new Date(), 1)), end: isoDay(subDays(new Date(), 1)) }) },
-  { id: 'week',      label: '7 Hari',       range: () => ({ start: isoDay(subDays(new Date(), 6)),  end: todayISO() }) },
-  { id: '30d',       label: '30 Hari',      range: () => ({ start: isoDay(subDays(new Date(), 29)), end: todayISO() }) },
+  { id: 'today',     labelKey: 'barber.presetToday',     range: () => ({ start: todayISO(),               end: todayISO() }) },
+  { id: 'yesterday', labelKey: 'barber.presetYesterday', range: () => ({ start: isoDay(subDays(new Date(), 1)), end: isoDay(subDays(new Date(), 1)) }) },
+  { id: 'week',      labelKey: 'barber.preset7Days',     range: () => ({ start: isoDay(subDays(new Date(), 6)),  end: todayISO() }) },
+  { id: '30d',       labelKey: 'barber.preset30Days',    range: () => ({ start: isoDay(subDays(new Date(), 29)), end: todayISO() }) },
 ]
 
 const presetIdFor = (start, end) => {
@@ -145,7 +145,8 @@ function ChartTooltip({ active, payload, label, theme }) {
 // ── Main ────────────────────────────────────────────────────────────────────
 
 export default function BarberCommission() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const dfLocale = i18n.language === 'en' ? enLocale : idLocale
   const navigate = useNavigate()
   const { user } = useAuthStore()
   const { theme } = useThemeStore()
@@ -283,13 +284,13 @@ export default function BarberCommission() {
       const dayRevenue = myItemsRevenue(dayTxns)
       return {
         date: format(d, 'd/M'),
-        full: format(d, 'EEE, d MMM', { locale: idLocale }),
+        full: format(d, 'EEE, d MMM', { locale: dfLocale }),
         commission: Math.round(dayRevenue * commissionRate),
       }
     })
     const max = days.reduce((m, d) => Math.max(m, d.commission), 0)
     return { days, max }
-  }, [aggregate.all, dateRange.start, dateRange.end, commissionRate, myId])
+  }, [aggregate.all, dateRange.start, dateRange.end, commissionRate, myId, dfLocale])
 
   // ── Service breakdown ─────────────────────────────────────────────────────
   const serviceBreakdown = useMemo(() => {
@@ -297,7 +298,7 @@ export default function BarberCommission() {
     aggregate.all.forEach(tx => {
       (tx.items || []).filter(i => i.barberId === myId).forEach(it => {
         const key = it.serviceId || it.name || 'unknown'
-        const cur = map.get(key) || { name: it.name || it.service?.name || 'Layanan', count: 0, revenue: 0 }
+        const cur = map.get(key) || { name: it.name || it.service?.name || t('barber.serviceFallback'), count: 0, revenue: 0 }
         cur.count += 1
         cur.revenue += it.price || 0
         map.set(key, cur)
@@ -307,7 +308,7 @@ export default function BarberCommission() {
       .map(s => ({ ...s, commission: Math.round(s.revenue * commissionRate) }))
       .sort((a, b) => b.commission - a.commission)
       .slice(0, 6)
-  }, [aggregate.all, myId, commissionRate])
+  }, [aggregate.all, myId, commissionRate, t])
 
   // ── Top customers ─────────────────────────────────────────────────────────
   const topCustomers = useMemo(() => {
@@ -347,12 +348,20 @@ export default function BarberCommission() {
 
   const handleExportCSV = async () => {
     if (!aggregate.all.length) {
-      toast.error('Tidak ada data untuk diekspor')
+      toast.error(t('barber.exportNoData'))
       return
     }
     setExporting(true)
     try {
-      const header = ['Tanggal', 'ID Transaksi', 'Pelanggan', 'Telepon', 'Layanan', 'Harga', `Komisi (${(commissionRate * 100).toFixed(0)}%)`]
+      const header = [
+        t('barber.csvDate'),
+        t('barber.csvTxId'),
+        t('barber.csvCustomer'),
+        t('barber.csvPhone'),
+        t('barber.csvService'),
+        t('barber.csvPrice'),
+        t('barber.csvCommission', { percent: (commissionRate * 100).toFixed(0) }),
+      ]
       const rows = []
       aggregate.all.forEach(tx => {
         (tx.items || []).filter(i => i.barberId === myId).forEach(it => {
@@ -361,7 +370,7 @@ export default function BarberCommission() {
             tx.id,
             tx.customer?.name || tx.customerName || 'Walk-in',
             tx.customer?.phone || tx.customerPhone || '',
-            it.name || it.service?.name || 'Layanan',
+            it.name || it.service?.name || t('barber.serviceFallback'),
             it.price || 0,
             Math.round((it.price || 0) * commissionRate),
           ])
@@ -369,12 +378,12 @@ export default function BarberCommission() {
       })
       // Footer summary
       rows.push([])
-      rows.push(['TOTAL', '', '', '', `${rows.length - 1} item`, totalRevenue, totalCommission])
+      rows.push([t('barber.csvTotal'), '', '', '', t('barber.csvItemCount', { count: rows.length - 1 }), totalRevenue, totalCommission])
       const fname = `komisi-${dateRange.start}_sd_${dateRange.end}.csv`
       downloadCSV(fname, header, rows)
-      toast.success(`Berhasil ekspor ${rows.length - 2} item`)
+      toast.success(t('barber.exportSuccess', { count: rows.length - 2 }))
     } catch (err) {
-      toast.error('Gagal ekspor: ' + (err?.message || 'Unknown'))
+      toast.error(t('barber.exportFailed', { message: err?.message || 'Unknown' }))
     } finally {
       setExporting(false)
     }
@@ -391,9 +400,9 @@ export default function BarberCommission() {
       <div className="mx-auto w-full max-w-3xl">
         <Card className="p-8 text-center">
           <Trophy className="w-10 h-10 text-brand/60 mx-auto mb-3" />
-          <h2 className="font-display text-xl font-bold text-off-white">Cabang belum ditentukan</h2>
+          <h2 className="font-display text-xl font-bold text-off-white">{t('barber.noBranchTitle')}</h2>
           <p className="text-muted text-sm mt-2">
-            Akun Anda belum dipasang ke cabang. Hubungi admin untuk pengaturan.
+            {t('barber.noBranchDesc')}
           </p>
         </Card>
       </div>
@@ -409,11 +418,11 @@ export default function BarberCommission() {
             <Trophy className="w-5 h-5 text-brand" /> {t('barber.myCommission')}
           </h1>
           <p className="text-muted text-xs sm:text-sm mt-1">
-            Rate komisi <span className="text-brand font-semibold">{(commissionRate * 100).toFixed(0)}%</span>
+            {t('barber.commissionRateLabel')} <span className="text-brand font-semibold">{(commissionRate * 100).toFixed(0)}%</span>
             {' · '}
             {dateRange.start === dateRange.end
-              ? format(parseISO(dateRange.start), 'EEEE, d MMM yyyy', { locale: idLocale })
-              : `${format(parseISO(dateRange.start), 'd MMM', { locale: idLocale })} – ${format(parseISO(dateRange.end), 'd MMM yyyy', { locale: idLocale })}`}
+              ? format(parseISO(dateRange.start), 'EEEE, d MMM yyyy', { locale: dfLocale })
+              : `${format(parseISO(dateRange.start), 'd MMM', { locale: dfLocale })} – ${format(parseISO(dateRange.end), 'd MMM yyyy', { locale: dfLocale })}`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -424,7 +433,7 @@ export default function BarberCommission() {
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-brand/10 border border-brand/30 text-brand text-xs font-semibold hover:bg-brand/20 disabled:opacity-50 transition-colors"
           >
             {exporting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            <span className="hidden sm:inline">{exporting ? 'Mengekspor…' : 'Ekspor CSV'}</span>
+            <span className="hidden sm:inline">{exporting ? t('barber.exporting') : t('barber.exportCsv')}</span>
           </button>
           <button
             type="button"
@@ -436,7 +445,7 @@ export default function BarberCommission() {
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-dark-card/60 border border-dark-border text-muted text-xs font-medium hover:text-off-white hover:border-brand/40 transition-colors"
           >
             <ArrowRight className="w-4 h-4 rotate-180" />
-            <span className="hidden sm:inline">{user?.role === 'barber' ? 'Dashboard' : 'Kasir'}</span>
+            <span className="hidden sm:inline">{user?.role === 'barber' ? t('nav.dashboard') : t('nav.pos')}</span>
           </button>
         </div>
       </div>
@@ -455,7 +464,7 @@ export default function BarberCommission() {
                   : 'bg-dark-card/60 border border-dark-border text-muted hover:text-off-white'
               }`}
             >
-              {p.label}
+              {t(p.labelKey)}
             </button>
           ))}
           <button
@@ -467,13 +476,13 @@ export default function BarberCommission() {
                 : 'bg-dark-card/60 border border-dark-border text-muted hover:text-off-white'
             }`}
           >
-            <Filter className="w-3.5 h-3.5" /> Kustom
+            <Filter className="w-3.5 h-3.5" /> {t('barber.custom')}
           </button>
         </div>
         {(showCustom || activePreset === 'custom') && (
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
             <label className="block">
-              <span className="text-[11px] text-muted">Mulai</span>
+              <span className="text-[11px] text-muted">{t('barber.startDate')}</span>
               <input
                 type="date"
                 value={dateRange.start}
@@ -483,7 +492,7 @@ export default function BarberCommission() {
               />
             </label>
             <label className="block">
-              <span className="text-[11px] text-muted">Selesai</span>
+              <span className="text-[11px] text-muted">{t('barber.endDate')}</span>
               <input
                 type="date"
                 value={dateRange.end}
@@ -501,40 +510,40 @@ export default function BarberCommission() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
         <SummaryCard
           icon={Wallet}
-          label="Komisi Total"
+          label={t('barber.totalCommission')}
           value={aggLoading ? '…' : formatRupiah(totalCommission)}
           valueShort={aggLoading ? '…' : formatRupiahShort(totalCommission)}
           accent="gold"
-          delta={deltaPct == null ? null : `${deltaPct >= 0 ? '+' : ''}${deltaPct}% vs periode lalu`}
-          deltaShort={deltaPct == null ? null : `${deltaPct >= 0 ? '+' : ''}${deltaPct}% vs lalu`}
+          delta={deltaPct == null ? null : t('barber.deltaVsPrevPeriod', { sign: deltaPct >= 0 ? '+' : '', pct: deltaPct })}
+          deltaShort={deltaPct == null ? null : t('barber.deltaVsPrevShort', { sign: deltaPct >= 0 ? '+' : '', pct: deltaPct })}
           deltaPositive={deltaPct == null ? null : deltaPct >= 0}
           delay={0.02}
         />
         <SummaryCard
           icon={Receipt}
-          label="Transaksi"
+          label={t('common.transactions')}
           value={aggLoading ? '…' : txCount}
           accent="blue"
-          hint={txCount > 0 ? `Avg ${formatRupiah(avgPerTx)}/tx` : 'Belum ada transaksi'}
-          hintShort={txCount > 0 ? `Avg ${formatRupiahShort(avgPerTx)}/tx` : '—'}
+          hint={txCount > 0 ? t('barber.avgPerTx', { amount: formatRupiah(avgPerTx) }) : t('barber.noTransactionsShort')}
+          hintShort={txCount > 0 ? t('barber.avgPerTx', { amount: formatRupiahShort(avgPerTx) }) : '—'}
           delay={0.04}
         />
         <SummaryCard
           icon={Scissors}
-          label="Layanan"
+          label={t('barber.servicesLabel')}
           value={aggLoading ? '…' : totalServices}
           accent="green"
-          hint={totalServices > 0 ? `${(totalServices / Math.max(1, txCount)).toFixed(1)} layanan/tx` : '—'}
+          hint={totalServices > 0 ? t('barber.servicesPerTx', { value: (totalServices / Math.max(1, txCount)).toFixed(1) }) : '—'}
           hintShort={totalServices > 0 ? `${(totalServices / Math.max(1, txCount)).toFixed(1)}/tx` : '—'}
           delay={0.06}
         />
         <SummaryCard
           icon={TrendingUp}
-          label="Revenue"
+          label={t('common.revenue')}
           value={aggLoading ? '…' : formatRupiah(totalRevenue)}
           valueShort={aggLoading ? '…' : formatRupiahShort(totalRevenue)}
           accent="amber"
-          hint={`Rate ${(commissionRate * 100).toFixed(0)}%`}
+          hint={t('barber.rateHint', { percent: (commissionRate * 100).toFixed(0) })}
           delay={0.08}
         />
       </div>
@@ -547,14 +556,14 @@ export default function BarberCommission() {
             <h3 className="text-sm font-semibold text-off-white inline-flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-brand" /> {t('barber.dailyCommission')}
             </h3>
-            <span className="text-[11px] text-muted">{chart.days.length} hari</span>
+            <span className="text-[11px] text-muted">{t('barber.daysCount', { count: chart.days.length })}</span>
           </div>
           {aggLoading ? (
             <div className="h-[220px] rounded-lg bg-dark-card/60 animate-pulse" />
           ) : chart.days.every(d => d.commission === 0) ? (
             <div className="h-[220px] flex flex-col items-center justify-center text-center">
               <Wallet className="w-10 h-10 text-muted opacity-40 mb-2" />
-              <p className="text-sm text-muted">Belum ada komisi pada periode ini</p>
+              <p className="text-sm text-muted">{t('barber.noCommissionInPeriod')}</p>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={220}>
@@ -590,7 +599,7 @@ export default function BarberCommission() {
         <Card className="p-4 sm:p-5">
           <div className="flex items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-off-white inline-flex items-center gap-2">
-              <Scissors className="w-4 h-4 text-brand" /> Top Layanan
+              <Scissors className="w-4 h-4 text-brand" /> {t('barber.topServices')}
             </h3>
             <span className="text-[11px] text-muted">{serviceBreakdown.length}</span>
           </div>
@@ -599,7 +608,7 @@ export default function BarberCommission() {
               {[...Array(3)].map((_, i) => <div key={i} className="h-10 rounded-lg bg-dark-card/60 animate-pulse" />)}
             </div>
           ) : serviceBreakdown.length === 0 ? (
-            <p className="text-sm text-muted text-center py-6">Belum ada layanan</p>
+            <p className="text-sm text-muted text-center py-6">{t('barber.noServices')}</p>
           ) : (
             <ul className="space-y-2">
               {serviceBreakdown.map((s, i) => {
@@ -620,7 +629,7 @@ export default function BarberCommission() {
                       />
                     </div>
                     <p className="text-[10px] text-muted mt-0.5 tabular-nums">
-                      {s.count}× · {formatRupiah(s.revenue)} revenue
+                      {t('barber.serviceRevenueLine', { count: s.count, revenue: formatRupiah(s.revenue) })}
                     </p>
                   </li>
                 )
@@ -635,7 +644,7 @@ export default function BarberCommission() {
         <Card className="p-4 sm:p-5">
           <div className="flex items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-off-white inline-flex items-center gap-2">
-              <Users className="w-4 h-4 text-brand" /> Pelanggan Paling Sering
+              <Users className="w-4 h-4 text-brand" /> {t('barber.topCustomers')}
             </h3>
             <span className="text-[11px] text-muted">{topCustomers.length}</span>
           </div>
@@ -675,7 +684,7 @@ export default function BarberCommission() {
                 disabled={page <= 1}
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 className="p-1.5 rounded-md hover:bg-dark-card/60 disabled:opacity-40"
-                aria-label="Halaman sebelumnya"
+                aria-label={t('barber.prevPage')}
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -685,7 +694,7 @@ export default function BarberCommission() {
                 disabled={page >= totalTxPages}
                 onClick={() => setPage(p => Math.min(totalTxPages, p + 1))}
                 className="p-1.5 rounded-md hover:bg-dark-card/60 disabled:opacity-40"
-                aria-label="Halaman berikutnya"
+                aria-label={t('barber.nextPage')}
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -701,7 +710,7 @@ export default function BarberCommission() {
           <Card className="p-8 text-center">
             <Receipt className="w-10 h-10 text-muted mx-auto mb-2 opacity-40" />
             <p className="text-muted text-sm">{t('barber.noTransactionsInPeriod')}</p>
-            <p className="text-xs text-muted/70 mt-1">Coba ubah rentang tanggal di atas.</p>
+            <p className="text-xs text-muted/70 mt-1">{t('barber.changeDateRangeHint')}</p>
           </Card>
         ) : (
           <div className="space-y-2">
@@ -730,7 +739,7 @@ export default function BarberCommission() {
                         {formatRupiah(myCommission)}
                       </p>
                       <p className="text-[10px] text-muted tabular-nums whitespace-nowrap">
-                        dari {formatRupiah(myRevenue)}
+                        {t('barber.fromAmount', { amount: formatRupiah(myRevenue) })}
                       </p>
                     </div>
                   </div>
@@ -756,10 +765,10 @@ export default function BarberCommission() {
               onClick={() => setPage(p => Math.max(1, p - 1))}
               className="px-2.5 py-1.5 rounded-md text-xs text-muted border border-dark-border bg-dark-card/40 disabled:opacity-40 hover:text-off-white"
             >
-              Sebelumnya
+              {t('barber.previous')}
             </button>
             <span className="px-3 py-1.5 text-xs text-off-white tabular-nums">
-              Halaman {page} dari {totalTxPages}
+              {t('barber.pageOf', { page, total: totalTxPages })}
             </span>
             <button
               type="button"
@@ -767,7 +776,7 @@ export default function BarberCommission() {
               onClick={() => setPage(p => Math.min(totalTxPages, p + 1))}
               className="px-2.5 py-1.5 rounded-md text-xs text-muted border border-dark-border bg-dark-card/40 disabled:opacity-40 hover:text-off-white"
             >
-              Berikutnya
+              {t('barber.next')}
             </button>
             <button
               type="button"
@@ -785,7 +794,7 @@ export default function BarberCommission() {
       {(pageQuery.isFetching || aggLoading) && (
         <div className="fixed bottom-20 sm:bottom-6 right-4 z-30 inline-flex items-center gap-2 px-3 py-2 rounded-full bg-dark-card/90 border border-dark-border text-xs text-muted shadow-card backdrop-blur">
           <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-          Sinkronisasi…
+          {t('barber.syncing')}
         </div>
       )}
     </div>

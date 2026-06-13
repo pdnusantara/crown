@@ -661,7 +661,7 @@ function POSPageInner() {
   const handleApplyDiscount = () => {
     const raw = Number(discountInput.value)
     if (!Number.isFinite(raw) || raw < 0) {
-      return toast.error('Nilai diskon tidak valid')
+      return toast.error(t('pos.invalidDiscountValue'))
     }
     const subtotal = posStore.getSubtotal()
     // Clamp: persentase 0–100, nominal 0–subtotal.
@@ -707,7 +707,7 @@ function POSPageInner() {
     if (posStore.cartItems.length === 0) return toast.error(t('pos.cartIsEmpty'))
     if (noActiveShift) {
       setShowPayModal(false)
-      return toast.error('Belum ada shift aktif. Buka shift terlebih dahulu sebelum transaksi.')
+      return toast.error(t('pos.noActiveShiftToast'))
     }
     if (missingBarber) {
       setShowPayModal(false)
@@ -715,7 +715,7 @@ function POSPageInner() {
     }
     if (missingCustomer) {
       setShowPayModal(false)
-      return toast.error('Pilih pelanggan terlebih dahulu')
+      return toast.error(t('pos.selectCustomerFirst'))
     }
     // Validasi tukar poin SEBELUM bayar — kalau di bawah minimum/over-cap, backend
     // akan menolak (400) setelah uang diterima. Blokir di sini supaya tak terjadi.
@@ -755,7 +755,7 @@ function POSPageInner() {
 
       toast.success(t('pos.transactionSuccess'))
     } catch (err) {
-      toast.error(err?.response?.data?.error || t('pos.transactionFailed') || 'Gagal memproses transaksi')
+      toast.error(err?.response?.data?.error || t('pos.transactionFailed'))
     } finally {
       setProcessing(false)
     }
@@ -856,15 +856,15 @@ function POSPageInner() {
 
   const handleBtPrint = async () => {
     if (!lastTxn) return
-    if (!bt.supported) { toast.error('Browser ini tidak mendukung Bluetooth. Gunakan Chrome di Android.'); return }
+    if (!bt.supported) { toast.error(t('pos.btNotSupported')); return }
     setBtBusy(true)
     try {
       if (!bt.connected) await bt.connect()        // tampilkan pemilih perangkat (butuh klik)
       await bt.write(buildReceipt(buildReceiptData(), paperWidth >= 80 ? 42 : 32))
-      toast.success('Struk terkirim ke printer')
+      toast.success(t('pos.btReceiptSent'))
     } catch (err) {
       // NotFoundError = pengguna menutup dialog pemilih perangkat → diam saja.
-      if (err?.name !== 'NotFoundError') toast.error(err?.message || 'Gagal mencetak via Bluetooth')
+      if (err?.name !== 'NotFoundError') toast.error(err?.message || t('pos.btPrintFailed'))
     } finally {
       setBtBusy(false)
     }
@@ -978,7 +978,7 @@ function POSPageInner() {
           <div className="flex items-center gap-2 bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-off-white">
             <Scissors className="w-3.5 h-3.5 text-brand flex-shrink-0" />
             <span className="truncate">{posStore.defaultBarberName || barbers[0]?.name || user?.name}</span>
-            <span className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/30 flex-shrink-0">Anda</span>
+            <span className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full bg-brand/10 text-brand border border-brand/30 flex-shrink-0">{t('pos.youLabel')}</span>
           </div>
         ) : (
           <>
@@ -1116,7 +1116,7 @@ function POSPageInner() {
                     posStore.setDiscount('percentage', 0); setVoucherCode('')
                   }}
                   className="text-muted hover:text-red-400 flex-shrink-0"
-                  aria-label="Hapus voucher"
+                  aria-label={t('pos.removeVoucher')}
                 >
                   <X size={14} />
                 </button>
@@ -1282,14 +1282,14 @@ function POSPageInner() {
         <div className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 flex items-start gap-2.5">
           <Clock size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-amber-300">Belum ada shift aktif</p>
-            <p className="text-xs text-muted mt-0.5">Buka shift dulu untuk mulai menerima transaksi.</p>
+            <p className="text-sm font-semibold text-amber-300">{t('pos.noActiveShiftTitle')}</p>
+            <p className="text-xs text-muted mt-0.5">{t('pos.noActiveShiftHint')}</p>
           </div>
           <button
             onClick={() => navigate(`/${getBranchSlug(user)}/kasir/shift-closing`)}
             className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-amber-500 text-dark text-xs font-bold hover:bg-amber-400 transition-colors"
           >
-            Buka Shift
+            {t('pos.openShift')}
           </button>
         </div>
       )}
@@ -1297,8 +1297,8 @@ function POSPageInner() {
         <div className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 flex items-start gap-2.5">
           <Scissors size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-amber-300">Barber belum dipilih</p>
-            <p className="text-xs text-muted mt-0.5">Pilih barber yang melayani dulu untuk memproses transaksi.</p>
+            <p className="text-sm font-semibold text-amber-300">{t('pos.barberNotSelected')}</p>
+            <p className="text-xs text-muted mt-0.5">{t('pos.barberRequired')}</p>
           </div>
         </div>
       )}
@@ -1306,8 +1306,8 @@ function POSPageInner() {
         <div className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 flex items-start gap-2.5">
           <User size={16} className="text-amber-400 flex-shrink-0 mt-0.5" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-amber-300">Pelanggan belum dipilih</p>
-            <p className="text-xs text-muted mt-0.5">Pilih atau tambahkan pelanggan dulu untuk memproses transaksi.</p>
+            <p className="text-sm font-semibold text-amber-300">{t('pos.customerNotSelected')}</p>
+            <p className="text-xs text-muted mt-0.5">{t('pos.customerNotSelectedHint')}</p>
           </div>
         </div>
       )}
@@ -1649,14 +1649,14 @@ function POSPageInner() {
             <div className="no-print flex items-center justify-between gap-2 text-xs">
               <span className="text-muted truncate min-w-0">
                 {bt.connected
-                  ? <>Printer: <b className="text-off-white">{bt.deviceName}</b> · <button type="button" onClick={bt.disconnect} className="text-brand hover:underline">putuskan</button></>
-                  : 'Printer Bluetooth belum tersambung'}
+                  ? <>{t('pos.printerLabel')}: <b className="text-off-white">{bt.deviceName}</b> · <button type="button" onClick={bt.disconnect} className="text-brand hover:underline">{t('pos.disconnect')}</button></>
+                  : t('pos.btNotConnected')}
               </span>
               <select
                 value={paperWidth}
                 onChange={(e) => { const v = Number(e.target.value); setPaperWidth(v); try { localStorage.setItem('btPaperWidth', String(v)) } catch { /* noop */ } }}
                 className="bg-dark-surface border border-dark-border rounded-lg px-2 py-1 text-xs text-off-white shrink-0"
-                aria-label="Lebar kertas struk"
+                aria-label={t('pos.paperWidthLabel')}
               >
                 <option value={58}>58mm</option>
                 <option value={80}>80mm</option>
@@ -1667,7 +1667,7 @@ function POSPageInner() {
           <div className="flex flex-col sm:flex-row gap-2 no-print">
             {bt.supported && (
               <Button icon={Bluetooth} fullWidth loading={btBusy} onClick={handleBtPrint}>
-                {bt.connected ? 'Cetak Bluetooth' : 'Hubungkan & Cetak'}
+                {bt.connected ? t('pos.printBluetooth') : t('pos.connectAndPrint')}
               </Button>
             )}
             <Button variant="secondary" icon={Printer} fullWidth onClick={() => window.print()}>

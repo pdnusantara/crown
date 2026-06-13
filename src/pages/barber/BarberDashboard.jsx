@@ -21,7 +21,7 @@ import Input from '../../components/ui/Input.jsx'
 import Button from '../../components/ui/Button.jsx'
 import { formatRupiah, formatRupiahShort } from '../../utils/format.js'
 import { format, isToday, parseISO, subDays, differenceInMinutes } from 'date-fns'
-import { id as idLocale } from 'date-fns/locale'
+import { id as idLocale, enUS as enLocale } from 'date-fns/locale'
 
 const HISTORY_PAGE_SIZE = 6
 
@@ -120,7 +120,7 @@ function QueueItemCard({ item, onAdvance, busyId, t }) {
               {isInProgress ? t('queue.inProgressShort') : t('queue.waiting')}
             </span>
             <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-md bg-dark-card/80 border border-dark-border text-muted">
-              {item.type === 'booking' ? 'Booking' : 'Walk-in'}
+              {item.type === 'booking' ? t('queue.ticketType.booking') : t('queue.ticketType.walk-in')}
             </span>
           </div>
           <p className="font-semibold text-off-white truncate">{item.customerName}</p>
@@ -135,12 +135,12 @@ function QueueItemCard({ item, onAdvance, busyId, t }) {
             {isInProgress ? (
               <span className="inline-flex items-center gap-1 text-blue-400">
                 <Clock className="w-3 h-3" />
-                <span className="tabular-nums">{elapsedMin ?? 0} min jalan</span>
+                <span className="tabular-nums">{t('barber.minElapsed', { n: elapsedMin ?? 0 })}</span>
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 text-amber-400">
                 <Clock className="w-3 h-3" />
-                <span className="tabular-nums">~{item.waitTime || 15} min</span>
+                <span className="tabular-nums">{t('queue.estimateMin', { n: item.waitTime || 15 })}</span>
               </span>
             )}
           </div>
@@ -193,7 +193,7 @@ function Sparkbars({ data, max }) {
 function resizeImageToBase64(file, maxSize = 256) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    reader.onerror = () => reject(new Error('Gagal membaca file'))
+    reader.onerror = () => reject(new Error())
     reader.onload = (e) => {
       const img = new Image()
       img.onload = () => {
@@ -204,7 +204,7 @@ function resizeImageToBase64(file, maxSize = 256) {
         canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
         resolve(canvas.toDataURL('image/jpeg', 0.85))
       }
-      img.onerror = () => reject(new Error('File bukan gambar yang valid'))
+      img.onerror = () => reject(new Error())
       img.src = e.target.result
     }
     reader.readAsDataURL(file)
@@ -212,6 +212,7 @@ function resizeImageToBase64(file, maxSize = 256) {
 }
 
 function ProfileEditModal({ open, onClose, user, toast }) {
+  const { t } = useTranslation()
   const updateProfile = useAuthStore(s => s.updateProfile)
   const fileRef = useRef(null)
   const [photo, setPhoto] = useState(user?.photo || '')
@@ -241,7 +242,7 @@ function ProfileEditModal({ open, onClose, user, toast }) {
     const file = e.target.files?.[0]
     if (!file) return
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('Ukuran file maksimal 5MB')
+      toast.error(t('barber.profileFileTooLarge'))
       return
     }
     try {
@@ -249,7 +250,7 @@ function ProfileEditModal({ open, onClose, user, toast }) {
       setImgError(false)
       setPhoto(base64)
     } catch (err) {
-      toast.error(err?.message || 'Gagal memproses gambar')
+      toast.error(err?.message || t('barber.profileImageFailed'))
     }
   }
 
@@ -275,12 +276,12 @@ function ProfileEditModal({ open, onClose, user, toast }) {
         if ((photo || '') !== (user?.photo || '')) payload.photo = photo || null
       } else {
         if (!currentPassword) {
-          toast.error('Masukkan password lama')
+          toast.error(t('barber.profileEnterOldPassword'))
           setSaving(false)
           return
         }
         if (!newPassword || newPassword.length < 6) {
-          toast.error('Password baru minimal 6 karakter')
+          toast.error(t('barber.profilePasswordTooShort'))
           setSaving(false)
           return
         }
@@ -288,10 +289,10 @@ function ProfileEditModal({ open, onClose, user, toast }) {
         payload.newPassword = newPassword
       }
       await updateProfile(payload)
-      toast.success(tab === 'password' ? 'Password berhasil diperbarui' : 'Profil berhasil disimpan')
+      toast.success(tab === 'password' ? t('barber.profilePasswordUpdated') : t('barber.profileSaved'))
       onClose()
     } catch (err) {
-      toast.error(err?.response?.data?.error || 'Gagal menyimpan perubahan')
+      toast.error(err?.response?.data?.error || t('barber.profileSaveFailed'))
     } finally {
       setSaving(false)
     }
@@ -300,7 +301,7 @@ function ProfileEditModal({ open, onClose, user, toast }) {
   const initialsTxt = (name || '?').trim().split(/\s+/).slice(0, 2).map(n => n[0]).join('').toUpperCase() || '?'
 
   return (
-    <Modal isOpen={open} onClose={onClose} title="Edit Profil" size="md">
+    <Modal isOpen={open} onClose={onClose} title={t('barber.editProfile')} size="md">
       {/* Tabs */}
       <div className="flex bg-dark-card/50 border border-dark-border rounded-xl p-1 mb-5">
         <button
@@ -310,7 +311,7 @@ function ProfileEditModal({ open, onClose, user, toast }) {
             tab === 'profile' ? 'bg-brand text-dark' : 'text-muted hover:text-off-white'
           }`}
         >
-          Profil
+          {t('barber.profileTab')}
         </button>
         <button
           type="button"
@@ -319,7 +320,7 @@ function ProfileEditModal({ open, onClose, user, toast }) {
             tab === 'password' ? 'bg-brand text-dark' : 'text-muted hover:text-off-white'
           }`}
         >
-          Password
+          {t('barber.passwordTab')}
         </button>
       </div>
 
@@ -337,7 +338,7 @@ function ProfileEditModal({ open, onClose, user, toast }) {
                 {photo && !imgError ? (
                   <img
                     src={photo}
-                    alt="Foto profil"
+                    alt={t('barber.profilePhotoAlt')}
                     className="w-full h-full object-cover"
                     onError={() => setImgError(true)}
                   />
@@ -353,7 +354,7 @@ function ProfileEditModal({ open, onClose, user, toast }) {
             </div>
             <div className="flex items-center gap-3 text-xs">
               <button type="button" onClick={() => fileRef.current?.click()} className="text-brand hover:underline">
-                {photo ? 'Ganti foto' : 'Upload foto'}
+                {photo ? t('barber.changePhoto') : t('barber.uploadPhoto')}
               </button>
               {photo && (
                 <button
@@ -361,17 +362,17 @@ function ProfileEditModal({ open, onClose, user, toast }) {
                   onClick={() => { setPhoto(''); setImgError(false) }}
                   className="text-muted hover:text-red-400 inline-flex items-center gap-1"
                 >
-                  <X className="w-3 h-3" /> Hapus
+                  <X className="w-3 h-3" /> {t('common.remove')}
                 </button>
               )}
             </div>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
-            <p className="text-[11px] text-muted text-center">Maks 5MB · disarankan 1:1 (persegi)</p>
+            <p className="text-[11px] text-muted text-center">{t('barber.photoHint')}</p>
           </div>
 
-          <Input label="Nama" value={name} onChange={e => setName(e.target.value)} placeholder="Nama lengkap" />
+          <Input label={t('common.name')} value={name} onChange={e => setName(e.target.value)} placeholder={t('barber.fullNamePlaceholder')} />
           <Input
-            label="Telepon"
+            label={t('common.phone')}
             value={phone}
             onChange={e => setPhone(e.target.value)}
             placeholder="08xxxxxxxxxx"
@@ -379,20 +380,20 @@ function ProfileEditModal({ open, onClose, user, toast }) {
           />
 
           <div className="bg-dark-card/40 border border-dark-border/60 rounded-xl px-3 py-2 text-xs text-muted">
-            <p><span className="text-off-white font-medium">Email:</span> {user?.email}</p>
-            <p className="mt-0.5"><span className="text-off-white font-medium">Cabang:</span> {user?.branch?.name || '—'}</p>
-            <p className="mt-0.5"><span className="text-off-white font-medium">Komisi:</span> {((user?.commissionRate ?? 0.35) * 100).toFixed(0)}%</p>
-            <p className="mt-1 text-[11px] opacity-80">Email, cabang & komisi diatur oleh admin.</p>
+            <p><span className="text-off-white font-medium">{t('common.email')}:</span> {user?.email}</p>
+            <p className="mt-0.5"><span className="text-off-white font-medium">{t('barber.branchLabel')}:</span> {user?.branch?.name || '—'}</p>
+            <p className="mt-0.5"><span className="text-off-white font-medium">{t('barber.commissionLabel')}:</span> {((user?.commissionRate ?? 0.35) * 100).toFixed(0)}%</p>
+            <p className="mt-1 text-[11px] opacity-80">{t('barber.profileAdminNote')}</p>
           </div>
         </div>
       ) : (
         <div className="space-y-4">
           <div className="flex items-center gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30">
             <Lock className="w-5 h-5 text-amber-300 shrink-0" />
-            <p className="text-xs text-amber-200">Setelah ganti password, Anda mungkin harus login ulang di perangkat lain.</p>
+            <p className="text-xs text-amber-200">{t('barber.passwordChangeWarning')}</p>
           </div>
           <Input
-            label="Password lama"
+            label={t('barber.oldPassword')}
             type={showPw ? 'text' : 'password'}
             value={currentPassword}
             onChange={e => setCurrentPassword(e.target.value)}
@@ -400,13 +401,13 @@ function ProfileEditModal({ open, onClose, user, toast }) {
             autoComplete="current-password"
           />
           <Input
-            label="Password baru"
+            label={t('barber.newPassword')}
             type={showPw ? 'text' : 'password'}
             value={newPassword}
             onChange={e => setNewPassword(e.target.value)}
-            placeholder="Min. 6 karakter"
+            placeholder={t('barber.passwordMinPlaceholder')}
             autoComplete="new-password"
-            hint="Gunakan kombinasi huruf, angka, dan simbol untuk keamanan."
+            hint={t('barber.passwordHint')}
           />
           <button
             type="button"
@@ -414,14 +415,14 @@ function ProfileEditModal({ open, onClose, user, toast }) {
             className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-off-white"
           >
             {showPw ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-            {showPw ? 'Sembunyikan' : 'Lihat'} password
+            {showPw ? t('barber.hidePassword') : t('barber.showPassword')}
           </button>
         </div>
       )}
 
       <div className="flex items-center justify-end gap-2 pt-5 mt-5 border-t border-dark-border">
-        <Button variant="ghost" onClick={onClose} disabled={saving}>Batal</Button>
-        <Button onClick={submit} loading={saving} disabled={!dirty || saving}>Simpan</Button>
+        <Button variant="ghost" onClick={onClose} disabled={saving}>{t('common.cancel')}</Button>
+        <Button onClick={submit} loading={saving} disabled={!dirty || saving}>{t('common.save')}</Button>
       </div>
     </Modal>
   )
@@ -430,7 +431,8 @@ function ProfileEditModal({ open, onClose, user, toast }) {
 // ── Main ────────────────────────────────────────────────────────────────────
 
 export default function BarberDashboard() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const dfLocale = i18n.language === 'en' ? enLocale : idLocale
   const navigate = useNavigate()
   const { user } = useAuthStore()
   const toast = useToast()
@@ -505,13 +507,13 @@ export default function BarberDashboard() {
       const dayTxns = weekTransactions.filter(tx => new Date(tx.createdAt).toDateString() === ds)
       const dayRevenue = myItemsRevenue(dayTxns)
       return {
-        label: format(d, 'EEE', { locale: idLocale }).replace('.', ''),
+        label: format(d, 'EEE', { locale: dfLocale }).replace('.', ''),
         value: Math.round(dayRevenue * commissionRate),
       }
     })
     const max = days.reduce((m, d) => Math.max(m, d.value), 0)
     return { days, max }
-  }, [weekTransactions, myId, commissionRate])
+  }, [weekTransactions, myId, commissionRate, dfLocale])
 
   // ── Earnings history (paid services, paginated client-side) ───────────────
   const earningEntries = useMemo(() => {
@@ -555,11 +557,11 @@ export default function BarberDashboard() {
   // ── Greeting ──────────────────────────────────────────────────────────────
   const greeting = useMemo(() => {
     const h = new Date().getHours()
-    if (h < 11) return 'Selamat pagi'
-    if (h < 15) return 'Selamat siang'
-    if (h < 18) return 'Selamat sore'
-    return 'Selamat malam'
-  }, [])
+    if (h < 11) return t('barber.greetingMorning')
+    if (h < 15) return t('barber.greetingNoon')
+    if (h < 18) return t('barber.greetingAfternoon')
+    return t('barber.greetingNight')
+  }, [t])
 
   // ── Actions ───────────────────────────────────────────────────────────────
   const advance = async (item, next) => {
@@ -583,9 +585,9 @@ export default function BarberDashboard() {
       <div className="mx-auto w-full max-w-3xl">
         <Card className="p-8 text-center">
           <Sparkles className="w-10 h-10 text-brand/60 mx-auto mb-3" />
-          <h2 className="font-display text-xl font-bold text-off-white">Cabang belum ditentukan</h2>
+          <h2 className="font-display text-xl font-bold text-off-white">{t('barber.noBranchTitle')}</h2>
           <p className="text-muted text-sm mt-2">
-            Akun Anda belum dipasang ke cabang. Hubungi admin untuk pengaturan.
+            {t('barber.noBranchDesc')}
           </p>
         </Card>
       </div>
@@ -602,10 +604,10 @@ export default function BarberDashboard() {
             type="button"
             onClick={() => setProfileOpen(true)}
             className="absolute top-3 right-3 z-10 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-dark-card/80 border border-dark-border hover:border-brand/50 hover:text-brand text-muted text-xs font-medium transition-colors backdrop-blur"
-            aria-label="Edit profil"
+            aria-label={t('barber.editProfile')}
           >
             <Edit3 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Edit Profil</span>
+            <span className="hidden sm:inline">{t('barber.editProfile')}</span>
           </button>
           <div className="relative flex items-start sm:items-center gap-3 sm:gap-5 flex-col sm:flex-row">
             <div className="flex items-center gap-3 sm:gap-5 w-full">
@@ -613,7 +615,7 @@ export default function BarberDashboard() {
                 type="button"
                 onClick={() => setProfileOpen(true)}
                 className="relative group rounded-full"
-                aria-label="Ganti foto profil"
+                aria-label={t('barber.changePhoto')}
               >
                 <Avatar src={user?.photo} name={user?.name} size="xl" ring />
                 <span className="absolute -bottom-0.5 -right-0.5 w-7 h-7 rounded-full bg-brand border-2 border-dark-surface flex items-center justify-center text-dark group-hover:scale-110 transition-transform">
@@ -625,14 +627,14 @@ export default function BarberDashboard() {
                   {greeting}
                 </p>
                 <h1 className="font-display text-xl sm:text-2xl font-bold text-off-white truncate">
-                  {user?.name || 'Barber'}
+                  {user?.name || t('barber.barberFallback')}
                 </h1>
                 <div className="flex flex-wrap items-center gap-2 mt-1.5">
                   <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-brand/10 border border-brand/30 text-brand">
                     <Scissors className="w-3 h-3" /> {t('barber.profile')}
                   </span>
                   <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-dark-card/60 border border-dark-border text-muted">
-                    <TrendingUp className="w-3 h-3" /> Komisi {(commissionRate * 100).toFixed(0)}%
+                    <TrendingUp className="w-3 h-3" /> {t('barber.commissionPercentChip', { percent: (commissionRate * 100).toFixed(0) })}
                   </span>
                   {user?.branch?.name && (
                     <span className="text-[11px] text-muted truncate max-w-[160px]">
@@ -644,12 +646,12 @@ export default function BarberDashboard() {
               </div>
             </div>
             <div className="w-full sm:w-auto sm:text-right shrink-0 mt-3 sm:mt-0">
-              <p className="text-[11px] uppercase tracking-wide text-muted">Komisi hari ini</p>
+              <p className="text-[11px] uppercase tracking-wide text-muted">{t('barber.commissionToday')}</p>
               <p className="text-2xl sm:text-3xl font-display font-bold text-brand tabular-nums whitespace-nowrap">
                 {formatRupiah(todayCommission)}
               </p>
               <p className="text-[11px] text-muted tabular-nums">
-                dari {formatRupiah(todayRevenue)} revenue
+                {t('barber.fromRevenue', { amount: formatRupiah(todayRevenue) })}
               </p>
             </div>
           </div>
@@ -658,17 +660,17 @@ export default function BarberDashboard() {
 
       {/* ── Stats ──────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-        <StatCard icon={ListOrdered} label="Antrian Aktif" value={activeItems.length} accent="amber" delay={0.02} onClick={() => navigate('/barber/queue')} />
-        <StatCard icon={Play} label="Sedang Dilayani" value={inProgress.length} accent="blue" delay={0.04} onClick={() => navigate('/barber/queue')} />
+        <StatCard icon={ListOrdered} label={t('barber.activeQueue')} value={activeItems.length} accent="amber" delay={0.02} onClick={() => navigate('/barber/queue')} />
+        <StatCard icon={Play} label={t('queue.inProgressShort')} value={inProgress.length} accent="blue" delay={0.04} onClick={() => navigate('/barber/queue')} />
         <StatCard
           icon={CheckCircle}
-          label="Selesai Hari Ini"
+          label={t('barber.doneToday')}
           value={txQuery.total || 0}
           accent="green"
           delay={0.06}
           onClick={() => navigate(`/barber/commission?start=${todayStr}&end=${todayStr}`)}
         />
-        <StatCard icon={DollarSign} label="Komisi Hari Ini" value={formatRupiah(todayCommission)} valueShort={formatRupiahShort(todayCommission)} accent="gold" delay={0.08} onClick={() => navigate('/barber/commission')} />
+        <StatCard icon={DollarSign} label={t('barber.commissionToday')} value={formatRupiah(todayCommission)} valueShort={formatRupiahShort(todayCommission)} accent="gold" delay={0.08} onClick={() => navigate('/barber/commission')} />
       </div>
 
       {/* ── Now Serving spotlight ──────────────────────────────────────────── */}
@@ -688,7 +690,7 @@ export default function BarberDashboard() {
                   <Scissors className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11px] uppercase tracking-wider text-blue-300/90 font-semibold">Sedang dilayani</p>
+                  <p className="text-[11px] uppercase tracking-wider text-blue-300/90 font-semibold">{t('queue.inProgressShort')}</p>
                   <p className="font-semibold text-off-white truncate">{nowServing.customerName}</p>
                   <p className="text-xs text-muted truncate">{nowServing.services?.join(', ') || '—'}</p>
                 </div>
@@ -701,7 +703,7 @@ export default function BarberDashboard() {
                   {busyId === nowServing.id
                     ? <Loader2 className="w-4 h-4 animate-spin" />
                     : <CheckCircle className="w-4 h-4" />}
-                  <span className="hidden sm:inline">Tandai Selesai</span>
+                  <span className="hidden sm:inline">{t('barber.markDone')}</span>
                 </button>
               </div>
             </Card>
@@ -723,7 +725,7 @@ export default function BarberDashboard() {
               onClick={() => navigate('/barber/queue')}
               className="text-xs text-brand hover:underline inline-flex items-center gap-1"
             >
-              Lihat semua <ArrowRight className="w-3 h-3" />
+              {t('barber.viewAll')} <ArrowRight className="w-3 h-3" />
             </button>
           </div>
 
@@ -732,7 +734,7 @@ export default function BarberDashboard() {
               <Card className="p-6 sm:p-8 text-center">
                 <ListOrdered className="w-10 h-10 text-muted mx-auto mb-2 opacity-40" />
                 <p className="text-muted text-sm">{t('queue.noActive')}</p>
-                <p className="text-xs text-muted/70 mt-1">Antrian baru akan muncul otomatis di sini.</p>
+                <p className="text-xs text-muted/70 mt-1">{t('barber.newQueueAutoHint')}</p>
               </Card>
             ) : (
               activeItems.slice(0, 6).map((item, i) => (
@@ -752,7 +754,7 @@ export default function BarberDashboard() {
                 onClick={() => navigate('/barber/queue')}
                 className="w-full text-xs text-brand py-2 hover:underline"
               >
-                Lihat {activeItems.length - 6} antrian lain
+                {t('barber.viewMoreQueue', { count: activeItems.length - 6 })}
               </button>
             )}
           </div>
@@ -762,7 +764,7 @@ export default function BarberDashboard() {
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-2">
             <h3 className="font-semibold text-off-white inline-flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-brand" /> Booking Hari Ini
+              <Calendar className="w-4 h-4 text-brand" /> {t('barber.todayBookings')}
               <span className="text-xs text-muted font-normal">({upcomingBookings.length})</span>
             </h3>
           </div>
@@ -773,7 +775,7 @@ export default function BarberDashboard() {
             ) : upcomingBookings.length === 0 ? (
               <Card className="p-5 text-center">
                 <Calendar className="w-8 h-8 text-muted mx-auto mb-2 opacity-40" />
-                <p className="text-xs text-muted">Tidak ada booking hari ini</p>
+                <p className="text-xs text-muted">{t('barber.noBookingsToday')}</p>
               </Card>
             ) : (
               upcomingBookings.map(b => (
@@ -783,7 +785,7 @@ export default function BarberDashboard() {
                       <span className="text-[11px] font-bold text-brand tabular-nums">{b.time || '--:--'}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-off-white truncate">{b.customerName || b.customer?.name || 'Pelanggan'}</p>
+                      <p className="text-sm font-medium text-off-white truncate">{b.customerName || b.customer?.name || t('barber.customerFallback')}</p>
                       <p className="text-xs text-muted truncate">{b.serviceName || '—'}</p>
                     </div>
                     <span className={`shrink-0 text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-md border ${
@@ -791,7 +793,7 @@ export default function BarberDashboard() {
                         ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
                         : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
                     }`}>
-                      {b.status === 'confirmed' ? 'Konfirm' : 'Pending'}
+                      {b.status === 'confirmed' ? t('barber.statusConfirmedShort') : t('barber.statusPending')}
                     </span>
                   </div>
                 </Card>
@@ -807,14 +809,14 @@ export default function BarberDashboard() {
         <Card className="p-4 sm:p-5 lg:col-span-1">
           <div className="flex items-center justify-between gap-2 mb-2">
             <h3 className="text-sm font-semibold text-off-white inline-flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-brand" /> Komisi 7 Hari
+              <TrendingUp className="w-4 h-4 text-brand" /> {t('barber.commission7Days')}
             </h3>
             <button
               type="button"
               onClick={() => navigate('/barber/commission')}
               className="text-xs text-brand hover:underline"
             >
-              Detail
+              {t('common.details')}
             </button>
           </div>
           {weekTxQuery.isLoading ? (
@@ -823,7 +825,7 @@ export default function BarberDashboard() {
             <Sparkbars data={chart.days} max={chart.max} />
           )}
           <p className="text-[11px] text-muted mt-2">
-            Total minggu ini: <span className="text-brand font-semibold tabular-nums">
+            {t('barber.weekTotalLabel')} <span className="text-brand font-semibold tabular-nums">
               {formatRupiah(chart.days.reduce((s, d) => s + d.value, 0))}
             </span>
           </p>
@@ -833,7 +835,7 @@ export default function BarberDashboard() {
         <Card id="riwayat-komisi" className="p-4 sm:p-5 lg:col-span-2 scroll-mt-24">
           <div className="flex items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-semibold text-off-white inline-flex items-center gap-2">
-              <Wallet className="w-4 h-4 text-brand" /> Riwayat Komisi Hari Ini
+              <Wallet className="w-4 h-4 text-brand" /> {t('barber.todayCommissionHistory')}
               <span className="text-xs text-muted font-normal">({earningEntries.length})</span>
             </h3>
             <div className="flex items-center gap-1 text-xs text-muted">
@@ -842,7 +844,7 @@ export default function BarberDashboard() {
                 disabled={historyPage <= 1}
                 onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
                 className="p-1.5 rounded-md hover:bg-dark-card/60 disabled:opacity-40"
-                aria-label="Halaman sebelumnya"
+                aria-label={t('barber.prevPage')}
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -852,7 +854,7 @@ export default function BarberDashboard() {
                 disabled={historyPage >= totalHistoryPages}
                 onClick={() => setHistoryPage(p => Math.min(totalHistoryPages, p + 1))}
                 className="p-1.5 rounded-md hover:bg-dark-card/60 disabled:opacity-40"
-                aria-label="Halaman berikutnya"
+                aria-label={t('barber.nextPage')}
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -866,8 +868,8 @@ export default function BarberDashboard() {
           ) : earningEntries.length === 0 ? (
             <div className="py-8 text-center">
               <Wallet className="w-8 h-8 text-muted mx-auto mb-2 opacity-40" />
-              <p className="text-sm text-muted">Belum ada komisi hari ini</p>
-              <p className="text-xs text-muted/70 mt-1">Selesaikan & bayarkan layanan untuk mulai mendapatkan komisi.</p>
+              <p className="text-sm text-muted">{t('barber.noCommissionToday')}</p>
+              <p className="text-xs text-muted/70 mt-1">{t('barber.noCommissionTodayHint')}</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -890,7 +892,7 @@ export default function BarberDashboard() {
                       {formatRupiah(row.commission)}
                     </p>
                     <p className="text-[10px] text-muted tabular-nums whitespace-nowrap">
-                      dari {formatRupiah(row.price)}
+                      {t('barber.fromAmount', { amount: formatRupiah(row.price) })}
                     </p>
                   </div>
                 </div>
@@ -913,8 +915,8 @@ export default function BarberDashboard() {
                 <ListOrdered className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-off-white">Antrian Saya</p>
-                <p className="text-xs text-muted truncate">Kelola pelanggan menunggu &amp; sedang dilayani</p>
+                <p className="text-sm font-semibold text-off-white">{t('queue.myQueue')}</p>
+                <p className="text-xs text-muted truncate">{t('barber.manageQueueDesc')}</p>
               </div>
               <ChevronRight className="w-4 h-4 text-muted shrink-0" />
             </div>
@@ -931,8 +933,8 @@ export default function BarberDashboard() {
                 <Trophy className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-off-white">Detail Komisi</p>
-                <p className="text-xs text-muted truncate">Riwayat &amp; grafik penghasilan</p>
+                <p className="text-sm font-semibold text-off-white">{t('barber.commissionDetail')}</p>
+                <p className="text-xs text-muted truncate">{t('barber.commissionDetailDesc')}</p>
               </div>
               <ChevronRight className="w-4 h-4 text-muted shrink-0" />
             </div>
@@ -944,7 +946,7 @@ export default function BarberDashboard() {
       {(queueFetching || txQuery.isFetching) && (
         <div className="fixed bottom-20 sm:bottom-6 right-4 z-30 inline-flex items-center gap-2 px-3 py-2 rounded-full bg-dark-card/90 border border-dark-border text-xs text-muted shadow-card backdrop-blur">
           <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-          Sinkronisasi…
+          {t('barber.syncing')}
         </div>
       )}
 

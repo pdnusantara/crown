@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, Users, Scissors, Receipt, User, X, ArrowRight, Command, Clock } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useTenantStore } from '../../store/tenantStore.js'
 import { useAuthStore } from '../../store/authStore.js'
 
@@ -28,6 +29,7 @@ export function CommandPalette({ open, onClose }) {
   const inputRef = useRef(null)
   const listRef = useRef(null)
   const navigate = useNavigate()
+  const { t, i18n } = useTranslation()
   const { user } = useAuthStore()
   const { services, customers, staff } = useTenantStore()
 
@@ -61,15 +63,15 @@ export function CommandPalette({ open, onClose }) {
       .filter(c => c.name.toLowerCase().includes(query.toLowerCase()) || c.phone?.includes(query))
       .slice(0, 4)
       .map(c => ({
-        type: 'Pelanggan', label: c.name, sub: c.phone, icon: Users,
+        type: t('commandPalette.typeCustomer'), label: c.name, sub: c.phone, icon: Users,
         action: () => navigate('/admin/customers')
       })),
     ...tenantServices
       .filter(s => s.name.toLowerCase().includes(query.toLowerCase()))
       .slice(0, 4)
       .map(s => ({
-        type: 'Layanan', label: s.name,
-        sub: new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(s.price),
+        type: t('commandPalette.typeService'), label: s.name,
+        sub: new Intl.NumberFormat(i18n.language === 'en' ? 'en-US' : 'id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(s.price),
         icon: Scissors,
         action: () => navigate('/admin/services')
       })),
@@ -77,16 +79,16 @@ export function CommandPalette({ open, onClose }) {
       .filter(s => s.name.toLowerCase().includes(query.toLowerCase()))
       .slice(0, 3)
       .map(s => ({
-        type: 'Staff', label: s.name, sub: s.role, icon: User,
+        type: t('commandPalette.typeStaff'), label: s.name, sub: s.role, icon: User,
         action: () => navigate('/admin/staff')
       })),
   ] : []
 
   const shortcuts = [
-    { label: 'Transaksi Baru (POS)', icon: Receipt, action: () => navigate(`/${user?.branchId}/kasir/pos`) },
-    { label: 'Lihat Antrian', icon: Users, action: () => navigate(`/${user?.branchId}/kasir/queue`) },
-    { label: 'Data Pelanggan', icon: User, action: () => navigate('/admin/customers') },
-    { label: 'Laporan', icon: Scissors, action: () => navigate('/admin/reports') },
+    { label: t('commandPalette.shortcutNewTransaction'), icon: Receipt, action: () => navigate(`/${user?.branchId}/kasir/pos`) },
+    { label: t('commandPalette.shortcutViewQueue'), icon: Users, action: () => navigate(`/${user?.branchId}/kasir/queue`) },
+    { label: t('commandPalette.shortcutCustomers'), icon: User, action: () => navigate('/admin/customers') },
+    { label: t('commandPalette.shortcutReports'), icon: Scissors, action: () => navigate('/admin/reports') },
   ]
 
   // Items navigable by arrow keys
@@ -146,7 +148,7 @@ export function CommandPalette({ open, onClose }) {
             onClick={e => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
-            aria-label="Command Palette"
+            aria-label={t('commandPalette.label')}
           >
             {/* Search Input */}
             <div className="flex items-center gap-3 px-4 py-3.5 border-b border-[#2A2A2A]">
@@ -160,14 +162,14 @@ export function CommandPalette({ open, onClose }) {
                 value={query}
                 onChange={e => { setQuery(e.target.value); setActiveIndex(-1) }}
                 onKeyDown={handleKeyDown}
-                placeholder="Cari pelanggan, layanan, staff..."
+                placeholder={t('commandPalette.searchPlaceholder')}
                 className="flex-1 bg-transparent text-[#F5F5F0] placeholder-[#6B7280] outline-none text-sm"
               />
               {query && (
                 <button
                   onClick={() => { setQuery(''); setActiveIndex(-1) }}
                   className="p-1 rounded-md text-[#6B7280] hover:text-[#F5F5F0] transition-colors"
-                  aria-label="Hapus pencarian"
+                  aria-label={t('commandPalette.clearSearch')}
                 >
                   <X size={14} />
                 </button>
@@ -201,8 +203,8 @@ export function CommandPalette({ open, onClose }) {
                     </button>
                   )) : (
                     <div className="py-10 text-center">
-                      <p className="text-sm text-[#6B7280]">Tidak ada hasil untuk <span className="text-[#F5F5F0]">"{query}"</span></p>
-                      <p className="text-xs text-[#6B7280]/60 mt-1">Coba kata kunci yang berbeda</p>
+                      <p className="text-sm text-[#6B7280]">{t('commandPalette.noResults')} <span className="text-[#F5F5F0]">"{query}"</span></p>
+                      <p className="text-xs text-[#6B7280]/60 mt-1">{t('commandPalette.tryDifferent')}</p>
                     </div>
                   )}
                 </div>
@@ -211,7 +213,7 @@ export function CommandPalette({ open, onClose }) {
                   {/* Search History */}
                   {history.length > 0 && (
                     <div>
-                      <p className="text-xs text-[#6B7280] uppercase tracking-wider mb-2 px-1">Pencarian Terbaru</p>
+                      <p className="text-xs text-[#6B7280] uppercase tracking-wider mb-2 px-1">{t('commandPalette.recentSearches')}</p>
                       <div className="space-y-0.5">
                         {history.map((q, i) => (
                           <div key={i} className="flex items-center group">
@@ -225,7 +227,7 @@ export function CommandPalette({ open, onClose }) {
                             <button
                               onClick={(e) => handleDeleteHistory(e, q)}
                               className="p-1.5 mr-1 rounded-lg text-[#6B7280] opacity-0 group-hover:opacity-100 hover:text-[#F5F5F0] transition-all"
-                              aria-label={`Hapus riwayat: ${q}`}
+                              aria-label={t('commandPalette.removeHistory', { query: q })}
                             >
                               <X size={12} />
                             </button>
@@ -237,7 +239,7 @@ export function CommandPalette({ open, onClose }) {
 
                   {/* Shortcuts */}
                   <div>
-                    <p className="text-xs text-[#6B7280] uppercase tracking-wider mb-2 px-1">Pintasan Cepat</p>
+                    <p className="text-xs text-[#6B7280] uppercase tracking-wider mb-2 px-1">{t('commandPalette.quickShortcuts')}</p>
                     <div className="space-y-0.5">
                       {shortcuts.map((item, i) => (
                         <button
@@ -264,19 +266,19 @@ export function CommandPalette({ open, onClose }) {
             <div className="px-4 py-2.5 border-t border-[#2A2A2A] flex items-center gap-4">
               <div className="flex items-center gap-1.5 text-xs text-[#6B7280]">
                 <Command size={11} aria-hidden="true" />
-                <span>K untuk buka</span>
+                <span>{t('commandPalette.hintOpen')}</span>
               </div>
               <div className="flex items-center gap-1.5 text-xs text-[#6B7280]">
                 <kbd className="bg-[#0A0A0A] border border-[#2A2A2A] rounded px-1">↑↓</kbd>
-                <span>navigasi</span>
+                <span>{t('commandPalette.hintNavigate')}</span>
               </div>
               <div className="flex items-center gap-1.5 text-xs text-[#6B7280]">
                 <kbd className="bg-[#0A0A0A] border border-[#2A2A2A] rounded px-1">↵</kbd>
-                <span>pilih</span>
+                <span>{t('commandPalette.hintSelect')}</span>
               </div>
               <div className="flex items-center gap-1.5 text-xs text-[#6B7280]">
                 <kbd className="bg-[#0A0A0A] border border-[#2A2A2A] rounded px-1">ESC</kbd>
-                <span>tutup</span>
+                <span>{t('commandPalette.hintClose')}</span>
               </div>
             </div>
           </motion.div>

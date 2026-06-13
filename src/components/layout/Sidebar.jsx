@@ -138,6 +138,18 @@ function groupNavBySection(items) {
   return groups
 }
 
+// Map nama section internal → key i18n untuk header grup di sidebar.
+const SECTION_LABEL_KEYS = {
+  'Platform':    'nav.sectionPlatform',
+  'Keuangan':    'nav.sectionFinance',
+  'Komunikasi':  'nav.sectionCommunication',
+  'Sistem':      'nav.sectionSystem',
+  'Akun':        'nav.sectionAccount',
+  'Operasional': 'nav.sectionOperations',
+  'Laporan':     'nav.sectionReports',
+  'Manajemen':   'nav.sectionManagement',
+}
+
 // Inisial nama untuk avatar — 1-2 huruf kapital, fallback "?" kalau kosong.
 function initialsOf(name) {
   if (!name) return '?'
@@ -241,12 +253,12 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
       // 1) Nama cabang dari branches list (URL atau user.branchId)
       // 2) Fallback ke user.branchName (kalau ter-cache di akun)
       // 3) Last resort: "Cabang"
-      return activeBranch?.name || user.branchName || 'Cabang'
+      return activeBranch?.name || user.branchName || t('nav.branchFallback')
     }
     if (tenant?.name) return tenant.name
-    if (user.role === 'super_admin') return 'Super Admin'
-    if (user.role === 'affiliate')   return 'Mitra Afiliasi'
-    if (user.role === 'customer')    return 'Pelanggan'
+    if (user.role === 'super_admin') return t('nav.roleSuperAdmin')
+    if (user.role === 'affiliate')   return t('nav.roleAffiliate')
+    if (user.role === 'customer')    return t('nav.roleCustomer')
     return null
   })()
 
@@ -302,7 +314,7 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
           >
             <Building2 className="w-3.5 h-3.5 text-off-white flex-shrink-0" />
             <span className="text-off-white/80 font-semibold tracking-wide uppercase text-[10px]">
-              {user.role === 'kasir' || user.role === 'barber' ? 'Cabang' : 'Tenant'}
+              {user.role === 'kasir' || user.role === 'barber' ? t('nav.contextBranch') : t('nav.contextTenant')}
             </span>
             <span className="text-off-white font-medium truncate flex-1">{contextLabel}</span>
           </div>
@@ -330,7 +342,7 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
           <div key={group.label || `__nogroup-${gi}`} className={gi > 0 ? 'mt-3' : ''}>
             {!collapsed && group.label && (
               <div className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">
-                {group.label}
+                {SECTION_LABEL_KEYS[group.label] ? t(SECTION_LABEL_KEYS[group.label]) : group.label}
               </div>
             )}
             <ul className="space-y-0.5">
@@ -396,17 +408,17 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
                 type="button"
                 onClick={toggleTheme}
                 className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-white/8 bg-white/[0.04] text-off-white/80 hover:text-off-white hover:border-off-white/40 hover:bg-white/[0.08] transition-all text-xs font-medium"
-                title={theme === 'dark' ? 'Mode Terang' : 'Mode Gelap'}
+                title={theme === 'dark' ? t('nav.lightMode') : t('nav.darkMode')}
               >
                 {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-                <span className="hidden xl:inline">{theme === 'dark' ? 'Terang' : 'Gelap'}</span>
+                <span className="hidden xl:inline">{theme === 'dark' ? t('nav.light') : t('nav.dark')}</span>
               </button>
             )}
             <button
               type="button"
               onClick={toggleLang}
               className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-white/8 bg-white/[0.04] text-off-white/80 hover:text-off-white hover:border-off-white/40 hover:bg-white/[0.08] transition-all text-xs font-medium"
-              title="Toggle Language"
+              title={t('nav.toggleLanguage')}
             >
               <Languages className="w-3.5 h-3.5" />
               <span>{i18n.language === 'id' ? 'ID' : 'EN'}</span>
@@ -456,9 +468,9 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
                 {subscription.package}
               </span>
               <span className="truncate">
-                {subExpired ? 'Langganan kadaluarsa'
-                  : subWarning ? `${daysLeft} hari lagi`
-                  : `Aktif · ${daysLeft}h lagi`}
+                {subExpired ? t('nav.subExpired')
+                  : subWarning ? t('nav.subDaysLeft', { count: daysLeft })
+                  : t('nav.subActiveDaysLeft', { count: daysLeft })}
               </span>
             </span>
             <ChevronRight className="w-3 h-3 opacity-60 flex-shrink-0" />
