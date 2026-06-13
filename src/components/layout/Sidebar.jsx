@@ -253,7 +253,7 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
   return (
     <aside
       // `sidebar-modern` wajib — dipakai CSS scope di index.css untuk UNDO
-      // .light-mode overrides yang akan menggelapkan text-indigo-300/off-white/
+      // .light-mode overrides yang akan menggelapkan text-off-white/off-white/
       // amber-X/red-X (text-on-light asumsi). Tanpa class ini, sidebar TIDAK
       // TERBACA di light mode karena text gelap di atas indigo-900.
       className={`
@@ -278,14 +278,14 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
             className="w-9 h-9 rounded-xl bg-brand-gradient flex items-center justify-center flex-shrink-0 shadow-brand"
             aria-hidden="true"
           >
-            <Scissors className="w-5 h-5 text-white" />
+            <Scissors className="w-5 h-5 text-dark" />
           </div>
           {!collapsed && (
             <div className="min-w-0 flex-1">
               <h1 className="font-display font-bold text-off-white text-base leading-tight tracking-wide">
                 BARBER OS
               </h1>
-              <p className="text-[10px] font-semibold tracking-[0.18em] text-indigo-300/80 leading-tight mt-0.5">
+              <p className="text-[10px] font-semibold tracking-[0.18em] text-off-white/80 leading-tight mt-0.5">
                 POS · SALON
               </p>
             </div>
@@ -300,8 +300,8 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
             className="flex items-center gap-2 px-3 py-2 rounded-lg border border-white/8 bg-white/[0.04] text-xs"
             title={contextLabel}
           >
-            <Building2 className="w-3.5 h-3.5 text-indigo-300 flex-shrink-0" />
-            <span className="text-indigo-300/80 font-semibold tracking-wide uppercase text-[10px]">
+            <Building2 className="w-3.5 h-3.5 text-off-white flex-shrink-0" />
+            <span className="text-off-white/80 font-semibold tracking-wide uppercase text-[10px]">
               {user.role === 'kasir' || user.role === 'barber' ? 'Cabang' : 'Tenant'}
             </span>
             <span className="text-off-white font-medium truncate flex-1">{contextLabel}</span>
@@ -315,7 +315,7 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
           <button
             type="button"
             onClick={onSearchClick}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-white/8 bg-white/[0.04] text-xs text-indigo-300/80 hover:text-off-white hover:border-indigo-300/40 hover:bg-white/[0.08] transition-all"
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg border border-white/8 bg-white/[0.04] text-xs text-off-white/80 hover:text-off-white hover:border-off-white/40 hover:bg-white/[0.08] transition-all"
           >
             <Search className="w-3.5 h-3.5" />
             <span className="flex-1 text-left">{t('common.search')}...</span>
@@ -346,8 +346,8 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
                         relative flex items-center gap-3 px-3 py-2 rounded-lg
                         text-[13.5px] font-medium transition-all
                         ${isActive
-                          ? 'bg-indigo-500/18 text-white font-semibold'
-                          : 'text-indigo-300/85 hover:bg-white/6 hover:text-off-white'
+                          ? 'bg-brand/18 text-white font-semibold'
+                          : 'text-off-white/85 hover:bg-white/6 hover:text-off-white'
                         }
                         ${collapsed ? 'justify-center px-0' : ''}
                       `}
@@ -360,11 +360,11 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
                               bar solid sudah cukup signal aktif. */}
                           {isActive && !collapsed && (
                             <span
-                              className="absolute -left-[2px] top-2 bottom-2 w-[3px] rounded-full bg-indigo-300"
+                              className="absolute -left-[2px] top-2 bottom-2 w-[3px] rounded-full bg-brand"
                             />
                           )}
                           <item.icon
-                            className={`w-[18px] h-[18px] flex-shrink-0 transition-colors ${isActive ? 'text-indigo-300' : ''}`}
+                            className={`w-[18px] h-[18px] flex-shrink-0 transition-colors ${isActive ? 'text-off-white' : ''}`}
                           />
                           {!collapsed && <span className="flex-1 truncate">{t(item.labelKey)}</span>}
                           {showBadge && !collapsed && (
@@ -395,7 +395,7 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
               <button
                 type="button"
                 onClick={toggleTheme}
-                className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-white/8 bg-white/[0.04] text-indigo-300/80 hover:text-off-white hover:border-indigo-300/40 hover:bg-white/[0.08] transition-all text-xs font-medium"
+                className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-white/8 bg-white/[0.04] text-off-white/80 hover:text-off-white hover:border-off-white/40 hover:bg-white/[0.08] transition-all text-xs font-medium"
                 title={theme === 'dark' ? 'Mode Terang' : 'Mode Gelap'}
               >
                 {theme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
@@ -405,7 +405,7 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
             <button
               type="button"
               onClick={toggleLang}
-              className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-white/8 bg-white/[0.04] text-indigo-300/80 hover:text-off-white hover:border-indigo-300/40 hover:bg-white/[0.08] transition-all text-xs font-medium"
+              className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-white/8 bg-white/[0.04] text-off-white/80 hover:text-off-white hover:border-off-white/40 hover:bg-white/[0.08] transition-all text-xs font-medium"
               title="Toggle Language"
             >
               <Languages className="w-3.5 h-3.5" />
@@ -419,7 +419,7 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
               <button
                 type="button"
                 onClick={toggleTheme}
-                className="w-full flex justify-center p-2 rounded-lg text-indigo-300/80 hover:text-off-white hover:bg-white/8 transition-all"
+                className="w-full flex justify-center p-2 rounded-lg text-off-white/80 hover:text-off-white hover:bg-white/8 transition-all"
               >
                 {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
@@ -427,7 +427,7 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
             <button
               type="button"
               onClick={toggleLang}
-              className="w-full flex justify-center p-2 rounded-lg text-indigo-300/80 hover:text-off-white hover:bg-white/8 transition-all"
+              className="w-full flex justify-center p-2 rounded-lg text-off-white/80 hover:text-off-white hover:bg-white/8 transition-all"
             >
               <Languages className="w-4 h-4" />
             </button>
@@ -467,21 +467,21 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
 
         {/* User card */}
         {!collapsed ? (
-          <div className="flex items-center gap-2.5 p-2 rounded-xl border border-white/8 bg-white/[0.04] hover:bg-white/[0.08] hover:border-indigo-300/40 transition-all">
+          <div className="flex items-center gap-2.5 p-2 rounded-xl border border-white/8 bg-white/[0.04] hover:bg-white/[0.08] hover:border-off-white/40 transition-all">
             <button
               type="button"
               onClick={profilePath ? () => navigate(profilePath) : undefined}
               className={`flex items-center gap-2.5 flex-1 min-w-0 text-left ${profilePath ? 'cursor-pointer' : ''}`}
             >
               <div
-                className="w-9 h-9 rounded-lg bg-brand-gradient flex items-center justify-center flex-shrink-0 shadow-brand text-white font-bold text-sm"
+                className="w-9 h-9 rounded-lg bg-brand-gradient flex items-center justify-center flex-shrink-0 shadow-brand text-dark font-bold text-sm"
                 aria-hidden="true"
               >
                 {initialsOf(user.name)}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-semibold text-off-white truncate leading-tight">{user.name}</p>
-                <p className="text-[11px] text-indigo-300/80 capitalize truncate leading-tight mt-0.5">
+                <p className="text-[11px] text-off-white/80 capitalize truncate leading-tight mt-0.5">
                   {user.role.replace('_', ' ')}
                 </p>
               </div>
@@ -489,7 +489,7 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
             <button
               type="button"
               onClick={handleLogout}
-              className="p-1.5 rounded-md text-indigo-300/70 hover:text-red-400 hover:bg-red-500/10 transition-all flex-shrink-0"
+              className="p-1.5 rounded-md text-off-white/70 hover:text-red-400 hover:bg-red-500/10 transition-all flex-shrink-0"
               title={t('nav.logout')}
             >
               <LogOut className="w-4 h-4" />
@@ -499,7 +499,7 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
           <button
             type="button"
             onClick={handleLogout}
-            className="w-full flex justify-center p-2 rounded-lg text-indigo-300/80 hover:text-red-400 hover:bg-red-500/10 transition-all"
+            className="w-full flex justify-center p-2 rounded-lg text-off-white/80 hover:text-red-400 hover:bg-red-500/10 transition-all"
           >
             <LogOut className="w-5 h-5" />
           </button>

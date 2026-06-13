@@ -46,7 +46,7 @@ export default {
           600: '#4F46E5',
           700: '#3F37C7',
           800: '#2D2870',
-          900: '#1E1B4B',
+          900: '#16140F',  // heritage: sidebar/anchor jadi warm near-black (landing --ink)
         },
 
         // ── NEW: MINT scale (fresh accent — pertumbuhan, Live, success) ────
@@ -64,12 +64,14 @@ export default {
         },
 
         // ── NEW: SEMANTIC ALIAS (pakai ini di komponen baru Fase B+) ───────
+        // Diselaraskan ke landing publik tema HERITAGE (brass/emas).
         brand: {
-          DEFAULT: '#6366F1',  // indigo-500 — tombol primer, link, fokus
-          hover:   '#818CF8',  // indigo-400 — hover state
-          strong:  '#4F46E5',  // indigo-600 — text di card terang
-          light:   '#A5A2FF',  // indigo-300 — di atas anchor gelap
-          anchor:  '#1E1B4B',  // indigo-900 — sidebar/header bg
+          DEFAULT: '#E0A82E',  // landing --accent (brass) — tombol primer, aksen
+          hover:   '#EBBE5A',  // brass terang — hover state
+          strong:  '#B88420',  // landing --accent-deep (brass tua) — text/aksen
+          light:   '#EBC877',  // brass muda — di atas surface gelap
+          dark:    '#9A7B1E',  // brass dalam — active
+          anchor:  '#16140F',  // landing --ink-fixed — sidebar/header dark
         },
         fresh: {
           DEFAULT: '#10B981',  // mint-500 — Live, delta naik, success
@@ -89,7 +91,7 @@ export default {
         'gold-gradient':  'linear-gradient(135deg, #C9A84C 0%, #E8C875 50%, #C9A84C 100%)',
         'dark-gradient':  'linear-gradient(180deg, #1A1A2E 0%, #0E0E1A 100%)',
         // NEW
-        'brand-gradient': 'linear-gradient(135deg, #6366F1 0%, #A5A2FF 50%, #6366F1 100%)',
+        'brand-gradient': 'linear-gradient(135deg, #E0A82E 0%, #EBC877 50%, #E0A82E 100%)',
         'fresh-gradient': 'linear-gradient(135deg, #10B981 0%, #34D399 50%, #10B981 100%)',
       },
 

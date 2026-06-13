@@ -107,7 +107,7 @@ export const TopBar = ({ onMenuClick, onSearchClick }) => {
           {/* Breadcrumb compact + brand mark */}
           <div className="flex items-center gap-2 min-w-0">
             <div className="w-6 h-6 rounded-md bg-brand-gradient flex items-center justify-center flex-shrink-0 shadow-brand">
-              <Scissors className="w-3.5 h-3.5 text-white" />
+              <Scissors className="w-3.5 h-3.5 text-dark" />
             </div>
             <span className="hidden sm:inline text-xs text-muted">Beranda</span>
             <ChevronDown className="hidden sm:inline w-3 h-3 text-muted/60 -rotate-90" aria-hidden="true" />
@@ -184,7 +184,7 @@ export const TopBar = ({ onMenuClick, onSearchClick }) => {
             aria-label={profilePath ? 'Buka profil & pengaturan' : (user?.name || 'Akun pengguna')}
           >
             <div
-              className="w-8 h-8 rounded-full bg-brand-gradient flex items-center justify-center flex-shrink-0 shadow-brand text-white font-bold text-xs"
+              className="w-8 h-8 rounded-full bg-brand-gradient flex items-center justify-center flex-shrink-0 shadow-brand text-dark font-bold text-xs"
               aria-hidden="true"
             >
               {initialsOf(user?.name)}

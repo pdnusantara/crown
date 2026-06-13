@@ -33,7 +33,7 @@ function UpcomingRow({ row, isToday }) {
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-off-white">
-          {fmtDate(row.ymd)}{isToday && <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-brand text-white align-middle">Hari ini</span>}
+          {fmtDate(row.ymd)}{isToday && <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-brand text-dark align-middle">Hari ini</span>}
         </p>
         {row.isDayOff ? (
           <p className="text-xs text-amber-400 flex items-center gap-1 mt-0.5"><Coffee size={12} />Libur</p>

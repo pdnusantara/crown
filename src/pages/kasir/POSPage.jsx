@@ -200,7 +200,7 @@ function PaymentModalBody({ posStore, appliedVoucher, methodLabel, processing, o
     <div className="space-y-4">
       {/* HERO: Total */}
       <div className="rounded-2xl p-5 text-center"
-        style={{ background: 'linear-gradient(135deg, rgba(99, 102, 241,0.18) 0%, rgba(99, 102, 241,0.06) 100%)', border: '1px solid rgba(99, 102, 241,0.30)' }}>
+        style={{ background: 'linear-gradient(135deg, rgba(224, 168, 46,0.18) 0%, rgba(224, 168, 46,0.06) 100%)', border: '1px solid rgba(224, 168, 46,0.30)' }}>
         <p className="text-[10px] uppercase tracking-[0.2em] text-muted font-semibold">{t('pos.totalPayment')}</p>
         <p className="font-display text-4xl font-bold text-brand tabular-nums mt-1">{formatRupiah(total)}</p>
         <div className="flex items-center justify-center gap-2 mt-2 flex-wrap text-xs text-muted">
@@ -242,7 +242,7 @@ function PaymentModalBody({ posStore, appliedVoucher, methodLabel, processing, o
             <div className="relative">
               <span
                 className="absolute left-4 top-1/2 -translate-y-1/2 text-base font-semibold pointer-events-none"
-                style={{ color: cashReceived > 0 ? '#6366F1' : 'var(--muted, #6b7280)' }}
+                style={{ color: cashReceived > 0 ? '#E0A82E' : 'var(--muted, #6b7280)' }}
               >
                 Rp
               </span>
@@ -285,7 +285,7 @@ function PaymentModalBody({ posStore, appliedVoucher, methodLabel, processing, o
                       onClick={() => setAmount(amt)}
                       className={`relative rounded-xl border px-3 py-3 text-center transition-all active:scale-95 ${
                         isSelected
-                          ? 'bg-brand/15 border-brand text-brand shadow-[0_0_0_3px_rgba(99, 102, 241,0.15)]'
+                          ? 'bg-brand/15 border-brand text-brand shadow-[0_0_0_3px_rgba(224, 168, 46,0.15)]'
                           : isExact
                             ? 'bg-brand/5 border-brand/40 text-off-white hover:bg-brand/10'
                             : 'bg-dark-card border-dark-border text-off-white hover:border-brand/40'

@@ -3,14 +3,14 @@ import { Fragment } from 'react'
 const DAYS = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
 const DAY_FULL = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu']
 
-// Ramp sekuensial indigo untuk latar terang (area tenant = light-only):
-// makin ramai makin pekat. Lebih terbaca daripada opacity 1-warna.
+// Ramp sekuensial BRASS heritage untuk latar terang (area tenant = light-only):
+// makin ramai makin pekat (krem → brass → brass tua). Selaras landing.
 const STOPS = [
-  [0, [238, 242, 255]],    // indigo-50
-  [0.25, [199, 210, 254]], // indigo-200
-  [0.5, [129, 140, 248]],  // indigo-400
-  [0.75, [99, 102, 241]],  // indigo-500
-  [1, [67, 56, 202]],      // indigo-700
+  [0, [246, 241, 231]],    // cream
+  [0.25, [235, 217, 168]], // brass pucat
+  [0.5, [235, 190, 90]],   // brass muda
+  [0.75, [224, 168, 46]],  // brass (--accent)
+  [1, [154, 123, 30]],     // brass tua
 ]
 
 function rampColor(t) {
@@ -96,7 +96,7 @@ export function HeatmapChart({ data = [], hoursStart = 9, hoursEnd = 20 }) {
           <span>Sepi</span>
           <span
             className="h-2.5 w-28 rounded-full"
-            style={{ background: 'linear-gradient(90deg, #EEF2FF, #C7D2FE, #818CF8, #6366F1, #4338CA)' }}
+            style={{ background: 'linear-gradient(90deg, #F6F1E7, #EBD9A8, #EBBE5A, #E0A82E, #9A7B1E)' }}
           />
           <span>Ramai</span>
         </div>

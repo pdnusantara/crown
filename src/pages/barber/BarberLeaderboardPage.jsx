@@ -11,7 +11,7 @@ function Avatar({ name, photo, highlight }) {
     return <img src={photo} alt={name} className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
   }
   return (
-    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm ${highlight ? 'bg-brand text-white' : 'bg-dark-surface text-muted'}`}>
+    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm ${highlight ? 'bg-brand text-dark' : 'bg-dark-surface text-muted'}`}>
       {(name || '?').charAt(0).toUpperCase()}
     </div>
   )
@@ -26,7 +26,7 @@ function Row({ row, isMe }) {
       <Avatar name={row.name} photo={row.photo} highlight={isMe} />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-off-white truncate">
-          {row.name}{isMe && <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-brand text-white align-middle">Kamu</span>}
+          {row.name}{isMe && <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-brand text-dark align-middle">Kamu</span>}
         </p>
         <p className="text-xs text-muted flex items-center gap-2 mt-0.5">
           <span className="inline-flex items-center gap-1"><Scissors size={11} />{row.services} layanan</span>

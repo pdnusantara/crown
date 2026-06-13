@@ -14,12 +14,12 @@ export function useChartTheme() {
   // pure white card; dark surfaces indigo-tinted (#1A1A2E surface, #2A2A40 border).
   return {
     isLight,
-    grid:          isLight ? '#D5D8E8' : '#2A2A40',
-    axisTick:      isLight ? '#56548A' : '#9B98C8',
+    grid:          isLight ? '#E4DCCB' : '#2A2A40',
+    axisTick:      isLight ? '#7C7568' : '#9B98C8',
     tooltipBg:     isLight ? '#FFFFFF' : '#1A1A2E',
-    tooltipBorder: isLight ? '#D5D8E8' : '#2A2A40',
-    tooltipLabel:  isLight ? '#1E1B2E' : '#F5F5F0',
-    legendText:    isLight ? '#56548A' : '#9B98C8',
+    tooltipBorder: isLight ? '#E4DCCB' : '#2A2A40',
+    tooltipLabel:  isLight ? '#16140F' : '#F5F5F0',
+    legendText:    isLight ? '#7C7568' : '#9B98C8',
   }
 }
 
