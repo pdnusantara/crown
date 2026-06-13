@@ -605,6 +605,12 @@ router.patch('/:id/status', authenticate, requireRole('super_admin', 'tenant_adm
     if (req.user.role !== 'super_admin' && existing.tenantId !== req.user.tenantId) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
+    // Kasir hanya boleh membatalkan/refund transaksi cabangnya sendiri — sama
+    // seperti guard di GET detail. Tanpa ini, kasir cabang A bisa membalik
+    // transaksi (poin/voucher/omzet) milik cabang B dalam tenant yang sama.
+    if (req.user.role === 'kasir' && req.user.branchId && existing.branchId !== req.user.branchId) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
 
     // State guard: hanya transaksi 'completed' yang bisa dibatalkan/refund.
     // Sekali final, tidak bisa diubah lagi — mencegah reversal poin/voucher ganda.

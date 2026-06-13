@@ -7,6 +7,7 @@ const { parsePagination, paginatedResponse } = require('../utils/pagination');
 const { buildTenantDateRange, formatYmdInTz, normalizeTimezone, DEFAULT_TZ } = require('../utils/timezone');
 const { getIO } = require('../config/socket');
 const { notifyError } = require('../services/telegramService');
+const { redactSensitive } = require('../middleware/errorHandler');
 
 // POST /error-logs menerima laporan anonim (halaman publik / pra-login), jadi
 // tak terlindungi `authenticate`. Cap per-IP terpisah agar tak bisa dipakai
@@ -166,6 +167,10 @@ router.get('/stats/trend', authenticate, requireRole('super_admin'), async (req,
 router.post('/', reportLimiter, optionalAuth, async (req, res, next) => {
   try {
     const body = createErrorSchema.parse(req.body);
+    // Endpoint ini publik/anonim — `metadata` datang dari klien dan bisa tanpa
+    // sengaja membawa token/PII. Redaksi field sensitif (pakai aturan yang sama
+    // dengan errorHandler) sebelum disimpan ke tabel yang dibaca super-admin.
+    if (body.metadata) body.metadata = redactSensitive(body.metadata);
     const log  = await prisma.errorLog.create({
       data: { ...body, tenantId: req.user?.tenantId || null, userId: req.user?.id || null },
     });

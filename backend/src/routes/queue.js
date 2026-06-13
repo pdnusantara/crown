@@ -226,6 +226,11 @@ const updateQueueHandler = async (req, res, next) => {
     if (req.user.role !== 'super_admin' && existing.tenantId !== req.user.tenantId) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
+    // Kasir/barber terikat cabang: hanya boleh mengubah antrian cabangnya sendiri.
+    // queueBranchGuard hanya memastikan cabang ber-lisensi, bukan kecocokan cabang.
+    if ((req.user.role === 'kasir' || req.user.role === 'barber') && req.user.branchId && existing.branchId !== req.user.branchId) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
 
     const body = updateQueueSchema.parse(req.body);
 
@@ -266,6 +271,10 @@ router.delete('/:id', authenticate, requireRole('super_admin', 'tenant_admin', '
     if (!existing) return res.status(404).json({ success: false, error: 'Queue entry not found' });
 
     if (req.user.role !== 'super_admin' && existing.tenantId !== req.user.tenantId) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+    // Kasir terikat cabang: hanya boleh menghapus antrian cabangnya sendiri.
+    if (req.user.role === 'kasir' && req.user.branchId && existing.branchId !== req.user.branchId) {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 

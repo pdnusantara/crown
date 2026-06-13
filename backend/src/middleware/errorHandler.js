@@ -118,3 +118,6 @@ function errorHandler(err, req, res, next) {
 }
 
 module.exports = errorHandler;
+// Diekspor agar endpoint lain (mis. POST /api/error-logs yang anonim) bisa
+// memakai redaksi yang sama sebelum menyimpan data dari klien.
+module.exports.redactSensitive = redactSensitive;
