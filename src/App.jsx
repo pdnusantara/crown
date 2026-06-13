@@ -148,10 +148,16 @@ function RootRedirector() {
   const { isAuthenticated, user } = useAuthStore()
   // Mode preview (iframe builder landing super-admin) — render landing apa
   // adanya tanpa redirect, walau super-admin sedang login.
-  const isPreview = new URLSearchParams(window.location.search).get('preview') === '1'
+  const params = new URLSearchParams(window.location.search)
+  const isPreview = params.get('preview') === '1'
+  // `?view=landing` memaksa render landing apa adanya walau super-admin sedang
+  // login — dipakai untuk MENGETES Meta Pixel (pixel tetap hidup, beda dari
+  // ?preview=1 yang mematikannya). Tanpa ini, admin yang login selalu di-redirect
+  // ke dashboard sehingga mengira pixel "tidak terpasang".
+  const forceLanding = params.get('view') === 'landing'
   if (isPreview) return <LandingPage />
-  if (isAuthenticated) return <Navigate to={roleHomePath(user)} replace />
-  if (isTenantSubdomain()) return <Navigate to="/login" replace />
+  if (isAuthenticated && !forceLanding) return <Navigate to={roleHomePath(user)} replace />
+  if (isTenantSubdomain() && !forceLanding) return <Navigate to="/login" replace />
   return <LandingPage />
 }
 

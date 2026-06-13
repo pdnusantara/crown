@@ -362,11 +362,12 @@ function TrackingEditor() {
         <CardHeader><h3 className="font-semibold text-off-white">Tes & Verifikasi Pixel</h3></CardHeader>
         <CardBody className="space-y-3">
           <p className="text-sm text-muted">
-            Pixel <b className="text-off-white">tidak terbaca</b> di Pixel Helper? Hampir selalu karena cara mengetesnya, bukan pixel-nya. Ikuti urutan ini:
+            Pixel <b className="text-off-white">tidak terbaca</b> di Pixel Helper? Hampir selalu karena cara mengetesnya, bukan pixel-nya. Penyebab paling sering: <b className="text-off-white">Anda sedang login</b> — membuka sembapos.com saat login otomatis mengalihkan ke dashboard, jadi landing (& pixel) tak pernah tampil. Ikuti urutan ini:
           </p>
           <ol className="space-y-2 text-xs text-muted list-decimal pl-4 leading-relaxed">
-            <li>Buka landing di tab baru lewat tombol di bawah — <b className="text-off-white">jangan</b> tes di dalam preview editor (pixel sengaja dimatikan di preview agar data iklan tak terkotori).</li>
-            <li>Hard-reload halaman: <kbd className="px-1 bg-dark-card rounded">Ctrl/Cmd + Shift + R</kbd> — memastikan bukan versi lama dari cache PWA.</li>
+            <li>Tes lewat tombol di bawah (memakai <code className="text-off-white">?view=landing</code> agar landing tetap tampil walau Anda login) — atau buka <code className="text-off-white">sembapos.com</code> di jendela <b className="text-off-white">incognito</b> (cara pengunjung iklan melihatnya).</li>
+            <li><b className="text-off-white">Jangan</b> tes di dalam preview editor (pixel sengaja dimatikan di preview agar data iklan tak terkotori).</li>
+            <li>Hard-reload: <kbd className="px-1 bg-dark-card rounded">Ctrl/Cmd + Shift + R</kbd> — memastikan bukan versi lama dari cache PWA.</li>
             <li>Matikan dulu ad-blocker / privacy blocker (uBlock, Brave Shields, dll.) — mereka memblokir <code className="text-off-white">connect.facebook.net</code>.</li>
             <li>Pixel Helper akan menampilkan ID <code className="text-off-white">{savedId || '—'}</code> dengan event <code className="text-off-white">PageView</code>.</li>
           </ol>
@@ -375,7 +376,7 @@ function TrackingEditor() {
               variant="secondary"
               icon={ExternalLink}
               fullWidth
-              onClick={() => window.open(`${window.location.origin}/?utm_source=pixel_test`, '_blank', 'noopener')}
+              onClick={() => window.open(`${window.location.origin}/?view=landing&utm_source=pixel_test`, '_blank', 'noopener')}
             >
               Buka landing live untuk tes
             </Button>
