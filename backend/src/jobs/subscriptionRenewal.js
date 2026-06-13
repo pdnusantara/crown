@@ -238,6 +238,38 @@ async function tryWASend(tenantId, text) {
   }
 }
 
+// Alert super-admin via Telegram: ada order DIBAYAR tapi callback Duitku tak
+// pernah sampai (sudah dipulihkan otomatis oleh reconcile). Sinyal masalah
+// pengiriman callback (URL callback/jaringan). Best-effort — tak memblokir job;
+// kalau Telegram nonaktif/token kosong, sendMessage diam-diam no-op.
+async function alertCallbackMissed(orders) {
+  try {
+    if (!orders.length) return;
+    const tg = require('../services/telegramService');
+    const esc = tg.escapeHtml || ((s) => String(s));
+    const tenantIds = [...new Set(orders.map(o => o.tenantId))];
+    const tenants = await prisma.tenant.findMany({
+      where: { id: { in: tenantIds } },
+      select: { id: true, name: true },
+    });
+    const nameById = Object.fromEntries(tenants.map(t => [t.id, t.name]));
+    const lines = orders.slice(0, 15).map(o =>
+      `• ${esc(nameById[o.tenantId] || o.tenantId)} — ${esc(o.type)} Rp ${Number(o.amount).toLocaleString('id-ID')} (${esc(o.merchantOrderId)})`
+    );
+    const text = [
+      '⚠️ <b>Callback Duitku terlewat</b>',
+      '',
+      `${orders.length} pembayaran LUNAS tapi callback-nya tak pernah sampai — sudah dipulihkan otomatis oleh reconcile. Mohon cek konfigurasi callback URL Duitku / jaringan.`,
+      '',
+      ...lines,
+      orders.length > 15 ? `…dan ${orders.length - 15} lainnya` : null,
+    ].filter(Boolean).join('\n');
+    await tg.sendMessage(text);
+  } catch (e) {
+    console.warn('[RenewalJob] alertCallbackMissed failed:', e.message);
+  }
+}
+
 // ── Core job ───────────────────────────────────────────────────────────────
 
 async function runRenewalJob() {
@@ -260,6 +292,7 @@ async function runRenewalJob() {
         take: 200,
       });
       let reconciled = 0;
+      const reconciledOrders = [];
       for (const order of pendingOrders) {
         try {
           const st = await duitku.checkStatus(order.merchantOrderId);
@@ -272,6 +305,7 @@ async function runRenewalJob() {
               try {
                 await applySuccessfulPayment(order);
                 reconciled++;
+                reconciledOrders.push(order);
                 log(`reconcile: fulfilled paid-but-stale order ${order.merchantOrderId} tenant=${order.tenantId}`);
               } catch (e) {
                 await prisma.paymentOrder.updateMany({
@@ -286,7 +320,13 @@ async function runRenewalJob() {
           console.warn(`[RenewalJob] reconcile status error ${order.merchantOrderId}:`, e.message);
         }
       }
-      if (reconciled) log(`Reconciled ${reconciled} paid order(s) missed by callback`);
+      if (reconciled) {
+        log(`Reconciled ${reconciled} paid order(s) missed by callback`);
+        // ALERT super-admin: order ini DIBAYAR tapi callback Duitku tak pernah
+        // sampai (sudah dipulihkan otomatis). Sinyal ada masalah pengiriman
+        // callback Duitku (URL callback / jaringan) yang perlu dicek manual.
+        await alertCallbackMissed(reconciledOrders);
+      }
     }
   } catch (e) {
     console.error('[RenewalJob] reconcile step failed:', e.message);
@@ -366,7 +406,9 @@ async function runRenewalJob() {
 
       const endStr = fmtDate(sub.endDate);
       const broadcastMsg = [
-        `Langganan ${sub.package} Anda akan berakhir dalam *${days} hari* (${endStr}).`,
+        // Tanpa *asterisk* — notifikasi in-app tidak me-render bold ala WhatsApp,
+        // jadi bintang akan tampil harfiah ("*1 hari*"). Bold WA dipakai di waMsg.
+        `Langganan ${sub.package} Anda akan berakhir dalam ${days} hari (${endStr}).`,
         sub.autoRenew && paymentUrl
           ? `Link pembayaran sudah disiapkan. Buka menu Billing untuk melanjutkan.`
           : `Segera lakukan pembayaran di menu Billing untuk menghindari gangguan layanan.`,
