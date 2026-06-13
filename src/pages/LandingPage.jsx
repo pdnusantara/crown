@@ -372,7 +372,8 @@ export default function LandingPage() {
   const ctaTo = isAuthenticated ? homePath : '/register'
   const ctaLabel = isAuthenticated ? 'Buka Dashboard' : (hero.heroCtaLabel || 'Coba Gratis 14 Hari')
 
-  const ctx = { hero, features, steps, sections, packages, testimonials, faqs, stats, isLoading, closing, waHref, siteName, showStats: hero.showStats !== false }
+  const compareRows = (hero.compareRows?.length ? hero.compareRows : COMPARE_ROWS)
+  const ctx = { hero, features, steps, sections, compareRows, packages, testimonials, faqs, stats, isLoading, closing, waHref, siteName, showStats: hero.showStats !== false }
 
   return (
     <div className="semba">
@@ -798,7 +799,7 @@ function StepsSection({ ctx }) {
 
 // Sebelum vs Sesudah (ba-grid). Baris dari COMPARE_ROWS.
 function CompareSection({ ctx }) {
-  const { sections } = ctx
+  const { sections, compareRows } = ctx
   return (
     <section className="section" id="perbandingan">
       <div className="wrap">
@@ -811,7 +812,7 @@ function CompareSection({ ctx }) {
               <div><div className="bt">Tanpa SembaPOS</div><div className="bs">buku + chat WhatsApp</div></div>
             </div>
             <div className="ba-list">
-              {COMPARE_ROWS.map((r) => (
+              {compareRows.map((r) => (
                 <div className="row" key={r.aspect}><X /><span><b style={{ fontWeight: 700 }}>{r.aspect}:</b> {r.before}</span></div>
               ))}
             </div>
@@ -822,7 +823,7 @@ function CompareSection({ ctx }) {
               <div><div className="bt">Dengan SembaPOS</div><div className="bs">semua otomatis</div></div>
             </div>
             <div className="ba-list">
-              {COMPARE_ROWS.map((r) => (
+              {compareRows.map((r) => (
                 <div className="row" key={r.aspect}><Check strokeWidth={3} /><span><b style={{ fontWeight: 700, color: '#fff' }}>{r.aspect}:</b> {r.after}</span></div>
               ))}
             </div>
@@ -1040,7 +1041,7 @@ function ClosingCtaSection({ ctx }) {
       <div className="wrap">
         <div className="cta-box">
           <div className="cta-stripe" />
-          <span className="cta-urgency"><span className="pulse" />Onboarding gratis dibantu tim kami — slot minggu ini terbatas</span>
+          <span className="cta-urgency"><span className="pulse" />{closing.urgency || 'Onboarding gratis dibantu tim kami — slot minggu ini terbatas'}</span>
           <h2>{closing.title}</h2>
           <p>{closing.subtitle}</p>
           <div className="cta-actions">

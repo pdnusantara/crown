@@ -639,7 +639,6 @@ function HeroEditor() {
         heroCtaLabel: data.hero.heroCtaLabel || '',
         brandTagline: data.hero.brandTagline || '',
         whatsappCta:  data.hero.whatsappCta  || '',
-        heroBadge:    data.hero.heroBadge    || '',
         showStats:    data.hero.showStats !== false,
         siteName:     data.hero.siteName     || '',
         siteLogo:     data.hero.siteLogo     || '',
@@ -771,14 +770,6 @@ function HeroEditor() {
             value={form.whatsappCta}
             onChange={e => setForm(f => ({ ...f, whatsappCta: e.target.value.replace(/\D/g, '') }))}
             hint="Kosongkan jika tidak ingin tampilkan tombol konsultasi"
-          />
-
-          <Input
-            label="Teks badge kecil (pil di atas tagline)"
-            placeholder="Baru"
-            value={form.heroBadge}
-            onChange={e => setForm(f => ({ ...f, heroBadge: e.target.value }))}
-            hint="Mis. 'Baru', 'Promo', 'v2.0'"
           />
 
           <div>
@@ -1140,13 +1131,25 @@ function FAQEditor() {
 const SECTION_LABELS = {
   features:     'Section "Fitur"',
   steps:        'Section "Cara Mulai"',
+  compare:      'Section "Sebelum vs Sesudah"',
+  roi:          'Section "Kalkulator ROI"',
   pricing:      'Section "Harga"',
   testimonials: 'Section "Testimoni"',
   faq:          'Section "FAQ"',
 }
 const EMPTY_HEADING = { kicker: '', title: '', subtitle: '' }
-const EMPTY_CLOSING = { title: '', subtitle: '', ctaLabel: '' }
+const EMPTY_CLOSING = { title: '', subtitle: '', ctaLabel: '', urgency: '' }
 const EMPTY_CONTACT = { contactPhone: '', contactEmail: '', contactAddress: '' }
+
+// Default heading per-section — dipakai menyemai field di editor untuk section
+// yang BELUM tersimpan di DB (mis. compare/roi yang baru ditambahkan), supaya
+// admin melihat teks bawaan, bukan kolom kosong (yang bila disimpan akan
+// mengosongkan judul section di landing). Selaras dengan FALLBACK_SECTIONS di
+// LandingPage.jsx & DEFAULTS.sections di backend.
+const DEFAULT_SECTION_HEADINGS = {
+  compare: { kicker: 'Sebelum vs Sesudah', title: 'Dari serba manual jadi serba otomatis', subtitle: 'Perbedaan yang langsung terasa di hari pertama — bukan sekadar ganti alat, tapi ganti cara kerja.' },
+  roi:     { kicker: 'Hitung Kebocoran', title: 'Berapa rupiah yang menguap tiap bulan?', subtitle: 'Geser sesuai kondisi barbershop kamu dan lihat potensi tambahan omzet yang bisa diselamatkan.' },
+}
 
 function ContentEditor() {
   const toast = useToast()
@@ -1156,6 +1159,7 @@ function ContentEditor() {
   const [steps, setSteps] = useState([])
   const [sections, setSections] = useState(null)
   const [closing, setClosing] = useState(EMPTY_CLOSING)
+  const [compareRows, setCompareRows] = useState([])
   const [footerText, setFooterText] = useState('')
   const [contact, setContact] = useState(EMPTY_CONTACT)
   const [ready, setReady] = useState(false)
@@ -1165,9 +1169,10 @@ function ContentEditor() {
       setSteps(Array.isArray(data.hero.steps) ? data.hero.steps : [])
       const s = data.hero.sections || {}
       setSections(Object.fromEntries(
-        Object.keys(SECTION_LABELS).map(k => [k, { ...EMPTY_HEADING, ...(s[k] || {}) }])
+        Object.keys(SECTION_LABELS).map(k => [k, { ...EMPTY_HEADING, ...(DEFAULT_SECTION_HEADINGS[k] || {}), ...(s[k] || {}) }])
       ))
       setClosing({ ...EMPTY_CLOSING, ...(data.hero.closingCta || {}) })
+      setCompareRows(Array.isArray(data.hero.compareRows) ? data.hero.compareRows : [])
       setFooterText(data.hero.footerText || '')
       setContact({
         contactPhone:   data.hero.contactPhone   || '',
@@ -1187,6 +1192,15 @@ function ContentEditor() {
   function setStep(i, field, value) {
     setSteps(arr => arr.map((s, idx) => idx === i ? { ...s, [field]: value } : s))
   }
+  function setCompareRow(i, field, value) {
+    setCompareRows(arr => arr.map((r, idx) => idx === i ? { ...r, [field]: value } : r))
+  }
+  function addCompareRow() {
+    setCompareRows(arr => [...arr, { aspect: '', before: '', after: '' }])
+  }
+  function removeCompareRow(i) {
+    setCompareRows(arr => arr.filter((_, idx) => idx !== i))
+  }
 
   async function handleSave() {
     try {
@@ -1197,8 +1211,11 @@ function ContentEditor() {
           title:    closing.title.trim(),
           subtitle: closing.subtitle.trim(),
           ctaLabel: closing.ctaLabel.trim(),
-          image:    (closing.image || '').trim() || undefined,
+          urgency:  (closing.urgency || '').trim() || undefined,
         },
+        compareRows: compareRows
+          .map(r => ({ aspect: (r.aspect || '').trim(), before: (r.before || '').trim(), after: (r.after || '').trim() }))
+          .filter(r => r.aspect || r.before || r.after),
         footerText: footerText.trim(),
         contactPhone:   contact.contactPhone.trim(),
         contactEmail:   contact.contactEmail.trim(),
@@ -1231,14 +1248,6 @@ function ContentEditor() {
                   onChange={e => setSection(key, 'subtitle', e.target.value)}
                 />
               </div>
-              {key === 'steps' && (
-                <ImageUploadField
-                  label="Gambar section (opsional)"
-                  value={sections[key].image || ''}
-                  onChange={url => setSection(key, 'image', url)}
-                  hint="Tampil sebagai LATAR (background) section di belakang 3 langkah — teks tetap terbaca (ada lapisan gelap di atas gambar). Gambar landscape/lebar paling pas (mis. 1600×900)."
-                />
-              )}
             </div>
           ))}
         </CardBody>
@@ -1279,6 +1288,36 @@ function ContentEditor() {
       </Card>
 
       <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-off-white">Baris "Sebelum vs Sesudah"</h3>
+            {compareRows.length < 8 && (
+              <Button size="sm" variant="secondary" icon={Plus} onClick={addCompareRow}>Tambah</Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardBody className="space-y-3">
+          <p className="text-xs text-muted">Tiap baris membandingkan satu aspek: tanpa SembaPOS (Sebelum) vs dengan SembaPOS (Sesudah). Kosongkan semua untuk memakai daftar bawaan.</p>
+          {compareRows.length === 0 && <p className="text-sm text-muted text-center py-3">Belum ada baris — memakai daftar bawaan.</p>}
+          {compareRows.map((r, i) => (
+            <div key={i} className="p-3 bg-dark-surface rounded-xl border border-dark-border space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-brand">Baris {i + 1}</span>
+                <button onClick={() => removeCompareRow(i)} className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20">
+                  <Trash2 size={13} />
+                </button>
+              </div>
+              <Input label="Aspek" placeholder="Antrian" value={r.aspect} onChange={e => setCompareRow(i, 'aspect', e.target.value)} />
+              <div className="grid sm:grid-cols-2 gap-2">
+                <Input label="Sebelum (tanpa SembaPOS)" value={r.before} onChange={e => setCompareRow(i, 'before', e.target.value)} />
+                <Input label="Sesudah (dengan SembaPOS)" value={r.after} onChange={e => setCompareRow(i, 'after', e.target.value)} />
+              </div>
+            </div>
+          ))}
+        </CardBody>
+      </Card>
+
+      <Card>
         <CardHeader><h3 className="font-semibold text-off-white">CTA Penutup</h3></CardHeader>
         <CardBody className="space-y-4">
           <Input label="Judul" value={closing.title} onChange={e => setClosing(c => ({ ...c, title: e.target.value }))} />
@@ -1292,11 +1331,12 @@ function ContentEditor() {
             />
           </div>
           <Input label="Label tombol" placeholder="Daftar Sekarang" value={closing.ctaLabel} onChange={e => setClosing(c => ({ ...c, ctaLabel: e.target.value }))} />
-          <ImageUploadField
-            label="Gambar CTA (opsional)"
-            value={closing.image || ''}
-            onChange={url => setClosing(c => ({ ...c, image: url }))}
-            hint="Tampil sebagai LATAR (background) panel CTA di belakang teks — tetap terbaca (ada lapisan gelap di atas gambar)."
+          <Input
+            label="Badge urgensi (opsional)"
+            placeholder="Onboarding gratis dibantu tim kami — slot minggu ini terbatas"
+            value={closing.urgency || ''}
+            onChange={e => setClosing(c => ({ ...c, urgency: e.target.value }))}
+            hint="Pil kecil di atas judul CTA penutup. Kosongkan untuk memakai teks bawaan."
           />
         </CardBody>
       </Card>

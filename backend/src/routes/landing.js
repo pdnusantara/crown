@@ -25,7 +25,6 @@ const SETTING_KEYS = {
   showStats:    'landing_show_stats',
   brandTagline: 'landing_brand_tagline',
   whatsappCta:  'landing_whatsapp_cta', // nomor WA buat tombol "konsultasi"
-  heroBadge:    'landing_hero_badge',   // teks pil "Baru" di atas judul
   footerText:   'landing_footer_text',  // deskripsi singkat di footer
   contactPhone:   'landing_contact_phone',   // nomor telepon/WA kontak di footer
   contactEmail:   'landing_contact_email',   // alamat email kontak di footer
@@ -34,7 +33,8 @@ const SETTING_KEYS = {
   trustItems:   'landing_trust_items',  // JSON: array string trust-line hero
   steps:        'landing_steps',        // JSON: array {title,desc} "cara mulai"
   sections:     'landing_sections',     // JSON: heading per-section
-  closingCta:   'landing_closing_cta',  // JSON: {title,subtitle,ctaLabel}
+  closingCta:   'landing_closing_cta',  // JSON: {title,subtitle,ctaLabel,urgency}
+  compareRows:  'landing_compare_rows', // JSON: array {aspect,before,after} (Sebelum vs Sesudah)
   metaPixelId:  'landing_meta_pixel_id',// Meta (Facebook) Pixel ID untuk iklan
   seoTitle:       'landing_seo_title',       // <title> & og:title landing
   seoDescription: 'landing_seo_description', // meta description & og:description
@@ -46,7 +46,7 @@ const SETTING_KEYS = {
 };
 
 // Keys yang nilainya JSON-encoded — di-parse saat baca, di-stringify saat tulis.
-const JSON_KEYS = ['features', 'trustItems', 'steps', 'sections', 'closingCta'];
+const JSON_KEYS = ['features', 'trustItems', 'steps', 'sections', 'closingCta', 'compareRows'];
 
 // ── Block layout (block builder) ───────────────────────────────────────────
 // Tata letak landing disimpan sebagai JSON array di SystemSetting. Hero & Footer
@@ -68,7 +68,6 @@ const DEFAULTS = {
   showStats:    'true',
   brandTagline: 'Dipercaya barbershop di seluruh Indonesia',
   whatsappCta:  '',
-  heroBadge:    'Baru',
   footerText:   'Sistem manajemen barbershop modern: kasir, antrian, booking online, multi-cabang, dan laporan pintar dalam satu aplikasi.',
   contactPhone:   '',
   contactEmail:   '',
@@ -90,6 +89,8 @@ const DEFAULTS = {
   sections: JSON.stringify({
     features:     { kicker: 'Fitur Lengkap',  title: 'Semua yang barbershop kamu butuhin', subtitle: 'Nggak perlu spreadsheet atau aplikasi terpisah. Dari kasir sampai laporan pemilik, semua sudah satu paket.' },
     steps:        { kicker: 'Gampang Banget', title: 'Mulai cuma 3 langkah', subtitle: 'Dari daftar sampai toko jalan, bisa kelar hari ini juga. Beneran.' },
+    compare:      { kicker: 'Sebelum vs Sesudah', title: 'Dari serba manual jadi serba otomatis', subtitle: 'Perbedaan yang langsung terasa di hari pertama — bukan sekadar ganti alat, tapi ganti cara kerja.' },
+    roi:          { kicker: 'Hitung Kebocoran', title: 'Berapa rupiah yang menguap tiap bulan?', subtitle: 'Geser sesuai kondisi barbershop kamu dan lihat potensi tambahan omzet yang bisa diselamatkan.' },
     pricing:      { kicker: 'Paket Harga',    title: 'Harga jelas, tanpa kejutan', subtitle: 'Mulai gratis 14 hari. Bayar cuma kalau toko kamu makin ramai — bisa naik paket kapan saja.' },
     testimonials: { kicker: 'Testimoni',      title: 'Kata para owner barbershop', subtitle: 'Mereka sudah pindah dari catatan manual ke SembaPOS — dan nggak mau balik lagi.' },
     faq:          { kicker: 'Tanya Jawab',    title: 'Masih ragu? Wajar kok', subtitle: 'Belum nemu jawabannya? Chat tim kami langsung lewat WhatsApp.' },
@@ -98,7 +99,15 @@ const DEFAULTS = {
     title:    'Yuk, rapikan barbershop kamu',
     subtitle: 'Coba gratis 14 hari. Tanpa kartu kredit, tanpa biaya tersembunyi. Kalau cocok, lanjut — kalau enggak, ya sudah.',
     ctaLabel: 'Daftar Sekarang',
+    urgency:  'Onboarding gratis dibantu tim kami — slot minggu ini terbatas',
   }),
+  compareRows: JSON.stringify([
+    { aspect: 'Antrian',       before: 'Ditulis di kertas, sering salah urutan',  after: 'Antrian digital rapi, pelanggan lihat dari HP' },
+    { aspect: 'Booking',       before: 'Balas chat WA satu-satu, sering bentrok',  after: 'Booking online 24 jam, slot terkunci otomatis' },
+    { aspect: 'Kas',           before: 'Dihitung manual, sering tidak cocok',      after: 'Tercatat real-time, selalu cocok' },
+    { aspect: 'Komisi barber', before: 'Dihitung satu-satu tiap akhir bulan',      after: 'Terhitung otomatis tiap transaksi' },
+    { aspect: 'Banyak cabang', before: 'Harus telpon tiap cabang buat tahu omzet', after: 'Semua cabang terpantau dari satu layar' },
+  ]),
   metaPixelId: '',
   seoTitle:       'SembaPOS — Sistem Manajemen Barbershop Modern',
   seoDescription: 'Kasir, antrian, booking online, multi-cabang, dan laporan pintar — semua dalam satu aplikasi yang dirancang khusus untuk barbershop. Coba gratis 14 hari, tanpa kartu kredit.',
@@ -205,7 +214,6 @@ const heroUpdateSchema = z.object({
   heroCtaLabel: z.string().max(50).optional(),
   brandTagline: z.string().max(200).optional(),
   whatsappCta:  z.string().max(20).optional(),
-  heroBadge:    z.string().max(40).optional(),
   footerText:   z.string().max(600).optional(),
   contactPhone:   z.string().max(40).optional(),
   contactEmail:   z.string().max(120).optional(),
@@ -228,8 +236,14 @@ const heroUpdateSchema = z.object({
     title:    z.string().max(160),
     subtitle: z.string().max(400),
     ctaLabel: z.string().max(50),
+    urgency:  z.string().max(120).optional(),  // badge urgensi kecil di atas judul CTA
     image:    z.string().max(500).optional(),  // gambar opsional di CTA penutup
   }).optional(),
+  compareRows:  z.array(z.object({
+    aspect: z.string().max(60),
+    before: z.string().max(160),
+    after:  z.string().max(160),
+  })).max(8).optional(),
   metaPixelId:  z.string().regex(/^\d*$/, 'Pixel ID hanya boleh berisi angka').max(20).optional(),
   seoTitle:       z.string().max(120).optional(),
   seoDescription: z.string().max(320).optional(),
