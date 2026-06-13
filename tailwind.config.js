@@ -36,16 +36,14 @@ export default {
         // ── NEW: ELECTRIC INDIGO scale (brand primary) ─────────────────────
         // 500 = brand, 400 = hover, 600 = strong, 300 = "on-anchor" bright,
         // 800–900 = sidebar/anchor backgrounds (deep indigo).
-        // Selaras dengan landing publik (tone indigo, token --accent #6d5fe8):
-        // 500/600 digeser ke violet landing supaya app & landing satu warna.
         indigo: {
-          50:  '#F3F4FB',
-          100: '#E8E9F5',
+          50:  '#F3F2F8',
+          100: '#E8EAF5',
           200: '#D5D8E8',
-          300: '#A79FF2',
-          400: '#8478F0',
-          500: '#6D5FE8',
-          600: '#5B54D6',
+          300: '#A5A2FF',
+          400: '#818CF8',
+          500: '#6366F1',
+          600: '#4F46E5',
           700: '#3F37C7',
           800: '#2D2870',
           900: '#1E1B4B',
@@ -67,11 +65,11 @@ export default {
 
         // ── NEW: SEMANTIC ALIAS (pakai ini di komponen baru Fase B+) ───────
         brand: {
-          DEFAULT: '#6D5FE8',  // landing --accent — tombol primer, link, fokus
-          hover:   '#8478F0',  // violet terang — hover state
-          strong:  '#5B54D6',  // landing --accent-deep — text di card terang
-          light:   '#A79FF2',  // violet muda — di atas anchor gelap
-          anchor:  '#1E1B4B',  // landing --ink-fixed — sidebar/header bg
+          DEFAULT: '#6366F1',  // indigo-500 — tombol primer, link, fokus
+          hover:   '#818CF8',  // indigo-400 — hover state
+          strong:  '#4F46E5',  // indigo-600 — text di card terang
+          light:   '#A5A2FF',  // indigo-300 — di atas anchor gelap
+          anchor:  '#1E1B4B',  // indigo-900 — sidebar/header bg
         },
         fresh: {
           DEFAULT: '#10B981',  // mint-500 — Live, delta naik, success
@@ -91,7 +89,7 @@ export default {
         'gold-gradient':  'linear-gradient(135deg, #C9A84C 0%, #E8C875 50%, #C9A84C 100%)',
         'dark-gradient':  'linear-gradient(180deg, #1A1A2E 0%, #0E0E1A 100%)',
         // NEW
-        'brand-gradient': 'linear-gradient(135deg, #6D5FE8 0%, #A79FF2 50%, #6D5FE8 100%)',
+        'brand-gradient': 'linear-gradient(135deg, #6366F1 0%, #A5A2FF 50%, #6366F1 100%)',
         'fresh-gradient': 'linear-gradient(135deg, #10B981 0%, #34D399 50%, #10B981 100%)',
       },
 

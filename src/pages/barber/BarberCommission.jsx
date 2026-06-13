@@ -135,7 +135,7 @@ function ChartTooltip({ active, payload, label, theme }) {
       }}
     >
       <p className="font-semibold mb-0.5">{label}</p>
-      <p className="tabular-nums" style={{ color: '#6D5FE8' }}>
+      <p className="tabular-nums" style={{ color: '#6366F1' }}>
         {formatRupiah(payload[0]?.value || 0)}
       </p>
     </div>
@@ -573,12 +573,12 @@ export default function BarberCommission() {
                   tickFormatter={v => v >= 1_000_000 ? `${(v/1_000_000).toFixed(1)}jt` : v >= 1000 ? `${Math.round(v/1000)}k` : v}
                 />
                 <Tooltip
-                  cursor={{ fill: isLight ? 'rgba(109, 95, 232,0.08)' : 'rgba(109, 95, 232,0.06)' }}
+                  cursor={{ fill: isLight ? 'rgba(99, 102, 241,0.08)' : 'rgba(99, 102, 241,0.06)' }}
                   content={(p) => <ChartTooltip {...p} theme={theme} />}
                 />
                 <Bar dataKey="commission" radius={[6, 6, 0, 0]} maxBarSize={28}>
                   {chart.days.map((entry, i) => (
-                    <Cell key={i} fill={entry.commission === chart.max && chart.max > 0 ? '#A79FF2' : '#6D5FE8'} />
+                    <Cell key={i} fill={entry.commission === chart.max && chart.max > 0 ? '#A5A2FF' : '#6366F1'} />
                   ))}
                 </Bar>
               </BarChart>

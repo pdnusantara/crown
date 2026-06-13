@@ -9,7 +9,7 @@ const STOPS = [
   [0, [238, 242, 255]],    // indigo-50
   [0.25, [199, 210, 254]], // indigo-200
   [0.5, [129, 140, 248]],  // indigo-400
-  [0.75, [109, 95, 232]],  // indigo-500
+  [0.75, [99, 102, 241]],  // indigo-500
   [1, [67, 56, 202]],      // indigo-700
 ]
 
@@ -96,7 +96,7 @@ export function HeatmapChart({ data = [], hoursStart = 9, hoursEnd = 20 }) {
           <span>Sepi</span>
           <span
             className="h-2.5 w-28 rounded-full"
-            style={{ background: 'linear-gradient(90deg, #EEF2FF, #C7D2FE, #818CF8, #6D5FE8, #4A43C8)' }}
+            style={{ background: 'linear-gradient(90deg, #EEF2FF, #C7D2FE, #818CF8, #6366F1, #4338CA)' }}
           />
           <span>Ramai</span>
         </div>
