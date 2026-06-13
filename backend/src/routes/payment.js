@@ -355,6 +355,19 @@ router.post('/create', authenticate, async (req, res, next) => {
     });
   } catch (err) {
     if (err instanceof z.ZodError) return res.status(400).json({ success: false, error: err.errors[0]?.message });
+    // Kegagalan dari gateway Duitku (mis. "Merchant Not Found", signature,
+    // belum dikonfigurasi) → tampilkan pesan JELAS ke tenant, bukan 500
+    // "Internal server error" generik. Ini biasanya masalah konfigurasi
+    // Merchant Code / API Key produksi di /super-admin/payment-settings.
+    if (/duitku|merchant|gateway|signature|belum dikonfigurasi/i.test(err.message || '')) {
+      console.error('[payment/create] gateway error:', err.message);
+      await logBilling(req.user.id, req.user.name, 'order.gateway_error', `subscription:${req.body?.subscriptionId || '-'}`,
+        err.message, 'critical').catch(() => {});
+      return res.status(502).json({
+        success: false,
+        error: `Pembayaran gagal disiapkan oleh gateway: ${err.message}. Hubungi admin untuk memeriksa konfigurasi Payment Gateway (Merchant Code & API Key produksi Duitku).`,
+      });
+    }
     next(err);
   }
 });
