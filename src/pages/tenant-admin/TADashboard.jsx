@@ -26,16 +26,16 @@ import Badge from '../../components/ui/Badge.jsx'
 import { formatRupiah, formatRupiahShort } from '../../utils/format.js'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function getGreeting() {
+function getGreeting(t) {
   const h = new Date().getHours()
-  if (h < 11) return 'Selamat Pagi'
-  if (h < 15) return 'Selamat Siang'
-  if (h < 18) return 'Selamat Sore'
-  return 'Selamat Malam'
+  if (h < 11) return t('tenantAdmin.dashboard.greetingMorning')
+  if (h < 15) return t('tenantAdmin.dashboard.greetingNoon')
+  if (h < 18) return t('tenantAdmin.dashboard.greetingAfternoon')
+  return t('tenantAdmin.dashboard.greetingNight')
 }
 
-function todayLabel() {
-  return new Date().toLocaleDateString('id-ID', {
+function todayLabel(lang) {
+  return new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'id-ID', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })
 }
@@ -46,12 +46,14 @@ function calcTrend(cur, prev) {
   return { pct: Math.abs(pct).toFixed(1), dir: cur >= prev ? 'up' : 'down' }
 }
 
-function shiftDuration(openedAt) {
+function shiftDuration(t, openedAt) {
   if (!openedAt) return null
   const diff = Date.now() - new Date(openedAt).getTime()
   const h = Math.floor(diff / 3600000)
   const m = Math.floor((diff % 3600000) / 60000)
-  return h > 0 ? `${h}j ${m}m` : `${m} menit`
+  return h > 0
+    ? t('tenantAdmin.dashboard.durationHoursMin', { hours: h, minutes: m })
+    : t('tenantAdmin.dashboard.durationMin', { minutes: m })
 }
 
 // ── Skeleton ─────────────────────────────────────────────────────────────────
@@ -129,7 +131,7 @@ function StatCard({ title, value, valueShort, icon: Icon, trend, loading, delay 
               {trend && (
                 <div className="flex items-center gap-1 mt-1">
                   <TrendChip trend={trend} />
-                  <span className="text-xs text-muted">vs kemarin</span>
+                  <span className="text-xs text-muted">{t('tenantAdmin.dashboard.vsYesterdayShort')}</span>
                 </div>
               )}
             </div>
@@ -165,7 +167,7 @@ function BranchCard({ branch, staffList }) {
   const { data: shift, isLoading: shiftLoading } = useActiveShift(branch.id)
   const staffCount = staffList.filter(s => s.branchId === branch.id).length
   const isActive   = branch.isActive !== false && !branch.deletedAt
-  const dur        = shift?.openedAt ? shiftDuration(shift.openedAt) : null
+  const dur        = shift?.openedAt ? shiftDuration(t, shift.openedAt) : null
 
   return (
     <Card className="p-4">
@@ -181,19 +183,19 @@ function BranchCard({ branch, staffList }) {
       <div className="space-y-2.5 text-sm">
         {/* Shift status */}
         <div className="flex items-center justify-between">
-          <span className="text-muted">Shift</span>
+          <span className="text-muted">{t('tenantAdmin.dashboard.shiftLabel')}</span>
           {shiftLoading ? (
             <Sk className="h-3.5 w-20" />
           ) : shift ? (
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse flex-shrink-0" />
-              <span className="text-green-400 font-medium">Buka</span>
+              <span className="text-green-400 font-medium">{t('tenantAdmin.dashboard.shiftOpen')}</span>
               {dur && <span className="text-muted text-xs">· {dur}</span>}
             </div>
           ) : (
             <div className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-dark-border flex-shrink-0" />
-              <span className="text-muted">Tutup</span>
+              <span className="text-muted">{t('tenantAdmin.dashboard.shiftClosed')}</span>
             </div>
           )}
         </div>
@@ -207,7 +209,7 @@ function BranchCard({ branch, staffList }) {
         </div>
         <div className="flex justify-between">
           <span className="text-muted">{t('tenantAdmin.dashboard.activeStaff')}</span>
-          <span className="text-off-white">{staffCount} orang</span>
+          <span className="text-off-white">{t('tenantAdmin.dashboard.activeStaffCount', { count: staffCount })}</span>
         </div>
       </div>
     </Card>
@@ -305,19 +307,20 @@ function LeaderboardCard({ barber, index, branchName }) {
 
 // ── Chart tooltip ─────────────────────────────────────────────────────────────
 function ChartTooltip({ active, payload, label }) {
+  const { t } = useTranslation()
   if (!active || !payload?.length) return null
   return (
     <div className="bg-dark-card border border-dark-border rounded-xl px-3 py-2 text-xs shadow-xl">
       <p className="text-muted mb-1">{label}</p>
       <p className="font-semibold text-brand">{formatRupiah(payload[0].value)}</p>
-      {payload[1] && <p className="text-muted">{payload[1].value} transaksi</p>}
+      {payload[1] && <p className="text-muted">{t('tenantAdmin.dashboard.chartTxns', { count: payload[1].value })}</p>}
     </div>
   )
 }
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function TADashboard() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const { user } = useAuthStore()
   const tenantId = user?.tenantId
@@ -375,12 +378,12 @@ export default function TADashboard() {
 
   // ── Quick actions config ──────────────────────────────────────────────────
   const quickActions = [
-    { icon: Users,      label: 'Pelanggan Baru',   to: '/admin/customers',      bg: 'bg-blue-400/10',   color: 'text-blue-400'   },
-    { icon: BarChart3,  label: 'Laporan',           to: '/admin/reports',        bg: 'bg-brand/10',       color: 'text-brand'       },
-    { icon: CalendarDays, label: 'Jadwal',          to: '/admin/schedule',       bg: 'bg-purple-400/10', color: 'text-purple-400' },
-    { icon: MapPin,     label: 'Laporan Wilayah',   to: '/admin/wilayah-report', bg: 'bg-green-400/10',  color: 'text-green-400'  },
-    { icon: Tag,        label: 'Voucher',           to: '/admin/vouchers',       bg: 'bg-pink-400/10',   color: 'text-pink-400'   },
-    { icon: TrendingUp, label: 'Perbandingan',      to: '/admin/comparison',     bg: 'bg-orange-400/10', color: 'text-orange-400' },
+    { icon: Users,      label: t('tenantAdmin.dashboard.qaNewCustomer'),   to: '/admin/customers',      bg: 'bg-blue-400/10',   color: 'text-blue-400'   },
+    { icon: BarChart3,  label: t('tenantAdmin.dashboard.qaReports'),       to: '/admin/reports',        bg: 'bg-brand/10',       color: 'text-brand'       },
+    { icon: CalendarDays, label: t('tenantAdmin.dashboard.qaSchedule'),    to: '/admin/schedule',       bg: 'bg-purple-400/10', color: 'text-purple-400' },
+    { icon: MapPin,     label: t('tenantAdmin.dashboard.qaWilayahReport'), to: '/admin/wilayah-report', bg: 'bg-green-400/10',  color: 'text-green-400'  },
+    { icon: Tag,        label: t('tenantAdmin.dashboard.qaVoucher'),       to: '/admin/vouchers',       bg: 'bg-pink-400/10',   color: 'text-pink-400'   },
+    { icon: TrendingUp, label: t('tenantAdmin.dashboard.qaComparison'),    to: '/admin/comparison',     bg: 'bg-orange-400/10', color: 'text-orange-400' },
   ]
 
   return (
@@ -393,9 +396,9 @@ export default function TADashboard() {
       {/* Greeting header */}
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-sm text-muted">{todayLabel()}</p>
+          <p className="text-sm text-muted">{todayLabel(i18n.language)}</p>
           <h1 className="font-display text-2xl font-bold text-off-white mt-0.5">
-            {getGreeting()}, <span className="brand-text">{user?.name?.split(' ')[0] || 'Admin'}</span> 👋
+            {getGreeting(t)}, <span className="brand-text">{user?.name?.split(' ')[0] || 'Admin'}</span> 👋
           </h1>
           <p className="text-sm text-muted mt-1">{t('tenantAdmin.dashboard.subtitle')}</p>
         </div>
@@ -404,10 +407,10 @@ export default function TADashboard() {
             <select
               value={branchId}
               onChange={(e) => setBranchId(e.target.value)}
-              aria-label="Filter cabang"
+              aria-label={t('tenantAdmin.dashboard.filterBranchAria')}
               className="bg-dark-card border border-dark-border text-off-white rounded-xl px-3 py-1.5 text-xs outline-none focus:border-brand/60 max-w-[180px]"
             >
-              <option value="">Semua Cabang</option>
+              <option value="">{t('tenantAdmin.dashboard.allBranches')}</option>
               {tenantBranches.map(b => (
                 <option key={b.id} value={b.id}>{b.name}</option>
               ))}
@@ -415,7 +418,7 @@ export default function TADashboard() {
           )}
           <div className="flex items-center gap-1.5 text-xs text-muted px-3 py-1.5 rounded-xl bg-dark-card border border-dark-border">
             <Clock size={12} />
-            <span>Data diperbarui real-time</span>
+            <span>{t('tenantAdmin.dashboard.realtimeData')}</span>
           </div>
         </div>
       </motion.div>
@@ -424,7 +427,7 @@ export default function TADashboard() {
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
         <div className="flex items-center gap-2 mb-3">
           <Zap size={14} className="text-brand" />
-          <p className="text-sm font-medium text-off-white">Aksi Cepat</p>
+          <p className="text-sm font-medium text-off-white">{t('tenantAdmin.dashboard.quickActions')}</p>
         </div>
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
           {quickActions.map(qa => (
@@ -461,7 +464,7 @@ export default function TADashboard() {
           delay={0.2}
         />
         <StatCard
-          title="Rata-rata Transaksi"
+          title={t('tenantAdmin.dashboard.avgTransaction')}
           value={formatRupiah(avgTx)}
           valueShort={formatRupiahShort(avgTx)}
           icon={TrendingUp}
@@ -478,10 +481,10 @@ export default function TADashboard() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-off-white">Tren Pendapatan (7 Hari)</h3>
+                <h3 className="font-semibold text-off-white">{t('tenantAdmin.dashboard.revenueTrend')}</h3>
                 {chartData.length > 0 && (
                   <span className="text-xs text-muted">
-                    Total: <span className="text-brand font-medium">{formatRupiah(chartData.reduce((s, d) => s + d.revenue, 0))}</span>
+                    {t('tenantAdmin.dashboard.chartTotal')} <span className="text-brand font-medium">{formatRupiah(chartData.reduce((s, d) => s + d.revenue, 0))}</span>
                   </span>
                 )}
               </div>
@@ -565,7 +568,7 @@ export default function TADashboard() {
                   <th className="px-3 sm:px-4 py-3 text-left font-medium w-10">#</th>
                   <th className="px-3 sm:px-4 py-3 text-left font-medium">{t('tenantAdmin.dashboard.colBarber')}</th>
                   <th className="px-3 sm:px-4 py-3 text-left font-medium hidden md:table-cell">{t('nav.branches')}</th>
-                  <th className="px-3 sm:px-4 py-3 text-center font-medium">Layanan</th>
+                  <th className="px-3 sm:px-4 py-3 text-center font-medium">{t('tenantAdmin.dashboard.colServices')}</th>
                   <th className="px-3 sm:px-4 py-3 text-right font-medium">{t('common.revenue')}</th>
                 </tr>
               </thead>
@@ -619,7 +622,7 @@ export default function TADashboard() {
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-off-white">{t('tenantAdmin.dashboard.branchPerformance')}</h3>
-          <span className="text-xs text-muted">{tenantBranches.length} cabang</span>
+          <span className="text-xs text-muted">{t('tenantAdmin.dashboard.branchCount', { count: tenantBranches.length })}</span>
         </div>
         {loadingBranches ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -628,7 +631,7 @@ export default function TADashboard() {
         ) : tenantBranches.length === 0 ? (
           <Card className="p-8 text-center">
             <Building2 size={32} className="text-muted mx-auto mb-2" />
-            <p className="text-muted text-sm">Belum ada cabang terdaftar</p>
+            <p className="text-muted text-sm">{t('tenantAdmin.dashboard.noBranchesYet')}</p>
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -646,7 +649,7 @@ export default function TADashboard() {
             type="button"
             onClick={() => navigate('/admin/ratings')}
             className="w-full text-left group"
-            aria-label="Kelola rating barber"
+            aria-label={t('tenantAdmin.dashboard.ratingManageAria')}
           >
             <Card className="p-4 sm:p-5 hover:border-brand/40 transition-colors">
               <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
@@ -655,19 +658,19 @@ export default function TADashboard() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-off-white inline-flex items-center gap-2 text-sm sm:text-base">
-                    Rating Barber
-                    <span className="text-[10px] sm:text-[11px] font-normal text-muted">(7 hari)</span>
+                    {t('tenantAdmin.dashboard.ratingBarber')}
+                    <span className="text-[10px] sm:text-[11px] font-normal text-muted">{t('tenantAdmin.dashboard.ratingDays')}</span>
                   </p>
                   <p className="text-xs text-muted mt-0.5 truncate">
                     {!ratingStats || ratingStats.totalRatings === 0
-                      ? 'Belum ada rating · klik untuk lihat detail'
-                      : `${ratingStats.avgRating?.toFixed(1) || '–'} ★ · ${ratingStats.totalRatings} review${
+                      ? t('tenantAdmin.dashboard.ratingNone')
+                      : `${ratingStats.avgRating?.toFixed(1) || '–'} ★ · ${t('tenantAdmin.dashboard.ratingReviewCount', { count: ratingStats.totalRatings })}${
                           ratingStats.kpi?.pendingPublishCount > 0
-                            ? ` · ${ratingStats.kpi.pendingPublishCount} menunggu moderasi`
+                            ? ` · ${t('tenantAdmin.dashboard.ratingPendingMod', { count: ratingStats.kpi.pendingPublishCount })}`
                             : ''
                         }${
                           ratingStats.kpi?.lowRatingCount > 0
-                            ? ` · ${ratingStats.kpi.lowRatingCount} komplain`
+                            ? ` · ${t('tenantAdmin.dashboard.ratingComplaint', { count: ratingStats.kpi.lowRatingCount })}`
                             : ''
                         }`}
                   </p>
@@ -676,14 +679,14 @@ export default function TADashboard() {
                   {ratingStats?.totalRatings > 0 && (
                     <>
                       <div className="text-right">
-                        <p className="text-[10px] uppercase tracking-wide text-muted">Avg</p>
+                        <p className="text-[10px] uppercase tracking-wide text-muted">{t('tenantAdmin.dashboard.labelAvg')}</p>
                         <p className="text-lg font-bold text-brand tabular-nums">
                           {ratingStats.avgRating?.toFixed(1) || '–'}
                         </p>
                       </div>
                       {ratingStats.kpi?.pendingPublishCount > 0 && (
                         <div className="text-right">
-                          <p className="text-[10px] uppercase tracking-wide text-muted">Pending</p>
+                          <p className="text-[10px] uppercase tracking-wide text-muted">{t('tenantAdmin.dashboard.labelPending')}</p>
                           <p className="text-lg font-bold text-amber-300 tabular-nums">
                             {ratingStats.kpi.pendingPublishCount}
                           </p>
@@ -691,7 +694,7 @@ export default function TADashboard() {
                       )}
                       {ratingStats.kpi?.lowRatingCount > 0 && (
                         <div className="text-right">
-                          <p className="text-[10px] uppercase tracking-wide text-muted">Komplain</p>
+                          <p className="text-[10px] uppercase tracking-wide text-muted">{t('tenantAdmin.dashboard.labelComplaint')}</p>
                           <p className="text-lg font-bold text-red-400 tabular-nums">
                             {ratingStats.kpi.lowRatingCount}
                           </p>
@@ -712,6 +715,7 @@ export default function TADashboard() {
 
 // ── Trial banner — persistent saat status=trial atau <=7 hari ────────────────
 function TrialBanner({ tenantId }) {
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const { data: sub } = useSubscription(tenantId)
   if (!sub) return null
@@ -737,10 +741,12 @@ function TrialBanner({ tenantId }) {
         <Sparkles size={16} className="text-brand flex-shrink-0" />
         <div className="text-sm">
           <span className="text-off-white font-semibold">
-            {isTrial ? 'Trial' : 'Langganan'} berakhir dalam {daysLeft} hari
+            {isTrial
+              ? t('tenantAdmin.dashboard.bannerTrialEnds', { days: daysLeft })
+              : t('tenantAdmin.dashboard.bannerSubEnds', { days: daysLeft })}
           </span>
           <span className="text-muted ml-2">
-            ({new Date(sub.endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })})
+            ({new Date(sub.endDate).toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'id-ID', { day: 'numeric', month: 'long', year: 'numeric' })})
           </span>
         </div>
       </div>
@@ -748,7 +754,7 @@ function TrialBanner({ tenantId }) {
         onClick={() => navigate('/admin/billing')}
         className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-brand text-dark text-sm font-semibold hover:bg-brand/90 transition-colors"
       >
-        {isTrial ? 'Aktifkan Sekarang' : 'Perpanjang'} <ArrowRight size={12} />
+        {isTrial ? t('tenantAdmin.dashboard.activateNow') : t('tenantAdmin.dashboard.renew')} <ArrowRight size={12} />
       </button>
     </motion.div>
   )
@@ -757,6 +763,7 @@ function TrialBanner({ tenantId }) {
 // ── Setup checklist — panduan onboarding toko baru ───────────────────────────
 // Auto-cek tiap langkah dari data nyata; hilang sendiri saat semua selesai.
 function SetupChecklist({ tenantId }) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { data: branches = [], isLoading: lb } = useBranches(tenantId)
   const { data: staff = [],    isLoading: lu } = useUsers({ tenantId })
@@ -784,20 +791,20 @@ function SetupChecklist({ tenantId }) {
 
   const steps = [
     { id: 'branch',  icon: Building2, done: branches.length > 0,
-      label: 'Tambah cabang pertama',
-      desc:  'Tentukan nama, alamat, dan jam buka cabang Anda.',
+      label: t('tenantAdmin.dashboard.stepBranchLabel'),
+      desc:  t('tenantAdmin.dashboard.stepBranchDesc'),
       to: '/admin/branches' },
     { id: 'service', icon: Tag, done: serviceCount > 0,
-      label: 'Buat daftar layanan',
-      desc:  'Potong rambut, cuci, cukur — lengkapi harga & durasi.',
+      label: t('tenantAdmin.dashboard.stepServiceLabel'),
+      desc:  t('tenantAdmin.dashboard.stepServiceDesc'),
       to: '/admin/services' },
     { id: 'staff',   icon: Users, done: staffCount > 0,
-      label: 'Tambah kasir & barber',
-      desc:  'Buat akun login untuk staf yang melayani transaksi.',
+      label: t('tenantAdmin.dashboard.stepStaffLabel'),
+      desc:  t('tenantAdmin.dashboard.stepStaffDesc'),
       to: '/admin/staff' },
     { id: 'tx',      icon: Receipt, done: txCount > 0,
-      label: 'Catat transaksi pertama',
-      desc:  'Lewat akun kasir di menu POS — tanda toko sudah aktif.',
+      label: t('tenantAdmin.dashboard.stepTxLabel'),
+      desc:  t('tenantAdmin.dashboard.stepTxDesc'),
       to: null },
   ]
 
@@ -826,10 +833,10 @@ function SetupChecklist({ tenantId }) {
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="font-display text-base sm:text-lg font-bold text-off-white">
-            Persiapan Toko
+            {t('tenantAdmin.dashboard.setupTitle')}
           </h3>
           <p className="text-xs text-muted mt-0.5">
-            {doneCount} dari {steps.length} langkah selesai — lengkapi agar toko siap dipakai.
+            {t('tenantAdmin.dashboard.setupProgress', { done: doneCount, total: steps.length })}
           </p>
         </div>
         <span className="text-sm font-bold text-brand flex-shrink-0">{pct}%</span>
@@ -881,7 +888,7 @@ function SetupChecklist({ tenantId }) {
                     onClick={() => navigate(step.to)}
                     className="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-brand text-dark text-xs font-semibold hover:bg-brand/90 transition-colors"
                   >
-                    Buka <ArrowRight size={12} />
+                    {t('tenantAdmin.dashboard.openBtn')} <ArrowRight size={12} />
                   </button>
                 )}
               </div>
@@ -891,7 +898,7 @@ function SetupChecklist({ tenantId }) {
             onClick={() => navigate('/admin/bantuan')}
             className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-dark-border text-xs font-medium text-muted hover:text-off-white hover:border-brand/30 transition-colors"
           >
-            Butuh panduan lengkap? Buka Pusat Bantuan
+            {t('tenantAdmin.dashboard.helpCenterCta')}
             <ArrowRight size={12} />
           </button>
         </div>
@@ -902,6 +909,7 @@ function SetupChecklist({ tenantId }) {
 
 // ── Welcome banner (muncul saat redirect dari /register) ─────────────────────
 function WelcomeBanner() {
+  const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const isWelcome = searchParams.get('welcome') === '1'
@@ -923,7 +931,7 @@ function WelcomeBanner() {
     >
       <button
         onClick={dismiss}
-        aria-label="Tutup"
+        aria-label={t('common.close')}
         className="absolute top-3 right-3 p-1 rounded-lg text-muted hover:text-off-white hover:bg-dark-card transition-colors"
       >
         <X size={14} />
@@ -934,25 +942,23 @@ function WelcomeBanner() {
         </div>
         <div className="min-w-0 flex-1">
           <h3 className="font-display text-lg font-bold text-off-white mb-1">
-            Selamat datang di SembaPOS! 🎉
+            {t('tenantAdmin.dashboard.welcomeTitle')}
           </h3>
           <p className="text-sm text-muted mb-4">
-            Trial 14 hari Anda sudah aktif. Ikuti checklist{' '}
-            <strong className="text-off-white">"Persiapan Toko"</strong> di bawah —
-            tiap langkah otomatis tercentang saat selesai.
+            {t('tenantAdmin.dashboard.welcomeDesc')}
           </p>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => { dismiss(); navigate('/admin/branches') }}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-brand text-dark text-sm font-semibold hover:bg-brand/90 transition-colors"
             >
-              Mulai Setup <ArrowRight size={13} />
+              {t('tenantAdmin.dashboard.welcomeStartSetup')} <ArrowRight size={13} />
             </button>
             <button
               onClick={() => { dismiss(); navigate('/admin/billing') }}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-dark-card border border-dark-border text-sm hover:border-brand/40 transition-colors"
             >
-              Lihat Status Trial
+              {t('tenantAdmin.dashboard.welcomeViewTrial')}
             </button>
           </div>
         </div>
