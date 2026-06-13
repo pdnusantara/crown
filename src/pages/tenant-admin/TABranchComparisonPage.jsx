@@ -179,7 +179,7 @@ export default function TABranchComparisonPage() {
                 <YAxis tick={{ fill: '#6B7280', fontSize: 11 }} tickLine={false} tickFormatter={v => `${(v / 1000000).toFixed(1)}M`} />
                 <Tooltip contentStyle={{ background: '#1A1A1A', border: '1px solid #2A2A2A', borderRadius: 12 }} formatter={v => [formatRupiah(v), '']} />
                 <Legend wrapperStyle={{ color: '#6B7280', fontSize: 12 }} />
-                <Bar dataKey={branchA?.name || 'A'} fill="#6366F1" radius={[4, 4, 0, 0]} />
+                <Bar dataKey={branchA?.name || 'A'} fill="#6D5FE8" radius={[4, 4, 0, 0]} />
                 <Bar dataKey={branchB?.name || 'B'} fill="#4B8BFF" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
