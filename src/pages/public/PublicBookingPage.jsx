@@ -100,6 +100,20 @@ function statusLabel(status, t) {
   return map[status] ? t(`publicBooking.${map[status]}`) : status
 }
 
+// Pilih warna teks yang kontras di atas warna accent (mis. tombol CTA). Accent
+// terang seperti brass #E0A82E → teks ink; accent gelap → teks putih. Bikin CTA
+// tetap terbaca walau tenant pasang primaryColor sendiri.
+function readableOn(hex) {
+  try {
+    const h = String(hex).replace('#', '')
+    const r = parseInt(h.slice(0, 2), 16)
+    const g = parseInt(h.slice(2, 4), 16)
+    const b = parseInt(h.slice(4, 6), 16)
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+    return lum > 0.6 ? '#16140F' : '#FFFFFF'
+  } catch { return '#FFFFFF' }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN PAGE
 // ═══════════════════════════════════════════════════════════════════════════
@@ -135,7 +149,7 @@ function PublicBookingPageInner() {
   // tenant); fallback ke Nama Bisnis bila owner/akun tak tersedia.
   const tenantName = ownerName || businessName
   const bp = bookingPage || {}
-  const accent = bp.primaryColor || '#6366F1'
+  const accent = bp.primaryColor || '#E0A82E'
 
   // step: 0 (pick), 1 (date), 2 (confirm), 3 (success)
   const [step, setStep] = useState(0)
@@ -584,7 +598,7 @@ function LookupModal({ accent, phone, setPhone, loading, list, error, onClose, o
 // SHELL — design tokens + sticky bottom CTA
 // ═══════════════════════════════════════════════════════════════════════════
 
-function BookShell({ accent = '#6366F1', tenantName, tenantLogo, bp = {}, sticky, children, onOpenLookup }) {
+function BookShell({ accent = '#E0A82E', tenantName, tenantLogo, bp = {}, sticky, children, onOpenLookup }) {
   const { t } = useTranslation()
   const showLogo = bp.showLogo !== false
   const isLight  = bp.mode === 'light'
@@ -592,29 +606,29 @@ function BookShell({ accent = '#6366F1', tenantName, tenantLogo, bp = {}, sticky
   // Tokens swap based on mode. Both palettes share the same accent so the
   // brand identity stays consistent regardless of theme. Designed so that
   // sub-components reading `var(--bk-*)` need ZERO awareness of the mode.
-  // Tokens v2 (rebrand Electric Indigo + Mint, 2026-05-28): light = lavender
-  // bg + pure white card; dark = indigo-tinted neutral (nyambung dengan dalam-
-  // app). Aksen tetap pakai accent prop tenant (default brand #6366F1).
+  // Tokens v3 (selaras landing publik "heritage brass", 2026-06-13): light =
+  // krem #F6F1E7 + kartu putih hangat + ink #16140F; dark = ink hangat + teks
+  // krem. Aksen pakai accent prop tenant (default brass #E0A82E = landing).
   const tokens = isLight ? {
-    '--bk-bg':            '#F4F4FA',
-    '--bk-bg-translucent':'rgba(244,244,250,0.92)',
-    '--bk-surface':       '#FFFFFF',
-    '--bk-surface-2':     '#EEEEF5',
-    '--bk-border':        '#D5D8E8',
-    '--bk-border-strong': '#C7CBE0',
-    '--bk-text':          '#1E1B2E',
-    '--bk-text-2':        '#56548A',
-    '--bk-text-muted':    '#7C7AA8',
+    '--bk-bg':            '#F6F1E7',
+    '--bk-bg-translucent':'rgba(246,241,231,0.92)',
+    '--bk-surface':       '#FFFDF8',
+    '--bk-surface-2':     '#F0E9DA',
+    '--bk-border':        '#E4DAC6',
+    '--bk-border-strong': '#D6C9AD',
+    '--bk-text':          '#16140F',
+    '--bk-text-2':        '#6B5F4A',
+    '--bk-text-muted':    '#938872',
   } : {
-    '--bk-bg':            '#0E0E1A',
-    '--bk-bg-translucent':'rgba(14,14,26,0.92)',
-    '--bk-surface':       '#1A1A2E',
-    '--bk-surface-2':     '#222236',
-    '--bk-border':        '#2A2A40',
-    '--bk-border-strong': '#3A3A55',
-    '--bk-text':          '#F0F0F5',
-    '--bk-text-2':        '#9B98C8',
-    '--bk-text-muted':    '#6B6890',
+    '--bk-bg':            '#16140F',
+    '--bk-bg-translucent':'rgba(22,20,15,0.92)',
+    '--bk-surface':       '#211D16',
+    '--bk-surface-2':     '#2A251B',
+    '--bk-border':        '#3A3326',
+    '--bk-border-strong': '#4A4030',
+    '--bk-text':          '#F6F1E7',
+    '--bk-text-2':        '#C9BFA8',
+    '--bk-text-muted':    '#9A8F78',
   }
 
   return (
@@ -624,6 +638,7 @@ function BookShell({ accent = '#6366F1', tenantName, tenantLogo, bp = {}, sticky
         '--bk-accent':       accent,
         '--bk-accent-soft':  `${accent}1A`,
         '--bk-accent-glow':  `${accent}55`,
+        '--bk-accent-text':  readableOn(accent),
         ...tokens,
         background: tokens['--bk-bg'],
         color: tokens['--bk-text'],
@@ -645,7 +660,7 @@ function BookShell({ accent = '#6366F1', tenantName, tenantLogo, bp = {}, sticky
         }
         .book-root .bk-cta {
           background: var(--bk-accent);
-          color: #FFFFFF;
+          color: var(--bk-accent-text, #FFFFFF);
           font-weight: 700;
           font-size: 15px;
           letter-spacing: 0.01em;
@@ -714,19 +729,19 @@ function BookShell({ accent = '#6366F1', tenantName, tenantLogo, bp = {}, sticky
         }
         .book-root .bk-shake { animation: bk-shake 0.4s ease-in-out; }
 
-        /* ── Hero v2: dark indigo gradient untuk identity tenant ─────────── */
+        /* ── Hero v2: gradient ink hangat (selaras landing heritage) ─────── */
         .book-root .bk-hero-v2 {
           border-radius: 18px;
-          background: linear-gradient(135deg, #1E1B4B 0%, #4F46E5 100%);
-          color: #FFFFFF;
+          background: linear-gradient(135deg, #16140F 0%, #2A2114 100%);
+          color: #F6F1E7;
           padding: 20px;
           position: relative; overflow: hidden;
-          box-shadow: 0 12px 30px rgba(99,102,241,0.10), 0 4px 10px rgba(0,0,0,0.04);
+          box-shadow: 0 12px 30px rgba(22,20,15,0.12), 0 4px 10px rgba(0,0,0,0.04);
         }
         .book-root .bk-hero-v2::before {
           content: ''; position: absolute; top: -30px; right: -30px;
           width: 180px; height: 180px;
-          background: radial-gradient(closest-side, rgba(165,162,255,0.22), transparent);
+          background: radial-gradient(closest-side, rgba(224,168,46,0.28), transparent);
           pointer-events: none;
         }
         .book-root .bk-hero-v2 > * { position: relative; }
@@ -1346,10 +1361,10 @@ function ShopHeader({ bp, tenantName, tenantLogo, branch, accent, tenantTz }) {
           </div>
         ) : null}
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] lg:text-[11px] uppercase tracking-[0.22em] font-semibold" style={{ color: '#C7C9FF' }}>
+          <p className="text-[10px] lg:text-[11px] uppercase tracking-[0.22em] font-semibold" style={{ color: '#EBC877' }}>
             {tagline || t('publicBooking.premiumBarbershop')}
           </p>
-          <h1 className="font-display text-2xl lg:text-5xl font-bold tracking-tight leading-tight mt-1 lg:mt-2 text-white">
+          <h1 className="font-display text-2xl lg:text-5xl font-bold tracking-tight leading-tight mt-1 lg:mt-2" style={{ color: '#F6F1E7' }}>
             {tenantName}
           </h1>
         </div>
