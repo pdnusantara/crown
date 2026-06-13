@@ -359,14 +359,47 @@ function TrackingEditor() {
       </Card>
 
       <Card>
-        <CardHeader><h3 className="font-semibold text-off-white">Event yang Dilacak</h3></CardHeader>
+        <CardHeader><h3 className="font-semibold text-off-white">Tes & Verifikasi Pixel</h3></CardHeader>
         <CardBody className="space-y-3">
           <p className="text-sm text-muted">
-            Saat pixel aktif, event berikut otomatis terkirim ke Meta:
+            Pixel <b className="text-off-white">tidak terbaca</b> di Pixel Helper? Hampir selalu karena cara mengetesnya, bukan pixel-nya. Ikuti urutan ini:
           </p>
+          <ol className="space-y-2 text-xs text-muted list-decimal pl-4 leading-relaxed">
+            <li>Buka landing di tab baru lewat tombol di bawah — <b className="text-off-white">jangan</b> tes di dalam preview editor (pixel sengaja dimatikan di preview agar data iklan tak terkotori).</li>
+            <li>Hard-reload halaman: <kbd className="px-1 bg-dark-card rounded">Ctrl/Cmd + Shift + R</kbd> — memastikan bukan versi lama dari cache PWA.</li>
+            <li>Matikan dulu ad-blocker / privacy blocker (uBlock, Brave Shields, dll.) — mereka memblokir <code className="text-off-white">connect.facebook.net</code>.</li>
+            <li>Pixel Helper akan menampilkan ID <code className="text-off-white">{savedId || '—'}</code> dengan event <code className="text-off-white">PageView</code>.</li>
+          </ol>
+          {active ? (
+            <Button
+              variant="secondary"
+              icon={ExternalLink}
+              fullWidth
+              onClick={() => window.open(`${window.location.origin}/?utm_source=pixel_test`, '_blank', 'noopener')}
+            >
+              Buka landing live untuk tes
+            </Button>
+          ) : (
+            <p className="text-xs text-amber-300/90">Simpan Pixel ID dulu sebelum mengetes.</p>
+          )}
+          <a
+            href="https://www.facebook.com/events_manager2/list/pixel/test_events"
+            target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs text-brand hover:underline"
+          >
+            <ExternalLink size={12} /> Buka "Test Events" di Meta Events Manager
+          </a>
+        </CardBody>
+      </Card>
+
+      <Card className="lg:col-span-2">
+        <CardHeader><h3 className="font-semibold text-off-white">Event yang Dilacak</h3></CardHeader>
+        <CardBody className="grid sm:grid-cols-3 gap-3">
           {[
             { ev: 'PageView',             desc: 'Setiap kunjungan landing page & halaman pendaftaran.' },
             { ev: 'Lead',                 desc: 'Pengunjung menekan tombol ajakan daftar di landing page.' },
+            { ev: 'ViewContent',          desc: 'Pengunjung melihat bagian harga (minat tinggi).' },
+            { ev: 'ScrollDepth',          desc: 'Kedalaman scroll 25/50/75/100% (event kustom).' },
             { ev: 'CompleteRegistration', desc: 'Pendaftaran tenant berhasil — konversi utama untuk iklan.' },
           ].map(item => (
             <div key={item.ev} className="p-3 bg-dark-surface rounded-xl border border-dark-border">
@@ -374,11 +407,6 @@ function TrackingEditor() {
               <p className="text-xs text-muted mt-1">{item.desc}</p>
             </div>
           ))}
-          <p className="text-xs text-muted leading-relaxed">
-            Mode preview builder tidak ikut terlacak. Pakai ekstensi
-            <span className="text-off-white"> Meta Pixel Helper </span>
-            di browser untuk memverifikasi pixel berfungsi.
-          </p>
         </CardBody>
       </Card>
     </div>
