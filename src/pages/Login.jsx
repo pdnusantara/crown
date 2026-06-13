@@ -70,13 +70,13 @@ export default function Login() {
     <div className="min-h-screen bg-dark lg:grid lg:grid-cols-2 overflow-x-hidden">
       {/* ── Panel kiri: branding (desktop) ─────────────────────────────────── */}
       <div className="relative hidden lg:flex flex-col justify-between overflow-hidden p-12 text-white"
-           style={{ background: 'linear-gradient(135deg,#4F46E5 0%,#6366F1 45%,#10B981 120%)' }}>
-        {/* Dekorasi */}
+           style={{ background: 'linear-gradient(150deg,#1C1813 0%,#16140F 52%,#241C12 100%)' }}>
+        {/* Dekorasi — selaras tema landing "heritage brass" (ink + brass) */}
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/10 blur-3xl" />
-          <div className="absolute -bottom-32 -left-20 w-96 h-96 rounded-full bg-[#10B981]/30 blur-3xl" />
-          <div className="absolute inset-0 opacity-[0.07]"
-               style={{ backgroundImage: 'radial-gradient(circle at 20% 30%, #fff 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
+          <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full blur-3xl" style={{ background: 'rgba(224,168,46,0.20)' }} />
+          <div className="absolute -bottom-32 -left-20 w-96 h-96 rounded-full blur-3xl" style={{ background: 'rgba(224,168,46,0.12)' }} />
+          <div className="absolute inset-0 opacity-[0.06]"
+               style={{ backgroundImage: 'radial-gradient(circle at 20% 30%, #E0A82E 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
         </div>
 
         <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
@@ -94,11 +94,11 @@ export default function Login() {
 
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
                     className="relative max-w-md">
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-white/80 mb-4">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.16em] mb-4" style={{ color: '#E0A82E' }}>
             <Sparkles size={14} /> Selamat datang kembali
           </span>
           <h2 className="font-display text-4xl font-bold leading-tight">
-            Kelola barbershop kamu,<br />tanpa ribet.
+            Kelola barbershop kamu,<br /><span style={{ color: '#E0A82E' }}>tanpa ribet.</span>
           </h2>
           <p className="text-white/80 mt-4 leading-relaxed">
             Masuk untuk buka kasir, pantau antrian, dan lihat performa toko hari ini.
@@ -107,8 +107,9 @@ export default function Login() {
           <div className="mt-8 space-y-3.5">
             {HIGHLIGHTS.map((h) => (
               <div key={h.title} className="flex items-start gap-3">
-                <span className="w-9 h-9 rounded-lg bg-white/15 border border-white/20 flex items-center justify-center flex-shrink-0 backdrop-blur-sm">
-                  <h.icon size={16} className="text-white" />
+                <span className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 backdrop-blur-sm"
+                      style={{ background: 'rgba(224,168,46,0.14)', border: '1px solid rgba(224,168,46,0.30)' }}>
+                  <h.icon size={16} style={{ color: '#EBC877' }} />
                 </span>
                 <div>
                   <p className="text-sm font-semibold leading-tight">{h.title}</p>
