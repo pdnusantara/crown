@@ -17,6 +17,7 @@ import { useFeatureFlags } from '../../hooks/useFeatureFlags.js'
 import {
   useCreatePaymentOrder, usePaymentStatus, useMyPaymentOrders,
   useCancelPaymentOrder, useResendPaymentLink, useValidatePromo,
+  useCheckPaymentOrder,
 } from '../../hooks/usePayment.js'
 import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
 import Badge from '../../components/ui/Badge.jsx'
@@ -68,6 +69,19 @@ export default function TABillingPage() {
   const [renewModalOpen, setRenewModalOpen] = useState(false)
   const [pauseModalOpen, setPauseModalOpen] = useState(false)
   const [paymentSuccess, setPaymentSuccess] = useState(null)
+
+  // Setelah kembali dari Duitku, polling /check untuk order tsb. Endpoint ini
+  // kini ikut menuntaskan fulfillment (perpanjang langganan dll.) bila callback
+  // server-to-server Duitku telat/gagal — jadi tenant tetap aktif otomatis
+  // tanpa menunggu cron. Saat sukses, segarkan langganan & daftar order.
+  const returnedOrderId = typeof paymentSuccess === 'string' ? paymentSuccess : null
+  const { data: checkedOrder } = useCheckPaymentOrder(returnedOrderId, !!returnedOrderId)
+  useEffect(() => {
+    if (checkedOrder?.status === 'success') {
+      refetchSub(); refetchOrders()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkedOrder?.status])
 
   // Form state for renew/upgrade — di-share via state object
   const [checkoutForm, setCheckoutForm] = useState({

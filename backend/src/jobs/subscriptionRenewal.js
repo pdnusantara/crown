@@ -3,10 +3,20 @@
 const cron  = require('node-cron');
 const prisma = require('../config/database');
 const duitku = require('../services/duitkuService');
+const { applySuccessfulPayment } = require('../services/paymentFulfillment');
 
 const BACKEND_URL  = process.env.BACKEND_URL  || 'https://sembapos.com';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://sembapos.com';
+const PUBLIC_HOST  = process.env.PUBLIC_HOST  || FRONTEND_URL.replace(/^https?:\/\//, '').replace(/\/$/, '') || 'sembapos.com';
 const GRACE_DAYS   = Number(process.env.SUBSCRIPTION_GRACE_DAYS || 7);
+
+// Arahkan returnUrl Duitku ke subdomain tenant (login di-enforce per subdomain)
+// supaya setelah bayar mereka mendarat dalam keadaan login. Selaras dengan
+// billingReturnUrl di routes/payment.js.
+function billingReturnUrl(slug) {
+  const base = slug ? `https://${slug}.${PUBLIC_HOST}` : FRONTEND_URL.replace(/\/$/, '');
+  return `${base}/admin/billing?payment=done`;
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -87,7 +97,7 @@ async function tryCreateDuitkuOrder(sub) {
       email:          sub.tenant.email,
       productDetails: `Perpanjang ${sub.package} (${cycle === 'annual' ? 'Tahunan' : 'Bulanan'}) — ${sub.tenant.name}`,
       callbackUrl:    `${BACKEND_URL}/api/payment/callback`,
-      returnUrl:      `${FRONTEND_URL}/admin/billing?payment=done`,
+      returnUrl:      billingReturnUrl(sub.tenant.slug),
       customerName:   sub.tenant.name,
     });
 
@@ -235,6 +245,53 @@ async function runRenewalJob() {
   const log = (...a) => console.log(`[RenewalJob ${now.toISOString()}]`, ...a);
   log('start');
 
+  // ── 0. RECONCILE — order pending yang ternyata SUDAH dibayar tapi callback
+  // Duitku tak pernah sampai (mis. gangguan jaringan / URL callback salah).
+  // Tanya status langsung ke Duitku; bila lunas, tuntaskan fulfillment yang
+  // SAMA dengan callback. Jaring pengaman supaya "dibayar tapi tak aktif" tak
+  // terjadi. Dijalankan SEBELUM auto-expire agar order lunas tak ikut di-expire.
+  try {
+    const settings = await duitku.getSettings();
+    if (settings.active && settings.merchantCode && settings.apiKey) {
+      const recentCutoff = new Date(now.getTime() - 7 * 86400 * 1000);
+      const pendingOrders = await prisma.paymentOrder.findMany({
+        where: { status: 'pending', createdAt: { gte: recentCutoff } },
+        orderBy: { createdAt: 'asc' },
+        take: 200,
+      });
+      let reconciled = 0;
+      for (const order of pendingOrders) {
+        try {
+          const st = await duitku.checkStatus(order.merchantOrderId);
+          if (st?.statusCode === '00') {
+            const claim = await prisma.paymentOrder.updateMany({
+              where: { merchantOrderId: order.merchantOrderId, status: { not: 'success' } },
+              data:  { status: 'success' },
+            });
+            if (claim.count > 0) {
+              try {
+                await applySuccessfulPayment(order);
+                reconciled++;
+                log(`reconcile: fulfilled paid-but-stale order ${order.merchantOrderId} tenant=${order.tenantId}`);
+              } catch (e) {
+                await prisma.paymentOrder.updateMany({
+                  where: { merchantOrderId: order.merchantOrderId, status: 'success' },
+                  data:  { status: 'pending' },
+                }).catch(() => {});
+                console.error(`[RenewalJob] reconcile fulfill error ${order.merchantOrderId}:`, e.message);
+              }
+            }
+          }
+        } catch (e) {
+          console.warn(`[RenewalJob] reconcile status error ${order.merchantOrderId}:`, e.message);
+        }
+      }
+      if (reconciled) log(`Reconciled ${reconciled} paid order(s) missed by callback`);
+    }
+  } catch (e) {
+    console.error('[RenewalJob] reconcile step failed:', e.message);
+  }
+
   // ── 0a. AUTO-EXPIRE pending payment orders (TTL 24h) ───────────────────
   const orderTtlCutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const expiredOrders = await prisma.paymentOrder.updateMany({
@@ -270,7 +327,7 @@ async function runRenewalJob() {
         // Tenant terhapus tidak boleh dapat reminder / dibuatkan order Duitku.
         tenant:  { deletedAt: null },
       },
-      include: { tenant: { select: { id: true, name: true, email: true } } },
+      include: { tenant: { select: { id: true, name: true, email: true, slug: true } } },
     });
 
     log(`D-${days}: ${subs.length} expiring`);

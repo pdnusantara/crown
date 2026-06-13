@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const prisma = require('../config/database');
 
 const SANDBOX_BASE = 'https://api-sandbox.duitku.com/api/merchant';
-const PROD_BASE    = 'https://passport.duitku.com/webapi/api/merchant';
+const PROD_BASE    = 'https://api-prod.duitku.com/api/merchant';
 
 async function getSettings() {
   const rows = await prisma.systemSetting.findMany({
@@ -55,9 +55,19 @@ async function createInvoice({ merchantOrderId, amount, email, productDetails, c
     body:    JSON.stringify(body),
   });
 
-  const data = await res.json();
+  // Duitku kadang membalas PLAIN TEXT untuk error konfigurasi (mis.
+  // "Merchant Not Found" saat merchant code salah / belum aktif di produksi).
+  // Baca sebagai teks dulu lalu coba parse JSON, supaya respons non-JSON tidak
+  // melempar SyntaxError undici yang gelap — tapi pesan error yang jelas.
+  const raw = await res.text();
+  let data;
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {
+    throw new Error(`Duitku menolak permintaan (HTTP ${res.status}): ${raw.slice(0, 200) || 'respons kosong'}`);
+  }
   if (!res.ok || !data.paymentUrl) {
-    throw new Error(data.statusMessage || `Duitku error ${res.status}`);
+    throw new Error(data.statusMessage || `Duitku error ${res.status}${raw && !data.statusMessage ? `: ${raw.slice(0, 200)}` : ''}`);
   }
   return data; // { paymentUrl, reference, vaNumber, amount, statusMessage }
 }
@@ -70,9 +80,7 @@ async function checkStatus(merchantOrderId) {
     .update(settings.merchantCode + merchantOrderId + settings.apiKey)
     .digest('hex');
 
-  const endpoint = settings.environment === 'production'
-    ? 'https://passport.duitku.com/webapi/api/merchant/transactionStatus'
-    : 'https://sandbox.duitku.com/webapi/api/merchant/transactionStatus';
+  const endpoint = `${baseUrl(settings.environment)}/transactionStatus`;
 
   const res = await fetch(endpoint, {
     method:  'POST',
@@ -80,7 +88,14 @@ async function checkStatus(merchantOrderId) {
     body:    JSON.stringify({ merchantCode: settings.merchantCode, merchantOrderId, signature }),
   });
 
-  return res.json();
+  // Toleran terhadap respons non-JSON (mis. error config) — jangan crash polling
+  // /check & cron reconcile. Kembalikan objek netral bila tak bisa di-parse.
+  const raw = await res.text();
+  try {
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return { statusCode: String(res.status), statusMessage: raw.slice(0, 200) };
+  }
 }
 
 function verifyCallback(payload, apiKey) {

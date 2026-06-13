@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   MapPin, Clock, Check, ChevronRight, Scissors, ChevronLeft,
@@ -14,21 +15,25 @@ import {
   startOfMonth, endOfMonth, eachDayOfInterval, getDay,
   addMonths, subMonths, isSameMonth, isSameDay, isBefore, startOfDay,
 } from 'date-fns'
-import { id as idLocale } from 'date-fns/locale'
+import { id as idLocale, enUS as enLocale } from 'date-fns/locale'
 import { formatRupiah } from '../../utils/format.js'
 import Avatar from '../../components/ui/Avatar.jsx'
 import ErrorBoundary from '../../components/ui/ErrorBoundary.jsx'
+
+// Pilih locale date-fns berdasarkan bahasa aktif i18n.
+function dfLocale(lang) { return lang === 'en' ? enLocale : idLocale }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Helpers (unchanged from previous version)
 // ═══════════════════════════════════════════════════════════════════════════
 
 const BOOKING_LEAD_MINUTES = 15
+// Step keys; label resolved via t('publicBooking.step<Key>') at render time.
 const STEPS = [
-  { key: 'pick',    label: 'Barber & Layanan' },
-  { key: 'date',    label: 'Jadwal' },
-  { key: 'confirm', label: 'Konfirmasi' },
-  { key: 'success', label: 'Selesai' },
+  { key: 'pick',    labelKey: 'stepPick' },
+  { key: 'date',    labelKey: 'stepDate' },
+  { key: 'confirm', labelKey: 'stepConfirm' },
+  { key: 'success', labelKey: 'stepSuccess' },
 ]
 
 function generateTimeSlots(openTime = '09:00', closeTime = '21:00') {
@@ -86,9 +91,13 @@ function computeBlockedSlotsFromRanges(ranges, targetDuration) {
   return [...out]
 }
 
-const STATUS_LABEL = {
-  pending: 'Menunggu Konfirmasi', confirmed: 'Terkonfirmasi',
-  in_progress: 'Sedang Berlangsung', done: 'Selesai', cancelled: 'Dibatalkan',
+// Map kode status booking → label terlokalisasi. Terima `t`.
+function statusLabel(status, t) {
+  const map = {
+    pending: 'statusPending', confirmed: 'statusConfirmed',
+    in_progress: 'statusInProgress', done: 'statusDone', cancelled: 'statusCancelled',
+  }
+  return map[status] ? t(`publicBooking.${map[status]}`) : status
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -104,10 +113,24 @@ export default function PublicBookingPage() {
 }
 
 function PublicBookingPageInner() {
+  const { t, i18n } = useTranslation()
   const {
     name: businessName, ownerName, logo: tenantLogo, status: tenantStatus,
     timezone: tenantTz, bookingPage, wilayah: tenantWilayah, resolve,
   } = usePublicTenantStore()
+
+  // Auto-detect bahasa pelanggan pada mount pertama — hanya bila belum ada
+  // preferensi tersimpan. navigator.language 'en*' → en, selain itu → id.
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('i18nextLng')
+      if (!stored) {
+        const nav = (navigator.language || '').toLowerCase()
+        const detected = nav.startsWith('en') ? 'en' : 'id'
+        i18n.changeLanguage(detected)
+      }
+    } catch { /* localStorage / navigator unavailable */ }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   // Nama yang ditampilkan di /book mengikuti Nama Akun pemilik (preferensi
   // tenant); fallback ke Nama Bisnis bila owner/akun tak tersedia.
   const tenantName = ownerName || businessName
@@ -149,7 +172,7 @@ function PublicBookingPageInner() {
   useEffect(() => {
     if (!tenantName) return
     const prevTitle = document.title
-    document.title = `Booking Online · ${tenantName}`
+    document.title = `${t('publicBooking.onlineBooking')} · ${tenantName}`
     const setMeta = (name, value, attr = 'name') => {
       let el = document.querySelector(`meta[${attr}="${name}"]`)
       if (!el) {
@@ -159,15 +182,15 @@ function PublicBookingPageInner() {
       }
       el.setAttribute('content', value)
     }
-    const desc = `Booking online di ${tenantName}. Pilih layanan, barber, dan jadwal favoritmu — konfirmasi instan, bayar di tempat.`
+    const desc = t('publicBooking.seoDescription', { name: tenantName })
     setMeta('description', desc)
-    setMeta('og:title', `Booking Online · ${tenantName}`, 'property')
+    setMeta('og:title', `${t('publicBooking.onlineBooking')} · ${tenantName}`, 'property')
     setMeta('og:description', desc, 'property')
     setMeta('og:type', 'website', 'property')
     if (tenantLogo) setMeta('og:image', tenantLogo, 'property')
     setMeta('theme-color', accent)
     return () => { document.title = prevTitle }
-  }, [tenantName, tenantLogo, accent])
+  }, [tenantName, tenantLogo, accent, i18n.language]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Lookup modal (cek booking by phone) ────────────────────────────────
   const [showLookup, setShowLookup]   = useState(false)
@@ -177,7 +200,7 @@ function PublicBookingPageInner() {
   const [lookupError, setLookupError] = useState(null)
   const handleLookup = async () => {
     if (!lookupPhone.trim() || lookupPhone.trim().length < 4) {
-      setLookupError('Nomor HP minimal 4 digit')
+      setLookupError(t('publicBooking.lookupPhoneMin'))
       return
     }
     setLookupLoading(true); setLookupError(null)
@@ -185,7 +208,7 @@ function PublicBookingPageInner() {
       const res = await publicApi.get('/public/bookings/lookup', { params: { phone: lookupPhone.trim() } })
       setLookupList(res.data.data || [])
     } catch (err) {
-      setLookupError(err?.response?.data?.error || 'Gagal mencari booking')
+      setLookupError(err?.response?.data?.error || t('publicBooking.lookupFailed'))
     } finally { setLookupLoading(false) }
   }
 
@@ -220,7 +243,7 @@ function PublicBookingPageInner() {
           loadBarbers(br[0].id)
         }
       } catch {
-        if (!cancelled) setError('Gagal memuat data. Pastikan koneksi internet Anda.')
+        if (!cancelled) setError(t('publicBooking.loadFailed'))
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -313,9 +336,9 @@ function PublicBookingPageInner() {
 
   const validateForm = () => {
     const err = {}
-    if (!form.name.trim() || form.name.trim().length < 2) err.name = 'Nama minimal 2 karakter'
-    if (!form.phone.trim() || form.phone.trim().length < 8) err.phone = 'Nomor HP minimal 8 digit'
-    else if (!/^[\d+\-\s()]{8,15}$/.test(form.phone.trim())) err.phone = 'Format nomor HP tidak valid'
+    if (!form.name.trim() || form.name.trim().length < 2) err.name = t('publicBooking.errNameMin')
+    if (!form.phone.trim() || form.phone.trim().length < 8) err.phone = t('publicBooking.errPhoneMin')
+    else if (!/^[\d+\-\s()]{8,15}$/.test(form.phone.trim())) err.phone = t('publicBooking.errPhoneInvalid')
     setFormError(err)
     return Object.keys(err).length === 0
   }
@@ -347,7 +370,7 @@ function PublicBookingPageInner() {
       setStep(3)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err) {
-      setError(err?.response?.data?.error || 'Gagal membuat booking. Coba lagi.')
+      setError(err?.response?.data?.error || t('publicBooking.submitFailed'))
     } finally { setSubmitting(false) }
   }
 
@@ -386,13 +409,13 @@ function PublicBookingPageInner() {
       sticky={
         step === 0 ? (
           <StickyCta
-            label="Lanjut Pilih Jadwal"
+            label={t('publicBooking.ctaContinueSchedule')}
             disabled={!canNextStep0}
             onClick={() => { if (canNextStep0) { setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }) } }}
             accent={accent}
             note={canNextStep0
-              ? `${selectedServices.length} layanan · ${formatRupiah(totalPrice)}${totalDuration ? ` · ${totalDuration} mnt` : ''}`
-              : !selected.barber ? 'Pilih barber & layanan untuk lanjut' : 'Pilih layanan untuk lanjut'}
+              ? `${t('publicBooking.servicesCount', { count: selectedServices.length })} · ${formatRupiah(totalPrice)}${totalDuration ? ` · ${t('publicBooking.minutesShort', { count: totalDuration })}` : ''}`
+              : !selected.barber ? t('publicBooking.pickBarberServiceToContinue') : t('publicBooking.pickServiceToContinue')}
           />
         ) : null
       }
@@ -469,6 +492,7 @@ function PublicBookingPageInner() {
 }
 
 function LookupModal({ accent, phone, setPhone, loading, list, error, onClose, onSubmit }) {
+  const { t, i18n } = useTranslation()
   return (
     <>
       <motion.div
@@ -489,13 +513,13 @@ function LookupModal({ accent, phone, setPhone, loading, list, error, onClose, o
           onClick={e => e.stopPropagation()}
         >
           <div className="flex items-center justify-between">
-            <h3 className="font-display text-lg font-bold">Cek Booking Saya</h3>
-            <button onClick={onClose} className="p-2 rounded-lg" style={{ color: 'var(--bk-text-2)' }} aria-label="Tutup">
+            <h3 className="font-display text-lg font-bold">{t('publicBooking.lookupTitle')}</h3>
+            <button onClick={onClose} className="p-2 rounded-lg" style={{ color: 'var(--bk-text-2)' }} aria-label={t('publicBooking.close')}>
               ✕
             </button>
           </div>
           <p className="text-xs" style={{ color: 'var(--bk-text-2)' }}>
-            Masukkan nomor HP yang dipakai saat booking. Akan tampil maksimal 5 booking terbaru.
+            {t('publicBooking.lookupHint')}
           </p>
           <div className="relative">
             <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--bk-text-2)' }} />
@@ -508,14 +532,14 @@ function LookupModal({ accent, phone, setPhone, loading, list, error, onClose, o
           </div>
           {error && <p className="text-xs" style={{ color: '#FCA5A5' }}>{error}</p>}
           <button onClick={onSubmit} disabled={loading} className="bk-cta w-full">
-            {loading ? 'Mencari…' : 'Cari Booking'}
+            {loading ? t('publicBooking.searching') : t('publicBooking.searchBooking')}
           </button>
 
           {list !== null && (
             <div className="space-y-2 max-h-72 overflow-y-auto">
               {list.length === 0 ? (
                 <p className="text-center text-sm py-6" style={{ color: 'var(--bk-text-muted)' }}>
-                  Tidak ada booking aktif dengan nomor ini.
+                  {t('publicBooking.lookupEmpty')}
                 </p>
               ) : (
                 list.map(b => (
@@ -535,12 +559,12 @@ function LookupModal({ accent, phone, setPhone, loading, list, error, onClose, o
                                       b.status === 'in_progress' ? 'rgba(251,191,36,0.12)' :
                                       'var(--bk-accent-soft)',
                         }}>
-                        {STATUS_LABEL[b.status] || b.status}
+                        {statusLabel(b.status, t)}
                       </span>
                     </div>
                     <p className="text-sm font-semibold">{b.serviceName}</p>
                     <p className="text-xs" style={{ color: 'var(--bk-text-2)' }}>
-                      {format(new Date(b.date + 'T00:00:00'), 'EEEE, d MMM yyyy', { locale: idLocale })} · {b.time}
+                      {format(new Date(b.date + 'T00:00:00'), 'EEEE, d MMM yyyy', { locale: dfLocale(i18n.language) })} · {b.time}
                     </p>
                     {b.branch?.name && (
                       <p className="text-xs" style={{ color: 'var(--bk-text-muted)' }}>{b.branch.name}{b.barberName ? ` · ${b.barberName}` : ''}</p>
@@ -561,6 +585,7 @@ function LookupModal({ accent, phone, setPhone, loading, list, error, onClose, o
 // ═══════════════════════════════════════════════════════════════════════════
 
 function BookShell({ accent = '#6366F1', tenantName, tenantLogo, bp = {}, sticky, children, onOpenLookup }) {
+  const { t } = useTranslation()
   const showLogo = bp.showLogo !== false
   const isLight  = bp.mode === 'light'
 
@@ -826,12 +851,13 @@ function BookShell({ accent = '#6366F1', tenantName, tenantLogo, bp = {}, sticky
           )}
           <div className="min-w-0 flex-1">
             <p className="font-semibold text-[13px] leading-none truncate" style={{ color: 'var(--bk-text)' }}>
-              {tenantName || 'Barbershop'}
+              {tenantName || t('publicBooking.barbershop')}
             </p>
             <p className="text-[10px] uppercase tracking-[0.2em] mt-1" style={{ color: 'var(--bk-text-muted)' }}>
-              Booking Online
+              {t('publicBooking.onlineBooking')}
             </p>
           </div>
+          <LanguageSwitcher accent={accent} />
           {onOpenLookup && (
             <button
               onClick={onOpenLookup}
@@ -841,9 +867,9 @@ function BookShell({ accent = '#6366F1', tenantName, tenantLogo, bp = {}, sticky
                 border: `1px solid ${accent}55`,
                 background: 'var(--bk-accent-soft)',
               }}
-              aria-label="Cek booking saya"
+              aria-label={t('publicBooking.checkMyBooking')}
             >
-              Cek Booking
+              {t('publicBooking.checkBooking')}
             </button>
           )}
         </div>
@@ -860,9 +886,49 @@ function BookShell({ accent = '#6366F1', tenantName, tenantLogo, bp = {}, sticky
 
       <footer className="text-center py-6 px-4" style={{ borderTop: '1px solid var(--bk-border)' }}>
         <p className="text-[11px]" style={{ color: 'var(--bk-text-muted)' }}>
-          Powered by <span style={{ color: accent, fontWeight: 600 }}>SembaPos</span>
+          {t('publicBooking.poweredBy')} <span style={{ color: accent, fontWeight: 600 }}>SembaPos</span>
         </p>
       </footer>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LANGUAGE SWITCHER — pill ID / EN, customer-facing
+// ═══════════════════════════════════════════════════════════════════════════
+
+function LanguageSwitcher({ accent }) {
+  const { i18n } = useTranslation()
+  const current = i18n.language?.startsWith('en') ? 'en' : 'id'
+  const pick = (lng) => {
+    try { localStorage.setItem('i18nextLng', lng) } catch { /* ignore */ }
+    i18n.changeLanguage(lng)
+  }
+  const langs = [{ code: 'id', label: 'ID' }, { code: 'en', label: 'EN' }]
+  return (
+    <div
+      className="flex items-center rounded-full p-0.5 flex-shrink-0"
+      style={{ background: 'var(--bk-surface-2)', border: '1px solid var(--bk-border)' }}
+      role="group"
+      aria-label="Language"
+    >
+      {langs.map(l => {
+        const isActive = current === l.code
+        return (
+          <button
+            key={l.code}
+            onClick={() => pick(l.code)}
+            aria-pressed={isActive}
+            className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full transition-colors"
+            style={{
+              color: isActive ? '#FFFFFF' : 'var(--bk-text-2)',
+              background: isActive ? accent : 'transparent',
+            }}
+          >
+            {l.label}
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -874,12 +940,13 @@ function BookShell({ accent = '#6366F1', tenantName, tenantLogo, bp = {}, sticky
 // ═══════════════════════════════════════════════════════════════════════════
 
 function StepIndicator({ current }) {
+  const { t } = useTranslation()
   const pct = ((current + 1) / STEPS.length) * 100
   return (
     <div className="bk-progress-v2">
       <div className="lbl">
-        <span>Step <span className="curr">{current + 1} / {STEPS.length}</span></span>
-        <span>{STEPS[current]?.label}</span>
+        <span>{t('publicBooking.step')} <span className="curr">{current + 1} / {STEPS.length}</span></span>
+        <span>{t(`publicBooking.${STEPS[current]?.labelKey}`)}</span>
       </div>
       <div className="bar"><div className="fill" style={{ width: `${pct}%` }} /></div>
       <div className="dots">
@@ -890,7 +957,7 @@ function StepIndicator({ current }) {
           return (
             <div key={s.key} className={cls}>
               <span className="circle">{isDone ? <Check className="w-3 h-3" strokeWidth={3} /> : i + 1}</span>
-              {s.label}
+              {t(`publicBooking.${s.labelKey}`)}
             </div>
           )
         })}
@@ -935,6 +1002,7 @@ function StickyCta({ label, onClick, disabled, accent, note }) {
 
 function Step1Pick({ tenantName, tenantLogo, bp, branches, services, barbers, testimonials = [], queueInfo = {}, selected, accent, tenantTz,
                     onPickBranch, onPickService, onPickBarber, onNext, canNext }) {
+  const { t } = useTranslation()
   return (
     <div className="space-y-7 lg:space-y-10">
       {/* Header banner — full width on both mobile & desktop */}
@@ -953,20 +1021,20 @@ function Step1Pick({ tenantName, tenantLogo, bp, branches, services, barbers, te
           {branches.length <= 1 && selected.branch && queueInfo[selected.branch.id]?.waiting > 0 && (
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"
               style={{ background: 'var(--bk-surface)', color: 'var(--bk-text)', border: '1px solid var(--bk-border)' }}>
-              🕐 Perkiraan tunggu {fmtWait(queueInfo[selected.branch.id].estimatedMinutes)}
-              <span style={{ color: 'var(--bk-text-muted)' }}>· {queueInfo[selected.branch.id].waiting} antre</span>
+              🕐 {t('publicBooking.estWait', { wait: fmtWait(queueInfo[selected.branch.id].estimatedMinutes, t) })}
+              <span style={{ color: 'var(--bk-text-muted)' }}>· {t('publicBooking.inQueue', { count: queueInfo[selected.branch.id].waiting })}</span>
             </div>
           )}
 
           {/* Barber picker */}
           <div>
-            <SectionTitle accent={accent} step="01" title="Pilih Barber" />
+            <SectionTitle accent={accent} step="01" title={t('publicBooking.pickBarber')} />
             <BarberCarousel barbers={barbers} selected={selected.barber} onPick={onPickBarber} accent={accent} />
           </div>
 
           {/* Service list — boleh pilih lebih dari satu */}
           <div>
-            <SectionTitle accent={accent} step="02" title="Pilih Layanan" hint="bisa lebih dari satu" />
+            <SectionTitle accent={accent} step="02" title={t('publicBooking.pickService')} hint={t('publicBooking.multipleAllowed')} />
             <ServiceList services={services} selected={selected.services} onPick={onPickService} accent={accent} />
           </div>
 
@@ -993,7 +1061,7 @@ function Step1Pick({ tenantName, tenantLogo, bp, branches, services, barbers, te
               accent={accent}
               selected={selected}
               tenantName={tenantName}
-              ctaLabel="Lanjut Pilih Jadwal"
+              ctaLabel={t('publicBooking.ctaContinueSchedule')}
               ctaDisabled={!canNext}
               onCta={onNext}
             />
@@ -1007,36 +1075,37 @@ function Step1Pick({ tenantName, tenantLogo, bp, branches, services, barbers, te
 // Section "Apa Kata Pelanggan" — testimoni rating ≥4★ yang sudah di-publish admin.
 // Layout responsive: 1 col mobile, 2 col tablet, 3 col desktop.
 function TestimonialsSection({ items, accent }) {
+  const { t, i18n } = useTranslation()
   return (
     <div>
       <div className="flex items-end justify-between mb-3 flex-wrap gap-2">
         <div>
           <p className="bk-step-num" style={{ color: accent }}>03</p>
           <h2 className="font-display text-xl font-bold mt-0.5" style={{ color: 'var(--bk-text)' }}>
-            Apa Kata Pelanggan
+            {t('publicBooking.testimonialsTitle')}
           </h2>
         </div>
         <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--bk-text-muted)' }}>
-          <span className="tabular-nums">{items.length} review</span>
+          <span className="tabular-nums">{t('publicBooking.reviewCount', { count: items.length })}</span>
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3">
-        {items.map(t => (
-          <div key={t.id} className="bk-card p-4 flex flex-col gap-2">
+        {items.map(tm => (
+          <div key={tm.id} className="bk-card p-4 flex flex-col gap-2">
             <div className="flex items-center justify-between gap-2">
               <span className="font-semibold text-sm truncate" style={{ color: 'var(--bk-text)' }}>
-                {t.barber?.name || 'Barber'}
+                {tm.barber?.name || t('publicBooking.barber')}
               </span>
               <span className="tabular-nums text-sm whitespace-nowrap" style={{ color: accent }}>
-                {'★'.repeat(t.rating)}{'☆'.repeat(5 - t.rating)}
+                {'★'.repeat(tm.rating)}{'☆'.repeat(5 - tm.rating)}
               </span>
             </div>
             <p className="text-sm italic leading-relaxed" style={{ color: 'var(--bk-text)' }}>
-              "{t.comment}"
+              "{tm.comment}"
             </p>
-            {t.publishedAt && (
+            {tm.publishedAt && (
               <p className="text-[11px] mt-auto" style={{ color: 'var(--bk-text-muted)' }}>
-                {format(new Date(t.publishedAt), 'd MMM yyyy', { locale: idLocale })}
+                {format(new Date(tm.publishedAt), 'd MMM yyyy', { locale: dfLocale(i18n.language) })}
               </p>
             )}
           </div>
@@ -1048,18 +1117,19 @@ function TestimonialsSection({ items, accent }) {
 
 // Galeri foto toko — grid responsif dari `bookingPage.gallery`.
 function GallerySection({ images, accent }) {
+  const { t } = useTranslation()
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">
         <ImageIcon className="w-5 h-5" style={{ color: accent }} />
-        <h2 className="font-display text-xl font-bold" style={{ color: 'var(--bk-text)' }}>Galeri</h2>
+        <h2 className="font-display text-xl font-bold" style={{ color: 'var(--bk-text)' }}>{t('publicBooking.gallery')}</h2>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
         {images.map((src, i) => (
           <img
             key={i}
             src={src}
-            alt={`Galeri ${i + 1}`}
+            alt={t('publicBooking.galleryAlt', { num: i + 1 })}
             loading="lazy"
             className="w-full aspect-square object-cover rounded-xl"
             style={{ border: '1px solid var(--bk-border)' }}
@@ -1071,7 +1141,7 @@ function GallerySection({ images, accent }) {
 }
 
 // Normalisasi nilai sosmed/kontak (handle ATAU URL) → URL siap-klik.
-function buildSocialLinks(bp) {
+function buildSocialLinks(bp, t) {
   const clean = (v) => (v || '').trim()
   const isUrl = (v) => /^https?:\/\//i.test(v)
   const links = []
@@ -1087,19 +1157,20 @@ function buildSocialLinks(bp) {
     const digits = wa.replace(/\D/g, '').replace(/^0/, '62')
     if (digits) links.push({ key: 'wa', label: 'WhatsApp', icon: MessageSquare, href: `https://wa.me/${digits}` })
   }
-  if (map) links.push({ key: 'map', label: 'Lihat Lokasi', icon: MapPin, href: map })
+  if (map) links.push({ key: 'map', label: t('publicBooking.viewLocation'), icon: MapPin, href: map })
   return links
 }
 
 // Sosial media & kontak toko — dari `bookingPage`.
 function SocialContactSection({ bp, accent }) {
-  const links = buildSocialLinks(bp)
+  const { t } = useTranslation()
+  const links = buildSocialLinks(bp, t)
   if (links.length === 0) return null
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">
         <Share2 className="w-5 h-5" style={{ color: accent }} />
-        <h2 className="font-display text-xl font-bold" style={{ color: 'var(--bk-text)' }}>Sosial Media &amp; Kontak</h2>
+        <h2 className="font-display text-xl font-bold" style={{ color: 'var(--bk-text)' }}>{t('publicBooking.socialContact')}</h2>
       </div>
       <div className="flex flex-wrap gap-2.5">
         {links.map(l => (
@@ -1123,32 +1194,33 @@ function SocialContactSection({ bp, accent }) {
 // Sidebar summary card — appears as right rail on desktop, replaces the
 // bottom-fixed StickyCta. Always shows what's been picked + the next-step CTA.
 function SidebarSummary({ accent, selected, tenantName, ctaLabel, ctaDisabled, onCta }) {
+  const { t, i18n } = useTranslation()
   const svcs = selected.services || []
   const totalPrice = svcs.reduce((sum, s) => sum + (s.price || 0), 0)
   return (
     <div className="bk-card p-5 space-y-4">
       <div>
-        <p className="bk-label">Ringkasan</p>
+        <p className="bk-label">{t('publicBooking.summary')}</p>
         <p className="font-display text-base font-bold mt-1 truncate" style={{ color: 'var(--bk-text)' }}>{tenantName}</p>
       </div>
 
       <div className="space-y-2.5 text-sm">
-        <SidebarRow label="Cabang"  value={selected.branch?.name} />
-        <SidebarRow label="Barber"  value={selected.barber?.name} muted={!selected.barber} />
+        <SidebarRow label={t('publicBooking.branch')}  value={selected.branch?.name} />
+        <SidebarRow label={t('publicBooking.barber')}  value={selected.barber?.name} muted={!selected.barber} />
         <SidebarRow
-          label={svcs.length > 1 ? `Layanan (${svcs.length})` : 'Layanan'}
+          label={svcs.length > 1 ? t('publicBooking.serviceWithCount', { count: svcs.length }) : t('publicBooking.service')}
           value={svcs.length ? svcs.map(s => s.name).join(', ') : null}
           highlight={svcs.length > 0}
           accent={accent}
         />
         {selected.date && (
-          <SidebarRow label="Jadwal" value={`${format(selected.date, 'd MMM', { locale: idLocale })} · ${selected.time || ''}`} />
+          <SidebarRow label={t('publicBooking.schedule')} value={`${format(selected.date, 'd MMM', { locale: dfLocale(i18n.language) })} · ${selected.time || ''}`} />
         )}
       </div>
 
       {totalPrice > 0 && (
         <div className="rounded-xl p-3.5 flex items-center justify-between" style={{ background: accent, color: '#FFFFFF' }}>
-          <span className="text-[10px] uppercase tracking-[0.22em] font-bold opacity-70">Total</span>
+          <span className="text-[10px] uppercase tracking-[0.22em] font-bold opacity-70">{t('publicBooking.total')}</span>
           <span className="font-display text-xl font-bold">{formatRupiah(totalPrice)}</span>
         </div>
       )}
@@ -1159,7 +1231,7 @@ function SidebarSummary({ accent, selected, tenantName, ctaLabel, ctaDisabled, o
       </button>
       {ctaDisabled && (
         <p className="text-[11px] text-center" style={{ color: 'var(--bk-text-muted)' }}>
-          Pilih layanan untuk lanjut
+          {t('publicBooking.pickServiceToContinue')}
         </p>
       )}
     </div>
@@ -1194,6 +1266,7 @@ function computeOpenStatus(branch, tz) {
 }
 
 function ShopHeader({ bp, tenantName, tenantLogo, branch, accent, tenantTz }) {
+  const { t } = useTranslation()
   const heroImage = bp.heroImage
   const showLogo  = bp.showLogo !== false
   const tagline   = bp.tagline
@@ -1213,8 +1286,8 @@ function ShopHeader({ bp, tenantName, tenantLogo, branch, accent, tenantTz }) {
         <div className="relative px-5 pt-7 pb-5 lg:px-10 lg:pt-16 lg:pb-10 lg:min-h-[360px] lg:flex lg:flex-col lg:justify-end">
           {status && (
             <div className="mb-3 flex items-center gap-2 flex-wrap">
-              <span className="bk-status-chip"><span className="bk-pulse-dot" />{status.isOpen ? 'Buka sekarang' : 'Tutup'}</span>
-              <span className="bk-soft-chip">{status.isOpen ? `Tutup ${status.close}` : `Buka ${status.open}`}</span>
+              <span className="bk-status-chip"><span className="bk-pulse-dot" />{status.isOpen ? t('publicBooking.openNow') : t('publicBooking.closed')}</span>
+              <span className="bk-soft-chip">{status.isOpen ? t('publicBooking.closesAt', { time: status.close }) : t('publicBooking.opensAt', { time: status.open })}</span>
             </div>
           )}
           <div className="flex items-start gap-3 lg:gap-5">
@@ -1230,7 +1303,7 @@ function ShopHeader({ bp, tenantName, tenantLogo, branch, accent, tenantTz }) {
             ) : null}
             <div className="flex-1 min-w-0">
               <p className="text-[10px] lg:text-[11px] uppercase tracking-[0.22em] font-semibold drop-shadow" style={{ color: accent }}>
-                {tagline || 'Premium Barbershop'}
+                {tagline || t('publicBooking.premiumBarbershop')}
               </p>
               <h1 className="font-display text-2xl lg:text-5xl font-bold tracking-tight leading-tight mt-1 lg:mt-2 drop-shadow-md"
                 style={{ color: '#FFF' }}>
@@ -1246,7 +1319,7 @@ function ShopHeader({ bp, tenantName, tenantLogo, branch, accent, tenantTz }) {
             {branch?.openTime && branch?.closeTime && (
               <Badge icon={Clock} accent={accent} label={`${branch.openTime} – ${branch.closeTime}`} onDark />
             )}
-            <Badge icon={Star} accent={accent} label="Booking Online" filled onDark />
+            <Badge icon={Star} accent={accent} label={t('publicBooking.onlineBooking')} filled onDark />
           </div>
         </div>
       </div>
@@ -1258,8 +1331,8 @@ function ShopHeader({ bp, tenantName, tenantLogo, branch, accent, tenantTz }) {
     <div className="bk-hero-v2 lg:min-h-[280px] lg:flex lg:flex-col lg:justify-end lg:p-10">
       {status && (
         <div className="mb-3 flex items-center gap-2 flex-wrap">
-          <span className="bk-status-chip"><span className="bk-pulse-dot" />{status.isOpen ? 'Buka sekarang' : 'Tutup'}</span>
-          <span className="bk-soft-chip">{status.isOpen ? `Tutup ${status.close}` : `Buka ${status.open}`}</span>
+          <span className="bk-status-chip"><span className="bk-pulse-dot" />{status.isOpen ? t('publicBooking.openNow') : t('publicBooking.closed')}</span>
+          <span className="bk-soft-chip">{status.isOpen ? t('publicBooking.closesAt', { time: status.close }) : t('publicBooking.opensAt', { time: status.open })}</span>
         </div>
       )}
       <div className="flex items-start gap-3 lg:gap-5">
@@ -1274,7 +1347,7 @@ function ShopHeader({ bp, tenantName, tenantLogo, branch, accent, tenantTz }) {
         ) : null}
         <div className="flex-1 min-w-0">
           <p className="text-[10px] lg:text-[11px] uppercase tracking-[0.22em] font-semibold" style={{ color: '#C7C9FF' }}>
-            {tagline || 'Premium Barbershop'}
+            {tagline || t('publicBooking.premiumBarbershop')}
           </p>
           <h1 className="font-display text-2xl lg:text-5xl font-bold tracking-tight leading-tight mt-1 lg:mt-2 text-white">
             {tenantName}
@@ -1326,16 +1399,19 @@ function Badge({ icon: Icon, label, accent, filled, onDark }) {
   )
 }
 
-function fmtWait(min) {
-  if (min < 60) return `± ${min} mnt`
+function fmtWait(min, t) {
+  if (min < 60) return t('publicBooking.waitMinutes', { count: min })
   const h = Math.floor(min / 60), m = min % 60
-  return m ? `± ${h} j ${m} mnt` : `± ${h} jam`
+  return m
+    ? t('publicBooking.waitHoursMinutes', { hours: h, minutes: m })
+    : t('publicBooking.waitHours', { count: h })
 }
 
 function BranchSelector({ branches, selected, onPick, accent, queueInfo = {} }) {
+  const { t } = useTranslation()
   return (
     <div>
-      <SectionTitle accent={accent} step="" title="Cabang" />
+      <SectionTitle accent={accent} step="" title={t('publicBooking.branch')} />
       <div className="flex gap-2 overflow-x-auto pb-1">
         {branches.map(b => {
           const isSel = selected?.id === b.id
@@ -1343,7 +1419,7 @@ function BranchSelector({ branches, selected, onPick, accent, queueInfo = {} }) 
           // Tampilkan estimasi hanya bila ada antrean — cabang tanpa antrean
           // dibiarkan bersih (langsung dilayani, tak perlu angka menakuti).
           const wait = q && q.waiting > 0
-            ? `🕐 ${fmtWait(q.estimatedMinutes)} · ${q.waiting} antre`
+            ? `🕐 ${fmtWait(q.estimatedMinutes, t)} · ${t('publicBooking.inQueue', { count: q.waiting })}`
             : null
           return (
             <button key={b.id} onClick={() => onPick(b)}
@@ -1372,15 +1448,16 @@ function BranchSelector({ branches, selected, onPick, accent, queueInfo = {} }) 
 }
 
 function BarberCarousel({ barbers, selected, onPick, accent }) {
+  const { t } = useTranslation()
   if (barbers.length === 0) {
     return (
       <p className="text-center py-8 text-sm" style={{ color: 'var(--bk-text-muted)' }}>
-        Belum ada barber tersedia di cabang ini
+        {t('publicBooking.noBarbers')}
       </p>
     )
   }
   return (
-    <div className="flex gap-3 overflow-x-auto -mx-1 px-1 pb-2" role="radiogroup" aria-label="Pilih barber">
+    <div className="flex gap-3 overflow-x-auto -mx-1 px-1 pb-2" role="radiogroup" aria-label={t('publicBooking.pickBarber')}>
       {barbers.map(barber => {
         const isSel = selected?.id === barber.id
         const hasRating = barber.ratingCount > 0 && barber.avgRating != null
@@ -1393,7 +1470,7 @@ function BarberCarousel({ barbers, selected, onPick, accent }) {
             onClick={() => onPick(barber)}
             role="radio"
             aria-checked={isSel}
-            aria-label={`Barber ${barber.name}${isTopRated ? ', rekomendasi' : ''}${hasRating ? `, rating ${barber.avgRating} dari 5 dari ${barber.ratingCount} ulasan` : ', belum ada rating'}`}
+            aria-label={`${t('publicBooking.barber')} ${barber.name}${isTopRated ? `, ${t('publicBooking.recommended')}` : ''}${hasRating ? `, ${t('publicBooking.ratingAria', { rating: barber.avgRating, count: barber.ratingCount })}` : `, ${t('publicBooking.noRatingYet')}`}`}
             className="flex-shrink-0 flex flex-col items-center gap-1.5 w-[96px]"
           >
             <div className="relative">
@@ -1414,7 +1491,7 @@ function BarberCarousel({ barbers, selected, onPick, accent }) {
               )}
               {isTopRated && (
                 <div className="absolute -top-1 -left-1 w-5 h-5 rounded-full flex items-center justify-center text-[11px] leading-none"
-                  title="Rekomendasi — rating tinggi"
+                  title={t('publicBooking.recommendedHighRating')}
                   style={{ background: '#F59E0B', color: '#FFFFFF', border: '2px solid var(--bk-bg)' }}>
                   ★
                 </div>
@@ -1432,7 +1509,7 @@ function BarberCarousel({ barbers, selected, onPick, accent }) {
               </span>
             ) : (
               <span className="text-[10px] leading-none" style={{ color: 'var(--bk-text-muted)' }}>
-                Barber baru
+                {t('publicBooking.newBarber')}
               </span>
             )}
           </button>
@@ -1443,6 +1520,7 @@ function BarberCarousel({ barbers, selected, onPick, accent }) {
 }
 
 function ServiceList({ services, selected, onPick, accent }) {
+  const { t } = useTranslation()
   // `selected` kini array layanan terpilih (bisa lebih dari satu).
   const selectedList = Array.isArray(selected) ? selected : (selected ? [selected] : [])
   const selCount = selectedList.length
@@ -1461,7 +1539,7 @@ function ServiceList({ services, selected, onPick, accent }) {
   const filtered = cat === 'All' ? services : services.filter(s => s.category === cat)
 
   if (services.length === 0) return (
-    <p className="text-center py-12 text-sm" style={{ color: 'var(--bk-text-muted)' }}>Belum ada layanan tersedia</p>
+    <p className="text-center py-12 text-sm" style={{ color: 'var(--bk-text-muted)' }}>{t('publicBooking.noServices')}</p>
   )
   return (
     <div className="space-y-3">
@@ -1480,7 +1558,7 @@ function ServiceList({ services, selected, onPick, accent }) {
                   border: `1px solid ${isSel ? accent : 'var(--bk-border)'}`,
                 }}
               >
-                {c === 'All' ? 'Semua' : c}
+                {c === 'All' ? t('publicBooking.all') : c}
               </button>
             )
           })}
@@ -1509,7 +1587,7 @@ function ServiceList({ services, selected, onPick, accent }) {
                 <div className="flex items-center gap-3 mt-1 text-[12px]" style={{ color: 'var(--bk-text-2)' }}>
                   {svc.duration && (
                     <span className="inline-flex items-center gap-1">
-                      <Clock className="w-3 h-3" />{svc.duration} mnt
+                      <Clock className="w-3 h-3" />{t('publicBooking.minutesShort', { count: svc.duration })}
                     </span>
                   )}
                 </div>
@@ -1533,7 +1611,7 @@ function ServiceList({ services, selected, onPick, accent }) {
         <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl"
           style={{ background: 'var(--bk-accent-soft)', border: `1px solid ${accent}55` }}>
           <span className="text-xs font-medium" style={{ color: 'var(--bk-text-2)' }}>
-            {selCount} layanan dipilih{selDur ? ` · ${selDur} mnt` : ''}
+            {t('publicBooking.servicesSelected', { count: selCount })}{selDur ? ` · ${t('publicBooking.minutesShort', { count: selDur })}` : ''}
           </span>
           <span className="font-display text-base font-bold" style={{ color: accent }}>{formatRupiah(selTotal)}</span>
         </div>
@@ -1566,6 +1644,11 @@ function SectionTitle({ step, title, accent, hint }) {
 
 function Step2Schedule({ selected, timeSlots, bookedSlots, branchClosure, tenantTz, accent, shake,
                          onPickDate, onPickTime, onBack, onNext }) {
+  const { t, i18n } = useTranslation()
+  const weekdays = [
+    t('publicBooking.dowSun'), t('publicBooking.dowMon'), t('publicBooking.dowTue'),
+    t('publicBooking.dowWed'), t('publicBooking.dowThu'), t('publicBooking.dowFri'), t('publicBooking.dowSat'),
+  ]
   // Set tanggal-tanggal cabang ini ditutup admin (mis. Lebaran) — dipakai untuk
   // disable di kalender pemilihan tanggal.
   const closedDates = React.useMemo(() => {
@@ -1601,18 +1684,18 @@ function Step2Schedule({ selected, timeSlots, bookedSlots, branchClosure, tenant
           <button
             onClick={goPrev}
             disabled={isViewCurrentMonth}
-            aria-label="Bulan sebelumnya"
+            aria-label={t('publicBooking.prevMonth')}
             className="w-10 h-10 rounded-xl flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"
             style={{ color: 'var(--bk-text-2)', background: 'var(--bk-surface-2)' }}
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
           <p className="font-display text-base font-bold capitalize">
-            {format(viewMonth, 'MMMM yyyy', { locale: idLocale })}
+            {format(viewMonth, 'MMMM yyyy', { locale: dfLocale(i18n.language) })}
           </p>
           <button
             onClick={goNext}
-            aria-label="Bulan berikutnya"
+            aria-label={t('publicBooking.nextMonth')}
             className="w-10 h-10 rounded-xl flex items-center justify-center"
             style={{ color: 'var(--bk-text-2)', background: 'var(--bk-surface-2)' }}
           >
@@ -1622,8 +1705,8 @@ function Step2Schedule({ selected, timeSlots, bookedSlots, branchClosure, tenant
 
         {/* Weekday header */}
         <div className="grid grid-cols-7 gap-1 mb-1.5">
-          {['Min','Sen','Sel','Rab','Kam','Jum','Sab'].map(d => (
-            <p key={d} className="text-[10px] uppercase tracking-wider font-bold text-center" style={{ color: 'var(--bk-text-muted)' }}>{d}</p>
+          {weekdays.map((d, i) => (
+            <p key={i} className="text-[10px] uppercase tracking-wider font-bold text-center" style={{ color: 'var(--bk-text-muted)' }}>{d}</p>
           ))}
         </div>
 
@@ -1642,10 +1725,10 @@ function Step2Schedule({ selected, timeSlots, bookedSlots, branchClosure, tenant
                 key={day.toISOString()}
                 disabled={disabled}
                 onClick={() => onPickDate(day)}
-                aria-label={`${format(day, 'EEEE, d MMMM yyyy', { locale: idLocale })}${closed ? ', cabang tutup' : ''}`}
+                aria-label={`${format(day, 'EEEE, d MMMM yyyy', { locale: dfLocale(i18n.language) })}${closed ? `, ${t('publicBooking.branchClosed')}` : ''}`}
                 aria-pressed={isSel}
                 aria-current={isToday_ ? 'date' : undefined}
-                title={closed ? 'Cabang tutup tanggal ini' : undefined}
+                title={closed ? t('publicBooking.branchClosedThisDate') : undefined}
                 className="aspect-square rounded-lg text-sm font-semibold relative flex items-center justify-center transition-all"
                 style={{
                   background: isSel ? accent : closed ? 'rgba(239,68,68,0.10)' : 'transparent',
@@ -1672,24 +1755,24 @@ function Step2Schedule({ selected, timeSlots, bookedSlots, branchClosure, tenant
       {selected.date && branchClosure ? (
         <div>
           <div className="flex items-center justify-between mb-3">
-            <SectionTitle step="" title="Cabang Tutup" accent={accent} />
+            <SectionTitle step="" title={t('publicBooking.branchClosedTitle')} accent={accent} />
           </div>
           <div className="p-4 rounded-xl flex items-start gap-3 text-sm"
             style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.35)', color: '#FCA5A5' }}>
             <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold">Cabang tutup pada tanggal ini.</p>
+              <p className="font-semibold">{t('publicBooking.branchClosedOnDate')}</p>
               {branchClosure.note && (
                 <p className="mt-0.5 opacity-90 italic">{branchClosure.note}</p>
               )}
-              <p className="mt-1 text-xs opacity-80">Silakan pilih tanggal lain di kalender.</p>
+              <p className="mt-1 text-xs opacity-80">{t('publicBooking.pickAnotherDate')}</p>
             </div>
           </div>
         </div>
       ) : selected.date ? (
         <div>
           <div className="flex items-center justify-between mb-3">
-            <SectionTitle step="" title="Pilih Jam" accent={accent} />
+            <SectionTitle step="" title={t('publicBooking.pickTime')} accent={accent} />
           </div>
           <div className="grid grid-cols-3 gap-2 lg:grid-cols-3">
             {timeSlots.map(time => {
@@ -1710,10 +1793,10 @@ function Step2Schedule({ selected, timeSlots, bookedSlots, branchClosure, tenant
                 <button
                   key={time}
                   onClick={() => onPickTime(time, status)}
-                  aria-label={`Jam ${time}${status === 'penuh' ? ', penuh' : status === 'past' ? ', sudah lewat' : ''}`}
+                  aria-label={`${t('publicBooking.timeAt', { time })}${status === 'penuh' ? `, ${t('publicBooking.full')}` : status === 'past' ? `, ${t('publicBooking.past')}` : ''}`}
                   aria-pressed={isSel}
                   aria-disabled={status !== 'tersedia'}
-                  title={status === 'penuh' ? 'Slot penuh' : status === 'past' ? 'Sudah lewat' : undefined}
+                  title={status === 'penuh' ? t('publicBooking.slotFull') : status === 'past' ? t('publicBooking.past') : undefined}
                   className={`py-3 rounded-xl text-sm font-semibold transition-all ${isShaking ? 'bk-shake' : ''}`}
                   style={{ ...styles, minHeight: '44px' }}
                 >
@@ -1726,13 +1809,13 @@ function Step2Schedule({ selected, timeSlots, bookedSlots, branchClosure, tenant
           {/* Legend */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-4 text-[11px]" style={{ color: 'var(--bk-text-2)' }}>
             <span className="inline-flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-md" style={{ border: '1.5px solid var(--bk-border-strong)' }} /> Tersedia
+              <span className="w-3 h-3 rounded-md" style={{ border: '1.5px solid var(--bk-border-strong)' }} /> {t('publicBooking.legendAvailable')}
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-md" style={{ background: accent }} /> Dipilih
+              <span className="w-3 h-3 rounded-md" style={{ background: accent }} /> {t('publicBooking.legendSelected')}
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-md" style={{ background: 'var(--bk-surface-2)', border: '1px solid var(--bk-border)' }} /> Penuh / Lewat
+              <span className="w-3 h-3 rounded-md" style={{ background: 'var(--bk-surface-2)', border: '1px solid var(--bk-border)' }} /> {t('publicBooking.legendFullPast')}
             </span>
           </div>
 
@@ -1740,7 +1823,7 @@ function Step2Schedule({ selected, timeSlots, bookedSlots, branchClosure, tenant
             <div className="mt-4 p-3 rounded-xl flex items-start gap-2 text-xs"
               style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.3)', color: '#FCD34D' }}>
               <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              Semua slot di tanggal ini tidak tersedia. Silakan pilih tanggal lain.
+              {t('publicBooking.allSlotsUnavailable')}
             </div>
           )}
         </div>
@@ -1748,7 +1831,7 @@ function Step2Schedule({ selected, timeSlots, bookedSlots, branchClosure, tenant
         <div className="hidden lg:flex items-center justify-center bk-card p-8 min-h-[300px] text-center"
           style={{ borderStyle: 'dashed' }}>
           <p className="text-sm" style={{ color: 'var(--bk-text-muted)' }}>
-            Pilih tanggal di kalender untuk melihat slot waktu
+            {t('publicBooking.pickDateToSeeSlots')}
           </p>
         </div>
       )}
@@ -1761,7 +1844,7 @@ function Step2Schedule({ selected, timeSlots, bookedSlots, branchClosure, tenant
         </button>
         <button onClick={onNext} disabled={!selected.date || !selected.time}
           className="bk-cta flex-1 inline-flex items-center justify-center gap-1.5">
-          Lanjut Konfirmasi
+          {t('publicBooking.ctaContinueConfirm')}
           <ChevronRight className="w-5 h-5" />
         </button>
       </div>
@@ -1775,21 +1858,22 @@ function Step2Schedule({ selected, timeSlots, bookedSlots, branchClosure, tenant
 
 function Step3Confirm({ tenantName, tenantWilayah, selected, form, formError, setForm, accent, totalPrice,
                         error, submitting, onBack, onSubmit }) {
+  const { t, i18n } = useTranslation()
   return (
     <div className="lg:grid lg:grid-cols-5 lg:gap-8 space-y-6 lg:space-y-0">
       {/* Left: form + notes */}
       <div className="space-y-6 lg:col-span-3">
         <div>
-          <SectionTitle step="03" title="Data Diri" accent={accent} />
+          <SectionTitle step="03" title={t('publicBooking.personalData')} accent={accent} />
           <div className="space-y-2.5">
-            <Field label="Nama" icon={User} placeholder="Nama lengkap"
+            <Field label={t('publicBooking.name')} icon={User} placeholder={t('publicBooking.fullNamePlaceholder')}
               value={form.name} onChange={v => setForm(f => ({ ...f, name: v }))} error={formError.name} />
-            <Field label="WhatsApp / HP" icon={Phone} type="tel" placeholder="08xxxxxxxxxx"
+            <Field label={t('publicBooking.whatsappPhone')} icon={Phone} type="tel" placeholder="08xxxxxxxxxx"
               value={form.phone} onChange={v => setForm(f => ({ ...f, phone: v }))} error={formError.phone} />
             {tenantWilayah?.kabupatenId && (
               <div>
                 <label className="bk-label block mb-1.5">
-                  Wilayah <span style={{ color: 'var(--bk-text-muted)' }}>(opsional)</span>
+                  {t('publicBooking.region')} <span style={{ color: 'var(--bk-text-muted)' }}>{t('publicBooking.optionalParen')}</span>
                 </label>
                 <WilayahPicker
                   kabupatenId={tenantWilayah.kabupatenId}
@@ -1804,10 +1888,10 @@ function Step3Confirm({ tenantName, tenantWilayah, selected, form, formError, se
         </div>
 
         <div>
-          <label className="bk-label block mb-1.5">Catatan (opsional)</label>
+          <label className="bk-label block mb-1.5">{t('publicBooking.notesOptional')}</label>
           <div className="relative">
             <MessageSquare className="absolute left-4 top-3.5 w-4 h-4" style={{ color: 'var(--bk-text-2)' }} />
-            <textarea rows={3} placeholder="Mis. potong pendek di samping, rapi di atas…"
+            <textarea rows={3} placeholder={t('publicBooking.notesPlaceholder')}
               value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
               className="bk-input resize-none" />
           </div>
@@ -1815,8 +1899,7 @@ function Step3Confirm({ tenantName, tenantWilayah, selected, form, formError, se
 
         {/* Disclaimer — kept on left so the right total bar stays uncluttered */}
         <p className="text-[11px] leading-relaxed" style={{ color: 'var(--bk-text-muted)' }}>
-          Dengan menekan "Konfirmasi Booking", kamu setuju dengan kebijakan pembatalan: pembatalan ≥1 jam sebelum jadwal tidak dikenakan biaya.
-          Pembayaran dilakukan langsung di lokasi.
+          {t('publicBooking.disclaimer')}
         </p>
       </div>
 
@@ -1824,18 +1907,18 @@ function Step3Confirm({ tenantName, tenantWilayah, selected, form, formError, se
       <div className="lg:col-span-2">
         <div className="lg:sticky lg:top-24 space-y-5">
           <div>
-            <SectionTitle step="" title="Ringkasan" accent={accent} />
+            <SectionTitle step="" title={t('publicBooking.summary')} accent={accent} />
             <div className="bk-card overflow-hidden">
-              <SummaryRow label="Barbershop" value={tenantName} />
-              <SummaryRow label="Cabang"     value={selected.branch?.name} />
-              <SummaryRow label="Barber"     value={selected.barber?.name || 'Barber tersedia'} />
+              <SummaryRow label={t('publicBooking.barbershop')} value={tenantName} />
+              <SummaryRow label={t('publicBooking.branch')}     value={selected.branch?.name} />
+              <SummaryRow label={t('publicBooking.barber')}     value={selected.barber?.name || t('publicBooking.barberAvailable')} />
               <SummaryRow
-                label={(selected.services || []).length > 1 ? `Layanan (${selected.services.length})` : 'Layanan'}
+                label={(selected.services || []).length > 1 ? t('publicBooking.serviceWithCount', { count: selected.services.length }) : t('publicBooking.service')}
                 value={(selected.services || []).map(s => s.name).join(', ')}
               />
-              <SummaryRow label="Tanggal"    value={format(selected.date, 'EEEE, d MMMM yyyy', { locale: idLocale })} />
-              <SummaryRow label="Jam"        value={selected.time} />
-              <SummaryRow label="Harga"      value={formatRupiah(totalPrice)} bold last />
+              <SummaryRow label={t('publicBooking.date')}    value={format(selected.date, 'EEEE, d MMMM yyyy', { locale: dfLocale(i18n.language) })} />
+              <SummaryRow label={t('publicBooking.time')}    value={selected.time} />
+              <SummaryRow label={t('publicBooking.price')}   value={formatRupiah(totalPrice)} bold last />
             </div>
           </div>
 
@@ -1843,7 +1926,7 @@ function Step3Confirm({ tenantName, tenantWilayah, selected, form, formError, se
           <div className="rounded-2xl p-4 flex items-center justify-between"
             style={{ background: accent, color: '#FFFFFF' }}>
             <div>
-              <p className="text-[10px] uppercase tracking-[0.22em] font-bold opacity-70">Total Pembayaran</p>
+              <p className="text-[10px] uppercase tracking-[0.22em] font-bold opacity-70">{t('publicBooking.totalPayment')}</p>
               <p className="font-display text-2xl font-bold mt-0.5">{formatRupiah(totalPrice)}</p>
             </div>
             <Sparkles className="w-7 h-7 opacity-70" />
@@ -1905,6 +1988,7 @@ function SummaryRow({ label, value, bold, last }) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function Step4Success({ booking, accent, tenantName, tenantPhone, onAnother }) {
+  const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
   const code = shortId(booking.id)
 
@@ -1976,7 +2060,7 @@ function Step4Success({ booking, accent, tenantName, tenantPhone, onAnother }) {
           </div>
 
           <div className="mt-5 pt-5 space-y-2.5" style={{ borderTop: `1.5px dashed ${accent}33` }}>
-            <TicketRow label="Status"  value={STATUS_LABEL[booking.status] || booking.status} />
+            <TicketRow label="Status"  value={statusLabel(booking.status, t)} />
             <TicketRow label="Cabang"  value={booking.branch?.name} />
             <TicketRow label="Layanan" value={booking.serviceName} />
             <TicketRow label="Barber"  value={booking.barberName || 'Barber tersedia'} />

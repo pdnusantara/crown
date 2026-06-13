@@ -321,7 +321,7 @@ router.post('/login', async (req, res, next) => {
         tenantId: true,
         branchId: true,
         branch: { select: { id: true, code: true, name: true } },
-        tenant: { select: { id: true, name: true, logo: true, timezone: true, wilayah: true } },
+        tenant: { select: { id: true, name: true, slug: true, logo: true, timezone: true, wilayah: true } },
         isActive: true,
         deletedAt: true,
       },
@@ -474,7 +474,7 @@ router.post('/dev-login', async (req, res, next) => {
         id: true, email: true, name: true, role: true, phone: true, photo: true,
         commissionRate: true, isBarber: true, tenantId: true, branchId: true,
         branch: { select: { id: true, code: true, name: true } },
-        tenant: { select: { id: true, name: true, logo: true, timezone: true, wilayah: true } },
+        tenant: { select: { id: true, name: true, slug: true, logo: true, timezone: true, wilayah: true } },
       },
     });
     if (!user) {
@@ -615,7 +615,7 @@ router.get('/me', authenticate, async (req, res, next) => {
         branchId: true,
         isActive: true,
         createdAt: true,
-        tenant: { select: { id: true, name: true, logo: true, timezone: true, wilayah: true } },
+        tenant: { select: { id: true, name: true, slug: true, logo: true, timezone: true, wilayah: true } },
         branch: { select: { id: true, code: true, name: true } },
       },
     });
@@ -669,7 +669,7 @@ router.patch('/me', authenticate, async (req, res, next) => {
       select: {
         id: true, email: true, name: true, role: true, phone: true, photo: true,
         commissionRate: true, isBarber: true, tenantId: true, branchId: true, isActive: true, createdAt: true,
-        tenant: { select: { id: true, name: true, logo: true, timezone: true, wilayah: true } },
+        tenant: { select: { id: true, name: true, slug: true, logo: true, timezone: true, wilayah: true } },
         branch: { select: { id: true, code: true, name: true } },
       },
     });
