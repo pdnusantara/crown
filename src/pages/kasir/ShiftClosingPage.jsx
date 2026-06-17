@@ -4,13 +4,13 @@ import { motion } from 'framer-motion'
 import {
   LogOut, DollarSign, Receipt, TrendingUp, CheckCircle, Download, Clock,
   Wallet, AlertTriangle, Printer, Plus, Calendar, ChevronLeft, ChevronRight,
-  Users, History, RefreshCw, Loader2,
+  Users, History, RefreshCw, Loader2, ArrowDownCircle, Trash2,
 } from 'lucide-react'
 import { format, differenceInMinutes } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore.js'
 import {
-  useActiveShift, useCloseShift, useOpenShift, useShiftSummary, useShifts,
+  useActiveShift, useCloseShift, useOpenShift, useShiftSummary, useShifts, useShiftCashOut,
 } from '../../hooks/useShifts.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import Button from '../../components/ui/Button.jsx'
@@ -219,6 +219,7 @@ function ShiftClosingPageInner() {
   } = useShiftSummary(shiftId)
 
   const closeShift = useCloseShift()
+  const cashOut = useShiftCashOut(shiftId)
 
   // Form state for closing
   const [closingCash, setClosingCash] = useState('')
@@ -226,6 +227,12 @@ function ShiftClosingPageInner() {
   const [showConfirm, setShowConfirm] = useState(false)
   const [closedShift, setClosedShift] = useState(null)
   const [showHistory, setShowHistory] = useState(false)
+
+  // Form state untuk "Kas Keluar" (pengeluaran tunai shift)
+  const [showCashOut, setShowCashOut] = useState(false)
+  const [coAmount, setCoAmount] = useState('')
+  const [coDesc, setCoDesc] = useState('')
+  const [coNote, setCoNote] = useState('')
 
   // Ticker 60s — durasi shift ikut hidup di antara refetch.
   const [, setTick] = useState(0)
@@ -245,7 +252,9 @@ function ShiftClosingPageInner() {
   const totalTransactions = summary?.totalTransactions ?? activeShift?.totalTransactions ?? 0
   const totalCash         = summary?.totalCash ?? 0
   const openingCash       = shift?.openingCash ?? activeShift?.openingCash ?? 0
-  const expectedCash      = (openingCash || 0) + (totalCash || 0)
+  const cashOutRows       = summary?.cashOut || []
+  const totalCashOut      = summary?.totalCashOut ?? 0
+  const expectedCash      = (openingCash || 0) + (totalCash || 0) - (totalCashOut || 0)
   const closingCashNum    = parseInt(closingCash || '0', 10) || 0
   const avgPerTx          = totalTransactions > 0 ? Math.round(totalRevenue / totalTransactions) : 0
 
@@ -287,6 +296,35 @@ function ShiftClosingPageInner() {
     }
   }
 
+  // Kuick-pick keterangan umum kas keluar — isi cepat tanpa ngetik.
+  const cashOutPresets = [t('shift.cashOutPresetBusker'), t('shift.cashOutPresetParking'), t('shift.cashOutPresetConsumption'), t('shift.cashOutPresetOther')]
+
+  const resetCashOutForm = () => { setCoAmount(''); setCoDesc(''); setCoNote('') }
+
+  const handleAddCashOut = async () => {
+    const amount = parseInt(coAmount || '0', 10) || 0
+    const description = coDesc.trim()
+    if (amount <= 0) { toast.error(t('shift.cashOutAmountRequired')); return }
+    if (!description) { toast.error(t('shift.cashOutDescRequired')); return }
+    try {
+      await cashOut.add.mutateAsync({ amount, description, note: coNote.trim() || undefined })
+      resetCashOutForm()
+      setShowCashOut(false)
+      toast.success(t('shift.cashOutAdded'))
+    } catch (err) {
+      toast.error(err?.response?.data?.error || t('shift.cashOutFailed'))
+    }
+  }
+
+  const handleDeleteCashOut = async (id) => {
+    try {
+      await cashOut.remove.mutateAsync(id)
+      toast.success(t('shift.cashOutDeleted'))
+    } catch (err) {
+      toast.error(err?.response?.data?.error || t('shift.cashOutFailed'))
+    }
+  }
+
   const handlePrint = () => window.print()
 
   const handleExport = () => {
@@ -309,6 +347,8 @@ function ShiftClosingPageInner() {
       [t('shift.cashHeader')],
       [t('shift.openCash'), openingCash],
       [t('shift.cashIn'), totalCash],
+      [t('shift.cashOutTitle'), totalCashOut ? -totalCashOut : 0],
+      ...cashOutRows.map(c => [`  • ${c.description}`, -c.amount]),
       [t('shift.expectedCash'), expectedCash],
       [t('shift.actualCash'), shift.closingCash != null ? shift.closingCash : ''],
       [t('shift.diff'), shift.cashDifference != null ? shift.cashDifference : ''],
@@ -479,6 +519,55 @@ function ShiftClosingPageInner() {
               </p>
             )}
           </div>
+        </div>
+
+        {/* Kas Keluar (pengeluaran tunai shift) — dikurangkan dari kas seharusnya */}
+        <div className="mt-3 rounded-xl border border-dark-border bg-dark-card/50 p-3">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <ArrowDownCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+              <span className="text-sm font-medium text-off-white truncate">{t('shift.cashOutTitle')}</span>
+              {totalCashOut > 0 && (
+                <span className="text-sm font-bold text-red-400 whitespace-nowrap">−{formatRupiah(totalCashOut)}</span>
+              )}
+            </div>
+            <Button
+              variant="outline"
+              size="xs"
+              icon={Plus}
+              onClick={() => setShowCashOut(true)}
+              disabled={!shiftId || shift?.status === 'closed'}
+              className="flex-shrink-0"
+            >
+              {t('shift.cashOutAdd')}
+            </Button>
+          </div>
+          {cashOutRows.length === 0 ? (
+            <p className="text-xs text-muted">{t('shift.cashOutEmpty')}</p>
+          ) : (
+            <ul className="space-y-1.5">
+              {cashOutRows.map((c) => (
+                <li key={c.id} className="flex items-center justify-between gap-2 text-sm bg-dark-surface/60 rounded-lg px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="text-off-white truncate">{c.description}</p>
+                    {c.note && <p className="text-[11px] text-muted truncate">{c.note}</p>}
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="font-semibold text-red-400 whitespace-nowrap">−{formatRupiah(c.amount)}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteCashOut(c.id)}
+                      disabled={cashOut.remove.isPending || shift?.status === 'closed'}
+                      className="text-muted hover:text-red-400 transition-colors disabled:opacity-40"
+                      aria-label={t('shift.cashOutDelete')}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         {variance !== null && (
@@ -720,6 +809,65 @@ function ShiftClosingPageInner() {
               className="bg-red-600 hover:bg-red-500 text-white border-0"
             >
               {closeShift.isPending ? t('shift.closing') : t('shift.confirmCloseButton')}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Kas Keluar modal */}
+      <Modal isOpen={showCashOut} onClose={() => { setShowCashOut(false); resetCashOutForm() }} title={t('shift.cashOutModalTitle')} size="md">
+        <div className="space-y-4">
+          <p className="text-muted text-sm">{t('shift.cashOutModalDesc')}</p>
+          <div>
+            <label htmlFor="co-amount" className="block text-xs font-medium text-muted mb-1.5">{t('shift.cashOutAmountLabel')}</label>
+            <input
+              id="co-amount"
+              inputMode="numeric"
+              value={coAmount}
+              onChange={e => setCoAmount(e.target.value.replace(/\D/g, '').slice(0, 9))}
+              placeholder="0"
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-base outline-none focus:border-brand/60 transition-colors font-mono"
+            />
+            {coAmount && <p className="text-xs text-muted mt-1">{formatRupiah(parseInt(coAmount || '0', 10) || 0)}</p>}
+          </div>
+          <div>
+            <label htmlFor="co-desc" className="block text-xs font-medium text-muted mb-1.5">{t('shift.cashOutDescLabel')}</label>
+            <input
+              id="co-desc"
+              value={coDesc}
+              onChange={e => setCoDesc(e.target.value.slice(0, 200))}
+              placeholder={t('shift.cashOutDescPlaceholder')}
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-base outline-none focus:border-brand/60 transition-colors"
+            />
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {cashOutPresets.map(p => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setCoDesc(p)}
+                  className={`px-2.5 py-1 rounded-lg text-xs border transition-colors ${coDesc === p ? 'bg-brand text-dark border-brand' : 'bg-dark-surface text-muted border-dark-border hover:text-off-white'}`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label htmlFor="co-note" className="block text-xs font-medium text-muted mb-1.5">{t('shift.cashOutNoteLabel')}</label>
+            <input
+              id="co-note"
+              value={coNote}
+              onChange={e => setCoNote(e.target.value.slice(0, 500))}
+              placeholder={t('shift.cashOutNotePlaceholder')}
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-base outline-none focus:border-brand/60 transition-colors"
+            />
+          </div>
+          <div className="flex gap-2 sm:gap-3">
+            <Button variant="outline" fullWidth onClick={() => { setShowCashOut(false); resetCashOutForm() }}>
+              {t('common.cancel')}
+            </Button>
+            <Button fullWidth icon={ArrowDownCircle} onClick={handleAddCashOut} disabled={cashOut.add.isPending}>
+              {cashOut.add.isPending ? t('shift.cashOutSaving') : t('shift.cashOutSave')}
             </Button>
           </div>
         </div>

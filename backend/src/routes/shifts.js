@@ -4,6 +4,18 @@ const prisma = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { parsePagination, paginatedResponse } = require('../utils/pagination');
 const { requireLicensedBranch } = require('../middleware/requireLicensedBranch');
+const { formatYmdInTz } = require('../utils/timezone');
+
+// Kategori Expense yang dipakai untuk "Kas Keluar" kasir — harus salah satu dari
+// enum kategori Expense (lihat routes/expenses.js) agar konsisten di laporan
+// pengeluaran admin. Kas keluar operasional kasir → 'operasional'.
+const CASH_OUT_CATEGORY = 'operasional';
+
+const cashOutSchema = z.object({
+  amount:      z.number().int().min(1).max(100_000_000),
+  description: z.string().trim().min(1, 'Keterangan wajib diisi').max(200),
+  note:        z.string().trim().max(500).optional(),
+});
 
 const shiftSelect = {
   id: true,
@@ -218,6 +230,16 @@ async function buildShiftSummary(shiftId, tenantId) {
   const topServices = Object.values(serviceMap).sort((a, b) => b.count - a.count).slice(0, 10);
   const barberSummary = Object.values(barberMap).sort((a, b) => b.revenue - a.revenue);
 
+  // Kas keluar (pengeluaran tunai) yang dicatat kasir selama shift ini. Dipakai
+  // mengurangi kas seharusnya saat rekonsiliasi — uang yang keluar dari laci
+  // untuk ngamen/parkir/konsumsi bukan selisih kasir.
+  const cashOutRows = await prisma.expense.findMany({
+    where: { shiftId },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true, category: true, description: true, amount: true, note: true, createdAt: true },
+  });
+  const totalCashOut = cashOutRows.reduce((s, e) => s + (e.amount || 0), 0);
+
   return {
     paymentBreakdown,
     totalRevenue,
@@ -228,6 +250,8 @@ async function buildShiftSummary(shiftId, tenantId) {
     refundCount: refunds._count || 0,
     topServices,
     barberSummary,
+    cashOut: cashOutRows,
+    totalCashOut,
   };
 }
 
@@ -248,7 +272,7 @@ router.get('/:id/summary', authenticate, requireRole('super_admin', 'tenant_admi
     }
 
     const summary = await buildShiftSummary(shift.id, shift.branch.tenantId);
-    const expectedCash = (shift.openingCash || 0) + summary.totalCash;
+    const expectedCash = (shift.openingCash || 0) + summary.totalCash - (summary.totalCashOut || 0);
 
     res.json({
       success: true,
@@ -415,7 +439,15 @@ async function closeShiftHandler(req, res, next) {
     const totalTransactions = txns.length;
     const totalCash = txns.filter(t => t.paymentMethod === 'cash').reduce((s, t) => s + (t.total || 0), 0);
 
-    const expectedCash = (shift.openingCash || 0) + totalCash;
+    // Kas keluar shift ini mengurangi kas seharusnya — uang tunai yang sudah
+    // sah dikeluarkan kasir (ngamen/parkir/konsumsi) tidak boleh jadi selisih.
+    const cashOutAgg = await prisma.expense.aggregate({
+      where: { shiftId: shift.id },
+      _sum: { amount: true },
+    });
+    const totalCashOut = cashOutAgg._sum.amount || 0;
+
+    const expectedCash = (shift.openingCash || 0) + totalCash - totalCashOut;
     const closingCash = body.closingCash != null ? body.closingCash : null;
     const cashDifference = closingCash != null ? closingCash - expectedCash : null;
 
@@ -464,5 +496,104 @@ async function closeShiftHandler(req, res, next) {
 router.post('/:id/close', authenticate, requireRole('kasir', 'tenant_admin', 'super_admin'), closeShiftHandler);
 // PATCH alias supaya klien lama (yang memanggil PATCH /:id/close) tetap bekerja
 router.patch('/:id/close', authenticate, requireRole('kasir', 'tenant_admin', 'super_admin'), closeShiftHandler);
+
+// ── Kas Keluar (cash-out / pengeluaran tunai shift) ─────────────────────────────
+// Sengaja TIDAK digate flag `expense_tracking`: ini soal akurasi kas drawer,
+// kebutuhan dasar semua paket. Tercatat sebagai Expense (kategori operasional)
+// ber-shiftId sehingga ikut laporan pengeluaran admin sekaligus mengurangi kas
+// seharusnya saat tutup shift.
+
+// Ambil shift + cek kepemilikan (tenant + kasir). Mengembalikan shift atau null
+// setelah mengirim respons error yang sesuai.
+async function loadOwnedOpenShift(req, res, { requireOpen = true } = {}) {
+  const shift = await prisma.shift.findUnique({
+    where: { id: req.params.id },
+    include: { branch: { select: { id: true, name: true, tenantId: true, timezone: true } } },
+  });
+  if (!shift) { res.status(404).json({ success: false, error: 'Shift not found' }); return null; }
+  if (req.user.role !== 'super_admin' && shift.branch.tenantId !== req.user.tenantId) {
+    res.status(403).json({ success: false, error: 'Access denied' }); return null;
+  }
+  if (req.user.role === 'kasir' && shift.kasirId !== req.user.id) {
+    res.status(403).json({ success: false, error: 'Access denied' }); return null;
+  }
+  if (requireOpen && shift.status !== 'open') {
+    res.status(400).json({ success: false, error: 'Shift sudah ditutup' }); return null;
+  }
+  return shift;
+}
+
+function emitCashOutChanged(shift, event, payload) {
+  try {
+    const { getIO, branchRoom, tenantRoom } = require('../config/socket');
+    const io = getIO();
+    if (!io) return;
+    // Branch room → halaman tutup-kas device lain ikut refresh.
+    io.to(branchRoom(shift.branchId)).emit('shift:updated', { shiftId: shift.id });
+    // Tenant room → laporan pengeluaran admin ikut sinkron.
+    io.to(tenantRoom(shift.branch.tenantId)).emit(event, payload);
+  } catch (_) { /* socket optional */ }
+}
+
+// POST /api/shifts/:id/cash-out — catat pengeluaran tunai untuk shift ini.
+router.post('/:id/cash-out', authenticate, requireRole('kasir', 'tenant_admin', 'super_admin'), async (req, res, next) => {
+  try {
+    const shift = await loadOwnedOpenShift(req, res);
+    if (!shift) return;
+
+    const body = cashOutSchema.parse(req.body || {});
+
+    // Tanggal kalender = hari ini di timezone tenant (konsisten dgn Expense admin
+    // yang menyimpan UTC-midnight tanggal kalender).
+    const tz = shift.branch.timezone || 'Asia/Jakarta';
+    const ymd = formatYmdInTz(new Date(), tz);
+    const date = new Date(`${ymd}T00:00:00.000Z`);
+
+    const expense = await prisma.expense.create({
+      data: {
+        tenantId:    shift.branch.tenantId,
+        branchId:    shift.branchId,
+        shiftId:     shift.id,
+        category:    CASH_OUT_CATEGORY,
+        description: body.description,
+        amount:      body.amount,
+        date,
+        note:        body.note || null,
+      },
+      select: { id: true, category: true, description: true, amount: true, note: true, createdAt: true, branchId: true, tenantId: true },
+    });
+
+    emitCashOutChanged(shift, 'expense:created', expense);
+    res.status(201).json({ success: true, data: expense });
+  } catch (err) {
+    if (err instanceof z.ZodError) return res.status(400).json({ success: false, error: err.errors[0]?.message });
+    next(err);
+  }
+});
+
+// DELETE /api/shifts/:id/cash-out/:expenseId — hapus pengeluaran (mis. salah input)
+// selagi shift masih terbuka.
+router.delete('/:id/cash-out/:expenseId', authenticate, requireRole('kasir', 'tenant_admin', 'super_admin'), async (req, res, next) => {
+  try {
+    const shift = await loadOwnedOpenShift(req, res);
+    if (!shift) return;
+
+    const expense = await prisma.expense.findUnique({
+      where: { id: req.params.expenseId },
+      select: { id: true, shiftId: true, tenantId: true },
+    });
+    // Hanya boleh hapus pengeluaran yang benar-benar milik shift ini (cegah hapus
+    // pengeluaran admin biasa lewat endpoint kasir).
+    if (!expense || expense.shiftId !== shift.id) {
+      return res.status(404).json({ success: false, error: 'Pengeluaran tidak ditemukan' });
+    }
+
+    await prisma.expense.delete({ where: { id: expense.id } });
+    emitCashOutChanged(shift, 'expense:deleted', { id: expense.id });
+    res.json({ success: true, data: { id: expense.id } });
+  } catch (err) {
+    next(err);
+  }
+});
 
 module.exports = router;

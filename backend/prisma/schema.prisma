@@ -510,6 +510,10 @@ model Expense {
   // Barber terkait — diisi saat pengeluaran dibuat dari fitur "Gaji Barber"
   // (penanda agar komisi tak dobel dicatat). Kolom skalar, tanpa FK.
   barberId    String?
+  // Shift terkait — diisi saat pengeluaran dibuat sebagai "Kas Keluar" oleh
+  // kasir dari halaman Tutup Kas. Dipakai untuk mengurangi kas seharusnya saat
+  // rekonsiliasi shift. Kolom skalar tanpa FK (shift bisa terhapus terpisah).
+  shiftId     String?
   note        String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -518,6 +522,7 @@ model Expense {
 
   @@index([tenantId, date])
   @@index([tenantId, category])
+  @@index([shiftId])
 }
 
 model Package {

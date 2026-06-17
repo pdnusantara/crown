@@ -90,15 +90,41 @@ export function useShiftSummary(shiftId, { refetchMs = 15_000 } = {}) {
     const refresh = () => qc.invalidateQueries({ queryKey: ['shifts', 'summary', shiftId] })
     socket.on('transaction:created', refresh)
     socket.on('queue:updated', refresh)
+    // Kas keluar dicatat/dihapus dari device lain → ikut refresh.
+    socket.on('shift:updated', refresh)
 
     return () => {
       socket.off('transaction:created', refresh)
       socket.off('queue:updated', refresh)
+      socket.off('shift:updated', refresh)
       leaveBranchRoom(branchId)
     }
   }, [shiftId, branchId, qc])
 
   return query
+}
+
+/**
+ * useShiftCashOut — catat / hapus "Kas Keluar" (pengeluaran tunai) untuk shift.
+ * Setelah sukses, invalidate summary supaya kas seharusnya & daftar ikut update.
+ */
+export function useShiftCashOut(shiftId) {
+  const qc = useQueryClient()
+  const invalidate = () => qc.invalidateQueries({ queryKey: ['shifts', 'summary', shiftId] })
+
+  const add = useMutation({
+    mutationFn: ({ amount, description, note }) =>
+      api.post(`/shifts/${shiftId}/cash-out`, { amount, description, note }).then(r => r.data.data),
+    onSuccess: invalidate,
+  })
+
+  const remove = useMutation({
+    mutationFn: (expenseId) =>
+      api.delete(`/shifts/${shiftId}/cash-out/${expenseId}`).then(r => r.data.data),
+    onSuccess: invalidate,
+  })
+
+  return { add, remove }
 }
 
 export function useOpenShift() {
