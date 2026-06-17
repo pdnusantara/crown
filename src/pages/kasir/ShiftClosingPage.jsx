@@ -597,43 +597,61 @@ function ShiftClosingPageInner() {
         )}
 
         {/* Kas Keluar (pengeluaran tunai shift) — dikurangkan dari kas seharusnya */}
-        <div className="mt-3 rounded-xl border border-dark-border bg-dark-card/50 p-3">
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <ArrowDownCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
-              <span className="text-sm font-medium text-off-white truncate">{t('shift.cashOutTitle')}</span>
-              {totalCashOut > 0 && (
-                <span className="text-sm font-bold text-red-400 whitespace-nowrap">−{formatRupiah(totalCashOut)}</span>
-              )}
+        <div className="mt-4">
+          <div className="flex items-center justify-between gap-2 mb-2.5">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-500/10 flex-shrink-0">
+                <ArrowDownCircle className="w-4 h-4 text-red-400" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-off-white leading-tight">{t('shift.cashOutTitle')}</p>
+                <p className="text-[11px] text-muted leading-tight mt-0.5">
+                  {cashOutRows.length > 0 ? t('shift.cashOutCount', { count: cashOutRows.length }) : t('shift.cashOutSubtitle')}
+                </p>
+              </div>
             </div>
-            <Button
-              variant="outline"
-              size="xs"
-              icon={Plus}
-              onClick={() => setShowCashOut(true)}
-              disabled={!shiftId || shift?.status === 'closed'}
-              className="flex-shrink-0"
-            >
-              {t('shift.cashOutAdd')}
-            </Button>
+            <div className="flex items-center gap-2.5 flex-shrink-0">
+              {totalCashOut > 0 && (
+                <span className="text-sm font-bold text-red-400 whitespace-nowrap tabular-nums">−{formatRupiah(totalCashOut)}</span>
+              )}
+              <Button
+                variant="outline"
+                size="xs"
+                icon={Plus}
+                onClick={() => setShowCashOut(true)}
+                disabled={!shiftId || shift?.status === 'closed'}
+              >
+                {t('shift.cashOutAdd')}
+              </Button>
+            </div>
           </div>
           {cashOutRows.length === 0 ? (
-            <p className="text-xs text-muted">{t('shift.cashOutEmpty')}</p>
+            <button
+              type="button"
+              onClick={() => setShowCashOut(true)}
+              disabled={!shiftId || shift?.status === 'closed'}
+              className="w-full rounded-xl border border-dashed border-dark-border py-3.5 text-center text-xs text-muted hover:border-brand/50 hover:text-off-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-dark-border disabled:hover:text-muted"
+            >
+              {t('shift.cashOutEmpty')}
+            </button>
           ) : (
-            <ul className="space-y-1.5">
+            <ul className="rounded-xl border border-dark-border divide-y divide-dark-border overflow-hidden">
               {cashOutRows.map((c) => (
-                <li key={c.id} className="flex items-center justify-between gap-2 text-sm bg-dark-surface/60 rounded-lg px-3 py-2">
-                  <div className="min-w-0">
-                    <p className="text-off-white truncate">{c.description}</p>
-                    {c.note && <p className="text-[11px] text-muted truncate">{c.note}</p>}
+                <li key={c.id} className="flex items-center justify-between gap-3 text-sm px-3 py-2.5 bg-dark-card/40">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-400/70 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-off-white truncate">{c.description}</p>
+                      {c.note && <p className="text-[11px] text-muted truncate">{c.note}</p>}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="font-semibold text-red-400 whitespace-nowrap">−{formatRupiah(c.amount)}</span>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <span className="font-semibold text-red-400 whitespace-nowrap tabular-nums">−{formatRupiah(c.amount)}</span>
                     <button
                       type="button"
                       onClick={() => handleDeleteCashOut(c.id)}
                       disabled={cashOut.remove.isPending || shift?.status === 'closed'}
-                      className="text-muted hover:text-red-400 transition-colors disabled:opacity-40"
+                      className="text-muted hover:text-red-400 transition-colors disabled:opacity-40 p-1 -m-1"
                       aria-label={t('shift.cashOutDelete')}
                     >
                       <Trash2 className="w-4 h-4" />
