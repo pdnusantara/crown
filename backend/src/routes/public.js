@@ -161,7 +161,7 @@ router.get('/info', requireTenant, async (req, res, next) => {
       where: { id: req.tenant.id },
       select: {
         name: true, slug: true, logo: true, address: true, phone: true,
-        bookingPage: true, wilayah: true,
+        bookingPage: true, wilayah: true, receiptSettings: true,
       },
     });
     if (!full) return res.status(404).json({ success: false, error: 'Tenant tidak ditemukan' });
@@ -184,6 +184,7 @@ router.get('/info', requireTenant, async (req, res, next) => {
         phone:       full.phone || null,
         bookingPage: full.bookingPage || null,
         wilayah:     full.wilayah || null,
+        receiptSettings: full.receiptSettings || null,
         // Flag dev-login — frontend pakai ini untuk memunculkan tombol login
         // cepat tanpa password. Hanya true kalau env DEV_LOGIN=1 di backend.
         devLogin:    process.env.DEV_LOGIN === '1',
@@ -293,7 +294,11 @@ router.get('/barbers', requireTenant, async (req, res, next) => {
     }
     const barbers = await prisma.user.findMany({
       where,
-      select: { id: true, name: true, photo: true },
+      select: {
+        id: true, name: true, photo: true,
+        barberTitle: true, barberBio: true, barberExpYears: true,
+        barberSpecialties: true, barberPortfolio: true,
+      },
       orderBy: { name: 'asc' },
     });
 
@@ -322,6 +327,52 @@ router.get('/barbers', requireTenant, async (req, res, next) => {
       ratingCount: ratingMap[b.id]?.ratingCount ?? 0,
     }));
     res.json({ success: true, data });
+  } catch (err) { next(err); }
+});
+
+// GET /api/public/barbers/:id — profil lengkap satu barber untuk halaman
+// detail di /book: bio, keahlian, portofolio, agregat rating + ulasan publish.
+router.get('/barbers/:id', requireTenant, async (req, res, next) => {
+  try {
+    const barber = await prisma.user.findFirst({
+      where: {
+        id: req.params.id,
+        tenantId: req.tenant.id,
+        isActive: true,
+        deletedAt: null,
+        OR: [{ role: 'barber' }, { isBarber: true }],
+      },
+      select: {
+        id: true, name: true, photo: true,
+        barberTitle: true, barberBio: true, barberExpYears: true,
+        barberSpecialties: true, barberPortfolio: true,
+      },
+    });
+    if (!barber) return res.status(404).json({ success: false, error: 'Barber tidak ditemukan' });
+
+    const [agg, reviews] = await Promise.all([
+      prisma.barberRating.aggregate({
+        where: { tenantId: req.tenant.id, barberId: barber.id },
+        _avg: { rating: true }, _count: { rating: true },
+      }),
+      // Ulasan publik (sudah di-publish admin) untuk barber ini — anonim.
+      prisma.barberRating.findMany({
+        where: { tenantId: req.tenant.id, barberId: barber.id, publishStatus: 'published', comment: { not: null } },
+        orderBy: { publishedAt: 'desc' },
+        take: 8,
+        select: { id: true, rating: true, comment: true, publishedAt: true },
+      }),
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        ...barber,
+        avgRating:   agg._avg.rating != null ? Math.round(agg._avg.rating * 10) / 10 : null,
+        ratingCount: agg._count.rating || 0,
+        reviews,
+      },
+    });
   } catch (err) { next(err); }
 });
 

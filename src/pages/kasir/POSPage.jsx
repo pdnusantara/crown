@@ -424,7 +424,7 @@ function POSPageInner() {
   // konteks cabang aktif. `matchesBranch` cocokkan slug ke branch.code maupun
   // branch.id (kompatibel dengan account lama yang slug-nya = CUID).
   const { branchId: urlBranchSlug } = useParams()
-  const { name: publicTenantName, logo: tenantLogo } = usePublicTenantStore()
+  const { name: publicTenantName, logo: tenantLogo, receiptSettings } = usePublicTenantStore()
   const currentBranch =
     branches.find(b => matchesBranch(urlBranchSlug, b))
     || branches.find(b => b.id === user?.branchId)
@@ -433,6 +433,15 @@ function POSPageInner() {
   const branchName  = currentBranch?.name  || ''
   const branchAddr  = currentBranch?.address || ''
   const branchPhone = currentBranch?.phone   || ''
+
+  // Pengaturan cetak struk tenant (footer, logo). Footer mendukung placeholder
+  // {toko}; kosong → pakai teks default i18n. Logo tampil kecuali di-nonaktifkan.
+  const receiptFooter = (() => {
+    const raw = (receiptSettings?.footer || '').trim()
+    if (!raw) return t('pos.receiptThanksLong')
+    return raw.replace(/\{(\w+)\}/g, (m, k) => (k === 'toko' ? tenantName : m))
+  })()
+  const receiptShowLogo = receiptSettings?.showLogo !== false
 
   // Feature flag checks — backend-backed, realtime invalidate on `featureFlag:changed`.
   const voucherEnabled       = useIsFeatureEnabled(user?.tenantId, 'voucher')
@@ -488,9 +497,23 @@ function POSPageInner() {
 
   // Cetak struk Bluetooth (Web Bluetooth + ESC/POS).
   const bt = useBtPrinter()
+  // Preferensi lebar kertas per-perangkat (localStorage) menang atas default
+  // tenant — kasir bisa pakai printer 58mm walau toko set default 80mm.
+  const hasLocalPaper = useRef(false)
   const [paperWidth, setPaperWidth] = useState(() => {
-    try { return Number(localStorage.getItem('btPaperWidth')) || 58 } catch { return 58 }
+    try {
+      const v = Number(localStorage.getItem('btPaperWidth'))
+      if (v === 58 || v === 80) { hasLocalPaper.current = true; return v }
+    } catch { /* noop */ }
+    return 58
   })
+  // Terapkan lebar kertas default dari pengaturan tenant bila kasir belum set
+  // preferensi lokal (mis. perangkat baru). Dijalankan saat receiptSettings tiba.
+  useEffect(() => {
+    if (hasLocalPaper.current) return
+    const def = Number(receiptSettings?.paperWidth)
+    if (def === 58 || def === 80) setPaperWidth(def)
+  }, [receiptSettings])
   const [btBusy, setBtBusy] = useState(false)
 
   const receipt = useRef(null)
@@ -848,7 +871,7 @@ function POSPageInner() {
       shopName: tenantName, branchName, branchAddr,
       branchPhone: branchPhone ? `${t('pos.receiptPhonePrefix')}: ${branchPhone}` : '',
       meta, items, rows,
-      thanks: t('pos.receiptThanksLong'),
+      thanks: receiptFooter,
       poweredBy: t('pos.poweredBy'),
       rating: (showRatingQr && ratingUrl) ? { title: t('pos.ratingQrTitle'), url: ratingUrl } : null,
     }
@@ -1539,7 +1562,7 @@ function POSPageInner() {
           {lastTxn && (
             <div ref={receipt} className="receipt-content bg-white text-gray-900 rounded-xl p-4 font-mono text-sm">
               <div className="text-center mb-3">
-                {tenantLogo && (
+                {receiptShowLogo && tenantLogo && (
                   <img src={tenantLogo} alt={tenantName} className="w-14 h-14 rounded-xl object-cover mx-auto mb-2" />
                 )}
                 <p className="font-bold text-gray-900 text-base leading-tight">{tenantName}</p>
@@ -1625,7 +1648,7 @@ function POSPageInner() {
               </div>
 
               <div className="border-t border-dashed border-gray-300 my-2" />
-              <p className="text-center text-xs text-gray-400">{t('pos.receiptThanksLong')}</p>
+              <p className="text-center text-xs text-gray-400 whitespace-pre-line">{receiptFooter}</p>
               <p className="text-center text-xs text-gray-400 mt-0.5">{t('pos.poweredBy')}</p>
 
               {/* QR rating — tampil di layar (dalam preview struk) & ikut tercetak.
@@ -1654,7 +1677,7 @@ function POSPageInner() {
               </span>
               <select
                 value={paperWidth}
-                onChange={(e) => { const v = Number(e.target.value); setPaperWidth(v); try { localStorage.setItem('btPaperWidth', String(v)) } catch { /* noop */ } }}
+                onChange={(e) => { const v = Number(e.target.value); hasLocalPaper.current = true; setPaperWidth(v); try { localStorage.setItem('btPaperWidth', String(v)) } catch { /* noop */ } }}
                 className="bg-dark-surface border border-dark-border rounded-lg px-2 py-1 text-xs text-off-white shrink-0"
                 aria-label={t('pos.paperWidthLabel')}
               >
@@ -1691,7 +1714,7 @@ function POSPageInner() {
                       k === 'nama' ? (lastTxn.customer?.name || '')
                       : k === 'toko' ? tenantName
                       : m)
-                  : `${t('pos.receiptThanksLong')} 🙏`
+                  : `${receiptFooter} 🙏`
                 const msg = `*${headerLine}*\n` +
                   (branchAddr ? `${branchAddr}\n` : '') +
                   `\n${t('pos.receiptNo')}: #${lastTxn.id.slice(-8).toUpperCase()}\n` +

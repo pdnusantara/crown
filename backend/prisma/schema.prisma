@@ -120,6 +120,14 @@ model User {
   // merangkap). Bila true, user ikut muncul di daftar/pilihan barber POS
   // sehingga komisi & rating-nya tercatat — tanpa perlu akun barber terpisah.
   isBarber       Boolean        @default(false)
+  // Profil publik barber — tampil di halaman detail barber /book. Semua
+  // opsional & dikelola admin tenant lewat editor staf. Kosong = bagian
+  // terkait disembunyikan di halaman publik (graceful fallback).
+  barberTitle       String? // mis. "Master Barber" / "Senior Barber"
+  barberBio         String? // paragraf "Tentang …"
+  barberExpYears    Int? // tahun pengalaman
+  barberSpecialties String[] @default([]) // tag keahlian: Fade, Pompadour, …
+  barberPortfolio   String[] @default([]) // URL foto hasil potongan
   tenantId       String?
   branchId       String?
   isActive       Boolean        @default(true)
@@ -206,6 +214,12 @@ model Tenant {
   //   autoSendMinutes    = delay sebelum link dikirim (default 15 menit)
   //   messageTemplate    = teks pesan, placeholder {nama} {toko} {link}
   ratingConfig        Json?
+  // Pengaturan cetak struk kasir. { footer, paperWidth, showLogo }.
+  //   footer     = teks catatan kaki struk (mis. promo/IG/jam buka),
+  //                placeholder {toko} dirender saat cetak. Null → pakai default.
+  //   paperWidth = lebar kertas default printer thermal (58 | 80, mm).
+  //   showLogo   = tampilkan logo toko di bagian atas struk.
+  receiptSettings     Json?
   // Trial WhatsApp untuk paket yang tidak menyertakan fitur `whatsapp` (mis.
   // Basic). Sekali pakai per tenant: `whatsappTrialStartedAt` != null berarti
   // trial pernah diambil (tak bisa diulang). Selama window aktif, flag `whatsapp`

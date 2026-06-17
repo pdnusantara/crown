@@ -13,7 +13,7 @@ import Button from '../../components/ui/Button.jsx'
 import Input from '../../components/ui/Input.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import * as api from '../../lib/api.js'
-import { Settings, Bell, Shield, Palette, Download, Upload, FileText, MessageCircle, Send, QrCode, Smartphone, RefreshCw, PowerOff, CheckCircle2, XCircle, Loader2, AlertTriangle, Phone, ArrowUpRight, ChevronLeft, ChevronRight, X, Star, Eye, EyeOff, Gift, Lock } from 'lucide-react'
+import { Settings, Bell, Shield, Palette, Download, Upload, FileText, MessageCircle, Send, QrCode, Smartphone, RefreshCw, PowerOff, CheckCircle2, XCircle, Loader2, AlertTriangle, Phone, ArrowUpRight, ChevronLeft, ChevronRight, X, Star, Eye, EyeOff, Gift, Lock, Printer } from 'lucide-react'
 import { format, differenceInDays } from 'date-fns'
 import { formatDistanceToNow } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
@@ -122,6 +122,20 @@ export default function TASettingsPage() {
       }))
     }
   }, [tenant])
+
+  // Pengaturan cetak struk kasir — footer kustom, lebar kertas default, logo.
+  const [receiptForm, setReceiptForm] = useState({ footer: '', paperWidth: 58, showLogo: true })
+  const [receiptSaving, setReceiptSaving] = useState(false)
+  useEffect(() => {
+    const rs = tenant?.receiptSettings
+    if (rs) {
+      setReceiptForm({
+        footer:     rs.footer || '',
+        paperWidth: rs.paperWidth === 80 ? 80 : 58,
+        showLogo:   rs.showLogo !== false,
+      })
+    }
+  }, [tenant?.receiptSettings])
 
   const [notifications, setNotifications] = useState({ newBooking: true, queueFull: true, dailyReport: false })
   const [activeTab, setActiveTab] = useState('general')
@@ -466,6 +480,25 @@ export default function TASettingsPage() {
       toast.success(t('tenantAdmin.settings.taxInfoSaved'))
     } catch (err) {
       toast.error(err?.response?.data?.error || t('tenantAdmin.settings.saveFailed'))
+    }
+  }
+
+  const handleSaveReceipt = async () => {
+    setReceiptSaving(true)
+    try {
+      const footer = (receiptForm.footer || '').trim()
+      await updateMyTenant.mutateAsync({
+        receiptSettings: {
+          footer:     footer || null,
+          paperWidth: receiptForm.paperWidth === 80 ? 80 : 58,
+          showLogo:   !!receiptForm.showLogo,
+        },
+      })
+      toast.success(t('tenantAdmin.settings.receiptSaved'))
+    } catch (err) {
+      toast.error(err?.response?.data?.error || t('tenantAdmin.settings.saveFailed'))
+    } finally {
+      setReceiptSaving(false)
     }
   }
 
@@ -815,6 +848,71 @@ export default function TASettingsPage() {
               />
               <Button variant="secondary" onClick={handleSaveTaxInfo} fullWidth loading={updateMyTenant.isPending}>
                 {t('tenantAdmin.settings.saveTaxInfo')}
+              </Button>
+            </CardBody>
+          </Card>
+
+          {/* Cetak struk — footer kustom, lebar kertas default, logo */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Printer className="w-5 h-5 text-brand" />
+                <h3 className="font-semibold text-off-white">{t('tenantAdmin.settings.receiptTitle')}</h3>
+              </div>
+            </CardHeader>
+            <CardBody className="space-y-4">
+              <p className="text-xs text-muted">{t('tenantAdmin.settings.receiptDesc')}</p>
+
+              <div>
+                <label className="block text-sm text-off-white mb-1.5">{t('tenantAdmin.settings.receiptFooterLabel')}</label>
+                <textarea
+                  rows={3}
+                  maxLength={500}
+                  value={receiptForm.footer}
+                  onChange={e => setReceiptForm(f => ({ ...f, footer: e.target.value }))}
+                  placeholder={t('tenantAdmin.settings.receiptFooterPlaceholder')}
+                  className="w-full bg-dark-surface border border-dark-border rounded-xl px-3 py-2 text-sm text-off-white placeholder:text-muted focus:outline-none focus:border-brand resize-none"
+                />
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-[11px] text-muted">{t('tenantAdmin.settings.receiptFooterHint')}</span>
+                  <span className="text-[11px] text-muted tabular-nums">{receiptForm.footer.length}/500</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-off-white mb-1.5">{t('tenantAdmin.settings.receiptPaperLabel')}</label>
+                <div className="flex gap-2">
+                  {[58, 80].map(w => (
+                    <button
+                      key={w}
+                      type="button"
+                      onClick={() => setReceiptForm(f => ({ ...f, paperWidth: w }))}
+                      className={`flex-1 px-4 py-2 rounded-xl text-sm font-medium border transition-colors ${receiptForm.paperWidth === w ? 'bg-brand text-dark border-brand' : 'bg-dark-surface text-muted border-dark-border hover:text-off-white'}`}
+                    >
+                      {w}mm
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted mt-1">{t('tenantAdmin.settings.receiptPaperHint')}</p>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-dark-surface rounded-xl">
+                <div>
+                  <p className="text-sm font-medium text-off-white">{t('tenantAdmin.settings.receiptShowLogoLabel')}</p>
+                  <p className="text-xs text-muted">{t('tenantAdmin.settings.receiptShowLogoDesc')}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setReceiptForm(f => ({ ...f, showLogo: !f.showLogo }))}
+                  className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${receiptForm.showLogo ? 'bg-brand' : 'bg-dark-border'}`}
+                  aria-pressed={receiptForm.showLogo}
+                >
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${receiptForm.showLogo ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              </div>
+
+              <Button variant="secondary" onClick={handleSaveReceipt} fullWidth loading={receiptSaving}>
+                {t('tenantAdmin.settings.saveReceipt')}
               </Button>
             </CardBody>
           </Card>

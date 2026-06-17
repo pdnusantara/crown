@@ -49,6 +49,7 @@ const tenantSelect = {
   attendanceConfig: true,
   shiftPresets: true,
   ratingConfig: true,
+  receiptSettings: true,
   isSuspended: true,
   createdAt: true,
   updatedAt: true,
@@ -390,6 +391,14 @@ const ratingConfigSchema = z.object({
   messageTemplate: z.string().trim().max(2000).optional().nullable(),
 }).strict().nullish();
 
+// Pengaturan cetak struk kasir. footer max 500 char (placeholder {toko});
+// paperWidth dibatasi ke lebar printer thermal umum (58/80mm).
+const receiptSettingsSchema = z.object({
+  footer:     z.string().max(500).nullish(),
+  paperWidth: z.union([z.literal(58), z.literal(80)]).optional(),
+  showLogo:   z.boolean().optional(),
+}).strict().nullish();
+
 const selfUpdateSchema = z.object({
   name:        z.string().min(1).max(255).optional(),
   phone:       z.string().max(50).nullish(),
@@ -406,6 +415,7 @@ const selfUpdateSchema = z.object({
   attendanceConfig: attendanceConfigSchema,
   shiftPresets: shiftPresetsSchema,
   ratingConfig: ratingConfigSchema,
+  receiptSettings: receiptSettingsSchema,
 });
 // ── Upload gambar tenant (hero & galeri halaman booking) ───────────────────────
 // Gambar disimpan sebagai FILE di disk, bukan base64 di JSON tenant — supaya
