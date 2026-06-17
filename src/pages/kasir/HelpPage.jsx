@@ -120,11 +120,11 @@ function buildCategories(slug) {
         {
           id: 'tx-poin',
           q: 'Bagaimana memakai poin loyalti pelanggan?',
-          a: 'Pelanggan terdaftar bisa menukar poin sebagai potongan. 1 poin bernilai Rp100, dengan batas maksimal 50% dari subtotal.',
+          a: 'Pelanggan terdaftar bisa menukar poin sebagai potongan. Nilai poin, minimal tukar, dan batas potongan ditentukan pemilik di Pengaturan → Sistem Poin; nilai serta batas maksimalnya tampil langsung di panel tukar poin saat transaksi. Bila pemilik menonaktifkan sistem poin, panel ini tidak muncul.',
           steps: [
             'Pastikan pelanggan sudah dipilih di keranjang.',
             'Buka opsi tukar poin sebelum menekan Bayar.',
-            'Masukkan jumlah poin — potongan langsung terhitung.',
+            'Masukkan jumlah poin (atau pakai tombol Maks) — potongan langsung terhitung sesuai nilai poin toko.',
           ],
           to: pos,
           toLabel: 'Buka Kasir',
