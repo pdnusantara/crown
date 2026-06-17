@@ -508,7 +508,8 @@ router.patch('/:id/close', authenticate, requireRole('kasir', 'tenant_admin', 's
 async function loadOwnedOpenShift(req, res, { requireOpen = true } = {}) {
   const shift = await prisma.shift.findUnique({
     where: { id: req.params.id },
-    include: { branch: { select: { id: true, name: true, tenantId: true, timezone: true } } },
+    // timezone ada di Tenant, BUKAN Branch — di-resolve terpisah di handler POST.
+    include: { branch: { select: { id: true, name: true, tenantId: true } } },
   });
   if (!shift) { res.status(404).json({ success: false, error: 'Shift not found' }); return null; }
   if (req.user.role !== 'super_admin' && shift.branch.tenantId !== req.user.tenantId) {
@@ -544,8 +545,12 @@ router.post('/:id/cash-out', authenticate, requireRole('kasir', 'tenant_admin', 
     const body = cashOutSchema.parse(req.body || {});
 
     // Tanggal kalender = hari ini di timezone tenant (konsisten dgn Expense admin
-    // yang menyimpan UTC-midnight tanggal kalender).
-    const tz = shift.branch.timezone || 'Asia/Jakarta';
+    // yang menyimpan UTC-midnight tanggal kalender). Timezone ada di Tenant.
+    const tenantRow = await prisma.tenant.findUnique({
+      where: { id: shift.branch.tenantId },
+      select: { timezone: true },
+    });
+    const tz = tenantRow?.timezone || 'Asia/Jakarta';
     const ymd = formatYmdInTz(new Date(), tz);
     const date = new Date(`${ymd}T00:00:00.000Z`);
 
