@@ -692,6 +692,12 @@ model Shift {
   closingCash       Int?
   expectedCash      Int?
   cashDifference    Int?
+  // Alasan selisih kas (diisi kasir saat tutup bila kas aktual ≠ kas diharapkan).
+  cashVarianceReason String?
+  // Setoran kas: modal yang ditahan untuk shift berikutnya (retainedFloat) &
+  // sisa yang disetor ke pemilik (depositedAmount = closingCash − retainedFloat).
+  retainedFloat     Int?
+  depositedAmount   Int?
   notes             String?
   totalRevenue      Int?
   totalTransactions Int?

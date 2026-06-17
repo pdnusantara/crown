@@ -143,8 +143,8 @@ export function useCloseShift() {
   const qc = useQueryClient()
   return useMutation({
     // FIX: backend route adalah POST, bukan PATCH. Method lama selalu 404.
-    mutationFn: ({ id, closingCash, notes }) =>
-      api.post(`/shifts/${id}/close`, { closingCash, notes }).then(r => r.data.data),
+    mutationFn: ({ id, closingCash, notes, varianceReason, retainedFloat }) =>
+      api.post(`/shifts/${id}/close`, { closingCash, notes, varianceReason, retainedFloat }).then(r => r.data.data),
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ['shifts', 'active', variables.branchId] })
       qc.invalidateQueries({ queryKey: ['shifts'] })

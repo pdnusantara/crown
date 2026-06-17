@@ -4,7 +4,7 @@ const prisma = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { parsePagination, paginatedResponse } = require('../utils/pagination');
 const { requireLicensedBranch } = require('../middleware/requireLicensedBranch');
-const { formatYmdInTz } = require('../utils/timezone');
+const { formatYmdInTz, tenantDayStart } = require('../utils/timezone');
 
 // Kategori Expense yang dipakai untuk "Kas Keluar" kasir — harus salah satu dari
 // enum kategori Expense (lihat routes/expenses.js) agar konsisten di laporan
@@ -29,6 +29,9 @@ const shiftSelect = {
   closingCash: true,
   expectedCash: true,
   cashDifference: true,
+  cashVarianceReason: true,
+  retainedFloat: true,
+  depositedAmount: true,
   notes: true,
   totalRevenue: true,
   totalTransactions: true,
@@ -44,6 +47,10 @@ const openShiftSchema = z.object({
 const closeShiftSchema = z.object({
   closingCash: z.number().int().min(0).optional(),
   notes: z.string().max(500).optional(),
+  // Alasan selisih kas (wajib di UI bila ada selisih; backend menyimpan apa adanya).
+  varianceReason: z.string().trim().max(500).optional(),
+  // Modal yang ditahan untuk shift berikutnya — sisanya jadi setoran.
+  retainedFloat: z.number().int().min(0).optional(),
 });
 
 // GET /api/shifts
@@ -274,6 +281,22 @@ router.get('/:id/summary', authenticate, requireRole('super_admin', 'tenant_admi
     const summary = await buildShiftSummary(shift.id, shift.branch.tenantId);
     const expectedCash = (shift.openingCash || 0) + summary.totalCash - (summary.totalCashOut || 0);
 
+    // Antrian belum dibayar di cabang ini hari ini (waiting/in_progress/done) —
+    // dipakai memperingatkan kasir sebelum tutup shift agar tak ada yg terlewat.
+    let pendingQueue = 0;
+    try {
+      const tenant = await prisma.tenant.findUnique({ where: { id: shift.branch.tenantId }, select: { timezone: true } });
+      const tz = tenant?.timezone || 'Asia/Jakarta';
+      const todayStart = tenantDayStart(formatYmdInTz(new Date(), tz), tz);
+      pendingQueue = await prisma.queue.count({
+        where: {
+          branchId: shift.branchId,
+          status: { in: ['waiting', 'in_progress', 'done'] },
+          createdAt: { gte: todayStart },
+        },
+      });
+    } catch (_) { /* non-fatal: peringatan opsional */ }
+
     res.json({
       success: true,
       data: {
@@ -295,6 +318,7 @@ router.get('/:id/summary', authenticate, requireRole('super_admin', 'tenant_admi
         summary: {
           ...summary,
           expectedCash,
+          pendingQueue,
         },
       },
     });
@@ -451,6 +475,12 @@ async function closeShiftHandler(req, res, next) {
     const closingCash = body.closingCash != null ? body.closingCash : null;
     const cashDifference = closingCash != null ? closingCash - expectedCash : null;
 
+    // Setoran: modal ditahan untuk besok & sisa yang disetor ke pemilik.
+    const retainedFloat = body.retainedFloat != null ? Math.min(body.retainedFloat, closingCash ?? body.retainedFloat) : null;
+    const depositedAmount = closingCash != null ? closingCash - (retainedFloat || 0) : null;
+    // Alasan selisih hanya relevan bila memang ada selisih.
+    const cashVarianceReason = (cashDifference && body.varianceReason) ? body.varianceReason : null;
+
     const closedShift = await prisma.shift.update({
       where: { id: req.params.id },
       data: {
@@ -461,6 +491,9 @@ async function closeShiftHandler(req, res, next) {
         closingCash,
         expectedCash,
         cashDifference,
+        cashVarianceReason,
+        retainedFloat,
+        depositedAmount,
         notes: body.notes != null ? body.notes : shift.notes,
       },
       include: { branch: { select: { id: true, name: true } } },

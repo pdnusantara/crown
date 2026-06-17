@@ -32,6 +32,9 @@ const PAYMENT_LABEL = {
   card:     { labelKey: 'pos.methodCard',     icon: '💳' },
 }
 
+// Pecahan rupiah (lembar & koin) untuk penghitung uang laci.
+const CASH_DENOMS = [100000, 50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100]
+
 function durationLabel(start, end, t) {
   if (!start) return '0m'
   const mins = Math.max(0, differenceInMinutes(end || new Date(), new Date(start)))
@@ -224,9 +227,15 @@ function ShiftClosingPageInner() {
   // Form state for closing
   const [closingCash, setClosingCash] = useState('')
   const [closeNotes, setCloseNotes] = useState('')
+  const [varianceReason, setVarianceReason] = useState('')
+  const [retainedFloat, setRetainedFloat] = useState('')
   const [showConfirm, setShowConfirm] = useState(false)
   const [closedShift, setClosedShift] = useState(null)
   const [showHistory, setShowHistory] = useState(false)
+
+  // Penghitung pecahan uang laci → otomatis isi Kas Aktual. Map { nominal: jumlah }.
+  const [showDenom, setShowDenom] = useState(false)
+  const [denoms, setDenoms] = useState({})
 
   // Form state untuk "Kas Keluar" (pengeluaran tunai shift)
   const [showCashOut, setShowCashOut] = useState(false)
@@ -256,6 +265,9 @@ function ShiftClosingPageInner() {
   const totalCashOut      = summary?.totalCashOut ?? 0
   const expectedCash      = (openingCash || 0) + (totalCash || 0) - (totalCashOut || 0)
   const closingCashNum    = parseInt(closingCash || '0', 10) || 0
+  const pendingQueue      = summary?.pendingQueue ?? 0
+  const retainedFloatNum  = Math.min(parseInt(retainedFloat || '0', 10) || 0, closingCashNum)
+  const depositedAmount   = closingCash !== '' ? Math.max(0, closingCashNum - retainedFloatNum) : null
   const avgPerTx          = totalTransactions > 0 ? Math.round(totalRevenue / totalTransactions) : 0
 
   const paymentRows = useMemo(() => {
@@ -276,20 +288,41 @@ function ShiftClosingPageInner() {
   const summaryReady = !!summary && !summaryError
   const variance     = (summaryReady && closingCash !== '') ? closingCashNum - expectedCash : null
 
+  // ── denominasi uang laci ───────────────────────────────────────────────────
+  const denomTotal = CASH_DENOMS.reduce((s, d) => s + d * (parseInt(denoms[d] || '0', 10) || 0), 0)
+  const setDenomCount = (denom, raw) => {
+    const qty = String(raw).replace(/\D/g, '').slice(0, 5)
+    const next = { ...denoms, [denom]: qty }
+    setDenoms(next)
+    const total = CASH_DENOMS.reduce((s, d) => s + d * (parseInt(next[d] || '0', 10) || 0), 0)
+    setClosingCash(total ? String(total) : '')
+  }
+
   // ── actions ──────────────────────────────────────────────────────────────
+  // Tutup hanya boleh setelah kas aktual diisi; jika ada selisih, alasan wajib.
+  const needsVarianceReason = summaryReady && closingCash !== '' && variance !== null && variance !== 0
+  const canClose = summaryReady && closingCash !== '' && (!needsVarianceReason || varianceReason.trim() !== '')
+
   const handleClose = async () => {
     if (!shiftId || closeShift.isPending) return
+    if (closingCash === '') { toast.error(t('shift.actualCashRequired')); return }
+    if (needsVarianceReason && varianceReason.trim() === '') { toast.error(t('shift.varianceReasonRequired')); return }
     try {
       const res = await closeShift.mutateAsync({
         id: shiftId,
         branchId: user?.branchId,
-        closingCash: closingCash !== '' ? closingCashNum : undefined,
+        closingCash: closingCashNum,
         notes: closeNotes.trim() || undefined,
+        varianceReason: needsVarianceReason ? varianceReason.trim() : undefined,
+        retainedFloat: retainedFloat !== '' ? retainedFloatNum : undefined,
       })
       setClosedShift({ ...res, summary })
       setShowConfirm(false)
       setClosingCash('')
       setCloseNotes('')
+      setVarianceReason('')
+      setRetainedFloat('')
+      setDenoms({})
       toast.success(t('shift.closedSuccessToast'))
     } catch (err) {
       toast.error(err?.response?.data?.error || t('shift.closeFailed'))
@@ -352,6 +385,9 @@ function ShiftClosingPageInner() {
       [t('shift.expectedCash'), expectedCash],
       [t('shift.actualCash'), shift.closingCash != null ? shift.closingCash : ''],
       [t('shift.diff'), shift.cashDifference != null ? shift.cashDifference : ''],
+      ...(shift.cashVarianceReason ? [[t('shift.varianceReasonLabel'), shift.cashVarianceReason]] : []),
+      [t('shift.retainedFloatLabel'), shift.retainedFloat != null ? shift.retainedFloat : ''],
+      [t('shift.depositedLabel'), shift.depositedAmount != null ? shift.depositedAmount : ''],
       [],
       [t('shift.exportPaymentHeaderPlain'), t('common.amount'), t('common.transactions')],
       ...paymentRows.map(p => [p.label, p.amount, p.count]),
@@ -518,8 +554,47 @@ function ShiftClosingPageInner() {
                 {formatRupiah(closingCashNum)}
               </p>
             )}
+            <button
+              type="button"
+              onClick={() => setShowDenom(v => !v)}
+              className="mt-1.5 text-[11px] text-brand hover:underline"
+            >
+              {showDenom ? t('shift.denomHide') : t('shift.denomShow')}
+            </button>
           </div>
         </div>
+
+        {/* Penghitung pecahan uang laci → auto-isi Kas Aktual */}
+        {showDenom && (
+          <div className="mt-3 rounded-xl border border-dark-border bg-dark-card/50 p-3">
+            <p className="text-xs font-medium text-off-white mb-2">{t('shift.denomTitle')}</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+              {CASH_DENOMS.map(d => {
+                const qty = parseInt(denoms[d] || '0', 10) || 0
+                return (
+                  <div key={d} className="bg-dark-surface rounded-lg border border-dark-border p-2">
+                    <label className="block text-[10px] text-muted mb-1 tabular-nums">{formatRupiah(d)}</label>
+                    <div className="flex items-center gap-1">
+                      <span className="text-muted text-xs">×</span>
+                      <input
+                        inputMode="numeric"
+                        value={denoms[d] || ''}
+                        onChange={e => setDenomCount(d, e.target.value)}
+                        placeholder="0"
+                        className="w-full bg-dark-card border border-dark-border text-off-white rounded-md px-2 py-1 text-sm outline-none focus:border-brand/60 font-mono"
+                      />
+                    </div>
+                    {qty > 0 && <p className="text-[10px] text-muted mt-1 truncate tabular-nums">= {formatRupiah(d * qty)}</p>}
+                  </div>
+                )
+              })}
+            </div>
+            <div className="flex items-center justify-between mt-2 pt-2 border-t border-dark-border">
+              <span className="text-xs text-muted">{t('shift.denomTotal')}</span>
+              <span className="font-bold text-brand text-sm tabular-nums">{formatRupiah(denomTotal)}</span>
+            </div>
+          </div>
+        )}
 
         {/* Kas Keluar (pengeluaran tunai shift) — dikurangkan dari kas seharusnya */}
         <div className="mt-3 rounded-xl border border-dark-border bg-dark-card/50 p-3">
@@ -586,6 +661,46 @@ function ShiftClosingPageInner() {
                 : ` — ${t('shift.varianceUnder')}`}
             </span>
           </div>
+        )}
+
+        {/* Alasan selisih — wajib bila kas aktual ≠ kas diharapkan */}
+        {needsVarianceReason && (
+          <div className="mt-3">
+            <label htmlFor="variance-reason" className="block text-[10px] sm:text-xs text-muted uppercase tracking-wider mb-1">
+              {t('shift.varianceReasonLabel')} <span className="text-red-400">*</span>
+            </label>
+            <input
+              id="variance-reason"
+              value={varianceReason}
+              onChange={e => setVarianceReason(e.target.value.slice(0, 500))}
+              placeholder={t('shift.varianceReasonPlaceholder')}
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 text-base outline-none focus:border-brand/60 transition-colors"
+            />
+          </div>
+        )}
+
+        {/* Setoran: modal disimpan utk besok vs uang disetor ke pemilik */}
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="retained-float" className="block text-[10px] sm:text-xs text-muted uppercase tracking-wider mb-1">{t('shift.retainedFloatLabel')}</label>
+            <input
+              id="retained-float"
+              inputMode="numeric"
+              value={retainedFloat}
+              onChange={e => setRetainedFloat(e.target.value.replace(/\D/g, '').slice(0, 12))}
+              placeholder="0"
+              className="w-full bg-dark-surface border border-dark-border text-off-white rounded-xl px-3 py-2.5 sm:py-2 text-base outline-none focus:border-brand/60 transition-colors font-mono"
+            />
+          </div>
+          <div className="bg-dark-card/50 rounded-xl border border-green-500/30 p-3">
+            <p className="text-[10px] sm:text-xs text-green-400 uppercase tracking-wider">{t('shift.depositedLabel')}</p>
+            <p className="text-base sm:text-lg font-bold text-green-400 truncate" title={depositedAmount != null ? formatRupiah(depositedAmount) : '—'}>
+              {depositedAmount != null ? formatRupiah(depositedAmount) : '—'}
+            </p>
+          </div>
+        </div>
+        {retainedFloat !== '' && (
+          <p className="text-[11px] text-muted mt-1">{t('shift.retainedFloatHint')}</p>
         )}
       </Card>
 
@@ -766,8 +881,8 @@ function ShiftClosingPageInner() {
           <Button
             icon={LogOut}
             onClick={() => setShowConfirm(true)}
-            disabled={!summaryReady}
-            title={!summaryReady ? t('shift.waitingSummary') : undefined}
+            disabled={!canClose}
+            title={!summaryReady ? t('shift.waitingSummary') : (closingCash === '' ? t('shift.actualCashRequired') : (needsVarianceReason && varianceReason.trim() === '' ? t('shift.varianceReasonRequired') : undefined))}
             className="bg-red-600 hover:bg-red-500 text-white border-0"
           >
             {t('shift.closeShift')}
@@ -796,8 +911,29 @@ function ShiftClosingPageInner() {
                   : 'bg-red-500/10 border-red-500/30 text-red-400'
             }`}>
               {t('shift.cashVariance')}: <span className="font-bold">{formatRupiah(variance)}</span>
+              {needsVarianceReason && varianceReason.trim() && (
+                <span className="block text-xs mt-0.5 opacity-90">{varianceReason.trim()}</span>
+              )}
             </div>
           )}
+
+          {/* Ringkasan setoran */}
+          {(retainedFloat !== '' || depositedAmount != null) && (
+            <div className="rounded-xl border border-dark-border bg-dark-card/50 p-3 text-sm space-y-1">
+              <div className="flex justify-between"><span className="text-muted">{t('shift.actualCashManual')}</span><span className="text-off-white tabular-nums">{formatRupiah(closingCashNum)}</span></div>
+              <div className="flex justify-between"><span className="text-muted">{t('shift.retainedFloatLabel')}</span><span className="text-off-white tabular-nums">{formatRupiah(retainedFloatNum)}</span></div>
+              <div className="flex justify-between border-t border-dark-border pt-1 mt-1"><span className="font-medium text-green-400">{t('shift.depositedLabel')}</span><span className="font-bold text-green-400 tabular-nums">{depositedAmount != null ? formatRupiah(depositedAmount) : '—'}</span></div>
+            </div>
+          )}
+
+          {/* Peringatan antrian belum dibayar */}
+          {pendingQueue > 0 && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-400 p-3 text-sm flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span>{t('shift.pendingQueueWarning', { count: pendingQueue })}</span>
+            </div>
+          )}
+
           <div className="flex gap-2 sm:gap-3">
             <Button variant="outline" fullWidth onClick={() => setShowConfirm(false)}>
               {t('common.cancel')}

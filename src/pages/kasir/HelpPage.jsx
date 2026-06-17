@@ -65,6 +65,20 @@ function buildCategories(slug) {
           to: shiftClosing,
           toLabel: 'Buka Tutup Shift',
         },
+        {
+          id: 'sh-tutup',
+          q: 'Bagaimana menutup shift di akhir kerja?',
+          a: 'Saat tutup shift Anda menghitung uang di laci lalu sistem membandingkannya dengan kas yang seharusnya (kas awal + tunai masuk − kas keluar). Kas Aktual wajib diisi; bila ada selisih, isi alasannya.',
+          steps: [
+            'Buka menu Tutup Shift.',
+            'Hitung uang fisik di laci. Tekan "Hitung uang laci" untuk memasukkan jumlah per pecahan — totalnya otomatis mengisi Kas Aktual.',
+            'Bila kas tidak sama dengan kas diharapkan, isi alasan selisih (wajib).',
+            'Isi "Modal Disimpan" bila sebagian uang ditahan untuk modal kembalian besok — sisanya jadi "Uang Disetor" ke pemilik.',
+            'Tekan "Tutup Shift", periksa ringkasan (termasuk peringatan bila ada antrian belum dibayar), lalu konfirmasi.',
+          ],
+          to: shiftClosing,
+          toLabel: 'Buka Tutup Shift',
+        },
       ],
     },
     {
