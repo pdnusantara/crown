@@ -220,6 +220,14 @@ model Tenant {
   //   paperWidth = lebar kertas default printer thermal (58 | 80, mm).
   //   showLogo   = tampilkan logo toko di bagian atas struk.
   receiptSettings     Json?
+  // Konfigurasi sistem poin loyalti per-tenant (sebelumnya hardcoded di util).
+  // { enabled, earnRupiahPerPoint, redeemRupiahPerPoint, minRedeemPoints, maxRedeemPercent }.
+  //   enabled              = aktifkan sistem poin (false → tak ada earn/redeem)
+  //   earnRupiahPerPoint   = rupiah belanja untuk dapat 1 poin (mis. 10000)
+  //   redeemRupiahPerPoint = nilai rupiah per 1 poin saat ditukar (mis. 100)
+  //   minRedeemPoints      = minimum poin yang bisa ditukar
+  //   maxRedeemPercent     = batas potongan poin (% dari subtotal)
+  loyaltyConfig       Json?
   // Trial WhatsApp untuk paket yang tidak menyertakan fitur `whatsapp` (mis.
   // Basic). Sekali pakai per tenant: `whatsappTrialStartedAt` != null berarti
   // trial pernah diambil (tak bisa diulang). Selama window aktif, flag `whatsapp`

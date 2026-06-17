@@ -161,7 +161,7 @@ router.get('/info', requireTenant, async (req, res, next) => {
       where: { id: req.tenant.id },
       select: {
         name: true, slug: true, logo: true, address: true, phone: true,
-        bookingPage: true, wilayah: true, receiptSettings: true,
+        bookingPage: true, wilayah: true, receiptSettings: true, loyaltyConfig: true,
       },
     });
     if (!full) return res.status(404).json({ success: false, error: 'Tenant tidak ditemukan' });
@@ -185,6 +185,7 @@ router.get('/info', requireTenant, async (req, res, next) => {
         bookingPage: full.bookingPage || null,
         wilayah:     full.wilayah || null,
         receiptSettings: full.receiptSettings || null,
+        loyaltyConfig:   full.loyaltyConfig || null,
         // Flag dev-login — frontend pakai ini untuk memunculkan tombol login
         // cepat tanpa password. Hanya true kalau env DEV_LOGIN=1 di backend.
         devLogin:    process.env.DEV_LOGIN === '1',

@@ -131,15 +131,17 @@ const CATEGORIES = [
       },
       {
         id: 'p-loyalti',
-        q: 'Bagaimana program poin loyalti bekerja?',
-        a: 'Pelanggan mengumpulkan poin tiap transaksi. Poin bisa ditukar di POS sebagai potongan — 1 poin setara Rp100, maksimal 50% dari subtotal.',
+        q: 'Bagaimana program poin loyalti bekerja & cara mengaturnya?',
+        a: 'Pelanggan mengumpulkan poin tiap transaksi, lalu poin bisa ditukar di POS sebagai potongan. Semua aturannya kini bisa Anda atur sendiri di Pengaturan → Sistem Poin: berapa rupiah belanja untuk 1 poin, nilai 1 poin saat ditukar, minimal poin yang bisa ditukar, batas potongan (% subtotal), dan tombol aktif/nonaktif. Nilai bawaan: 1 poin per Rp10.000 belanja, 1 poin = Rp100, minimal tukar 10 poin, maksimal potong 50% subtotal.',
         steps: [
+          'Atur aturan poin di Pengaturan → Sistem Poin (lalu Simpan).',
           'Poin bertambah otomatis saat transaksi selesai.',
           'Kasir menukar poin pelanggan di POS sebelum bayar.',
           'Riwayat poin tercatat pada profil pelanggan.',
+          'Ingin menonaktifkan poin? Matikan "Aktifkan sistem poin" di Pengaturan.',
         ],
-        to: '/admin/customers',
-        toLabel: 'Buka Pelanggan',
+        to: '/admin/settings',
+        toLabel: 'Buka Pengaturan',
       },
       {
         id: 'p-voucher',

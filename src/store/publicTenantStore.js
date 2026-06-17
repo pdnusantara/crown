@@ -16,6 +16,7 @@ export const usePublicTenantStore = create((set) => ({
   bookingPage: null, // { tagline, description, heroImage, gallery, … }
   wilayah: null,     // { provinsiId, provinsi, kabupatenId, kabupaten }
   receiptSettings: null, // { footer, paperWidth, showLogo } — cetak struk kasir
+  loyaltyConfig: null,   // { enabled, earnRupiahPerPoint, redeemRupiahPerPoint, minRedeemPoints, maxRedeemPercent }
   devLogin: false,   // true kalau backend mengaktifkan dev-login (env DEV_LOGIN=1)
   status: 'idle',
 
@@ -50,6 +51,7 @@ export const usePublicTenantStore = create((set) => ({
         bookingPage: info.bookingPage || null,
         wilayah: info.wilayah || null,
         receiptSettings: info.receiptSettings || null,
+        loyaltyConfig: info.loyaltyConfig || null,
         devLogin: info.devLogin === true,
         slug,
       })

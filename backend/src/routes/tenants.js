@@ -50,6 +50,7 @@ const tenantSelect = {
   shiftPresets: true,
   ratingConfig: true,
   receiptSettings: true,
+  loyaltyConfig: true,
   isSuspended: true,
   createdAt: true,
   updatedAt: true,
@@ -399,6 +400,16 @@ const receiptSettingsSchema = z.object({
   showLogo:   z.boolean().optional(),
 }).strict().nullish();
 
+// Konfigurasi sistem poin loyalti per-tenant. Batas atas wajar supaya tak ada
+// nilai ekstrem yang merusak ekonomi poin / kalkulasi.
+const loyaltyConfigSchema = z.object({
+  enabled:              z.boolean().optional(),
+  earnRupiahPerPoint:   z.number().int().min(1).max(100_000_000).optional(),
+  redeemRupiahPerPoint: z.number().int().min(1).max(1_000_000).optional(),
+  minRedeemPoints:      z.number().int().min(1).max(1_000_000).optional(),
+  maxRedeemPercent:     z.number().int().min(1).max(100).optional(),
+}).strict().nullish();
+
 const selfUpdateSchema = z.object({
   name:        z.string().min(1).max(255).optional(),
   phone:       z.string().max(50).nullish(),
@@ -416,6 +427,7 @@ const selfUpdateSchema = z.object({
   shiftPresets: shiftPresetsSchema,
   ratingConfig: ratingConfigSchema,
   receiptSettings: receiptSettingsSchema,
+  loyaltyConfig: loyaltyConfigSchema,
 });
 // ── Upload gambar tenant (hero & galeri halaman booking) ───────────────────────
 // Gambar disimpan sebagai FILE di disk, bukan base64 di JSON tenant — supaya

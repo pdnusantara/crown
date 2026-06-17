@@ -18,7 +18,7 @@ import { usePublicTenantStore } from '../../store/publicTenantStore.js'
 import { useValidateVoucher } from '../../hooks/useVouchers.js'
 import { useIsFeatureEnabled } from '../../hooks/useFeatureFlags.js'
 import { getBranchSlug, matchesBranch } from '../../utils/branchSlug.js'
-import { MIN_REDEEM_POINTS, MAX_REDEEM_PERCENT, RUPIAH_PER_POINT, maxRedeemablePoints, calcRedeemValue, validateRedeem } from '../../utils/loyalty.js'
+import { resolveLoyaltyConfig, calcPointsEarn, maxRedeemablePoints, calcRedeemValue, validateRedeem } from '../../utils/loyalty.js'
 import { formatDateTimeInTz, formatInTenantTz } from '../../utils/timezone.js'
 import { useShiftStore } from '../../store/shiftStore.js'
 import { useActiveShift } from '../../hooks/useShifts.js'
@@ -36,11 +36,6 @@ import Input from '../../components/ui/Input.jsx'
 import ErrorBoundary from '../../components/ui/ErrorBoundary.jsx'
 import { formatRupiah } from '../../utils/format.js'
 import { QRCodeSVG } from 'qrcode.react'
-
-// Rumus earn sama dengan backend (`backend/src/routes/transactions.js`):
-// 1 poin per Rp10.000 dari `total` (setelah diskon).
-const POINTS_PER_RUPIAH = 10_000
-const calcPointsEarn = (total) => Math.max(0, Math.floor((Number(total) || 0) / POINTS_PER_RUPIAH))
 
 // Segmen RFM time-aware — mirror `classifySegment` di backend (customers.js).
 const SEGMENT_THRESHOLDS = { vipMinVisits: 10, loyalMinVisits: 3, atRiskMinDays: 90, lostMinDays: 180 }
@@ -64,7 +59,7 @@ const SEGMENT_META = {
   never:  { key: 'pos.segNever',  cls: 'text-muted bg-dark-surface border-dark-border' },
 }
 
-function CustomerHistorySnippet({ customer, transactionTotal = 0 }) {
+function CustomerHistorySnippet({ customer, transactionTotal = 0, loyalty }) {
   const { t, i18n } = useTranslation()
   const dateLocale = i18n.language?.startsWith('en') ? enLocale : idLocale
 
@@ -79,7 +74,7 @@ function CustomerHistorySnippet({ customer, transactionTotal = 0 }) {
     ? formatInTenantTz(customer.createdAt, { month: 'short', year: 'numeric' })
     : null
 
-  const pointsToEarn = calcPointsEarn(transactionTotal)
+  const pointsToEarn = calcPointsEarn(transactionTotal, loyalty)
 
   const segment = classifyCustomerSegment(visits, lastVisitAt)
   const segMeta = SEGMENT_META[segment] || SEGMENT_META.never
@@ -139,7 +134,7 @@ function CustomerHistorySnippet({ customer, transactionTotal = 0 }) {
               <Star size={9} className="fill-emerald-300 flex-shrink-0" />
               {t('pos.pointsEarnPreview', { points: pointsToEarn })}
             </span>
-            <span className="text-emerald-300 whitespace-nowrap">{t('pos.pointsEarnRule')}</span>
+            <span className="text-emerald-300 whitespace-nowrap">{t('pos.pointsEarnRule', { rate: (loyalty?.earnRupiahPerPoint ?? 10000).toLocaleString('id-ID') })}</span>
           </div>
         )}
       </div>
@@ -424,7 +419,10 @@ function POSPageInner() {
   // konteks cabang aktif. `matchesBranch` cocokkan slug ke branch.code maupun
   // branch.id (kompatibel dengan account lama yang slug-nya = CUID).
   const { branchId: urlBranchSlug } = useParams()
-  const { name: publicTenantName, logo: tenantLogo, receiptSettings } = usePublicTenantStore()
+  const { name: publicTenantName, logo: tenantLogo, receiptSettings, loyaltyConfig: rawLoyaltyConfig } = usePublicTenantStore()
+  // Konfigurasi poin tenant (earn/redeem/min/max + enabled) — sumber untuk
+  // tampilan & validasi POS; backend tetap penjaga akhir saat transaksi.
+  const loyalty = resolveLoyaltyConfig(rawLoyaltyConfig)
   const currentBranch =
     branches.find(b => matchesBranch(urlBranchSlug, b))
     || branches.find(b => b.id === user?.branchId)
@@ -862,7 +860,7 @@ function POSPageInner() {
     const items = lastTxn.services.map((s) => ({ name: s.name, price: formatRupiah(s.price), barber: s.barberName || '' }))
     const rows = [{ label: t('pos.receiptSubtotal'), value: formatRupiah(lastTxn.subtotal) }]
     if (lastTxn.discountAmount > 0) rows.push({ label: t('pos.receiptDiscount'), value: `-${formatRupiah(lastTxn.discountAmount)}` })
-    if (lastTxn.pointsRedeemed > 0) rows.push({ label: t('pos.receiptPointsRedeemed', { points: lastTxn.pointsRedeemed }), value: `-${formatRupiah(calcRedeemValue(lastTxn.pointsRedeemed))}` })
+    if (lastTxn.pointsRedeemed > 0) rows.push({ label: t('pos.receiptPointsRedeemed', { points: lastTxn.pointsRedeemed }), value: `-${formatRupiah(calcRedeemValue(lastTxn.pointsRedeemed, loyalty))}` })
     rows.push({ label: t('pos.receiptTotalUpper'), value: formatRupiah(lastTxn.total), bold: true })
     rows.push({ label: t('pos.receiptPaymentRow'), value: methodLabel(lastTxn.paymentMethod) })
     if (lastTxn.cashReceived > 0) rows.push({ label: t('pos.receiptReceived'), value: formatRupiah(lastTxn.cashReceived) })
@@ -986,6 +984,7 @@ function POSPageInner() {
           <CustomerHistorySnippet
             customer={posStore.selectedCustomer}
             transactionTotal={posStore.getTotal()}
+            loyalty={loyalty}
           />
         )}
       </AnimatePresence>
@@ -1165,8 +1164,8 @@ function POSPageInner() {
         )}
       </div>
 
-      {/* Redeem Points — hanya muncul saat customer dipilih + punya saldo cukup + ada item di cart */}
-      {posStore.selectedCustomer && (posStore.selectedCustomer.loyaltyPoints || 0) >= MIN_REDEEM_POINTS && posStore.getSubtotal() > 0 && (
+      {/* Redeem Points — hanya muncul saat sistem poin aktif + customer dipilih + saldo cukup + ada item di cart */}
+      {loyalty.enabled && posStore.selectedCustomer && (posStore.selectedCustomer.loyaltyPoints || 0) >= loyalty.minRedeemPoints && posStore.getSubtotal() > 0 && (
         <div className="border-t border-dark-border pt-3">
           <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
             <span className="text-xs font-semibold text-off-white inline-flex items-center gap-1.5">
@@ -1180,10 +1179,10 @@ function POSPageInner() {
           {(() => {
             const balance  = posStore.selectedCustomer.loyaltyPoints || 0
             const subtotal = posStore.getSubtotal()
-            const cap      = maxRedeemablePoints({ balance, subtotal })
+            const cap      = maxRedeemablePoints({ balance, subtotal, config: loyalty })
             const current  = posStore.pointsToRedeem || 0
-            const discount = calcRedeemValue(current)
-            const redeemErr = validateRedeem({ points: current, balance, subtotal })
+            const discount = calcRedeemValue(current, loyalty)
+            const redeemErr = validateRedeem({ points: current, balance, subtotal, config: loyalty })
             return (
               <div className="space-y-2">
                 <div className="flex gap-2 items-center flex-wrap">
@@ -1247,7 +1246,7 @@ function POSPageInner() {
                   </div>
                 ) : (
                   <p className="text-[10px] text-muted leading-relaxed">
-                    {t('pos.redeemHint', { rate: RUPIAH_PER_POINT.toLocaleString('id-ID'), max: MAX_REDEEM_PERCENT })}
+                    {t('pos.redeemHint', { rate: loyalty.redeemRupiahPerPoint.toLocaleString('id-ID'), max: loyalty.maxRedeemPercent })}
                   </p>
                 )}
               </div>
@@ -1622,7 +1621,7 @@ function POSPageInner() {
                 {lastTxn.pointsRedeemed > 0 && (
                   <div className="flex justify-between text-gray-600 italic text-[10px]">
                     <span>{t('pos.receiptPointsRedeemed', { points: lastTxn.pointsRedeemed })}</span>
-                    <span className="tabular-nums">-{formatRupiah(calcRedeemValue(lastTxn.pointsRedeemed))}</span>
+                    <span className="tabular-nums">-{formatRupiah(calcRedeemValue(lastTxn.pointsRedeemed, loyalty))}</span>
                   </div>
                 )}
                 <div className="flex justify-between font-bold text-sm text-gray-900 border-t border-gray-200 pt-1 mt-1">
@@ -1722,7 +1721,7 @@ function POSPageInner() {
                   `*${t('pos.waItemsHeader')}*\n${items}\n\n` +
                   `${t('pos.receiptSubtotal')}: ${formatRupiah(lastTxn.subtotal)}\n` +
                   (lastTxn.discountAmount > 0 ? `${t('pos.receiptDiscount')}: -${formatRupiah(lastTxn.discountAmount)}\n` : '') +
-                  (lastTxn.pointsRedeemed > 0 ? `${t('pos.receiptPointsRedeemed', { points: lastTxn.pointsRedeemed })}: -${formatRupiah(calcRedeemValue(lastTxn.pointsRedeemed))}\n` : '') +
+                  (lastTxn.pointsRedeemed > 0 ? `${t('pos.receiptPointsRedeemed', { points: lastTxn.pointsRedeemed })}: -${formatRupiah(calcRedeemValue(lastTxn.pointsRedeemed, loyalty))}\n` : '') +
                   `*TOTAL: ${formatRupiah(lastTxn.total)}*\n` +
                   `${t('pos.receiptPaymentRow')}: ${methodLabel(lastTxn.paymentMethod)}\n\n` +
                   shareClosing

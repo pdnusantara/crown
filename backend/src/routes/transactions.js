@@ -300,6 +300,13 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir
     let { items, loyaltyPointsEarned = 0, pointsRedeemed = 0, voucherCode, queueId, ...txData } = body;
     pointsRedeemed = Math.max(0, Math.floor(Number(pointsRedeemed) || 0));
 
+    // Konfigurasi poin per-tenant (earn rate, nilai poin, min/max). Null → default
+    // historis. Dipakai untuk semua perhitungan poin di handler ini.
+    const tenantLoyalty = txData.tenantId
+      ? await prisma.tenant.findUnique({ where: { id: txData.tenantId }, select: { loyaltyConfig: true } })
+      : null;
+    const loyaltyConfig = tenantLoyalty?.loyaltyConfig || null;
+
     // === REDEMPTION VALIDATION ===
     // Validasi poin yang akan dipakai sebelum buat transaksi. Server adalah
     // pemegang kebenaran — frontend hanya boleh menyarankan, BE harus verify.
@@ -328,12 +335,13 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir
         points: pointsRedeemed,
         balance: customerRecord.loyaltyPoints,
         subtotal: Number(txData.subtotal) || 0,
+        config: loyaltyConfig,
       });
       if (err) {
         return res.status(400).json({ success: false, error: err });
       }
       // Untuk konsistensi total: pastikan diskon dari poin yang dihitung BE = FE
-      const expectedPointDiscount = calcRedeemValue(pointsRedeemed);
+      const expectedPointDiscount = calcRedeemValue(pointsRedeemed, loyaltyConfig);
       const submittedDiscount = Math.max(0, Number(txData.discountAmount) || 0);
       const submittedTotal    = Math.max(0, Number(txData.total) || 0);
       const submittedSubtotal = Math.max(0, Number(txData.subtotal) || 0);
@@ -361,7 +369,7 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir
     // transaksi punya customerId — walk-in tanpa nomor telepon tidak terhitung.
     // Bisa di-override per-transaksi dengan kirim `loyaltyPointsEarned`.
     if ((loyaltyPointsEarned == null || loyaltyPointsEarned === 0) && txData.customerId) {
-      loyaltyPointsEarned = calcPointsEarn(txData.total);
+      loyaltyPointsEarned = calcPointsEarn(txData.total, loyaltyConfig);
     }
     // Persist pointsRedeemed, loyaltyPointsEarned & voucherCode ke kolom
     // transaksi — dipakai laporan DAN reversal saat transaksi dibatalkan.
@@ -485,7 +493,7 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir
               type: 'redeem',
               refType: 'transaction',
               refId: transaction.id,
-              reason: `Tukar ${pointsRedeemed} pt → Rp${calcRedeemValue(pointsRedeemed).toLocaleString('id-ID')} diskon`,
+              reason: `Tukar ${pointsRedeemed} pt → Rp${calcRedeemValue(pointsRedeemed, loyaltyConfig).toLocaleString('id-ID')} diskon`,
               actorId: req.user.id,
             },
           });

@@ -137,6 +137,24 @@ export default function TASettingsPage() {
     }
   }, [tenant?.receiptSettings])
 
+  // Pengaturan sistem poin loyalti — dapat-poin, nilai poin, min/max, aktif.
+  const [loyaltyForm, setLoyaltyForm] = useState({
+    enabled: true, earnRupiahPerPoint: 10000, redeemRupiahPerPoint: 100, minRedeemPoints: 10, maxRedeemPercent: 50,
+  })
+  const [loyaltySaving, setLoyaltySaving] = useState(false)
+  useEffect(() => {
+    const lc = tenant?.loyaltyConfig
+    if (lc) {
+      setLoyaltyForm(f => ({
+        enabled:              lc.enabled !== false,
+        earnRupiahPerPoint:   Number(lc.earnRupiahPerPoint)   > 0 ? Number(lc.earnRupiahPerPoint)   : f.earnRupiahPerPoint,
+        redeemRupiahPerPoint: Number(lc.redeemRupiahPerPoint) > 0 ? Number(lc.redeemRupiahPerPoint) : f.redeemRupiahPerPoint,
+        minRedeemPoints:      Number(lc.minRedeemPoints)      > 0 ? Number(lc.minRedeemPoints)      : f.minRedeemPoints,
+        maxRedeemPercent:     Number(lc.maxRedeemPercent)     > 0 ? Number(lc.maxRedeemPercent)     : f.maxRedeemPercent,
+      }))
+    }
+  }, [tenant?.loyaltyConfig])
+
   const [notifications, setNotifications] = useState({ newBooking: true, queueFull: true, dailyReport: false })
   const [activeTab, setActiveTab] = useState('general')
 
@@ -499,6 +517,27 @@ export default function TASettingsPage() {
       toast.error(err?.response?.data?.error || t('tenantAdmin.settings.saveFailed'))
     } finally {
       setReceiptSaving(false)
+    }
+  }
+
+  const handleSaveLoyalty = async () => {
+    setLoyaltySaving(true)
+    try {
+      const posInt = (v, def) => { const n = Math.floor(Number(v)); return Number.isFinite(n) && n > 0 ? n : def }
+      await updateMyTenant.mutateAsync({
+        loyaltyConfig: {
+          enabled:              !!loyaltyForm.enabled,
+          earnRupiahPerPoint:   posInt(loyaltyForm.earnRupiahPerPoint, 10000),
+          redeemRupiahPerPoint: posInt(loyaltyForm.redeemRupiahPerPoint, 100),
+          minRedeemPoints:      posInt(loyaltyForm.minRedeemPoints, 10),
+          maxRedeemPercent:     Math.min(100, posInt(loyaltyForm.maxRedeemPercent, 50)),
+        },
+      })
+      toast.success(t('tenantAdmin.settings.loyaltySaved'))
+    } catch (err) {
+      toast.error(err?.response?.data?.error || t('tenantAdmin.settings.saveFailed'))
+    } finally {
+      setLoyaltySaving(false)
     }
   }
 
@@ -913,6 +952,76 @@ export default function TASettingsPage() {
 
               <Button variant="secondary" onClick={handleSaveReceipt} fullWidth loading={receiptSaving}>
                 {t('tenantAdmin.settings.saveReceipt')}
+              </Button>
+            </CardBody>
+          </Card>
+
+          {/* Pengaturan sistem poin loyalti */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Star className="w-5 h-5 text-brand" />
+                <h3 className="font-semibold text-off-white">{t('tenantAdmin.settings.loyaltyTitle')}</h3>
+              </div>
+            </CardHeader>
+            <CardBody className="space-y-4">
+              <p className="text-xs text-muted">{t('tenantAdmin.settings.loyaltyDesc')}</p>
+
+              <div className="flex items-center justify-between p-3 bg-dark-surface rounded-xl">
+                <div>
+                  <p className="text-sm font-medium text-off-white">{t('tenantAdmin.settings.loyaltyEnabledLabel')}</p>
+                  <p className="text-xs text-muted">{t('tenantAdmin.settings.loyaltyEnabledDesc')}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setLoyaltyForm(f => ({ ...f, enabled: !f.enabled }))}
+                  className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${loyaltyForm.enabled ? 'bg-brand' : 'bg-dark-border'}`}
+                  aria-pressed={loyaltyForm.enabled}
+                >
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${loyaltyForm.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              </div>
+
+              {loyaltyForm.enabled && (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Input
+                      label={t('tenantAdmin.settings.loyaltyEarnLabel')}
+                      type="number" min="1" inputMode="numeric"
+                      value={loyaltyForm.earnRupiahPerPoint}
+                      onChange={e => setLoyaltyForm(f => ({ ...f, earnRupiahPerPoint: e.target.value }))}
+                    />
+                    <Input
+                      label={t('tenantAdmin.settings.loyaltyValueLabel')}
+                      type="number" min="1" inputMode="numeric"
+                      value={loyaltyForm.redeemRupiahPerPoint}
+                      onChange={e => setLoyaltyForm(f => ({ ...f, redeemRupiahPerPoint: e.target.value }))}
+                    />
+                    <Input
+                      label={t('tenantAdmin.settings.loyaltyMinLabel')}
+                      type="number" min="1" inputMode="numeric"
+                      value={loyaltyForm.minRedeemPoints}
+                      onChange={e => setLoyaltyForm(f => ({ ...f, minRedeemPoints: e.target.value }))}
+                    />
+                    <Input
+                      label={t('tenantAdmin.settings.loyaltyMaxLabel')}
+                      type="number" min="1" max="100" inputMode="numeric"
+                      value={loyaltyForm.maxRedeemPercent}
+                      onChange={e => setLoyaltyForm(f => ({ ...f, maxRedeemPercent: e.target.value }))}
+                    />
+                  </div>
+                  <div className="rounded-xl border border-brand/20 bg-brand/[0.06] p-3 text-xs text-muted leading-relaxed">
+                    {t('tenantAdmin.settings.loyaltyExample', {
+                      spend: (50000).toLocaleString('id-ID'),
+                      points: Math.floor(50000 / (Number(loyaltyForm.earnRupiahPerPoint) || 10000)),
+                      value: (Math.floor(50000 / (Number(loyaltyForm.earnRupiahPerPoint) || 10000)) * (Number(loyaltyForm.redeemRupiahPerPoint) || 100)).toLocaleString('id-ID'),
+                    })}
+                  </div>
+                </>
+              )}
+
+              <Button variant="secondary" onClick={handleSaveLoyalty} fullWidth loading={loyaltySaving}>
+                {t('tenantAdmin.settings.saveLoyalty')}
               </Button>
             </CardBody>
           </Card>
