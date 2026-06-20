@@ -25,6 +25,31 @@ function buildAddonCycleFilter(subscription) {
 }
 
 /**
+ * Filter `where` (tanpa subscriptionId) untuk invoice `branch_addon` LUNAS yang
+ * masih sah menghitung lisensi cabang / kuota staf:
+ *  - berada dalam cycle window berjalan (buildAddonCycleFilter), DAN
+ *  - TIDAK terikat ke cabang yang sudah di-soft-delete.
+ *
+ * Invoice dengan `branchId` null (agregat renewal `Cabang Tambahan (N)` dan data
+ * legacy sebelum kolom branchId ada) TETAP dihitung — supaya tenant existing
+ * tidak tiba-tiba kehilangan lisensi. Hanya invoice per-cabang yang cabangnya
+ * dihapus yang berhenti memberi kredit (menutup celah "kredit hantu").
+ *
+ * Dua filter OR (cycle window & status cabang) digabung via AND agar tidak
+ * saling menimpa key `OR`.
+ */
+function paidBranchAddonFilter(subscription) {
+  return {
+    type: 'branch_addon',
+    status: 'paid',
+    AND: [
+      buildAddonCycleFilter(subscription),
+      { OR: [{ branchId: null }, { branch: { deletedAt: null } }] },
+    ],
+  };
+}
+
+/**
  * Mengembalikan status lisensi semua cabang aktif milik tenant.
  *
  * Aturan:
@@ -115,14 +140,11 @@ async function getBranchLicenseStatus(tenantId) {
     };
   }
 
-  const cycleFilter = buildAddonCycleFilter(subscription);
   const [paidAddonAgg, pendingAddonAgg] = await Promise.all([
     prisma.invoice.aggregate({
       where: {
         subscriptionId: subscription.id,
-        type: 'branch_addon',
-        status: 'paid',
-        ...cycleFilter,
+        ...paidBranchAddonFilter(subscription),
       },
       _sum: { quantity: true },
     }),
@@ -131,6 +153,10 @@ async function getBranchLicenseStatus(tenantId) {
         subscriptionId: subscription.id,
         type: 'branch_addon',
         status: { not: 'paid' },
+        // Invoice pending milik cabang yang sudah dihapus tidak lagi ada
+        // (dibatalkan saat delete), tapi kalau ada sisa data lama → jangan
+        // tampilkan sebagai "menunggu pembayaran" untuk cabang yang hilang.
+        OR: [{ branchId: null }, { branch: { deletedAt: null } }],
       },
       _sum: { quantity: true },
     }),
@@ -179,4 +205,4 @@ async function isBranchLicensed(tenantId, branchId) {
   return !status.unlicensed.has(branchId);
 }
 
-module.exports = { getBranchLicenseStatus, isBranchLicensed, buildAddonCycleFilter };
+module.exports = { getBranchLicenseStatus, isBranchLicensed, buildAddonCycleFilter, paidBranchAddonFilter };

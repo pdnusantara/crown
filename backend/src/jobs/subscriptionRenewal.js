@@ -185,15 +185,13 @@ async function generateRecurringAddonInvoices(sub, log) {
   if (pkg.staffAddonType === 'monthly' && pkg.staffAddonPrice > 0) {
     // Effective max staff dihitung BERDASARKAN cabang add-on yang lisensinya
     // masih aktif di cycle berjalan (sama dengan POST /users supaya konsisten).
-    const { buildAddonCycleFilter } = require('../utils/branchLicense');
+    const { paidBranchAddonFilter } = require('../utils/branchLicense');
     const [staffCount, paidBranchAgg] = await Promise.all([
       prisma.user.count({ where: { tenantId: sub.tenantId, deletedAt: null } }),
       prisma.invoice.aggregate({
         where: {
           subscriptionId: sub.id,
-          type: 'branch_addon',
-          status: 'paid',
-          ...buildAddonCycleFilter(sub),
+          ...paidBranchAddonFilter(sub),
         },
         _sum: { quantity: true },
       }),

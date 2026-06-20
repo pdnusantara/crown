@@ -302,6 +302,7 @@ model Branch {
   shifts           Shift[]
   expenses         Expense[]
   attendances      Attendance[]
+  invoices         Invoice[]
 
   @@unique([tenantId, code])
 }
@@ -601,7 +602,13 @@ model Invoice {
   // Untuk invoice staff_addon: staf yang dibuat terkunci menunggu pembayaran
   // ini. Saat invoice lunas, user tsb diaktifkan otomatis. Null untuk tipe lain.
   staffUserId    String?
+  // Untuk invoice branch_addon PER-CABANG (dibuat di POST /branches): cabang
+  // yang ditagih. Null untuk invoice agregat renewal (`Cabang Tambahan (N)`)
+  // dan data legacy. Saat cabang di-soft-delete: invoice pending dibatalkan &
+  // invoice lunas berhenti memberi kredit lisensi (lihat paidBranchAddonFilter).
+  branchId       String?
   subscription   Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  branch         Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
 }
 
 model TenantFeatureFlag {

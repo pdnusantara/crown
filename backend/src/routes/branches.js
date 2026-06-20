@@ -305,6 +305,7 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin'), async
           invoice = await tx.invoice.create({
             data: {
               subscriptionId: subscription.id,
+              branchId: createdBranch.id,
               period,
               amount: pkg.branchAddonPrice,
               type: 'branch_addon',
@@ -482,9 +483,25 @@ router.delete('/:id', authenticate, requireRole('super_admin', 'tenant_admin'), 
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
-    await prisma.branch.update({
-      where: { id: req.params.id },
-      data: { deletedAt: new Date() },
+    // Soft-delete cabang + bersihkan tagihan add-on PENDING miliknya dalam satu
+    // transaksi. Invoice branch_addon yang belum dibayar untuk cabang ini jadi
+    // tak relevan begitu cabang hilang → hapus supaya tidak menggantung di
+    // tagihan. Invoice yang SUDAH lunas DIPERTAHANKAN sebagai catatan keuangan,
+    // tapi otomatis berhenti memberi kredit lisensi (paidBranchAddonFilter
+    // mengecualikan invoice yang branch-nya sudah di-soft-delete).
+    const { canceledInvoices } = await prisma.$transaction(async (tx) => {
+      await tx.branch.update({
+        where: { id: req.params.id },
+        data: { deletedAt: new Date() },
+      });
+      const { count } = await tx.invoice.deleteMany({
+        where: {
+          branchId: req.params.id,
+          type: 'branch_addon',
+          status: { not: 'paid' },
+        },
+      });
+      return { canceledInvoices: count };
     });
 
     invalidateBranchCache();
@@ -492,11 +509,12 @@ router.delete('/:id', authenticate, requireRole('super_admin', 'tenant_admin'), 
     await recordAudit(req, {
       action: 'branch.delete',
       target: `branch:${existing.id}`,
-      detail: `Hapus cabang: ${existing.name}`,
+      detail: `Hapus cabang: ${existing.name}`
+        + (canceledInvoices ? ` (${canceledInvoices} tagihan pending dibatalkan)` : ''),
       severity: 'warning',
       tenantId: existing.tenantId,
     });
-    res.json({ success: true, data: { message: 'Branch deleted successfully' } });
+    res.json({ success: true, data: { message: 'Branch deleted successfully', canceledInvoices } });
   } catch (err) {
     next(err);
   }

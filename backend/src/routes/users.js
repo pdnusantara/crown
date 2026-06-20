@@ -6,7 +6,7 @@ const prisma = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { parsePagination, paginatedResponse } = require('../utils/pagination');
 const { recordAudit } = require('../utils/auditLog');
-const { buildAddonCycleFilter } = require('../utils/branchLicense');
+const { paidBranchAddonFilter } = require('../utils/branchLicense');
 const { getIO, tenantRoom } = require('../config/socket');
 
 // Realtime: kasir/barber lain ikut dapat update saat admin tambah/edit/hapus
@@ -41,6 +41,11 @@ const userSelect = {
   salaryType: true,
   baseSalary: true,
   isBarber: true,
+  barberTitle: true,
+  barberBio: true,
+  barberExpYears: true,
+  barberSpecialties: true,
+  barberPortfolio: true,
   tenantId: true,
   branchId: true,
   isActive: true,
@@ -66,6 +71,11 @@ const createUserSchema = z.object({
   salaryType: z.enum(['commission', 'fixed', 'hybrid']).optional(),
   baseSalary: z.number().int().min(0).max(1_000_000_000).optional(),
   isBarber: z.boolean().optional(),
+  barberTitle: z.string().max(60).nullable().optional(),
+  barberBio: z.string().max(1000).nullable().optional(),
+  barberExpYears: z.number().int().min(0).max(80).nullable().optional(),
+  barberSpecialties: z.array(z.string().max(40)).max(20).optional(),
+  barberPortfolio: z.array(z.string()).max(20).optional(),
   tenantId: z.string().optional(),
   branchId: z.string().optional(),
   isActive: z.boolean().optional(),
@@ -212,9 +222,7 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin'), async
             const paidBranchAgg = await tx.invoice.aggregate({
               where: {
                 subscriptionId: subscription.id,
-                type: 'branch_addon',
-                status: 'paid',
-                ...buildAddonCycleFilter(subscription),
+                ...paidBranchAddonFilter(subscription),
               },
               _sum: { quantity: true },
             });
