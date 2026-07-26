@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 // Secret WAJIB dari environment. Di PRODUKSI, ketiadaan secret = fatal: tanpa
 // guard ini server diam-diam menandatangani & menerima token dengan secret
@@ -16,8 +17,19 @@ function signAccess(payload) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: ACCESS_EXPIRY });
 }
 
+// `jti` acak WAJIB ada. Tanpanya payload refresh token hanya {id, iat, exp} dan
+// `iat`/`exp` berpresisi DETIK — dua login user yang sama dalam detik yang sama
+// menghasilkan string JWT yang identik, lalu `RefreshToken.token` (unique) tolak
+// baris kedua → login gagal 409 "Duplicate value for unique field(s): token".
+// Nyata terjadi: login web + login app di detik yang sama, atau satu akun staf
+// dipakai di dua perangkat. Token lama tetap valid (verifikasi hanya soal tanda
+// tangan), jadi perubahan ini backward-compatible.
 function signRefresh(payload) {
-  return jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: REFRESH_EXPIRY });
+  return jwt.sign(
+    { ...payload, jti: crypto.randomUUID() },
+    JWT_REFRESH_SECRET,
+    { expiresIn: REFRESH_EXPIRY }
+  );
 }
 
 function verifyAccess(token) {

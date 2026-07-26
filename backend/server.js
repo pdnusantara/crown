@@ -90,7 +90,7 @@ const generalLimiter = rateLimit({
   message: { success: false, error: 'Too many requests, please try again later.' },
 });
 
-// Login rate limiting — brute-force protection on /auth/login only.
+// Login rate limiting — brute-force protection untuk /auth/login & /auth/app-login.
 // `skipSuccessfulRequests` means we only count failed attempts, so legit users
 // in a shared office (multiple admin/kasir/barber on one NAT IP) don't get
 // blocked by each other's successful logins.
@@ -124,6 +124,10 @@ app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api', generalLimiter);
 app.use('/api/auth/login', loginLimiter);
+// Login aplikasi staf (Flutter): bucket brute-force yang sama dengan /auth/login.
+// Wajib dipasang eksplisit — `app.use('/api/auth/login', ...)` tidak mencakup
+// path ini karena namanya beda, bukan sub-path.
+app.use('/api/auth/app-login', loginLimiter);
 app.use('/api/auth/refresh', refreshLimiter);
 // Trial signup juga dibatasi (lebih ketat lagi: maks 5/IP/15m di prod)
 const registerLimiter = rateLimit({

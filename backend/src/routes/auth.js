@@ -445,6 +445,107 @@ router.post('/login', async (req, res, next) => {
   }
 });
 
+// POST /api/auth/app-login — login untuk aplikasi staf (Flutter).
+//
+// Beda dengan /login: TIDAK ada kebijakan terikat-domain. App memanggil apex
+// (`PUBLIC_HOST`) TANPA header X-Tenant-Slug, karena ia justru belum tahu slug
+// tenant-nya — layar loginnya hanya Email + Kata Sandi, tanpa "Kode Toko".
+// Response inilah yang memberi tahu slug (`user.tenant.slug`), lalu app
+// mengirimnya sebagai X-Tenant-Slug di SEMUA request berikutnya (/auth/me dst
+// tetap mewajibkan header itu seperti biasa).
+//
+// Ini sah karena `User.email` unik global (schema.prisma `email @unique`), jadi
+// email sendiri sudah cukup menentukan tenant tanpa kode toko yang diketik.
+//
+// /login sengaja tidak diubah: kebijakan domain di sana yang menjaga tiap tenant
+// punya pintu login sendiri di web + audit super-admin selalu dari main domain.
+// Harganya: penerbitan token di bawah menduplikasi /login. Itu ditukar dengan
+// nol risiko regresi pada endpoint login web yang dipakai semua tenant.
+//
+// Rate-limit: berbagi `loginLimiter` dengan /login (dipasang di server.js).
+router.post('/app-login', async (req, res, next) => {
+  try {
+    const { email, password } = loginSchema.parse(req.body);
+
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        email: true,
+        password: true,
+        name: true,
+        role: true,
+        phone: true,
+        photo: true,
+        commissionRate: true, isBarber: true,
+        tenantId: true,
+        branchId: true,
+        branch: { select: { id: true, code: true, name: true } },
+        tenant: { select: { id: true, name: true, slug: true, logo: true, timezone: true, wilayah: true } },
+        isActive: true,
+        deletedAt: true,
+      },
+    });
+
+    // Satu pesan identik untuk "email tak ada" MAUPUN "password salah", supaya
+    // endpoint ini tidak bisa dipakai memetakan email mana yang terdaftar.
+    const invalidCredentials = () =>
+      res.status(401).json({ success: false, error: 'Email atau kata sandi salah' });
+
+    if (!user || user.deletedAt) return invalidCredentials();
+
+    // Cek password DULU, baru status akun. Kalau urutannya dibalik, respons
+    // "akun nonaktif" pada password salah akan membocorkan bahwa email itu ada.
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) return invalidCredentials();
+
+    if (!user.isActive) {
+      return res.status(403).json({
+        success: false,
+        error: 'Akun Anda tidak aktif. Hubungi admin toko Anda.',
+      });
+    }
+
+    // App staf WAJIB punya konteks tenant — slug-nya dipakai sebagai header di
+    // request berikutnya. Akun platform (super_admin/affiliate) tidak punya
+    // tenant, jadi tolak dengan pesan jelas alih-alih mengirim 200 yang bikin
+    // app gagal dengan "data toko tidak lengkap dari server".
+    if (!user.tenantId || !user.tenant?.slug) {
+      return res.status(403).json({
+        success: false,
+        error: 'Akun ini bukan akun staf toko. Silakan masuk lewat dasbor web.',
+      });
+    }
+
+    const accessToken = signAccess({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      tenantId: user.tenantId,
+      branchId: user.branchId,
+    });
+    const refreshToken = signRefresh({ id: user.id });
+
+    await prisma.refreshToken.create({
+      data: {
+        token: refreshToken,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const { password: _, deletedAt: __, ...userWithoutPassword } = user;
+
+    res.json({
+      success: true,
+      data: { accessToken, refreshToken, user: userWithoutPassword },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // POST /api/auth/dev-login — login cepat TANPA password, untuk mempercepat
 // testing antar-subdomain saat development.
 //
