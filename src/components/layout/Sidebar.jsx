@@ -7,7 +7,7 @@ import {
   Tag, GitCompare, Megaphone, Flag, MessageSquare, Activity,
   PieChart, UserCircle, DollarSign, Package, ShieldAlert, MapPin,
   ChevronRight, Wallet, Landmark, LifeBuoy, Fingerprint, Handshake,
-  Banknote, UserPlus, MessageCircle, Trophy,
+  Banknote, UserPlus, MessageCircle, Trophy, BookOpen, ExternalLink,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import { useTenantStore } from '../../store/tenantStore.js'
@@ -31,8 +31,9 @@ const navConfig = {
     { section: 'Platform',   labelKey: 'nav.tenantRegistrations', icon: UserPlus,        path: '/super-admin/tenant-registrations' },
     { section: 'Platform',   labelKey: 'nav.packages',            icon: Package,         path: '/super-admin/packages' },
 
-    { section: 'Keuangan',   labelKey: 'nav.billing',         icon: DollarSign,  path: '/super-admin/billing' },
-    { section: 'Keuangan',   labelKey: 'nav.paymentSettings', icon: Landmark,    path: '/super-admin/payment-settings' },
+    { section: 'Keuangan',   labelKey: 'nav.billing',             icon: DollarSign,  path: '/super-admin/billing' },
+    { section: 'Keuangan',   labelKey: 'nav.paymentSettings',     icon: Landmark,    path: '/super-admin/payment-settings' },
+    { section: 'Keuangan',   labelKey: 'nav.paymentTransactions', icon: Receipt,     path: '/super-admin/payment-transactions' },
 
     { section: 'Komunikasi', labelKey: 'nav.whatsappSettings', icon: MessageSquare, path: '/super-admin/whatsapp-settings' },
     { section: 'Komunikasi', labelKey: 'nav.promotions',       icon: Tag,           path: '/super-admin/promotions' },
@@ -45,6 +46,10 @@ const navConfig = {
     { section: 'Sistem',     labelKey: 'nav.errorLogs',    icon: ShieldAlert,   path: '/super-admin/error-logs', badge: 'errorLogs' },
     { section: 'Sistem',     labelKey: 'nav.usage',        icon: PieChart,      path: '/super-admin/usage' },
     { section: 'Sistem',     labelKey: 'nav.affiliates',   icon: Handshake,     path: '/super-admin/affiliates' },
+    // Swagger UI di-serve backend (bukan route React) — wajib `external` agar
+    // dirender <a href> dan tidak ditelan React Router. Slash akhir menghindari
+    // redirect 301 dari swagger-ui-express.
+    { section: 'Sistem',     labelKey: 'nav.apiDocs',      icon: BookOpen,      path: '/api/docs/', external: true },
 
     { section: 'Akun',       labelKey: 'nav.profile',      icon: UserCircle,    path: '/super-admin/profile' },
   ],
@@ -349,6 +354,34 @@ export const Sidebar = ({ collapsed = false, onSearchClick, onNavigate }) => {
               {group.items.map(item => {
                 const badgeCount = badgeCountFor(item)
                 const showBadge  = badgeCount > 0
+
+                // Link keluar SPA (mis. Swagger UI dari backend): buka tab baru.
+                // Tak pernah "aktif", jadi tak perlu render-prop isActive.
+                if (item.external) {
+                  return (
+                    <li key={item.path}>
+                      <a
+                        href={item.path}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={collapsed ? t(item.labelKey) : undefined}
+                        className={`
+                          relative flex items-center gap-3 px-3 py-2 rounded-lg
+                          text-[13.5px] font-medium transition-all
+                          text-off-white/85 hover:bg-white/6 hover:text-off-white
+                          ${collapsed ? 'justify-center px-0' : ''}
+                        `}
+                      >
+                        <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
+                        {!collapsed && <span className="flex-1 truncate">{t(item.labelKey)}</span>}
+                        {!collapsed && (
+                          <ExternalLink className="w-3.5 h-3.5 flex-shrink-0 text-white/40" />
+                        )}
+                      </a>
+                    </li>
+                  )
+                }
+
                 return (
                   <li key={item.path}>
                     <NavLink
