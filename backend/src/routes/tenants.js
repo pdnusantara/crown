@@ -188,6 +188,50 @@ router.get('/', authenticate, requireRole('super_admin'), async (req, res, next)
   }
 });
 
+// GET /api/tenants/me/onboarding — status "Persiapan Toko" dalam satu panggilan.
+//
+// Menggantikan pola klien menembak 4 endpoint (/branches, /services?limit=1,
+// /users?limit=100, /transactions/summary) setiap kali Beranda dibuka — termasuk
+// untuk tenant yang persiapannya sudah lama selesai. Semua cek pakai `count`
+// dengan `take: 1`, jadi berhenti di baris pertama yang ditemukan.
+//
+// Harus terdaftar SEBELUM GET /:id agar "me" tidak tertangkap sebagai id tenant.
+router.get('/me/onboarding', authenticate, async (req, res, next) => {
+  try {
+    const tenantId = req.user.role === 'super_admin' ? req.query.tenantId : req.user.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ success: false, error: 'tenantId wajib' });
+    }
+    if (req.user.role !== 'super_admin' && req.user.tenantId !== tenantId) {
+      return res.status(403).json({ success: false, error: 'Access denied' });
+    }
+
+    const [branch, service, staff, transaction] = await Promise.all([
+      prisma.branch.findFirst({ where: { tenantId, deletedAt: null }, select: { id: true } }),
+      prisma.service.findFirst({ where: { tenantId, deletedAt: null }, select: { id: true } }),
+      // "Ada staf" = ada user SELAIN pemilik: kasir atau barber. Owner
+      // (tenant_admin) selalu ada sejak registrasi, jadi tak menandakan apa pun.
+      prisma.user.findFirst({
+        where: { tenantId, deletedAt: null, isActive: true, role: { in: ['kasir', 'barber'] } },
+        select: { id: true },
+      }),
+      prisma.transaction.findFirst({ where: { tenantId, status: 'completed' }, select: { id: true } }),
+    ]);
+
+    const data = {
+      hasBranch: !!branch,
+      hasService: !!service,
+      hasStaff: !!staff,
+      hasTransaction: !!transaction,
+    };
+    data.completed = Object.values(data).every(Boolean);
+
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/tenants/:id
 router.get('/:id', authenticate, async (req, res, next) => {
   try {

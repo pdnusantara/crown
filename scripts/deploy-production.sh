@@ -86,6 +86,14 @@ fi
 mv "${TMP_DIST}" "${APP_ROOT}/dist"
 
 echo "==> Restart backend"
+# `--update-env` menyalin environment shell pemanggil ke proses app, dan `pm2 save`
+# mengabadikannya di ~/.pm2/dump.pm2. Kalau deploy dijalankan dari sesi Claude Code,
+# TMPDIR menunjuk /tmp/claude-<uid> yang TERHAPUS saat sesi berakhir → os.tmpdir()
+# menunjuk path mati → app crash-loop tanpa henti sambil menumpuk log (kasus nyata:
+# `sorabi` 2026-08-06 crash 218× & 750 MB log; `crown-backend` 2026-08-12).
+# Paksa nilai stabil supaya deploy dari shell mana pun aman.
+export TMPDIR=/tmp
+unset TMPPREFIX CLAUDE_CODE_TMPDIR
 pm2 startOrReload "${APP_ROOT}/ecosystem.config.cjs" --only crown-backend --update-env
 pm2 save
 

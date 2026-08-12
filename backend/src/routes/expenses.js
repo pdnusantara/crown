@@ -5,6 +5,16 @@ const { authenticate, requireRole } = require('../middleware/auth');
 const { parsePagination, paginatedResponse } = require('../utils/pagination');
 const { recordAudit } = require('../utils/auditLog');
 const { getIO, tenantRoom } = require('../config/socket');
+const { DEFAULT_TZ, normalizeTimezone, formatYmdInTz } = require('../utils/timezone');
+
+// Zona waktu tenant — dipakai HANYA untuk menentukan default "hari ini" /
+// "bulan ini". Rentangnya sendiri tetap dibandingkan pada batas UTC-midnight
+// karena Expense.date menyimpan tanggal kalender, bukan instan waktu.
+async function resolveExpenseTz(tenantId) {
+  if (!tenantId) return DEFAULT_TZ;
+  const t = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { timezone: true } });
+  return normalizeTimezone(t?.timezone);
+}
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const VALID_CATEGORIES = ['gaji', 'supplies', 'utilitas', 'sewa', 'operasional', 'lainnya'];
@@ -38,13 +48,14 @@ const emitExpense = (event, payload, tenantId) => {
 const toDayStart = (ymd) => new Date(`${ymd}T00:00:00.000Z`);
 const toDayEnd   = (ymd) => new Date(`${ymd}T23:59:59.999Z`);
 
-// Default periode = bulan berjalan (UTC) bila query tak mengirim rentang.
-function currentMonthRange() {
-  const now = new Date();
-  const y = now.getUTCFullYear();
-  const m = String(now.getUTCMonth() + 1).padStart(2, '0');
-  const start = `${y}-${m}-01`;
-  const end = new Date(Date.UTC(y, now.getUTCMonth() + 1, 0)).toISOString().slice(0, 10);
+// Default periode = bulan berjalan MENURUT ZONA TENANT bila query tak mengirim
+// rentang. Memakai bulan UTC bikin tenant WIB pada tanggal 1 pukul 00:00–07:00
+// masih melihat bulan sebelumnya.
+function currentMonthRange(tz = DEFAULT_TZ) {
+  const [y, m] = formatYmdInTz(new Date(), tz).split('-').map(Number);
+  const start = `${y}-${String(m).padStart(2, '0')}-01`;
+  // Hari ke-0 bulan berikutnya = hari terakhir bulan ini.
+  const end = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
   return { start, end };
 }
 
@@ -131,7 +142,80 @@ const createExpenseSchema = z.object({
 });
 const updateExpenseSchema = createExpenseSchema.partial().omit({ tenantId: true });
 
-// Semua route butuh auth + role admin + fitur aktif.
+// ── GET /api/expenses/summary — total pengeluaran ringkas, KASIR BOLEH ──────────
+//
+// Terdaftar SEBELUM `router.use` di bawah, jadi tidak kena gate admin+fitur.
+// Alasannya sama dengan POST /api/shifts/:id/cash-out: kasir yang mencatat kas
+// keluar berhak melihat total kas keluar cabangnya sendiri — itu soal akurasi
+// laci, bukan fitur "Manajemen Pengeluaran" (yang mencakup gaji & komisi lintas
+// cabang dan tetap tertutup untuk kasir).
+//
+// Berbeda dari /stats: tanpa perbandingan bulan lalu, dan selalu ter-scope cabang.
+router.get(
+  '/summary',
+  authenticate,
+  requireRole('super_admin', 'tenant_admin', 'kasir'),
+  async (req, res, next) => {
+    try {
+      const tenantId = resolveTenantId(req);
+      if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId wajib' });
+
+      const tz = await resolveExpenseTz(tenantId);
+      const { date, branchId } = req.query;
+
+      // `date` (satu hari) adalah jalan pintas untuk kartu "Kas Keluar Hari Ini";
+      // startDate/endDate tetap didukung untuk rentang.
+      let startDate, endDate;
+      if (date) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+          return res.status(400).json({ success: false, error: 'Parameter date harus format YYYY-MM-DD' });
+        }
+        startDate = endDate = date;
+      } else {
+        const today = formatYmdInTz(new Date(), tz);
+        startDate = /^\d{4}-\d{2}-\d{2}$/.test(req.query.startDate || '') ? req.query.startDate : today;
+        endDate   = /^\d{4}-\d{2}-\d{2}$/.test(req.query.endDate || '')   ? req.query.endDate   : startDate;
+      }
+
+      const where = { tenantId, date: { gte: toDayStart(startDate), lte: toDayEnd(endDate) } };
+
+      const kasirLocked = req.user.role === 'kasir' && req.user.branchId;
+      if (kasirLocked) {
+        if (branchId && branchId !== req.user.branchId) {
+          return res.status(403).json({ success: false, error: 'Tidak boleh melihat cabang lain' });
+        }
+        where.branchId = req.user.branchId;
+      } else if (branchId) {
+        if (!(await assertBranchOwnership(branchId, tenantId))) {
+          return res.status(400).json({ success: false, error: 'branchId tidak dikenal untuk tenant ini' });
+        }
+        where.branchId = branchId;
+      }
+
+      const [agg, byCat] = await Promise.all([
+        prisma.expense.aggregate({ where, _sum: { amount: true }, _count: true }),
+        prisma.expense.groupBy({ by: ['category'], where, _sum: { amount: true } }),
+      ]);
+
+      const byCategory = {};
+      byCat.forEach((c) => { byCategory[c.category] = c._sum.amount || 0; });
+
+      res.json({
+        success: true,
+        data: {
+          total: agg._sum.amount || 0,
+          count: agg._count || 0,
+          byCategory,
+          period: { startDate, endDate },
+          branchId: where.branchId || null,
+        },
+        meta: { timezone: tz },
+      });
+    } catch (err) { next(err); }
+  }
+);
+
+// Semua route DI BAWAH INI butuh auth + role admin + fitur aktif.
 router.use(authenticate, requireRole('super_admin', 'tenant_admin'), requireExpenseFeature);
 
 // ── GET /api/expenses — list, tenant-scoped, paginated ──────────────────────────
@@ -186,7 +270,11 @@ router.get('/stats', async (req, res, next) => {
     const tenantId = resolveTenantId(req);
     if (!tenantId) return res.status(400).json({ success: false, error: 'tenantId wajib' });
 
-    const fallback = currentMonthRange();
+    const tz = await resolveExpenseTz(tenantId);
+    // Default "bulan berjalan" mengikuti zona tenant. Sebelumnya memakai bulan
+    // UTC, sehingga tenant WIB pada 1 Agustus pukul 00:00–07:00 masih mendapat
+    // rentang Juli.
+    const fallback = currentMonthRange(tz);
     const startDate = /^\d{4}-\d{2}-\d{2}$/.test(req.query.startDate || '') ? req.query.startDate : fallback.start;
     const endDate   = /^\d{4}-\d{2}-\d{2}$/.test(req.query.endDate || '')   ? req.query.endDate   : fallback.end;
 
@@ -195,13 +283,30 @@ router.get('/stats', async (req, res, next) => {
       date: { gte: toDayStart(startDate), lte: toDayEnd(endDate) },
     };
 
+    // branchId SEBELUMNYA DIABAIKAN sepenuhnya di sini — pemilih cabang di UI
+    // tetap menghasilkan angka se-tenant. Sekarang difilter, dan cabang tak
+    // dikenal ditolak alih-alih diam-diam melebar jadi seluruh tenant.
+    const { branchId } = req.query;
+    if (branchId) {
+      if (!(await assertBranchOwnership(branchId, tenantId))) {
+        return res.status(400).json({ success: false, error: 'branchId tidak dikenal untuk tenant ini' });
+      }
+      where.branchId = branchId;
+    }
+
     const prev = prevMonthRange(startDate);
 
     const [agg, byCat, prevAgg] = await Promise.all([
       prisma.expense.aggregate({ where, _sum: { amount: true }, _count: true }),
       prisma.expense.groupBy({ by: ['category'], where, _sum: { amount: true } }),
       prisma.expense.aggregate({
-        where: { tenantId, date: { gte: toDayStart(prev.start), lte: toDayEnd(prev.end) } },
+        // Pembanding bulan lalu WAJIB memakai scope cabang yang sama, kalau
+        // tidak chip "vs bln lalu" membandingkan satu cabang dengan se-tenant.
+        where: {
+          tenantId,
+          ...(where.branchId ? { branchId: where.branchId } : {}),
+          date: { gte: toDayStart(prev.start), lte: toDayEnd(prev.end) },
+        },
         _sum: { amount: true },
       }),
     ]);
@@ -217,7 +322,9 @@ router.get('/stats', async (req, res, next) => {
         byCategory,
         prevTotal: prevAgg._sum.amount || 0,
         period: { startDate, endDate },
+        branchId: where.branchId || null,
       },
+      meta: { timezone: tz },
     });
   } catch (err) { next(err); }
 });

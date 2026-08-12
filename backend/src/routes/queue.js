@@ -5,6 +5,21 @@ const { authenticate, requireRole } = require('../middleware/auth');
 const { parsePagination, paginatedResponse } = require('../utils/pagination');
 const { emitQueueEvent, emitBookingEvent } = require('../config/socket');
 const { requireLicensedBranch } = require('../middleware/requireLicensedBranch');
+const { DEFAULT_TZ, normalizeTimezone, tenantDayStart, tenantDayEnd, formatYmdInTz } = require('../utils/timezone');
+
+// Zona waktu tenant pemanggil — batas "hari" untuk filter antrian. Server jalan
+// di UTC, jadi tanpa ini `?date=` memotong hari pada 07:00 WIB, bukan tengah malam.
+async function resolveQueueTz(req) {
+  const tid = req.user.role === 'super_admin' ? (req.query.tenantId || req.user.tenantId) : req.user.tenantId;
+  if (!tid) return DEFAULT_TZ;
+  const t = await prisma.tenant.findUnique({ where: { id: tid }, select: { timezone: true } });
+  return normalizeTimezone(t?.timezone);
+}
+
+// Rentang satu hari kalender `ymd` pada zona tenant.
+function tenantDayRange(ymd, tz) {
+  return { gte: tenantDayStart(ymd, tz), lte: tenantDayEnd(ymd, tz) };
+}
 
 // Helper: ekstrak bookingId yang dititipkan di queue.notes JSON saat check-in.
 function extractBookingId(notes) {
@@ -107,11 +122,12 @@ router.get('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir'
     if (status) where.status = status;
 
     if (date) {
-      const start = new Date(date);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(date);
-      end.setHours(23, 59, 59, 999);
-      where.createdAt = { gte: start, lte: end };
+      // Batas hari mengikuti zona tenant, BUKAN zona server (UTC). Sebelumnya
+      // `new Date(date).setHours(0,0,0,0)` memotong hari pada 07:00 WIB sehingga
+      // antrian dini hari terhitung ke tanggal kemarin — dan GET /queue tidak
+      // sepakat dengan GET /queue/summary maupun pendingQueue di shift summary.
+      const tz = await resolveQueueTz(req);
+      where.createdAt = tenantDayRange(date, tz);
     }
 
     const [data, total] = await Promise.all([
@@ -128,6 +144,78 @@ router.get('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir'
     ]);
 
     res.json({ success: true, data: paginatedResponse(data, total, page, limit) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/queue/summary — jumlah antrian per status untuk satu hari.
+//
+// Menggantikan pola "tarik seluruh daftar lalu hitung di klien", yang selain
+// boros juga DIAM-DIAM SALAH begitu volume harian melewati `limit` pagination.
+// Harus terdaftar SEBELUM GET /:id, kalau tidak "summary" tertangkap sebagai id.
+router.get('/summary', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir', 'barber'), async (req, res, next) => {
+  try {
+    const tz = await resolveQueueTz(req);
+    const { date, branchId } = req.query;
+
+    if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ success: false, error: 'Parameter date harus format YYYY-MM-DD' });
+    }
+    // Default: hari ini menurut zona tenant (bukan zona server).
+    const ymd = date || formatYmdInTz(new Date(), tz);
+
+    const where = { createdAt: tenantDayRange(ymd, tz) };
+    if (req.user.role !== 'super_admin') {
+      where.tenantId = req.user.tenantId;
+    } else if (req.query.tenantId) {
+      where.tenantId = req.query.tenantId;
+    }
+
+    // Kasir & barber terkunci ke cabangnya — samakan dengan GET /.
+    const staffLocked = (req.user.role === 'kasir' || req.user.role === 'barber') && req.user.branchId;
+    if (staffLocked) {
+      if (branchId && branchId !== req.user.branchId) {
+        return res.status(403).json({ success: false, error: 'Tidak boleh melihat cabang lain' });
+      }
+      where.branchId = req.user.branchId;
+    } else if (branchId) {
+      // Cabang tak dikenal ditolak, BUKAN diabaikan diam-diam — kalau tidak,
+      // angka se-tenant akan terbaca sebagai angka satu cabang.
+      const owned = await prisma.branch.findFirst({
+        where: { id: branchId, deletedAt: null, ...(where.tenantId ? { tenantId: where.tenantId } : {}) },
+        select: { id: true },
+      });
+      if (!owned) {
+        return res.status(400).json({ success: false, error: 'branchId tidak dikenal untuk tenant ini' });
+      }
+      where.branchId = branchId;
+    }
+
+    const rows = await prisma.queue.groupBy({ by: ['status'], where, _count: { _all: true } });
+
+    // Semua status selalu hadir sebagai 0 supaya klien tak perlu null-check.
+    const counts = { waiting: 0, in_progress: 0, done: 0, paid: 0, cancelled: 0 };
+    let total = 0;
+    for (const r of rows) {
+      const n = r._count._all;
+      total += n;
+      if (r.status in counts) counts[r.status] = n;
+    }
+
+    res.json({
+      success: true,
+      data: {
+        waiting: counts.waiting,
+        // camelCase untuk klien; enum DB memakai snake_case `in_progress`.
+        inProgress: counts.in_progress,
+        done: counts.done,
+        paid: counts.paid,
+        cancelled: counts.cancelled,
+        total,
+      },
+      meta: { timezone: tz, date: ymd, branchId: where.branchId || null },
+    });
   } catch (err) {
     next(err);
   }

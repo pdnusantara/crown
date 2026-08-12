@@ -319,6 +319,79 @@ test('(g) varianceReason TIDAK disimpan saat selisih 0 (UI menyembunyikan inputn
   assert.equal(body.data.cashVarianceReason, null, 'tanpa selisih, alasan tidak disimpan');
 });
 
+// ── (i) Batch dengan satu entri gagal di tengah ─────────────────────────────
+// Klien mengirim kas keluar sekaligus tepat sebelum close. Kalau satu entri
+// ditolak, server hanya mencatat sisanya — dan `totalCashOut` adalah sumber
+// kebenaran untuk mengetahui berapa yang BENAR-BENAR tercatat. Klien memakai
+// selisih (dikirim − tercatat) untuk mengkompensasi entri yang gagal; test ini
+// memastikan angka itu tidak pernah menghitung entri yang sukses.
+test('(i) batch dengan satu entri ditolak: totalCashOut hanya mencakup yang sukses', async () => {
+  const shiftId = await bukaShiftDenganPenjualan();
+
+  const sebelum = await get(`/api/shifts/${shiftId}/summary`);
+  const totalSebelum = sebelum.body.data.summary.totalCashOut;
+  assert.equal(totalSebelum, 0, 'shift baru belum punya kas keluar');
+
+  // Entri kedua sengaja tak valid (amount 0) — meniru satu permintaan gagal
+  // di tengah batch. Loop klien berurutan, jadi entri ketiga tetap terkirim.
+  const batch = [
+    { amount: 30_000, description: 'Bensin' },
+    { amount: 0,      description: 'Entri rusak' },
+    { amount: 20_000, description: 'Konsumsi' },
+  ];
+  let dikirim = 0;
+  const gagalMenurutKlien = [];
+  for (const entri of batch) {
+    const res = await post(`/api/shifts/${shiftId}/cash-out`, entri);
+    dikirim += entri.amount;
+    if (res.status !== 201) gagalMenurutKlien.push(entri.amount);
+  }
+  assert.deepEqual(gagalMenurutKlien, [0], 'hanya entri rusak yang gagal');
+
+  // Verifikasi ala klien: server yang menentukan berapa yang tercatat.
+  const sesudah = await get(`/api/shifts/${shiftId}/summary`);
+  const tercatat = sesudah.body.data.summary.totalCashOut - totalSebelum;
+  assert.equal(tercatat, 50_000, 'hanya dua entri sukses yang tercatat');
+  assert.equal(dikirim - tercatat, 0, 'entri rusak bernilai 0 → tak ada kompensasi');
+  assert.equal(sesudah.body.data.summary.cashOut.length, 2, 'entri gagal tidak menyisakan baris');
+
+  // expectedCash hanya dikurangi yang benar-benar tercatat.
+  const seharusnya = KAS_AWAL + PENJUALAN_TUNAI - 50_000;
+  assert.equal(sesudah.body.data.summary.expectedCash, seharusnya);
+
+  const tutup = await post(`/api/shifts/${shiftId}/close`, { closingCash: seharusnya });
+  assert.equal(tutup.status, 200, `close gagal: ${JSON.stringify(tutup.body)}`);
+  assert.equal(tutup.body.data.expectedCash, seharusnya);
+  assert.equal(tutup.body.data.cashDifference, 0,
+    'kas fisik = kas seharusnya → selisih 0, tanpa kompensasi klien');
+});
+
+// ── (j) Entri yang timeout di klien tapi SUKSES di server ───────────────────
+// Skenario paling berbahaya: klien menandai entri gagal karena timeout,
+// padahal server sudah mencatatnya. Kalau klien mengkompensasi berdasarkan
+// catatannya sendiri, selisih jadi salah dua kali lipat. `totalCashOut`
+// menutup lubang itu karena entri tsb ikut terhitung di server.
+test('(j) entri "gagal" menurut klien tapi tercatat di server tetap terhitung', async () => {
+  const shiftId = await bukaShiftDenganPenjualan();
+
+  const res = await post(`/api/shifts/${shiftId}/cash-out`, { amount: 40_000, description: 'Timeout di klien' });
+  assert.equal(res.status, 201, 'server tetap mencatat walau klien menganggapnya gagal');
+
+  const { body } = await get(`/api/shifts/${shiftId}/summary`);
+  const tercatat = body.data.summary.totalCashOut;
+
+  // Pembukuan klien (keliru) mengira entri ini gagal.
+  const dikirimMenurutKlien = 40_000;
+  const kompensasiNaif = dikirimMenurutKlien;                 // cara lama: salah
+  const kompensasiBenar = dikirimMenurutKlien - tercatat;     // cara baru: 0
+
+  assert.equal(tercatat, 40_000);
+  assert.equal(kompensasiBenar, 0, 'verifikasi lewat totalCashOut meniadakan kompensasi ganda');
+  assert.equal(kompensasiNaif, 40_000, 'cara lama akan menggeser selisih sebesar nominal entri');
+
+  assert.equal(body.data.summary.expectedCash, KAS_AWAL + PENJUALAN_TUNAI - 40_000);
+});
+
 // ── (h) Validasi body ───────────────────────────────────────────────────────
 test('(h) cash-out menolak body tak valid', async () => {
   const shiftId = await bukaShiftDenganPenjualan();
