@@ -49,7 +49,7 @@ export default function TAStaffPage() {
   const [search, setSearch] = useState('')
   const [branchFilter, setBranchFilter] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
-  const [form, setForm] = useState({ name: '', email: '', role: 'barber', branchId: '', commissionRate: 0.35, salaryType: 'commission', baseSalary: 0, isBarber: false, photo: '' })
+  const [form, setForm] = useState({ name: '', email: '', role: 'barber', branchId: '', commissionRate: 0.35, salaryType: 'commission', baseSalary: 0, isBarber: false, photo: '', barberTitle: '', barberExpYears: '', barberBio: '', barberSpecialties: [], barberPortfolio: [] })
   const [formError, setFormError] = useState({})
   // { email, tempPassword, name, mode: 'created' | 'reset', custom? } | null
   const [credentials, setCredentials] = useState(null)
@@ -59,6 +59,7 @@ export default function TAStaffPage() {
   const [customPw, setCustomPw] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [pwError, setPwError] = useState('')
+  const [specialtyInput, setSpecialtyInput] = useState('')
 
   // Role picker — schema backend hanya menerima 'barber' & 'kasir' utk
   // tenant_admin (super_admin/tenant_admin/customer/affiliate diblokir di
@@ -124,14 +125,14 @@ export default function TAStaffPage() {
 
   const openAdd = () => {
     setEditStaff(null)
-    setForm({ name: '', email: '', role: 'barber', branchId: branches[0]?.id || '', commissionRate: 0.35, salaryType: 'commission', baseSalary: 0, isBarber: false, photo: '' })
+    setForm({ name: '', email: '', role: 'barber', branchId: branches[0]?.id || '', commissionRate: 0.35, salaryType: 'commission', baseSalary: 0, isBarber: false, photo: '', barberTitle: '', barberExpYears: '', barberBio: '', barberSpecialties: [], barberPortfolio: [] })
     setFormError({})
     setShowModal(true)
   }
 
   const openEdit = (member) => {
     setEditStaff(member)
-    setForm({ name: member.name, email: member.email || '', role: member.role, branchId: member.branchId, commissionRate: member.commissionRate ?? 0.35, salaryType: (member.role === 'kasir' && !member.isBarber) ? 'fixed' : (member.salaryType || 'commission'), baseSalary: member.baseSalary || 0, isBarber: member.isBarber || false, photo: member.photo || '' })
+    setForm({ name: member.name, email: member.email || '', role: member.role, branchId: member.branchId, commissionRate: member.commissionRate ?? 0.35, salaryType: (member.role === 'kasir' && !member.isBarber) ? 'fixed' : (member.salaryType || 'commission'), baseSalary: member.baseSalary || 0, isBarber: member.isBarber || false, photo: member.photo || '', barberTitle: member.barberTitle || '', barberExpYears: member.barberExpYears ?? '', barberBio: member.barberBio || '', barberSpecialties: member.barberSpecialties || [], barberPortfolio: member.barberPortfolio || [] })
     setFormError({})
     setShowModal(true)
   }
@@ -156,6 +157,18 @@ export default function TAStaffPage() {
     // Pakai raw string supaya user bebas backspace/edit decimal.
     const commissionNum = Math.max(0, Math.min(1, Number(form.commissionRate) || 0))
     const baseSalaryNum = Math.max(0, Math.min(1_000_000_000, parseInt(String(form.baseSalary), 10) || 0))
+
+    // Profil publik barber — hanya dikirim untuk staf barber-eligible (barber
+    // murni atau kasir merangkap). Untuk non-barber tidak relevan.
+    const barberEligible = form.role === 'barber' || (form.role === 'kasir' && form.isBarber)
+    const expYears = String(form.barberExpYears).trim() === '' ? null : Math.max(0, Math.min(80, parseInt(String(form.barberExpYears), 10) || 0))
+    const barberProfile = barberEligible ? {
+      barberTitle:       form.barberTitle?.trim() || null,
+      barberBio:         form.barberBio?.trim() || null,
+      barberExpYears:    expYears,
+      barberSpecialties: (form.barberSpecialties || []).map(s => s.trim()).filter(Boolean).slice(0, 20),
+      barberPortfolio:   (form.barberPortfolio || []).filter(Boolean).slice(0, 20),
+    } : {}
     try {
       if (editStaff) {
         // Saat edit, jangan kirim email (untuk hindari bentrok unique) kecuali memang berubah.
@@ -166,7 +179,7 @@ export default function TAStaffPage() {
         // photo: null = hapus foto, string = ganti, undefined = tak diubah.
         // Kirim null kalau user kosongkan (PhotoPicker remove). Backend update
         // schema menerima nullable supaya "hapus foto" bisa di-persist.
-        const patch = { name: form.name, role: form.role, branchId: form.branchId, commissionRate: commissionNum, salaryType, baseSalary: baseSalaryNum, isBarber, photo: form.photo || null }
+        const patch = { name: form.name, role: form.role, branchId: form.branchId, commissionRate: commissionNum, salaryType, baseSalary: baseSalaryNum, isBarber, photo: form.photo || null, ...barberProfile }
         if (form.email && form.email !== editStaff.email) patch.email = form.email
         await updateUser.mutateAsync({ id: editStaff.id, ...patch, tenantId: user.tenantId })
         toast.success(t('tenantAdmin.staff.staffUpdated'))
@@ -179,6 +192,7 @@ export default function TAStaffPage() {
           branchId: form.branchId,
           tenantId: user.tenantId,
           photo: form.photo || undefined,
+          ...barberProfile,
           ...(form.role === 'barber'
             ? { commissionRate: commissionNum, salaryType: form.salaryType, baseSalary: baseSalaryNum }
             : form.role === 'kasir'
@@ -679,6 +693,116 @@ export default function TAStaffPage() {
               )}
             </div>
           )}
+
+          {/* Profil publik barber — tampil di halaman detail barber /book.
+              Hanya untuk staf barber-eligible. Semua opsional. */}
+          {(form.role === 'barber' || (form.role === 'kasir' && form.isBarber)) && (
+            <div className="space-y-3 p-3 rounded-xl bg-dark-surface border border-dark-border">
+              <div className="flex items-center gap-2">
+                <Scissors className="w-4 h-4 text-brand" />
+                <p className="text-sm font-semibold text-off-white">{t('tenantAdmin.staff.barberProfileTitle')}</p>
+              </div>
+              <p className="text-[11px] text-muted -mt-1.5">{t('tenantAdmin.staff.barberProfileHint')}</p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label={t('tenantAdmin.staff.barberTitleLabel')}
+                  value={form.barberTitle}
+                  onChange={e => setForm(f => ({ ...f, barberTitle: e.target.value }))}
+                  placeholder={t('tenantAdmin.staff.barberTitlePlaceholder')}
+                  maxLength={60}
+                />
+                <Input
+                  label={t('tenantAdmin.staff.barberExpLabel')}
+                  type="number" min="0" max="80"
+                  value={form.barberExpYears}
+                  onChange={e => setForm(f => ({ ...f, barberExpYears: e.target.value }))}
+                  placeholder="0"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-muted mb-1.5">{t('tenantAdmin.staff.barberBioLabel')}</label>
+                <textarea
+                  rows={3}
+                  value={form.barberBio}
+                  maxLength={1000}
+                  onChange={e => setForm(f => ({ ...f, barberBio: e.target.value }))}
+                  placeholder={t('tenantAdmin.staff.barberBioPlaceholder')}
+                  className="w-full bg-dark-card border border-dark-border rounded-xl px-3 py-2 text-sm text-off-white placeholder:text-muted focus:outline-none focus:border-brand/40 resize-none"
+                />
+              </div>
+
+              {/* Keahlian (tags) */}
+              <div>
+                <label className="block text-sm font-medium text-muted mb-1.5">{t('tenantAdmin.staff.barberSpecialtiesLabel')}</label>
+                {form.barberSpecialties.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {form.barberSpecialties.map((sp, i) => (
+                      <span key={`${sp}-${i}`} className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-brand/10 text-brand border border-brand/20">
+                        {sp}
+                        <button type="button" onClick={() => setForm(f => ({ ...f, barberSpecialties: f.barberSpecialties.filter((_, idx) => idx !== i) }))} className="hover:text-red-400">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <input
+                  value={specialtyInput}
+                  onChange={e => setSpecialtyInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ',') {
+                      e.preventDefault()
+                      const v = specialtyInput.trim()
+                      if (v) setForm(f => (f.barberSpecialties.includes(v) || f.barberSpecialties.length >= 20) ? f : { ...f, barberSpecialties: [...f.barberSpecialties, v] })
+                      setSpecialtyInput('')
+                    }
+                  }}
+                  placeholder={t('tenantAdmin.staff.barberSpecialtiesPlaceholder')}
+                  className="w-full bg-dark-card border border-dark-border rounded-xl px-3 py-2 text-sm text-off-white placeholder:text-muted focus:outline-none focus:border-brand/40"
+                />
+              </div>
+
+              {/* Portofolio (galeri hasil potongan) */}
+              <div>
+                <label className="block text-sm font-medium text-muted mb-1.5">{t('tenantAdmin.staff.barberPortfolioLabel')}</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {form.barberPortfolio.map((src, i) => (
+                    <div key={i} className="relative aspect-square rounded-lg overflow-hidden ring-1 ring-dark-border group">
+                      <img src={src} alt="" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setForm(f => ({ ...f, barberPortfolio: f.barberPortfolio.filter((_, idx) => idx !== i) }))}
+                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                  {form.barberPortfolio.length < 20 && (
+                    <label className="aspect-square rounded-lg border border-dashed border-dark-border flex flex-col items-center justify-center cursor-pointer text-muted hover:border-brand/40 hover:text-brand transition-colors">
+                      <Plus className="w-5 h-5" />
+                      <input
+                        type="file" accept="image/*" multiple className="hidden"
+                        onChange={async (e) => {
+                          const files = Array.from(e.target.files || [])
+                          for (const file of files) {
+                            if (file.size > 5 * 1024 * 1024) { toast.error(t('tenantAdmin.staff.fileTooLarge')); continue }
+                            const b64 = await resizeImageToBase64(file)
+                            setForm(f => f.barberPortfolio.length >= 20 ? f : { ...f, barberPortfolio: [...f.barberPortfolio, b64] })
+                          }
+                          e.target.value = ''
+                        }}
+                      />
+                    </label>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted mt-1.5">{t('tenantAdmin.staff.barberPortfolioHint')}</p>
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-3 pt-2">
             <Button variant="outline" fullWidth onClick={() => setShowModal(false)}>{t('common.cancel')}</Button>
             <Button

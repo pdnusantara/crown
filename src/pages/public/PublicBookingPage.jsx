@@ -4,16 +4,14 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   MapPin, Clock, Check, ChevronRight, Scissors, ChevronLeft,
   User, Phone, MessageSquare, Star, Copy, Share2,
-  Sparkles, AlertCircle, Camera, Globe, Music2, Image as ImageIcon,
+  Sparkles, AlertCircle, Camera, Globe, Music2, Image as ImageIcon, X,
 } from 'lucide-react'
 import publicApi from '../../lib/publicApi.js'
 import WilayahPicker from '../../components/WilayahPicker.jsx'
 import { usePublicTenantStore } from '../../store/publicTenantStore.js'
 import { getTenantSlug } from '../../lib/tenantSlug.js'
 import {
-  format,
-  startOfMonth, endOfMonth, eachDayOfInterval, getDay,
-  addMonths, subMonths, isSameMonth, isSameDay, isBefore, startOfDay,
+  format, isSameDay, startOfDay, addDays,
 } from 'date-fns'
 import { id as idLocale, enUS as enLocale } from 'date-fns/locale'
 import { formatRupiah } from '../../utils/format.js'
@@ -165,6 +163,8 @@ function PublicBookingPageInner() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError]         = useState(null)
   const [booking, setBooking]     = useState(null)
+  // Barber yang sedang dibuka di halaman detail (overlay). null = tertutup.
+  const [detailBarber, setDetailBarber] = useState(null)
 
   // `services` = array (booking bisa lebih dari satu layanan).
   const [selected, setSelected] = useState({
@@ -452,6 +452,7 @@ function PublicBookingPageInner() {
               testimonials={testimonials} queueInfo={queueInfo}
               selected={selected} accent={accent} tenantTz={tenantTz}
               onPickBranch={pickBranch} onPickService={pickService} onPickBarber={pickBarber}
+              onShowBarberDetail={setDetailBarber}
               canNext={canNextStep0}
               onNext={() => { if (canNextStep0) { setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }) } }}
             />
@@ -460,7 +461,7 @@ function PublicBookingPageInner() {
             <Step2Schedule
               selected={selected} timeSlots={timeSlots} bookedSlots={bookedSlots}
               branchClosure={branchClosure} tenantTz={tenantTz}
-              accent={accent} shake={shake}
+              accent={accent} shake={shake} totalDuration={totalDuration}
               onPickDate={pickDate} onPickTime={pickTime}
               onBack={() => setStep(0)}
               onNext={() => { setStep(2); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
@@ -473,6 +474,8 @@ function PublicBookingPageInner() {
               setForm={setForm} accent={accent} totalPrice={totalPrice}
               error={error} submitting={submitting}
               onBack={() => setStep(1)}
+              onEditPick={() => { setStep(0); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+              onEditSchedule={() => { setStep(1); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
               onSubmit={handleSubmit}
             />
           )}
@@ -498,6 +501,19 @@ function PublicBookingPageInner() {
             error={lookupError}
             onClose={() => setShowLookup(false)}
             onSubmit={handleLookup}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Halaman detail barber — overlay penuh dari kartu barber */}
+      <AnimatePresence>
+        {detailBarber && (
+          <BarberDetailSheet
+            barberId={detailBarber.id}
+            fallback={detailBarber}
+            accent={accent}
+            onClose={() => setDetailBarber(null)}
+            onSelect={(b) => { pickBarber(b); setDetailBarber(null); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
           />
         )}
       </AnimatePresence>
@@ -1016,7 +1032,7 @@ function StickyCta({ label, onClick, disabled, accent, note }) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function Step1Pick({ tenantName, tenantLogo, bp, branches, services, barbers, testimonials = [], queueInfo = {}, selected, accent, tenantTz,
-                    onPickBranch, onPickService, onPickBarber, onNext, canNext }) {
+                    onPickBranch, onPickService, onPickBarber, onShowBarberDetail, onNext, canNext }) {
   const { t } = useTranslation()
   return (
     <div className="space-y-7 lg:space-y-10">
@@ -1044,7 +1060,7 @@ function Step1Pick({ tenantName, tenantLogo, bp, branches, services, barbers, te
           {/* Barber picker */}
           <div>
             <SectionTitle accent={accent} step="01" title={t('publicBooking.pickBarber')} />
-            <BarberCarousel barbers={barbers} selected={selected.barber} onPick={onPickBarber} accent={accent} />
+            <BarberCarousel barbers={barbers} selected={selected.barber} onPick={onPickBarber} onShowDetail={onShowBarberDetail} accent={accent} />
           </div>
 
           {/* Service list — boleh pilih lebih dari satu */}
@@ -1462,7 +1478,188 @@ function BranchSelector({ branches, selected, onPick, accent, queueInfo = {} }) 
   )
 }
 
-function BarberCarousel({ barbers, selected, onPick, accent }) {
+// Halaman detail barber (overlay penuh) — profil lengkap + portofolio + ulasan.
+// Dibuka dari kartu barber; tombol "Pilih" memilih barber lalu menutup overlay.
+function BarberDetailSheet({ barberId, fallback, accent, onClose, onSelect }) {
+  const { t, i18n } = useTranslation()
+  const [data, setData]       = useState(fallback || null)
+  const [loading, setLoading] = useState(true)
+  const [err, setErr]         = useState(false)
+  const [lightbox, setLightbox] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true); setErr(false)
+    publicApi.get(`/public/barbers/${barberId}`)
+      .then(res => { if (!cancelled) setData(res.data.data) })
+      .catch(() => { if (!cancelled && !fallback) setErr(true) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [barberId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
+  }, [])
+
+  const hasRating = data?.ratingCount > 0 && data?.avgRating != null
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 overflow-y-auto book-root"
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      style={{ background: 'var(--bk-bg)' }}
+    >
+      {/* Top bar */}
+      <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-3"
+        style={{ background: 'var(--bk-bg-translucent)', backdropFilter: 'blur(8px)', borderBottom: '1px solid var(--bk-border)' }}>
+        <button onClick={onClose} className="p-2 -ml-2 rounded-lg" aria-label={t('publicBooking.back')} style={{ color: 'var(--bk-text-2)' }}>
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <p className="font-display font-bold" style={{ color: 'var(--bk-text)' }}>{t('publicBooking.barberProfile', { defaultValue: 'Profil Barber' })}</p>
+      </div>
+
+      <div className="max-w-md mx-auto px-5 pt-5 pb-28 space-y-6">
+        {loading && !data ? (
+          <div className="space-y-4">
+            <div className="h-24 bk-card animate-pulse" />
+            <div className="h-32 bk-card animate-pulse" />
+          </div>
+        ) : err ? (
+          <p className="text-center py-12 text-sm" style={{ color: 'var(--bk-text-muted)' }}>{t('publicBooking.loadFailed')}</p>
+        ) : data && (
+          <>
+            {/* Header */}
+            <div className="flex items-center gap-4">
+              <div className="w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0" style={{ border: `2px solid ${accent}` }}>
+                <Avatar src={data.photo} name={data.name} size="lg" className="w-full h-full" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="font-display text-xl font-bold" style={{ color: 'var(--bk-text)' }}>{data.name}</h2>
+                  {data.barberTitle && (
+                    <span className="px-2 py-0.5 rounded-md text-xs font-semibold" style={{ background: 'var(--bk-accent-soft)', color: accent }}>
+                      {data.barberTitle}
+                    </span>
+                  )}
+                </div>
+                {hasRating ? (
+                  <p className="flex items-center gap-1 text-sm font-semibold mt-1" style={{ color: accent }}>
+                    <Star className="w-4 h-4" fill={accent} strokeWidth={0} /> {data.avgRating.toFixed(1)}
+                    <span className="font-normal" style={{ color: 'var(--bk-text-muted)' }}>
+                      ({t('publicBooking.reviewsCount', { count: data.ratingCount, defaultValue: '{{count}} ulasan' })})
+                    </span>
+                  </p>
+                ) : (
+                  <p className="text-xs mt-1" style={{ color: 'var(--bk-text-muted)' }}>{t('publicBooking.newBarber')}</p>
+                )}
+                {data.barberExpYears != null && data.barberExpYears > 0 && (
+                  <p className="flex items-center gap-1 text-xs mt-1" style={{ color: 'var(--bk-text-2)' }}>
+                    <Clock className="w-3.5 h-3.5" /> {t('publicBooking.experienceYears', { count: data.barberExpYears, defaultValue: '{{count}} tahun pengalaman' })}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* About */}
+            {data.barberBio && (
+              <div>
+                <h3 className="font-display font-bold text-base mb-1.5" style={{ color: 'var(--bk-text)' }}>
+                  {t('publicBooking.aboutBarber', { name: data.name, defaultValue: 'Tentang {{name}}' })}
+                </h3>
+                <p className="text-sm leading-relaxed whitespace-pre-line" style={{ color: 'var(--bk-text-2)' }}>{data.barberBio}</p>
+              </div>
+            )}
+
+            {/* Specialties */}
+            {Array.isArray(data.barberSpecialties) && data.barberSpecialties.length > 0 && (
+              <div>
+                <h3 className="font-display font-bold text-base mb-2" style={{ color: 'var(--bk-text)' }}>{t('publicBooking.specialties', { defaultValue: 'Keahlian' })}</h3>
+                <div className="flex flex-wrap gap-2">
+                  {data.barberSpecialties.map((sp, i) => (
+                    <span key={`${sp}-${i}`} className="px-3 py-1.5 rounded-full text-xs font-medium"
+                      style={{ background: 'var(--bk-surface)', color: 'var(--bk-text)', border: '1px solid var(--bk-border)' }}>
+                      {sp}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Portfolio */}
+            {Array.isArray(data.barberPortfolio) && data.barberPortfolio.length > 0 && (
+              <div>
+                <h3 className="font-display font-bold text-base mb-2" style={{ color: 'var(--bk-text)' }}>{t('publicBooking.portfolio', { defaultValue: 'Hasil Potongan' })}</h3>
+                <div className="grid grid-cols-3 gap-2">
+                  {data.barberPortfolio.map((src, i) => (
+                    <button key={i} onClick={() => setLightbox(src)}
+                      className="aspect-square rounded-xl overflow-hidden" style={{ border: '1px solid var(--bk-border)' }}>
+                      <img src={src} alt="" className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Reviews */}
+            {Array.isArray(data.reviews) && data.reviews.length > 0 && (
+              <div>
+                <h3 className="font-display font-bold text-base mb-2" style={{ color: 'var(--bk-text)' }}>{t('publicBooking.reviews', { defaultValue: 'Ulasan' })}</h3>
+                <div className="space-y-2.5">
+                  {data.reviews.map(r => (
+                    <div key={r.id} className="bk-card p-3.5">
+                      <div className="flex items-center gap-0.5 mb-1">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star key={i} className="w-3.5 h-3.5" fill={i < r.rating ? accent : 'transparent'} strokeWidth={i < r.rating ? 0 : 1.5}
+                            style={{ color: i < r.rating ? accent : 'var(--bk-border-strong)' }} />
+                        ))}
+                        {r.publishedAt && (
+                          <span className="text-[11px] ml-auto" style={{ color: 'var(--bk-text-muted)' }}>
+                            {format(new Date(r.publishedAt), 'd MMM yyyy', { locale: dfLocale(i18n.language) })}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm leading-snug" style={{ color: 'var(--bk-text-2)' }}>{r.comment}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Sticky select CTA */}
+      {data && (
+        <div className="fixed bottom-0 left-0 right-0 z-10"
+          style={{ background: 'linear-gradient(180deg, transparent 0%, var(--bk-bg) 30%)', paddingTop: '24px', paddingBottom: 'max(env(safe-area-inset-bottom, 0), 12px)' }}>
+          <div className="max-w-md mx-auto px-5">
+            <button onClick={() => onSelect(data)} className="bk-cta w-full inline-flex items-center justify-center gap-2">
+              {t('publicBooking.selectBarberCta', { name: data.name, defaultValue: 'Pilih {{name}}' })}
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox */}
+      <AnimatePresence>
+        {lightbox && (
+          <motion.div className="fixed inset-0 z-[60] flex items-center justify-center p-6"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ background: 'rgba(0,0,0,0.85)' }} onClick={() => setLightbox(null)}>
+            <button className="absolute top-4 right-4 p-2 rounded-full text-white" style={{ background: 'rgba(255,255,255,0.15)' }} aria-label={t('publicBooking.close')}>
+              <X className="w-5 h-5" />
+            </button>
+            <img src={lightbox} alt="" className="max-w-full max-h-full rounded-xl object-contain" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  )
+}
+
+function BarberCarousel({ barbers, selected, onPick, onShowDetail, accent }) {
   const { t } = useTranslation()
   if (barbers.length === 0) {
     return (
@@ -1480,13 +1677,14 @@ function BarberCarousel({ barbers, selected, onPick, accent }) {
         // jadi "top". Bantu pelanggan baru memilih (kurangi choice paralysis).
         const isTopRated = barber.avgRating >= 4.5 && barber.ratingCount >= 5
         return (
-          <button key={barber.id}
+          <div key={barber.id} className="flex-shrink-0 flex flex-col items-center gap-1 w-[96px]">
+          <button
             type="button"
             onClick={() => onPick(barber)}
             role="radio"
             aria-checked={isSel}
             aria-label={`${t('publicBooking.barber')} ${barber.name}${isTopRated ? `, ${t('publicBooking.recommended')}` : ''}${hasRating ? `, ${t('publicBooking.ratingAria', { rating: barber.avgRating, count: barber.ratingCount })}` : `, ${t('publicBooking.noRatingYet')}`}`}
-            className="flex-shrink-0 flex flex-col items-center gap-1.5 w-[96px]"
+            className="flex flex-col items-center gap-1.5 w-full"
           >
             <div className="relative">
               <div className="w-[72px] h-[72px] rounded-full overflow-hidden flex items-center justify-center transition-all"
@@ -1528,6 +1726,15 @@ function BarberCarousel({ barbers, selected, onPick, accent }) {
               </span>
             )}
           </button>
+          {onShowDetail && (
+            <button type="button" onClick={() => onShowDetail(barber)}
+              aria-label={t('publicBooking.viewProfileOf', { name: barber.name, defaultValue: 'Lihat profil {{name}}' })}
+              className="text-[10px] font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-0.5"
+              style={{ color: accent, background: 'var(--bk-accent-soft)' }}>
+              {t('publicBooking.viewProfile', { defaultValue: 'Lihat profil' })}
+            </button>
+          )}
+          </div>
         )
       })}
     </div>
@@ -1657,60 +1864,100 @@ function SectionTitle({ step, title, accent, hint }) {
 // STEP 2 — Pilih Jadwal (calendar grid + slot grid)
 // ═══════════════════════════════════════════════════════════════════════════
 
-function Step2Schedule({ selected, timeSlots, bookedSlots, branchClosure, tenantTz, accent, shake,
+function Step2Schedule({ selected, timeSlots, bookedSlots, branchClosure, tenantTz, accent, shake, totalDuration = 0,
                          onPickDate, onPickTime, onBack, onNext }) {
   const { t, i18n } = useTranslation()
-  const weekdays = [
-    t('publicBooking.dowSun'), t('publicBooking.dowMon'), t('publicBooking.dowTue'),
-    t('publicBooking.dowWed'), t('publicBooking.dowThu'), t('publicBooking.dowFri'), t('publicBooking.dowSat'),
-  ]
   // Set tanggal-tanggal cabang ini ditutup admin (mis. Lebaran) — dipakai untuk
-  // disable di kalender pemilihan tanggal.
+  // disable di strip pemilihan tanggal.
   const closedDates = React.useMemo(() => {
     const arr = Array.isArray(selected.branch?.closedDates) ? selected.branch.closedDates : []
     return new Set(arr.map((c) => c?.date).filter(Boolean))
   }, [selected.branch?.closedDates])
   const isClosedDate = (day) => closedDates.has(format(day, 'yyyy-MM-dd'))
-  const [viewMonth, setViewMonth] = useState(selected.date || new Date())
-  // ensure if selected.date changes externally we follow
-  useEffect(() => { if (selected.date) setViewMonth(selected.date) }, [selected.date])
-
-  const monthStart = startOfMonth(viewMonth)
-  const monthEnd   = endOfMonth(viewMonth)
-  const days       = eachDayOfInterval({ start: monthStart, end: monthEnd })
-  const leadingBlanks = getDay(monthStart) // 0=Sun
 
   const today = startOfDay(new Date())
-  const isViewCurrentMonth = isSameMonth(viewMonth, today)
-  const goPrev = () => { if (!isViewCurrentMonth) setViewMonth(subMonths(viewMonth, 1)) }
-  const goNext = () => setViewMonth(addMonths(viewMonth, 1))
+  // Strip hari horizontal: 7 hari per halaman, mulai hari ini; panah geser ±7.
+  const [weekOffset, setWeekOffset] = useState(0)
+  useEffect(() => {
+    if (selected.date) {
+      const diff = Math.floor((startOfDay(selected.date).getTime() - today.getTime()) / 86_400_000)
+      if (diff >= 0) setWeekOffset(Math.floor(diff / 7))
+    }
+  }, [selected.date]) // eslint-disable-line react-hooks/exhaustive-deps
+  const stripDays  = Array.from({ length: 7 }, (_, i) => addDays(today, weekOffset * 7 + i))
+  const monthLabel = format(stripDays[0], 'MMMM yyyy', { locale: dfLocale(i18n.language) })
 
-  const allSlotsUnavailable = selected.date && timeSlots.length > 0 && timeSlots.every(t =>
-    isSlotInPast(t, selected.date, tenantTz) || bookedSlots.includes(t)
+  const allSlotsUnavailable = selected.date && timeSlots.length > 0 && timeSlots.every(tm =>
+    isSlotInPast(tm, selected.date, tenantTz) || bookedSlots.includes(tm)
   )
 
+  // Kelompokkan slot ke Pagi / Siang / Sore / Malam (sesuai jam mulai).
+  const slotGroups = React.useMemo(() => {
+    const b = { pagi: [], siang: [], sore: [], malam: [] }
+    timeSlots.forEach(tm => {
+      const h = parseInt(tm.slice(0, 2), 10)
+      if (h < 12) b.pagi.push(tm)
+      else if (h < 15) b.siang.push(tm)
+      else if (h < 18) b.sore.push(tm)
+      else b.malam.push(tm)
+    })
+    return [
+      { key: 'pagi',  label: t('publicBooking.morning',   { defaultValue: 'Pagi' }),  slots: b.pagi },
+      { key: 'siang', label: t('publicBooking.afternoon', { defaultValue: 'Siang' }), slots: b.siang },
+      { key: 'sore',  label: t('publicBooking.evening',   { defaultValue: 'Sore' }),  slots: b.sore },
+      { key: 'malam', label: t('publicBooking.night',     { defaultValue: 'Malam' }), slots: b.malam },
+    ].filter(g => g.slots.length)
+  }, [timeSlots, t])
+
+  // Tombol satu slot waktu (dipakai di tiap grup).
+  const renderSlot = (time) => {
+    const past   = isSlotInPast(time, selected.date, tenantTz)
+    const booked = bookedSlots.includes(time)
+    const status = past ? 'past' : booked ? 'penuh' : 'tersedia'
+    const isSel  = selected.time === time
+    const isShaking = shake.key === time
+    const styles = (() => {
+      if (isSel) return { background: accent, color: '#FFFFFF', border: `1.5px solid ${accent}`, boxShadow: `0 4px 12px -4px ${accent}80` }
+      if (status === 'past' || status === 'penuh') return {
+        background: 'var(--bk-surface-2)', color: 'var(--bk-text-muted)',
+        border: '1px solid var(--bk-border)', textDecoration: 'line-through',
+      }
+      return { background: 'transparent', color: 'var(--bk-text)', border: '1.5px solid var(--bk-border-strong)' }
+    })()
+    return (
+      <button
+        key={time}
+        onClick={() => onPickTime(time, status)}
+        aria-label={`${t('publicBooking.timeAt', { time })}${status === 'penuh' ? `, ${t('publicBooking.full')}` : status === 'past' ? `, ${t('publicBooking.past')}` : ''}`}
+        aria-pressed={isSel}
+        aria-disabled={status !== 'tersedia'}
+        title={status === 'penuh' ? t('publicBooking.slotFull') : status === 'past' ? t('publicBooking.past') : undefined}
+        className={`py-3 rounded-xl text-sm font-semibold transition-all ${isShaking ? 'bk-shake' : ''}`}
+        style={{ ...styles, minHeight: '44px' }}
+      >
+        {time}
+      </button>
+    )
+  }
+
   return (
-    <div className="space-y-7 lg:max-w-4xl lg:mx-auto">
-      {/* Two-column on desktop: calendar (left) + time grid (right) */}
-      <div className="lg:grid lg:grid-cols-2 lg:gap-6 space-y-7 lg:space-y-0">
-      {/* Calendar */}
-      <div className="bk-card p-4 lg:p-5">
-        <div className="flex items-center justify-between mb-4">
+    <div className="space-y-6 lg:max-w-2xl lg:mx-auto">
+      {/* Strip hari horizontal (mengganti kalender bulanan) */}
+      <div className="bk-card p-4">
+        <div className="flex items-center justify-between mb-3">
           <button
-            onClick={goPrev}
-            disabled={isViewCurrentMonth}
-            aria-label={t('publicBooking.prevMonth')}
+            onClick={() => weekOffset > 0 && setWeekOffset(w => w - 1)}
+            disabled={weekOffset === 0}
+            aria-label={t('publicBooking.prevWeek', { defaultValue: 'Minggu sebelumnya' })}
             className="w-10 h-10 rounded-xl flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed"
             style={{ color: 'var(--bk-text-2)', background: 'var(--bk-surface-2)' }}
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <p className="font-display text-base font-bold capitalize">
-            {format(viewMonth, 'MMMM yyyy', { locale: dfLocale(i18n.language) })}
-          </p>
+          <p className="font-display text-base font-bold capitalize">{monthLabel}</p>
           <button
-            onClick={goNext}
-            aria-label={t('publicBooking.nextMonth')}
+            onClick={() => setWeekOffset(w => w + 1)}
+            aria-label={t('publicBooking.nextWeek', { defaultValue: 'Minggu berikutnya' })}
             className="w-10 h-10 rounded-xl flex items-center justify-center"
             style={{ color: 'var(--bk-text-2)', background: 'var(--bk-surface-2)' }}
           >
@@ -1718,55 +1965,43 @@ function Step2Schedule({ selected, timeSlots, bookedSlots, branchClosure, tenant
           </button>
         </div>
 
-        {/* Weekday header */}
-        <div className="grid grid-cols-7 gap-1 mb-1.5">
-          {weekdays.map((d, i) => (
-            <p key={i} className="text-[10px] uppercase tracking-wider font-bold text-center" style={{ color: 'var(--bk-text-muted)' }}>{d}</p>
-          ))}
-        </div>
-
-        {/* Date grid */}
-        <div className="grid grid-cols-7 gap-1">
-          {Array.from({ length: leadingBlanks }).map((_, i) => <div key={`bl${i}`} />)}
-          {days.map(day => {
-            const isPast = isBefore(day, today) && !isSameDay(day, today)
+        <div className="grid grid-cols-7 gap-1.5">
+          {stripDays.map(day => {
             const isSel = selected.date && isSameDay(day, selected.date)
-            const isCurrentMonth = isSameMonth(day, viewMonth)
             const isToday_ = isSameDay(day, today)
             const closed = isClosedDate(day)
-            const disabled = isPast || closed
             return (
               <button
                 key={day.toISOString()}
-                disabled={disabled}
+                disabled={closed}
                 onClick={() => onPickDate(day)}
                 aria-label={`${format(day, 'EEEE, d MMMM yyyy', { locale: dfLocale(i18n.language) })}${closed ? `, ${t('publicBooking.branchClosed')}` : ''}`}
                 aria-pressed={isSel}
                 aria-current={isToday_ ? 'date' : undefined}
                 title={closed ? t('publicBooking.branchClosedThisDate') : undefined}
-                className="aspect-square rounded-lg text-sm font-semibold relative flex items-center justify-center transition-all"
+                className="flex flex-col items-center justify-center gap-0.5 rounded-xl transition-all"
                 style={{
-                  background: isSel ? accent : closed ? 'rgba(239,68,68,0.10)' : 'transparent',
-                  color: isSel ? '#111' :
-                         closed ? '#FCA5A5' :
-                         isPast ? 'var(--bk-text-muted)' :
-                         isCurrentMonth ? 'var(--bk-text)' : 'var(--bk-text-2)',
-                  opacity: isPast ? 0.35 : closed ? 0.85 : 1,
-                  cursor: disabled ? 'not-allowed' : 'pointer',
+                  background: isSel ? accent : closed ? 'rgba(239,68,68,0.10)' : 'var(--bk-surface-2)',
+                  color: isSel ? '#FFFFFF' : closed ? '#FCA5A5' : 'var(--bk-text)',
                   border: isToday_ && !isSel ? `1.5px solid ${accent}66` : closed ? '1px solid rgba(239,68,68,0.35)' : '1.5px solid transparent',
+                  opacity: closed ? 0.85 : 1,
+                  cursor: closed ? 'not-allowed' : 'pointer',
                   textDecoration: closed ? 'line-through' : undefined,
-                  minHeight: '44px',
-                  minWidth: '44px',
+                  minHeight: '58px',
                 }}
               >
-                {format(day, 'd')}
+                <span className="text-[10px] uppercase tracking-wide font-bold"
+                  style={{ color: isSel ? 'rgba(255,255,255,0.85)' : 'var(--bk-text-muted)' }}>
+                  {format(day, 'EEE', { locale: dfLocale(i18n.language) })}
+                </span>
+                <span className="text-base font-bold leading-none">{format(day, 'd')}</span>
               </button>
             )
           })}
         </div>
       </div>
 
-      {/* Time grid */}
+      {/* Slot waktu — dikelompokkan Pagi / Siang / Sore / Malam */}
       {selected.date && branchClosure ? (
         <div>
           <div className="flex items-center justify-between mb-3">
@@ -1785,72 +2020,51 @@ function Step2Schedule({ selected, timeSlots, bookedSlots, branchClosure, tenant
           </div>
         </div>
       ) : selected.date ? (
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <SectionTitle step="" title={t('publicBooking.pickTime')} accent={accent} />
-          </div>
-          <div className="grid grid-cols-3 gap-2 lg:grid-cols-3">
-            {timeSlots.map(time => {
-              const past   = isSlotInPast(time, selected.date, tenantTz)
-              const booked = bookedSlots.includes(time)
-              const status = past ? 'past' : booked ? 'penuh' : 'tersedia'
-              const isSel  = selected.time === time
-              const isShaking = shake.key === time
-              const styles = (() => {
-                if (isSel) return { background: accent, color: '#FFFFFF', border: `1.5px solid ${accent}`, boxShadow: `0 4px 12px -4px ${accent}80` }
-                if (status === 'past' || status === 'penuh') return {
-                  background: 'var(--bk-surface-2)', color: 'var(--bk-text-muted)',
-                  border: '1px solid var(--bk-border)', textDecoration: 'line-through',
-                }
-                return { background: 'transparent', color: 'var(--bk-text)', border: '1.5px solid var(--bk-border-strong)' }
-              })()
-              return (
-                <button
-                  key={time}
-                  onClick={() => onPickTime(time, status)}
-                  aria-label={`${t('publicBooking.timeAt', { time })}${status === 'penuh' ? `, ${t('publicBooking.full')}` : status === 'past' ? `, ${t('publicBooking.past')}` : ''}`}
-                  aria-pressed={isSel}
-                  aria-disabled={status !== 'tersedia'}
-                  title={status === 'penuh' ? t('publicBooking.slotFull') : status === 'past' ? t('publicBooking.past') : undefined}
-                  className={`py-3 rounded-xl text-sm font-semibold transition-all ${isShaking ? 'bk-shake' : ''}`}
-                  style={{ ...styles, minHeight: '44px' }}
-                >
-                  {time}
-                </button>
-              )
-            })}
-          </div>
+        <div className="space-y-5">
+          {slotGroups.length === 0 ? (
+            <p className="text-center py-8 text-sm" style={{ color: 'var(--bk-text-muted)' }}>
+              {t('publicBooking.allSlotsUnavailable')}
+            </p>
+          ) : slotGroups.map(g => (
+            <div key={g.key}>
+              <p className="font-display text-sm font-bold mb-2.5" style={{ color: 'var(--bk-text)' }}>{g.label}</p>
+              <div className="grid grid-cols-4 gap-2">{g.slots.map(renderSlot)}</div>
+            </div>
+          ))}
 
-          {/* Legend */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-4 text-[11px]" style={{ color: 'var(--bk-text-2)' }}>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-md" style={{ border: '1.5px solid var(--bk-border-strong)' }} /> {t('publicBooking.legendAvailable')}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-md" style={{ background: accent }} /> {t('publicBooking.legendSelected')}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-md" style={{ background: 'var(--bk-surface-2)', border: '1px solid var(--bk-border)' }} /> {t('publicBooking.legendFullPast')}
-            </span>
-          </div>
+          {slotGroups.length > 0 && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px]" style={{ color: 'var(--bk-text-2)' }}>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-md" style={{ border: '1.5px solid var(--bk-border-strong)' }} /> {t('publicBooking.legendAvailable')}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-md" style={{ background: accent }} /> {t('publicBooking.legendSelected')}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-md" style={{ background: 'var(--bk-surface-2)', border: '1px solid var(--bk-border)' }} /> {t('publicBooking.legendFullPast')}
+              </span>
+            </div>
+          )}
 
           {allSlotsUnavailable && (
-            <div className="mt-4 p-3 rounded-xl flex items-start gap-2 text-xs"
+            <div className="p-3 rounded-xl flex items-start gap-2 text-xs"
               style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.3)', color: '#FCD34D' }}>
               <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
               {t('publicBooking.allSlotsUnavailable')}
             </div>
           )}
+
+          {totalDuration > 0 && (
+            <p className="flex items-center gap-1.5 text-xs pt-1" style={{ color: 'var(--bk-text-2)' }}>
+              <Clock className="w-3.5 h-3.5" /> {t('publicBooking.sessionDuration', { count: totalDuration, defaultValue: 'Sesi berdurasi sekitar {{count}} menit' })}
+            </p>
+          )}
         </div>
       ) : (
-        <div className="hidden lg:flex items-center justify-center bk-card p-8 min-h-[300px] text-center"
-          style={{ borderStyle: 'dashed' }}>
-          <p className="text-sm" style={{ color: 'var(--bk-text-muted)' }}>
-            {t('publicBooking.pickDateToSeeSlots')}
-          </p>
-        </div>
+        <p className="text-center py-8 text-sm" style={{ color: 'var(--bk-text-muted)' }}>
+          {t('publicBooking.pickDateToSeeSlots')}
+        </p>
       )}
-      </div>{/* end 2-col grid */}
 
       {/* Bottom actions */}
       <div className="flex gap-2 pt-2">
@@ -1872,7 +2086,7 @@ function Step2Schedule({ selected, timeSlots, bookedSlots, branchClosure, tenant
 // ═══════════════════════════════════════════════════════════════════════════
 
 function Step3Confirm({ tenantName, tenantWilayah, selected, form, formError, setForm, accent, totalPrice,
-                        error, submitting, onBack, onSubmit }) {
+                        error, submitting, onBack, onSubmit, onEditPick, onEditSchedule }) {
   const { t, i18n } = useTranslation()
   return (
     <div className="lg:grid lg:grid-cols-5 lg:gap-8 space-y-6 lg:space-y-0">
@@ -1926,14 +2140,19 @@ function Step3Confirm({ tenantName, tenantWilayah, selected, form, formError, se
             <div className="bk-card overflow-hidden">
               <SummaryRow label={t('publicBooking.barbershop')} value={tenantName} />
               <SummaryRow label={t('publicBooking.branch')}     value={selected.branch?.name} />
-              <SummaryRow label={t('publicBooking.barber')}     value={selected.barber?.name || t('publicBooking.barberAvailable')} />
+              <SummaryRow label={t('publicBooking.barber')}     value={selected.barber?.name || t('publicBooking.barberAvailable')}
+                onEdit={onEditPick} editLabel={t('publicBooking.edit', { defaultValue: 'Ubah' })} />
               <SummaryRow
                 label={(selected.services || []).length > 1 ? t('publicBooking.serviceWithCount', { count: selected.services.length }) : t('publicBooking.service')}
                 value={(selected.services || []).map(s => s.name).join(', ')}
+                onEdit={onEditPick} editLabel={t('publicBooking.edit', { defaultValue: 'Ubah' })}
               />
-              <SummaryRow label={t('publicBooking.date')}    value={format(selected.date, 'EEEE, d MMMM yyyy', { locale: dfLocale(i18n.language) })} />
+              <SummaryRow label={t('publicBooking.date')}    value={format(selected.date, 'EEEE, d MMMM yyyy', { locale: dfLocale(i18n.language) })}
+                onEdit={onEditSchedule} editLabel={t('publicBooking.edit', { defaultValue: 'Ubah' })} />
               <SummaryRow label={t('publicBooking.time')}    value={selected.time} />
-              <SummaryRow label={t('publicBooking.price')}   value={formatRupiah(totalPrice)} bold last />
+              <SummaryRow label={t('publicBooking.subtotal', { defaultValue: 'Subtotal' })}     value={formatRupiah(totalPrice)} />
+              <SummaryRow label={t('publicBooking.serviceFee', { defaultValue: 'Biaya Layanan' })}   value={t('publicBooking.free', { defaultValue: 'Gratis' })} free />
+              <SummaryRow label={t('publicBooking.totalLabel', { defaultValue: 'Total' })}   value={formatRupiah(totalPrice)} bold last />
             </div>
           </div>
 
@@ -1983,15 +2202,22 @@ function Field({ label, icon: Icon, placeholder, type = 'text', value, onChange,
   )
 }
 
-function SummaryRow({ label, value, bold, last }) {
+function SummaryRow({ label, value, bold, last, free, onEdit, editLabel }) {
   return (
     <div
       className="flex items-center justify-between gap-3 px-4 py-3"
       style={{ borderBottom: last ? 'none' : '1px solid var(--bk-border)' }}
     >
-      <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--bk-text-2)' }}>{label}</span>
+      <span className="text-xs uppercase tracking-wider flex items-center gap-2" style={{ color: 'var(--bk-text-2)' }}>
+        {label}
+        {onEdit && (
+          <button type="button" onClick={onEdit} className="text-[10px] font-semibold normal-case tracking-normal" style={{ color: 'var(--bk-accent)' }}>
+            {editLabel}
+          </button>
+        )}
+      </span>
       <span className={`text-sm text-right ${bold ? 'font-bold text-base' : 'font-medium'}`}
-        style={{ color: bold ? 'var(--bk-accent)' : 'var(--bk-text)' }}>
+        style={{ color: free ? '#10B981' : bold ? 'var(--bk-accent)' : 'var(--bk-text)' }}>
         {value || '—'}
       </span>
     </div>
@@ -2131,7 +2357,7 @@ function EmptyTenant() {
       </div>
       <div className="bk-card p-4 text-left max-w-sm mx-auto">
         <p className="text-[10px] uppercase tracking-widest font-semibold" style={{ color: 'var(--bk-text-2)' }}>Contoh URL</p>
-        <p className="font-mono text-sm mt-1.5" style={{ color: 'var(--bk-accent)' }}>namabarbershop.sembapos.com/book</p>
+        <p className="font-mono text-sm mt-1.5" style={{ color: 'var(--bk-accent)' }}>namabarbershop.barberos.id/book</p>
       </div>
     </div>
   )
