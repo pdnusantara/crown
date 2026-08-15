@@ -29,3 +29,6 @@ backend/storage/
 
 # Backup DB (data sensitif — jangan commit)
 .backups/
+
+# Build lama sisa deploy (pernah ter-commit, jangan lagi)
+dist.old/
