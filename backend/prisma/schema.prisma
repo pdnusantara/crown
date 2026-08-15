@@ -303,6 +303,7 @@ model Branch {
   expenses         Expense[]
   attendances      Attendance[]
   invoices         Invoice[]
+  servicePrices    ServiceBranchPrice[]
 
   @@unique([tenantId, code])
 }
@@ -313,6 +314,11 @@ model Service {
   name             String
   description      String?
   price            Int
+  // Biaya modal / HPP per layanan (Rp, integer). Nullable: null = tenant belum
+  // mengisi modal → laporan laba menampilkan "belum tersedia" (bukan 0). Saat
+  // item terjual, nilai ini di-snapshot ke TransactionItem.cost supaya laba
+  // historis tak berubah bila harga modal kelak diedit.
+  costPrice        Int?
   duration         Int
   category         String
   icon             String?
@@ -321,6 +327,24 @@ model Service {
   createdAt        DateTime          @default(now())
   tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   transactionItems TransactionItem[]
+  branchPrices     ServiceBranchPrice[]
+}
+
+// Override harga layanan untuk cabang tertentu. Bila tidak ada baris untuk
+// pasangan (serviceId, branchId), cabang itu memakai harga dasar Service.price.
+// Menghapus override = balik ke harga dasar.
+model ServiceBranchPrice {
+  id        String   @id @default(cuid())
+  serviceId String
+  branchId  String
+  price     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, branchId])
+  @@index([branchId])
 }
 
 model Customer {
@@ -375,6 +399,11 @@ model Transaction {
   id                  String            @id @default(cuid())
   tenantId            String
   branchId            String
+  // Nomor struk manusiawi: "TRX-<YYMMDD>-<NNN>" dengan sekuens harian PER-CABANG
+  // (reset tiap hari, per zona waktu tenant). Digenerate atomik via InvoiceCounter
+  // saat transaksi dibuat. Nullable untuk data lama (sebelum fitur ini). Unik
+  // per cabang (dua cabang bisa punya nomor sama di hari sama — itu wajar).
+  invoiceNo           String?
   customerId          String?
   // Snapshot identitas pelanggan — diisi saat walk-in tanpa registrasi atau
   // saat customer record kemudian dihapus, supaya struk & laporan tetap utuh.
@@ -426,6 +455,10 @@ model TransactionItem {
   barberId      String?
   name          String
   price         Int
+  // Snapshot biaya modal (Service.costPrice) saat item terjual. Null bila
+  // layanan belum punya costPrice waktu itu → transaksi tsb tak dihitung ke
+  // laba (laporan mengembalikan null bila TIDAK ADA item ber-cost di rentang).
+  cost          Int?
   transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
   service       Service     @relation(fields: [serviceId], references: [id])
   // Relasi opsional ke barber yang melayani item ini — supaya prisma include

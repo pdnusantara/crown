@@ -5,13 +5,15 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus, Edit2, Trash2, Clock, Search, Filter, ChevronLeft, ChevronRight,
   Package, Power, Eye, EyeOff, Layers, TrendingUp, Download, RefreshCw,
-  CheckSquare, Square, X, Tag, BadgeCheck, Pause,
+  CheckSquare, Square, X, Tag, BadgeCheck, Pause, Building2, RotateCcw,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore.js'
 import {
   useServices, useServiceCategories, useServiceStats,
   useCreateService, useUpdateService, useDeleteService,
+  useServiceBranchPrices, useUpdateServiceBranchPrices,
 } from '../../hooks/useServices.js'
+import { useBranches } from '../../hooks/useBranches.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import Card from '../../components/ui/Card.jsx'
 import Badge from '../../components/ui/Badge.jsx'
@@ -89,7 +91,7 @@ function StatTile({ icon: Icon, label, value, valueShort, accent = 'gold', hint,
 }
 
 // ─── Service card (grid item) ───────────────────────────────────────────────
-function ServiceCard({ svc, selected, onToggleSelect, onEdit, onDelete, onToggleActive, busyId }) {
+function ServiceCard({ svc, selected, onToggleSelect, onEdit, onDelete, onToggleActive, onBranchPrices, multiBranch, busyId }) {
   const { t } = useTranslation()
   const isBusy = busyId === svc.id
   const inactive = !svc.isActive
@@ -166,6 +168,16 @@ function ServiceCard({ svc, selected, onToggleSelect, onEdit, onDelete, onToggle
             >
               {inactive ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
             </button>
+            {multiBranch && (
+              <button
+                type="button"
+                onClick={() => onBranchPrices(svc)}
+                title={t('tenantAdmin.services.branchPricesTitle')}
+                className="p-1.5 rounded-lg text-muted hover:text-brand transition-colors"
+              >
+                <Building2 className="w-3.5 h-3.5" />
+              </button>
+            )}
             <button
               type="button"
               onClick={() => onEdit(svc)}
@@ -406,6 +418,152 @@ function ServiceFormModal({ open, onClose, editService, knownCategories, onSave,
   )
 }
 
+// ─── Branch Prices Modal ────────────────────────────────────────────────────
+// Atur harga khusus per cabang untuk satu layanan. Kosongkan input = cabang
+// memakai harga dasar. Hanya cabang dengan harga berbeda yang disimpan.
+function BranchPricesModal({ open, onClose, service, branches }) {
+  const { t } = useTranslation()
+  const toast = useToast()
+  const { data, isLoading } = useServiceBranchPrices(service?.id, open && !!service?.id)
+  const saveM = useUpdateServiceBranchPrices()
+
+  const basePrice = data?.basePrice ?? service?.price ?? 0
+  // value map: branchId -> string. '' = ikut harga dasar.
+  const [values, setValues] = useState({})
+  const [initial, setInitial] = useState({})
+
+  useEffect(() => {
+    if (open && data) {
+      const map = {}
+      for (const o of (data.overrides || [])) map[o.branchId] = String(o.price)
+      setValues(map)
+      setInitial(map)
+    }
+  }, [open, data])
+
+  const activeBranches = (branches || []).filter(b => b.isActive !== false)
+
+  const setVal = (branchId, v) => setValues(prev => ({ ...prev, [branchId]: v.replace(/[^\d]/g, '') }))
+  const clearVal = (branchId) => setValues(prev => { const n = { ...prev }; delete n[branchId]; return n })
+
+  const overrideCount = activeBranches.filter(b => {
+    const v = values[b.id]
+    return v != null && String(v).trim() !== ''
+  }).length
+
+  const dirty = JSON.stringify(values) !== JSON.stringify(initial)
+
+  const submit = async () => {
+    // Bangun payload: cabang dengan nilai → set harga; cabang yang tadinya
+    // punya override tapi kini dikosongkan → null (hapus). Cabang tanpa
+    // perubahan & tanpa nilai dilewati.
+    const prices = []
+    for (const b of activeBranches) {
+      const cur = values[b.id]
+      const had = initial[b.id] != null
+      const hasVal = cur != null && String(cur).trim() !== ''
+      if (hasVal) {
+        prices.push({ branchId: b.id, price: Math.round(Number(cur)) })
+      } else if (had) {
+        prices.push({ branchId: b.id, price: null })
+      }
+    }
+    try {
+      await saveM.mutateAsync({ serviceId: service.id, prices })
+      toast.success(t('tenantAdmin.services.branchPricesSaved'))
+      onClose()
+    } catch (err) {
+      toast.error(err?.response?.data?.error || t('tenantAdmin.services.saveFailed'))
+    }
+  }
+
+  return (
+    <Modal
+      isOpen={open}
+      onClose={onClose}
+      title={t('tenantAdmin.services.branchPricesTitle')}
+      size="md"
+    >
+      <div className="space-y-4">
+        <div className="flex items-start gap-3 p-3 rounded-xl bg-dark-card/40 border border-dark-border/60">
+          <div className="shrink-0 w-9 h-9 rounded-xl bg-brand/10 border border-brand/30 flex items-center justify-center text-lg">
+            {service?.icon || '✂️'}
+          </div>
+          <div className="min-w-0">
+            <p className="font-medium text-off-white truncate">{service?.name}</p>
+            <p className="text-xs text-muted mt-0.5">
+              {t('tenantAdmin.services.basePriceLabel')}: <span className="text-brand font-semibold tabular-nums">{formatRupiah(basePrice)}</span>
+            </p>
+          </div>
+        </div>
+
+        <p className="text-xs text-muted">{t('tenantAdmin.services.branchPricesHint')}</p>
+
+        {isLoading ? (
+          <div className="space-y-2">
+            {[...Array(3)].map((_, i) => <div key={i} className="h-12 rounded-xl bg-dark-card/60 animate-pulse" />)}
+          </div>
+        ) : activeBranches.length === 0 ? (
+          <div className="p-6 text-center text-muted text-sm">
+            <Building2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            {t('tenantAdmin.services.noBranches')}
+          </div>
+        ) : (
+          <div className="space-y-2 max-h-[45vh] overflow-y-auto pr-0.5">
+            {activeBranches.map(b => {
+              const v = values[b.id] ?? ''
+              const isOverride = String(v).trim() !== ''
+              return (
+                <div key={b.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-dark-card/40 border border-dark-border/60">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-off-white truncate inline-flex items-center gap-1.5">
+                      <Building2 className="w-3.5 h-3.5 text-muted shrink-0" /> {b.name}
+                    </p>
+                    <p className="text-[11px] text-muted mt-0.5">
+                      {isOverride
+                        ? `${formatRupiah(Number(v) || 0)}`
+                        : t('tenantAdmin.services.followBasePrice', { price: formatRupiah(basePrice) })}
+                    </p>
+                  </div>
+                  <div className="shrink-0 w-32">
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      value={v}
+                      onChange={e => setVal(b.id, e.target.value)}
+                      placeholder={String(basePrice)}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => clearVal(b.id)}
+                    disabled={!isOverride}
+                    title={t('tenantAdmin.services.resetToBase')}
+                    className="shrink-0 p-1.5 rounded-lg text-muted hover:text-amber-400 disabled:opacity-30 transition-colors"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between text-xs text-muted">
+          <span>{t('tenantAdmin.services.branchOverrideCount', { count: overrideCount })}</span>
+        </div>
+
+        <div className="flex flex-col-reverse sm:flex-row gap-2 pt-1">
+          <Button variant="outline" fullWidth onClick={onClose} disabled={saveM.isPending}>{t('common.cancel')}</Button>
+          <Button fullWidth onClick={submit} loading={saveM.isPending} disabled={!dirty || activeBranches.length === 0}>
+            {t('tenantAdmin.services.saveChanges')}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  )
+}
+
 // ─── Main ───────────────────────────────────────────────────────────────────
 export default function TAServicesPage() {
   const { t } = useTranslation()
@@ -459,6 +617,11 @@ export default function TAServicesPage() {
 
   const categoriesQuery = useServiceCategories()
   const statsQuery = useServiceStats()
+  // Harga per cabang hanya relevan bila tenant punya >1 cabang aktif.
+  const branchesQuery = useBranches(user?.tenantId)
+  const branches = useMemo(() => branchesQuery.data || [], [branchesQuery.data])
+  const activeBranchCount = branches.filter(b => b.isActive !== false).length
+  const multiBranch = activeBranchCount > 1
 
   const knownCategories = useMemo(
     () => (categoriesQuery.data || []).map(c => c.category),
@@ -477,6 +640,7 @@ export default function TAServicesPage() {
 
   const [confirmDel, setConfirmDel] = useState(null) // service to delete
   const [confirmBulk, setConfirmBulk] = useState(null) // 'delete' | 'activate' | 'deactivate' | null
+  const [branchPriceSvc, setBranchPriceSvc] = useState(null) // service for per-branch pricing
 
   const [selected, setSelected] = useState(() => new Set())
   const allOnPageSelected = items.length > 0 && items.every(s => selected.has(s.id))
@@ -844,6 +1008,8 @@ export default function TAServicesPage() {
                 onEdit={openEdit}
                 onDelete={handleDelete}
                 onToggleActive={handleToggleActive}
+                onBranchPrices={setBranchPriceSvc}
+                multiBranch={multiBranch}
                 busyId={busyId}
               />
             ))}
@@ -902,6 +1068,13 @@ export default function TAServicesPage() {
         knownCategories={knownCategories}
         onSave={handleSave}
         saving={createM.isPending || updateM.isPending}
+      />
+
+      <BranchPricesModal
+        open={!!branchPriceSvc}
+        onClose={() => setBranchPriceSvc(null)}
+        service={branchPriceSvc}
+        branches={branches}
       />
 
       <ConfirmDialog

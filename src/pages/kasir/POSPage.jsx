@@ -399,14 +399,22 @@ function POSPageInner() {
   const validateVoucherMut = useValidateVoucher()
   const { currentShift, addTransaction: addShiftTransaction } = useShiftStore()
   const { data: apiActiveShift, isLoading: shiftLoading } = useActiveShift(user?.branchId)
+  const { data: branches = [] } = useBranches(user?.tenantId)
+  // Cabang aktif (URL slug → user.branchId) di-resolve lebih dulu supaya harga
+  // layanan diambil sesuai cabang (override harga per cabang). Lihat catatan di
+  // bawah soal kenapa URL adalah single-source-of-truth konteks cabang.
+  const { branchId: urlBranchSlug } = useParams()
+  const currentBranch =
+    branches.find(b => matchesBranch(urlBranchSlug, b))
+    || branches.find(b => b.id === user?.branchId)
+    || null
   const {
     data: services = [],
     isLoading: servicesLoading,
     isError: servicesError,
     refetch: refetchServices,
-  } = useServices({ isActive: 'true' })
+  } = useServices({ isActive: 'true', branchId: currentBranch?.id })
   const { data: barbers = [] } = useUsers({ branchId: user?.branchId, role: 'barber' })
-  const { data: branches = [] } = useBranches(user?.tenantId)
   const createCustomer = useCreateCustomer()
   const updateQueueStatus = useUpdateQueueStatus()
   const toast = useToast()
@@ -418,15 +426,10 @@ function POSPageInner() {
   // yang akses kasir multi-cabang). URL adalah single-source-of-truth untuk
   // konteks cabang aktif. `matchesBranch` cocokkan slug ke branch.code maupun
   // branch.id (kompatibel dengan account lama yang slug-nya = CUID).
-  const { branchId: urlBranchSlug } = useParams()
   const { name: publicTenantName, logo: tenantLogo, receiptSettings, loyaltyConfig: rawLoyaltyConfig } = usePublicTenantStore()
   // Konfigurasi poin tenant (earn/redeem/min/max + enabled) — sumber untuk
   // tampilan & validasi POS; backend tetap penjaga akhir saat transaksi.
   const loyalty = resolveLoyaltyConfig(rawLoyaltyConfig)
-  const currentBranch =
-    branches.find(b => matchesBranch(urlBranchSlug, b))
-    || branches.find(b => b.id === user?.branchId)
-    || null
   const tenantName  = currentBranch?.tenant?.name || publicTenantName || 'Barbershop'
   const branchName  = currentBranch?.name  || ''
   const branchAddr  = currentBranch?.address || ''

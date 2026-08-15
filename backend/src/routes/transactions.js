@@ -443,10 +443,35 @@ router.post('/', authenticate, requireRole('super_admin', 'tenant_admin', 'kasir
         if (c?.id) txData.customerId = c.id;
       } catch (_) { /* never block transaction on customer upsert */ }
     }
+    // Harga otoritatif: server menentukan harga tiap item dari [serviceId,
+    // branchId] (override cabang → fallback harga dasar), bukan percaya harga
+    // kiriman frontend. Mencegah manipulasi & memastikan harga per cabang benar.
+    const itemServiceIds = [...new Set(items.map(it => it.serviceId).filter(Boolean))];
+    let priceByServiceId = new Map();
+    if (itemServiceIds.length) {
+      const [svcRows, overrideRows] = await Promise.all([
+        prisma.service.findMany({
+          where: { id: { in: itemServiceIds }, tenantId: txData.tenantId, deletedAt: null },
+          select: { id: true, price: true },
+        }),
+        prisma.serviceBranchPrice.findMany({
+          where: { serviceId: { in: itemServiceIds }, branchId: txData.branchId },
+          select: { serviceId: true, price: true },
+        }),
+      ]);
+      priceByServiceId = new Map(svcRows.map(s => [s.id, s.price]));
+      for (const o of overrideRows) priceByServiceId.set(o.serviceId, o.price);
+    }
+
     const cleanedItems = items.map((it) => {
       const next = { ...it };
       for (const k of Object.keys(next)) {
         if (next[k] === null) delete next[k];
+      }
+      // Pakai harga server bila layanan dikenal; ad-hoc item (tanpa serviceId
+      // terdaftar) tetap pakai harga kiriman.
+      if (priceByServiceId.has(next.serviceId)) {
+        next.price = priceByServiceId.get(next.serviceId);
       }
       return next;
     });

@@ -67,10 +67,29 @@ router.get('/', authenticate, async (req, res, next) => {
       ? { [sortBy]: dir }
       : { createdAt: 'desc' };
 
-    const [data, total] = await Promise.all([
-      prisma.service.findMany({ where, select: serviceSelect, skip, take: limit, orderBy }),
+    // Harga efektif per cabang: bila `branchId` dikirim (mis. dari POS kasir),
+    // sertakan override harga cabang tsb supaya frontend pakai harga yang benar.
+    // Tanpa branchId, effectivePrice = harga dasar.
+    const branchId = req.query.branchId || null;
+    const select = { ...serviceSelect };
+    if (branchId) {
+      select.branchPrices = { where: { branchId }, select: { price: true } };
+    }
+
+    const [rawData, total] = await Promise.all([
+      prisma.service.findMany({ where, select, skip, take: limit, orderBy }),
       prisma.service.count({ where }),
     ]);
+
+    const data = rawData.map((s) => {
+      const { branchPrices, ...rest } = s;
+      const override = branchPrices && branchPrices[0];
+      return {
+        ...rest,
+        effectivePrice: override ? override.price : s.price,
+        hasBranchOverride: !!override,
+      };
+    });
 
     res.json({ success: true, data: paginatedResponse(data, total, page, limit) });
   } catch (err) {
@@ -241,6 +260,103 @@ router.delete('/:id', authenticate, requireRole('super_admin', 'tenant_admin'), 
       tenantId: existing.tenantId,
     });
     res.json({ success: true, data: { message: 'Service deleted successfully' } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// --- Harga per cabang (override) ---------------------------------------------
+
+// Pastikan layanan ada + caller berhak (tenant sama). Return service atau null.
+const resolveOwnedService = async (req) => {
+  const service = await prisma.service.findFirst({
+    where: { id: req.params.id, deletedAt: null },
+    select: { id: true, tenantId: true, name: true, price: true },
+  });
+  if (!service) return { error: 404 };
+  if (req.user.role !== 'super_admin' && service.tenantId !== req.user.tenantId) {
+    return { error: 403 };
+  }
+  return { service };
+};
+
+// GET /api/services/:id/branch-prices — daftar override harga per cabang.
+// Mengembalikan harga dasar + array {branchId, price} untuk cabang yang dioverride.
+router.get('/:id/branch-prices', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
+  try {
+    const { service, error } = await resolveOwnedService(req);
+    if (error) return res.status(error).json({ success: false, error: error === 404 ? 'Service not found' : 'Access denied' });
+
+    const overrides = await prisma.serviceBranchPrice.findMany({
+      where: { serviceId: service.id },
+      select: { branchId: true, price: true },
+    });
+
+    res.json({ success: true, data: { basePrice: service.price, overrides } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+const branchPriceItemSchema = z.object({
+  branchId: z.string().min(1),
+  // null = hapus override (cabang ikut harga dasar). Angka = set harga khusus.
+  price: z.number().int().min(0).nullable(),
+});
+const branchPricesSchema = z.object({
+  prices: z.array(branchPriceItemSchema).max(500),
+});
+
+// PUT /api/services/:id/branch-prices — simpan override harga per cabang.
+// Body: { prices: [{ branchId, price|null }] }. price null → hapus override.
+router.put('/:id/branch-prices', authenticate, requireRole('super_admin', 'tenant_admin'), async (req, res, next) => {
+  try {
+    const { service, error } = await resolveOwnedService(req);
+    if (error) return res.status(error).json({ success: false, error: error === 404 ? 'Service not found' : 'Access denied' });
+
+    const { prices } = branchPricesSchema.parse(req.body);
+
+    // Hanya izinkan cabang milik tenant layanan ini.
+    const validBranches = await prisma.branch.findMany({
+      where: { tenantId: service.tenantId, deletedAt: null },
+      select: { id: true },
+    });
+    const validIds = new Set(validBranches.map(b => b.id));
+    const invalid = prices.find(p => !validIds.has(p.branchId));
+    if (invalid) return res.status(400).json({ success: false, error: `Cabang tidak valid: ${invalid.branchId}` });
+
+    const toRemove = prices.filter(p => p.price === null).map(p => p.branchId);
+    const toUpsert = prices.filter(p => p.price !== null);
+
+    await prisma.$transaction([
+      ...(toRemove.length
+        ? [prisma.serviceBranchPrice.deleteMany({ where: { serviceId: service.id, branchId: { in: toRemove } } })]
+        : []),
+      ...toUpsert.map(p =>
+        prisma.serviceBranchPrice.upsert({
+          where: { serviceId_branchId: { serviceId: service.id, branchId: p.branchId } },
+          create: { serviceId: service.id, branchId: p.branchId, price: p.price },
+          update: { price: p.price },
+        })
+      ),
+    ]);
+
+    const overrides = await prisma.serviceBranchPrice.findMany({
+      where: { serviceId: service.id },
+      select: { branchId: true, price: true },
+    });
+
+    // Sinkronkan POS/booking: harga cabang berubah → klien refetch layanan.
+    emitService('service:updated', { id: service.id }, service.tenantId);
+    await recordAudit(req, {
+      action: 'service.branch_prices.update',
+      target: `service:${service.id}`,
+      detail: `Harga per cabang ${service.name}: ${overrides.length} cabang khusus`,
+      severity: 'info',
+      tenantId: service.tenantId,
+    });
+
+    res.json({ success: true, data: { basePrice: service.price, overrides } });
   } catch (err) {
     next(err);
   }

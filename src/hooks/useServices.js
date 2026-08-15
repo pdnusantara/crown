@@ -48,11 +48,21 @@ export function useServices(filters = {}) {
         params,
       })
       const raw = res.data?.data
+      // Harga efektif per cabang: backend kirim `effectivePrice` (override cabang
+      // bila `branchId` diteruskan, else harga dasar). Normalisasi ke `price` agar
+      // callsite lama (POS, picker) otomatis pakai harga benar; harga dasar tetap
+      // tersedia di `basePrice`.
+      const withEffective = (arr) => (arr || []).map((s) => (
+        s && s.effectivePrice != null
+          ? { ...s, basePrice: s.price, price: s.effectivePrice }
+          : s
+      ))
       if (Array.isArray(raw)) {
-        return { data: raw, total: raw.length, page: 1, limit: raw.length, totalPages: 1 }
+        const data = withEffective(raw)
+        return { data, total: data.length, page: 1, limit: data.length, totalPages: 1 }
       }
       return {
-        data: raw?.data || [],
+        data: withEffective(raw?.data),
         total: raw?.total ?? 0,
         page: raw?.page ?? (Number(filters.page) || 1),
         limit: raw?.limit ?? (Number(filters.limit) || 20),
@@ -138,5 +148,34 @@ export function useDeleteService() {
   return useMutation({
     mutationFn: (id) => api.delete(`/services/${id}`),
     onSuccess: () => invalidateAll(qc, user?.tenantId),
+  })
+}
+
+// Override harga per cabang untuk satu layanan. Mengembalikan
+// { basePrice, overrides: [{ branchId, price }] }.
+export function useServiceBranchPrices(serviceId, enabled = true) {
+  return useQuery({
+    queryKey: ['services', 'branch-prices', serviceId],
+    queryFn: async () => {
+      const res = await api.get(`/services/${serviceId}/branch-prices`)
+      return res.data?.data || { basePrice: 0, overrides: [] }
+    },
+    enabled: !!serviceId && enabled,
+    staleTime: 0,
+  })
+}
+
+// Simpan override harga per cabang. `prices`: [{ branchId, price|null }];
+// price null = hapus override (cabang ikut harga dasar).
+export function useUpdateServiceBranchPrices() {
+  const qc = useQueryClient()
+  const { user } = useAuthStore()
+  return useMutation({
+    mutationFn: ({ serviceId, prices }) =>
+      api.put(`/services/${serviceId}/branch-prices`, { prices }).then(r => r.data?.data),
+    onSuccess: (_, { serviceId }) => {
+      qc.invalidateQueries({ queryKey: ['services', 'branch-prices', serviceId] })
+      invalidateAll(qc, user?.tenantId)
+    },
   })
 }
