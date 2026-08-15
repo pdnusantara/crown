@@ -450,9 +450,7 @@ function Nav({ isAuthed, homePath, logo, siteName, ctaLabel, ctaTo }) {
           <a href="#faq">FAQ</a>
         </div>
         <div className="nav-cta">
-          {isAuthed
-            ? <Link to={homePath} className="nav-login">Dashboard</Link>
-            : <Link to="/login" className="nav-login">Masuk</Link>}
+          {isAuthed && <Link to={homePath} className="nav-login">Dashboard</Link>}
           <Link to={ctaTo} onClick={() => { if (!isAuthed) trackPixel('Lead') }} className="btn btn-accent">{ctaLabel}</Link>
         </div>
       </div>
@@ -510,7 +508,7 @@ function DashboardMock() {
     <div className="dash">
       <div className="dash-bar">
         <span className="d" /><span className="d" /><span className="d" />
-        <span className="tab">app.sembapos.com/dashboard</span>
+        <span className="tab">app.barberos.id/dashboard</span>
       </div>
       <div className="dash-body">
         <div className="dash-side">
@@ -1236,7 +1234,7 @@ function Footer({ text, logo, contact = {}, siteName, waHref }) {
             {phone && <a href={waPhone ? `https://wa.me/${waPhone}` : `tel:${phone.replace(/[^\d+]/g, '')}`} target={waPhone ? '_blank' : undefined} rel={waPhone ? 'noopener noreferrer' : undefined}>{phone}</a>}
             {email && <a href={`mailto:${email}`}>{email}</a>}
             {address && <a style={{ whiteSpace: 'pre-line' }}>{address}</a>}
-            {!hasContact && <a href="#">sembapos.com</a>}
+            {!hasContact && <a href="#">barberos.id</a>}
           </div>
           <div className="footer-col">
             <h5>Bantuan</h5>

@@ -66,7 +66,7 @@ export default function SALandingPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold text-off-white">Landing Page</h1>
-          <p className="text-muted text-sm mt-1">Konten yang tampil di sembapos.com sebelum login.</p>
+          <p className="text-muted text-sm mt-1">Konten yang tampil di barberos.id sebelum login.</p>
         </div>
         <a
           href="/"
@@ -251,7 +251,7 @@ function SeoEditor() {
             <p className="text-xs text-muted mb-2">Tampil di hasil pencarian Google</p>
             <div className="p-3 rounded-xl bg-white">
               <p className="text-[#1a0dab] text-base leading-snug truncate">{previewTitle}</p>
-              <p className="text-[#006621] text-xs mt-0.5">https://sembapos.com</p>
+              <p className="text-[#006621] text-xs mt-0.5">https://barberos.id</p>
               <p className="text-[#4d5156] text-[13px] mt-1 line-clamp-2">{previewDesc}</p>
             </div>
           </div>
@@ -262,7 +262,7 @@ function SeoEditor() {
                 <img src={ogSrc} alt="Pratinjau Open Graph" className="w-full h-full object-cover" />
               </div>
               <div className="p-3 bg-dark-surface">
-                <p className="text-[11px] text-muted uppercase">sembapos.com</p>
+                <p className="text-[11px] text-muted uppercase">barberos.id</p>
                 <p className="text-sm font-semibold text-off-white truncate mt-0.5">{previewTitle}</p>
                 <p className="text-xs text-muted line-clamp-2 mt-0.5">{previewDesc}</p>
               </div>
@@ -362,10 +362,10 @@ function TrackingEditor() {
         <CardHeader><h3 className="font-semibold text-off-white">Tes & Verifikasi Pixel</h3></CardHeader>
         <CardBody className="space-y-3">
           <p className="text-sm text-muted">
-            Pixel <b className="text-off-white">tidak terbaca</b> di Pixel Helper? Hampir selalu karena cara mengetesnya, bukan pixel-nya. Penyebab paling sering: <b className="text-off-white">Anda sedang login</b> — membuka sembapos.com saat login otomatis mengalihkan ke dashboard, jadi landing (& pixel) tak pernah tampil. Ikuti urutan ini:
+            Pixel <b className="text-off-white">tidak terbaca</b> di Pixel Helper? Hampir selalu karena cara mengetesnya, bukan pixel-nya. Penyebab paling sering: <b className="text-off-white">Anda sedang login</b> — membuka barberos.id saat login otomatis mengalihkan ke dashboard, jadi landing (& pixel) tak pernah tampil. Ikuti urutan ini:
           </p>
           <ol className="space-y-2 text-xs text-muted list-decimal pl-4 leading-relaxed">
-            <li>Tes lewat tombol di bawah (memakai <code className="text-off-white">?view=landing</code> agar landing tetap tampil walau Anda login) — atau buka <code className="text-off-white">sembapos.com</code> di jendela <b className="text-off-white">incognito</b> (cara pengunjung iklan melihatnya).</li>
+            <li>Tes lewat tombol di bawah (memakai <code className="text-off-white">?view=landing</code> agar landing tetap tampil walau Anda login) — atau buka <code className="text-off-white">barberos.id</code> di jendela <b className="text-off-white">incognito</b> (cara pengunjung iklan melihatnya).</li>
             <li><b className="text-off-white">Jangan</b> tes di dalam preview editor (pixel sengaja dimatikan di preview agar data iklan tak terkotori).</li>
             <li>Hard-reload: <kbd className="px-1 bg-dark-card rounded">Ctrl/Cmd + Shift + R</kbd> — memastikan bukan versi lama dari cache PWA.</li>
             <li>Matikan dulu ad-blocker / privacy blocker (uBlock, Brave Shields, dll.) — mereka memblokir <code className="text-off-white">connect.facebook.net</code>.</li>
@@ -1399,7 +1399,7 @@ function ContentEditor() {
           <Input
             label="Email"
             type="email"
-            placeholder="halo@sembapos.com"
+            placeholder="halo@barberos.id"
             value={contact.contactEmail}
             onChange={e => setContact(c => ({ ...c, contactEmail: e.target.value }))}
           />

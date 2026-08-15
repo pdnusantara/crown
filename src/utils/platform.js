@@ -1,7 +1,7 @@
 // Konstanta platform — supaya domain & branding tidak ditulis ulang di mana-mana.
-// Override via env saat dev/staging: `VITE_PLATFORM_DOMAIN=staging.sembapos.com`.
+// Override via env saat dev/staging: `VITE_PLATFORM_DOMAIN=staging.barberos.id`.
 
-export const PLATFORM_DOMAIN = import.meta.env.VITE_PLATFORM_DOMAIN || 'sembapos.com'
+export const PLATFORM_DOMAIN = import.meta.env.VITE_PLATFORM_DOMAIN || 'barberos.id'
 export const PLATFORM_NAME = import.meta.env.VITE_PLATFORM_NAME || 'SembaPOS'
 
 export function tenantHostname(slug) {

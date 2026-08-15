@@ -169,7 +169,7 @@ function DashboardCard() {
     <div className="dash">
       <div className="chrome">
         <span className="chrome-dots"><i /><i /><i /></span>
-        <span className="chrome-url">barberque.sembapos.com</span>
+        <span className="chrome-url">barberque.barberos.id</span>
       </div>
       <div className="dash-body">
       <div className="dash-top">

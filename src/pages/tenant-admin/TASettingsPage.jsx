@@ -19,6 +19,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
 import { formatRupiah, formatDateTime } from '../../utils/format.js'
 import { FALLBACK_TIMEZONES, DEFAULT_TZ } from '../../utils/timezone.js'
+import { tenantHostname } from '../../utils/platform.js'
 
 // Warna badge log aktivitas mengikuti severity dari backend AuditLog.
 const SEVERITY_VARIANT = { info: 'info', success: 'success', warning: 'warning', error: 'danger' }
@@ -2050,7 +2051,7 @@ function BookingPageTab({ form, setForm, tenantLogo, tenantSlug, saving, onSave,
   const heroInputRef = React.useRef(null)
   const galleryInputRef = React.useRef(null)
   const set = (patch) => setForm(f => ({ ...f, ...patch }))
-  const subdomainUrl = tenantSlug ? `https://${tenantSlug}.sembapos.com/book` : null
+  const subdomainUrl = tenantSlug ? `https://${tenantHostname(tenantSlug)}/book` : null
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

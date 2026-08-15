@@ -20,6 +20,7 @@ import Badge from '../../components/ui/Badge.jsx'
 import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx'
 import { useToast } from '../../components/ui/Toast.jsx'
 import { formatRupiah, formatRupiahShort, formatDate } from '../../utils/format.js'
+import { PLATFORM_DOMAIN } from '../../utils/platform.js'
 
 const PAYOUT_METHOD_LABEL = {
   bank_transfer: 'Transfer Bank',
@@ -310,7 +311,7 @@ function ReferralsTab({ id }) {
                 <tr key={r.id} className="border-t border-dark-border hover:bg-dark-surface/40">
                   <Td>
                     <p className="text-off-white font-medium">{r.tenant?.name || '—'}</p>
-                    <p className="text-xs text-muted">{r.tenant?.slug ? `${r.tenant.slug}.sembapos.com` : ''}</p>
+                    <p className="text-xs text-muted">{r.tenant?.slug ? `${r.tenant.slug}.${PLATFORM_DOMAIN}` : ''}</p>
                     {r.status === 'pending' && r.claimNote && (
                       <p className="text-[11px] text-muted mt-0.5 italic max-w-[260px]">“{r.claimNote}”</p>
                     )}
@@ -341,7 +342,7 @@ function ReferralsTab({ id }) {
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-off-white font-medium truncate">{r.tenant?.name || '—'}</p>
-                {r.tenant?.slug && <p className="text-xs text-muted truncate">{r.tenant.slug}.sembapos.com</p>}
+                {r.tenant?.slug && <p className="text-xs text-muted truncate">{r.tenant.slug}.{PLATFORM_DOMAIN}</p>}
               </div>
               <span className="text-brand tabular-nums text-sm shrink-0">{formatRupiah(r.totalCommission)}</span>
             </div>

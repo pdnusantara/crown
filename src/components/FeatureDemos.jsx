@@ -15,7 +15,7 @@ function DemoFrame({ children }) {
         <span className="w-2.5 h-2.5 rounded-full bg-[#E0573E]/70" />
         <span className="w-2.5 h-2.5 rounded-full bg-[#E0A23E]/70" />
         <span className="w-2.5 h-2.5 rounded-full bg-[#3FB950]/70" />
-        <span className="ml-2 text-[10px] text-[#9c9ab8] font-medium">app.sembapos.com</span>
+        <span className="ml-2 text-[10px] text-[#9c9ab8] font-medium">app.barberos.id</span>
         <span className="fd-live ml-auto">● Live</span>
       </div>
       <div className="aspect-[16/10] bg-[#F7F7FC] p-4 sm:p-5">{children}</div>

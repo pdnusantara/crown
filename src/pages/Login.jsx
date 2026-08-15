@@ -167,7 +167,7 @@ export default function Login() {
                 <p>
                   Domain ini untuk <span className="font-semibold">Super-Admin</span> &amp; <span className="font-semibold">Affiliate</span>.
                   Akun tenant (admin/kasir/barber) silakan login melalui subdomain bisnis Anda
-                  (mis. <span className="font-mono text-amber-100">tenant.sembapos.com</span>).
+                  (mis. <span className="font-mono text-amber-100">tenant.barberos.id</span>).
                 </p>
               </div>
             )}

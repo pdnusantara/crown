@@ -5,6 +5,7 @@ import { Printer, ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import api from '../../lib/api.js'
 import { formatRupiah } from '../../utils/format.js'
+import { PLATFORM_DOMAIN } from '../../utils/platform.js'
 
 function useInvoice(id) {
   return useQuery({
@@ -88,7 +89,7 @@ export default function TAInvoicePrintPage() {
           <div className="text-right">
             <p className="text-lg font-bold text-gray-900">SembaPOS / SembaPOS</p>
             <p className="text-xs text-gray-600">{t('tenantAdmin.invoicePrint.appTagline')}</p>
-            <p className="text-xs text-gray-600">sembapos.com</p>
+            <p className="text-xs text-gray-600">{PLATFORM_DOMAIN}</p>
           </div>
         </div>
 
