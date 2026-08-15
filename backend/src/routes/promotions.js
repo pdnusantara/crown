@@ -142,14 +142,97 @@ router.delete('/:id', authenticate, requireRole('super_admin'), async (req, res,
   } catch (err) { next(err); }
 });
 
-// GET /api/promotions/:id/redemptions — daftar pemakaian
+// Enrich daftar redemption dengan nama tenant, kode promo, dan order id.
+// PromotionRedemption hanya punya relasi Prisma ke Promotion — tenant &
+// paymentOrder di-lookup manual lalu di-map.
+async function enrichRedemptions(rows) {
+  if (!rows.length) return [];
+  const tenantIds = [...new Set(rows.map(r => r.tenantId).filter(Boolean))];
+  const promoIds  = [...new Set(rows.map(r => r.promotionId).filter(Boolean))];
+  const orderIds  = [...new Set(rows.map(r => r.paymentOrderId).filter(Boolean))];
+
+  const [tenants, promos, orders] = await Promise.all([
+    tenantIds.length ? prisma.tenant.findMany({ where: { id: { in: tenantIds } }, select: { id: true, name: true, slug: true } }) : [],
+    promoIds.length  ? prisma.promotion.findMany({ where: { id: { in: promoIds } }, select: { id: true, code: true, discountType: true } }) : [],
+    orderIds.length  ? prisma.paymentOrder.findMany({ where: { id: { in: orderIds } }, select: { id: true, merchantOrderId: true, type: true, amount: true } }) : [],
+  ]);
+  const tenantMap = Object.fromEntries(tenants.map(t => [t.id, t]));
+  const promoMap  = Object.fromEntries(promos.map(p => [p.id, p]));
+  const orderMap  = Object.fromEntries(orders.map(o => [o.id, o]));
+
+  return rows.map(r => ({
+    ...r,
+    tenantName:      tenantMap[r.tenantId]?.name || null,
+    tenantSlug:      tenantMap[r.tenantId]?.slug || null,
+    promotionCode:   promoMap[r.promotionId]?.code || null,
+    merchantOrderId: orderMap[r.paymentOrderId]?.merchantOrderId || null,
+    orderType:       orderMap[r.paymentOrderId]?.type || null,
+    orderAmount:     orderMap[r.paymentOrderId]?.amount ?? null,
+  }));
+}
+
+// GET /api/promotions/redemptions — riwayat pemakaian GLOBAL semua promo,
+// dengan filter (kode/promo, tenant, rentang tanggal, pencarian) + ringkasan.
+router.get('/redemptions', authenticate, requireRole('super_admin'), async (req, res, next) => {
+  try {
+    const { promotionId, code, tenantId, search, from, to, page = 1, limit = 25 } = req.query;
+    const where = {};
+    if (promotionId) where.promotionId = promotionId;
+    if (tenantId)    where.tenantId    = tenantId;
+    if (code) {
+      const promo = await prisma.promotion.findUnique({ where: { code: String(code).toUpperCase() }, select: { id: true } });
+      where.promotionId = promo?.id || '__none__';
+    }
+    if (from || to) {
+      where.redeemedAt = {};
+      if (from) where.redeemedAt.gte = new Date(from);
+      if (to) { const end = new Date(to); end.setHours(23, 59, 59, 999); where.redeemedAt.lte = end; }
+    }
+
+    // Pencarian teks: tenant name / kode promo / order id bukan kolom redemption,
+    // jadi resolve dulu ke daftar id agar count & pagination tetap konsisten.
+    if (search) {
+      const q = String(search).trim();
+      const [matchTenants, matchPromos, matchOrders] = await Promise.all([
+        prisma.tenant.findMany({ where: { name: { contains: q, mode: 'insensitive' } }, select: { id: true } }),
+        prisma.promotion.findMany({ where: { code: { contains: q, mode: 'insensitive' } }, select: { id: true } }),
+        prisma.paymentOrder.findMany({ where: { merchantOrderId: { contains: q, mode: 'insensitive' } }, select: { id: true } }),
+      ]);
+      where.OR = [
+        { tenantId:       { in: matchTenants.map(t => t.id) } },
+        { promotionId:    { in: matchPromos.map(p => p.id) } },
+        { paymentOrderId: { in: matchOrders.map(o => o.id) } },
+      ];
+    }
+
+    const skip = (Number(page) - 1) * Number(limit);
+    const [rows, total, agg, distinctTenants] = await Promise.all([
+      prisma.promotionRedemption.findMany({ where, orderBy: { redeemedAt: 'desc' }, skip, take: Number(limit) }),
+      prisma.promotionRedemption.count({ where }),
+      prisma.promotionRedemption.aggregate({ where, _sum: { discountApplied: true } }),
+      prisma.promotionRedemption.findMany({ where, select: { tenantId: true }, distinct: ['tenantId'] }),
+    ]);
+
+    const enriched = await enrichRedemptions(rows);
+
+    const summary = {
+      count: total,
+      totalDiscount: agg._sum.discountApplied || 0,
+      uniqueTenants: distinctTenants.length,
+    };
+    res.json({ success: true, data: { data: enriched, total, page: Number(page), limit: Number(limit), summary } });
+  } catch (err) { next(err); }
+});
+
+// GET /api/promotions/:id/redemptions — daftar pemakaian satu promo (ter-enrich)
 router.get('/:id/redemptions', authenticate, requireRole('super_admin'), async (req, res, next) => {
   try {
-    const data = await prisma.promotionRedemption.findMany({
+    const rows = await prisma.promotionRedemption.findMany({
       where: { promotionId: req.params.id },
       orderBy: { redeemedAt: 'desc' },
-      take: 100,
+      take: 200,
     });
+    const data = await enrichRedemptions(rows);
     res.json({ success: true, data });
   } catch (err) { next(err); }
 });

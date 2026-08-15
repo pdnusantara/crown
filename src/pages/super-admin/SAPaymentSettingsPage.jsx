@@ -1,16 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { CreditCard, Save, Eye, EyeOff, CheckCircle, AlertTriangle, ExternalLink, ToggleLeft, ToggleRight, Clock } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { CreditCard, Save, Eye, EyeOff, AlertTriangle, ExternalLink, ToggleLeft, ToggleRight, Clock, ArrowRight } from 'lucide-react'
 import { usePaymentSettings, useUpdatePaymentSettings } from '../../hooks/usePayment.js'
-import { usePaymentOrders } from '../../hooks/usePayment.js'
 import { useToast } from '../../components/ui/Toast.jsx'
 import Card, { CardHeader } from '../../components/ui/Card.jsx'
 import Button from '../../components/ui/Button.jsx'
-import Badge from '../../components/ui/Badge.jsx'
-import { formatRupiah, formatDate } from '../../utils/format.js'
-
-const STATUS_VARIANTS = { pending: 'warning', success: 'success', failed: 'danger', expired: 'muted' }
-const STATUS_LABEL    = { pending: 'Pending', success: 'Sukses', failed: 'Gagal', expired: 'Expired' }
 
 function FieldRow({ label, children }) {
   return (
@@ -25,6 +20,7 @@ export default function SAPaymentSettingsPage() {
   const { data: settings, isLoading } = usePaymentSettings()
   const update = useUpdatePaymentSettings()
   const { showToast } = useToast()
+  const navigate = useNavigate()
 
   const [form, setForm]         = useState({ merchantCode: '', apiKey: '', environment: 'sandbox', expiryMinutes: 60, active: false })
   const [showKey, setShowKey]   = useState(false)
@@ -64,9 +60,6 @@ export default function SAPaymentSettingsPage() {
       showToast('Gagal menyimpan pengaturan', 'error')
     }
   }
-
-  const { data: ordersData } = usePaymentOrders({ limit: 50 })
-  const orders = ordersData?.data || []
 
   if (isLoading) {
     return (
@@ -219,43 +212,19 @@ export default function SAPaymentSettingsPage() {
         </div>
       </Card>
 
-      {/* Recent orders */}
+      {/* Riwayat transaksi kini punya halaman tersendiri: /super-admin/payment-transactions */}
       <Card>
-        <CardHeader>
+        <div className="p-5 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <Clock size={16} className="text-muted" />
-            <span className="font-semibold text-off-white">Riwayat Transaksi Duitku</span>
+            <div>
+              <p className="text-sm font-medium text-off-white">Riwayat Transaksi Duitku</p>
+              <p className="text-xs text-muted mt-0.5">Lihat semua pembayaran tenant di halaman terpisah dengan filter & ekspor.</p>
+            </div>
           </div>
-        </CardHeader>
-        <div className="overflow-x-auto">
-          {orders.length === 0 ? (
-            <p className="text-center text-muted py-10 text-sm">Belum ada transaksi</p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-dark-border text-muted text-xs">
-                  <th className="text-left p-3">Order ID</th>
-                  <th className="text-left p-3">Tipe</th>
-                  <th className="text-right p-3">Nominal</th>
-                  <th className="text-center p-3">Status</th>
-                  <th className="text-left p-3">Tanggal</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map(o => (
-                  <tr key={o.id} className="border-b border-dark-border/50 hover:bg-dark-card/40 transition-colors">
-                    <td className="p-3 font-mono text-xs text-muted">{o.merchantOrderId}</td>
-                    <td className="p-3 capitalize">{o.type === 'branch_addon' ? 'Cabang' : 'Subscription'}</td>
-                    <td className="p-3 text-right font-medium">{formatRupiah(o.amount)}</td>
-                    <td className="p-3 text-center">
-                      <Badge variant={STATUS_VARIANTS[o.status] || 'muted'}>{STATUS_LABEL[o.status] || o.status}</Badge>
-                    </td>
-                    <td className="p-3 text-muted text-xs">{formatDate(o.createdAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <Button variant="ghost" onClick={() => navigate('/super-admin/payment-transactions')} className="gap-2">
+            Buka Riwayat Transaksi <ArrowRight size={15} />
+          </Button>
         </div>
       </Card>
     </div>

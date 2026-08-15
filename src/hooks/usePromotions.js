@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import api from '../lib/api.js'
 import { getSocket } from '../lib/socket.js'
 
@@ -61,5 +61,24 @@ export function usePromotionRedemptions(id) {
     queryKey: ['promotions', id, 'redemptions'],
     queryFn: () => api.get(`/promotions/${id}/redemptions`).then(r => r.data.data),
     enabled: !!id,
+  })
+}
+
+// Riwayat pemakaian GLOBAL (semua promo) dengan filter & pagination.
+export function usePromotionRedemptionHistory(filters = {}) {
+  const qc = useQueryClient()
+  useEffect(() => {
+    const socket = getSocket()
+    const onChange = () => qc.invalidateQueries({ queryKey: ['promotion-redemptions'] })
+    // Redemption tercatat saat pembayaran sukses → ikut event langganan.
+    const events = ['subscription:any-updated', 'promotion:updated']
+    events.forEach(evt => socket.on(evt, onChange))
+    return () => events.forEach(evt => socket.off(evt, onChange))
+  }, [qc])
+
+  return useQuery({
+    queryKey: ['promotion-redemptions', filters],
+    queryFn: () => api.get('/promotions/redemptions', { params: filters }).then(r => r.data.data),
+    placeholderData: keepPreviousData,
   })
 }

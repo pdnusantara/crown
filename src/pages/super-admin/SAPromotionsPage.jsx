@@ -3,12 +3,13 @@ import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import {
   Tag, Plus, Power, Edit, CheckCircle, AlertCircle, Calendar,
-  Filter, X, Search, Radio, RefreshCw, AlertTriangle, Eye,
+  Filter, X, Search, Radio, RefreshCw, AlertTriangle, Eye, History,
 } from 'lucide-react'
 import {
   usePromotions, useCreatePromotion, useUpdatePromotion,
   useDeactivatePromotion, useActivatePromotion,
 } from '../../hooks/usePromotions.js'
+import PromotionRedemptionHistory from '../../components/super-admin/PromotionRedemptionHistory.jsx'
 import Card, { CardHeader, CardBody } from '../../components/ui/Card.jsx'
 import Button from '../../components/ui/Button.jsx'
 import Input from '../../components/ui/Input.jsx'
@@ -60,6 +61,11 @@ export default function SAPromotionsPage() {
   const [editing, setEditing] = useState(null)
   const [form, setForm]       = useState(empty)
   const [confirmAction, setConfirmAction] = useState(null)
+
+  const [view, setView]               = useState('promos') // 'promos' | 'history'
+  const [historyCode, setHistoryCode] = useState('')       // pra-filter saat dari kartu
+
+  function openUsage(p) { setHistoryCode(p.code); setView('history') }
 
   useEffect(() => {
     const id = setTimeout(() => setDebouncedSearch(search.trim()), 300)
@@ -202,13 +208,42 @@ export default function SAPromotionsPage() {
           <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-green-400/10 border border-green-400/20 text-[10px] text-green-400 font-medium">
             <Radio size={10} className="animate-pulse" /> {t('realtime.live')}
           </span>
-          <Button variant="secondary" size="sm" icon={RefreshCw} onClick={() => refetch()} loading={isFetching && !isLoading}>
-            {t('superAdmin.promotions.retry')}
-          </Button>
-          <Button icon={Plus} size="sm" onClick={openNew}>{t('superAdmin.promotions.createBtn')}</Button>
+          {view === 'promos' && (
+            <>
+              <Button variant="secondary" size="sm" icon={RefreshCw} onClick={() => refetch()} loading={isFetching && !isLoading}>
+                {t('superAdmin.promotions.retry')}
+              </Button>
+              <Button icon={Plus} size="sm" onClick={openNew}>{t('superAdmin.promotions.createBtn')}</Button>
+            </>
+          )}
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex items-center gap-1 border-b border-dark-border">
+        {[
+          { id: 'promos',  label: t('superAdmin.promotions.tabPromos'),  icon: Tag },
+          { id: 'history', label: t('superAdmin.promotions.tabHistory'), icon: History },
+        ].map(tab => {
+          const active = view === tab.id
+          return (
+            <button
+              key={tab.id}
+              onClick={() => { setView(tab.id); if (tab.id === 'promos') setHistoryCode('') }}
+              className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                active ? 'border-brand text-brand' : 'border-transparent text-muted hover:text-off-white'
+              }`}
+            >
+              <tab.icon size={15} /> {tab.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {view === 'history' ? (
+        <PromotionRedemptionHistory promos={promos} initialCode={historyCode} />
+      ) : (
+      <>
       {/* KPI */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <KpiCard label={t('superAdmin.promotions.kpiTotal')}       value={stats.total}       color="text-brand"        icon={Tag} delay={0} />
@@ -284,6 +319,9 @@ export default function SAPromotionsPage() {
                     {p.description && <p className="text-xs text-muted mt-1">{p.description}</p>}
                   </div>
                   <div className="flex gap-1 flex-shrink-0">
+                    <button onClick={() => openUsage(p)} className="p-1.5 rounded-lg hover:bg-dark-surface text-muted hover:text-brand" title={t('superAdmin.promotions.viewUsage')}>
+                      <Eye size={14} />
+                    </button>
                     <button onClick={() => openEdit(p)} className="p-1.5 rounded-lg hover:bg-dark-surface text-muted hover:text-off-white" title={t('superAdmin.promotions.tooltipEdit')}>
                       <Edit size={14} />
                     </button>
@@ -351,6 +389,8 @@ export default function SAPromotionsPage() {
             )
           })}
         </motion.div>
+      )}
+      </>
       )}
 
       {/* Editor modal */}

@@ -590,17 +590,58 @@ router.post('/trigger-renewal', authenticate, requireRole('super_admin'), async 
 // GET /api/payment/orders — super admin: list all orders
 router.get('/orders', authenticate, requireRole('super_admin'), async (req, res, next) => {
   try {
-    const { tenantId, status, page = 1, limit = 20 } = req.query;
+    const { tenantId, status, type, search, from, to, page = 1, limit = 20 } = req.query;
     const where = {};
     if (tenantId) where.tenantId = tenantId;
     if (status)   where.status   = status;
+    if (type)     where.type     = type;
+    if (search) {
+      const q = String(search).trim();
+      where.OR = [
+        { merchantOrderId: { contains: q, mode: 'insensitive' } },
+        { reference:       { contains: q, mode: 'insensitive' } },
+        { promotionCode:   { contains: q, mode: 'insensitive' } },
+      ];
+    }
+    if (from || to) {
+      where.createdAt = {};
+      if (from) where.createdAt.gte = new Date(from);
+      if (to) {
+        // inklusif sampai akhir hari `to`
+        const end = new Date(to);
+        end.setHours(23, 59, 59, 999);
+        where.createdAt.lte = end;
+      }
+    }
 
     const skip = (Number(page) - 1) * Number(limit);
-    const [data, total] = await Promise.all([
+    const [data, total, grouped] = await Promise.all([
       prisma.paymentOrder.findMany({ where, skip, take: Number(limit), orderBy: { createdAt: 'desc' } }),
       prisma.paymentOrder.count({ where }),
+      // Ringkasan agregat lintas SELURUH hasil terfilter (bukan cuma halaman ini)
+      prisma.paymentOrder.groupBy({ by: ['status'], where, _count: { _all: true }, _sum: { amount: true } }),
     ]);
-    res.json({ success: true, data: { data, total, page: Number(page), limit: Number(limit) } });
+
+    // Enrich nama tenant (PaymentOrder tak punya relasi Prisma ke Tenant)
+    const tenantIds = [...new Set(data.map(o => o.tenantId).filter(Boolean))];
+    const tenants = tenantIds.length
+      ? await prisma.tenant.findMany({ where: { id: { in: tenantIds } }, select: { id: true, name: true, slug: true } })
+      : [];
+    const tenantMap = Object.fromEntries(tenants.map(t => [t.id, t]));
+    const enriched = data.map(o => ({
+      ...o,
+      tenantName: tenantMap[o.tenantId]?.name || null,
+      tenantSlug: tenantMap[o.tenantId]?.slug || null,
+    }));
+
+    const summary = { count: total, successCount: 0, successAmount: 0, pendingCount: 0, failedCount: 0 };
+    for (const g of grouped) {
+      if (g.status === 'success') { summary.successCount = g._count._all; summary.successAmount = g._sum.amount || 0; }
+      else if (g.status === 'pending') summary.pendingCount = g._count._all;
+      else if (g.status === 'failed' || g.status === 'expired' || g.status === 'cancelled') summary.failedCount += g._count._all;
+    }
+
+    res.json({ success: true, data: { data: enriched, total, page: Number(page), limit: Number(limit), summary } });
   } catch (err) { next(err); }
 });
 

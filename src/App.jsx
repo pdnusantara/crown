@@ -32,6 +32,7 @@ const SATenantsPage      = lazy(() => import('./pages/super-admin/SATenantsPage.
 const SATenantsDetailPage = lazy(() => import('./pages/super-admin/SATenantsDetailPage.jsx'))
 const SABillingPage          = lazy(() => import('./pages/super-admin/SABillingPage.jsx'))
 const SAPaymentSettingsPage  = lazy(() => import('./pages/super-admin/SAPaymentSettingsPage.jsx'))
+const SAPaymentTransactionsPage = lazy(() => import('./pages/super-admin/SAPaymentTransactionsPage.jsx'))
 const SAWhatsAppSettingsPage = lazy(() => import('./pages/super-admin/SAWhatsAppSettingsPage.jsx'))
 const SATenantRegistrationsPage = lazy(() => import('./pages/super-admin/SATenantRegistrationsPage.jsx'))
 const SABroadcastPage        = lazy(() => import('./pages/super-admin/SABroadcastPage.jsx'))
@@ -320,6 +321,7 @@ export default function App() {
             <Route path="packages"         element={<SAPackagesPage />} />
             <Route path="billing"          element={<SABillingPage />} />
             <Route path="payment-settings" element={<SAPaymentSettingsPage />} />
+            <Route path="payment-transactions" element={<SAPaymentTransactionsPage />} />
             <Route path="whatsapp-settings" element={<SAWhatsAppSettingsPage />} />
             <Route path="promotions"       element={<SAPromotionsPage />} />
             <Route path="landing"          element={<SALandingPage />} />
