@@ -561,7 +561,19 @@ router.get('/staff-payroll', authenticate, requireRole('super_admin', 'tenant_ad
 
     // Semua staf aktif (barber + kasir) — termasuk yang nol transaksi.
     const staff = await prisma.user.findMany({
-      where: { tenantId, role: { in: ['barber', 'kasir'] }, deletedAt: null, isActive: true },
+      where: {
+        tenantId,
+        // "Barber-eligible" — definisi yang SAMA dengan GET /users: peran
+        // barber/kasir, ATAU siapa pun yang ditandai `isBarber`, termasuk
+        // tenant_admin yang merangkap (owner single-fighter yang juga
+        // memotong rambut). Sebelumnya penyaring ini hanya per-`role`,
+        // sehingga owner muncul di pilihan barber POS dan omzetnya
+        // teratribusi ke dirinya, tapi komisinya TAK PERNAH terhitung di
+        // sini — baru ketahuan saat gajian.
+        OR: [{ role: { in: ['barber', 'kasir'] } }, { isBarber: true }],
+        deletedAt: null,
+        isActive: true,
+      },
       select: { id: true, name: true, role: true, commissionRate: true, salaryType: true, baseSalary: true },
       orderBy: [{ role: 'asc' }, { name: 'asc' }],
     });

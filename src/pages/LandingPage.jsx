@@ -120,6 +120,11 @@ function upsertMeta(selector, content) {
 }
 
 // Urutan section default kalau /api/landing belum mengembalikan `layout`.
+// Aplikasi Android di Play Store. Bisa ditimpa lewat `hero.playStoreUrl`
+// dari /api/landing supaya tautannya bisa diganti tanpa build ulang.
+const PLAY_STORE_URL =
+  'https://play.google.com/store/apps/details?id=id.barberos.app&hl=id'
+
 const FALLBACK_LAYOUT = ['stats', 'features', 'compare', 'steps', 'roi', 'pricing', 'testimonials', 'faq', 'closingCta']
   .map(t => ({ id: t, type: t, visible: true }))
 
@@ -1202,6 +1207,21 @@ function StickyCtaBar({ show, siteName, label, to, note, onCta }) {
   )
 }
 
+// Ikon Google Play. Digambar inline, bukan lucide: lucide tidak punya lambang
+// merek ini, dan tautan toko aplikasi baru dikenali sekilas justru lewat
+// segitiga empat warnanya.
+function GooglePlayIcon() {
+  return (
+    <svg viewBox="0 0 512 512" width="16" height="16" aria-hidden="true"
+         focusable="false">
+      <path fill="#00D3FF" d="M47 19a24 24 0 0 0-9 19v436a24 24 0 0 0 9 19l2 2 244-244v-6L49 17z" />
+      <path fill="#FFCE00" d="M374 337l-81-81v-6l81-81 2 1 96 55c28 15 28 41 0 57l-96 54z" />
+      <path fill="#FF3A44" d="M376 336l-83-83L47 495c9 10 25 11 42 1l287-160" />
+      <path fill="#00C853" d="M376 176L89 16C72 6 56 7 47 17l246 236z" />
+    </svg>
+  )
+}
+
 function Footer({ text, logo, contact = {}, siteName, waHref }) {
   const phone = (contact.phone || '').trim()
   const email = (contact.email || '').trim()
@@ -1228,6 +1248,10 @@ function Footer({ text, logo, contact = {}, siteName, waHref }) {
             <a href="#harga">Harga</a>
             <a href="#cara">Cara Kerja</a>
             <Link to="/register">Daftar Gratis</Link>
+            <a className="footer-playstore" href={PLAY_STORE_URL}
+               target="_blank" rel="noopener noreferrer">
+              <GooglePlayIcon /> Unduh di Google Play
+            </a>
           </div>
           <div className="footer-col">
             <h5>Kontak</h5>
