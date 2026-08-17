@@ -12,7 +12,7 @@ import {
   GripVertical, Eye, EyeOff, Edit3, Copy, Trash2, Plus, Save, Lock, Upload, Image as ImageIcon,
   BarChart3, LayoutGrid, ListChecks, Tag, MessageSquare, HelpCircle, Megaphone,
   Images, Video, Building2, Type, ExternalLink, Monitor, Smartphone, RefreshCw, Calculator, Columns2,
-  Sparkles,
+  Sparkles, Smartphone as PhoneIcon,
 } from 'lucide-react'
 import api from '../../lib/api.js'
 import { useLanding, useUpdateLayout } from '../../hooks/useLanding.js'
@@ -37,12 +37,13 @@ const BLOCK_META = {
   faq:          { label: 'FAQ',            icon: HelpCircle,    core: true },
   closingCta:   { label: 'CTA Penutup',    icon: Megaphone,     core: true },
   gallery:      { label: 'Galeri Gambar',  icon: Images,        core: false },
+  appShots:     { label: 'Screenshot Aplikasi', icon: PhoneIcon, core: false },
   video:        { label: 'Video',          icon: Video,         core: false },
   logoStrip:    { label: 'Logo Partner',   icon: Building2,     core: false },
   banner:       { label: 'Banner Promo',   icon: ImageIcon,     core: false },
   richText:     { label: 'Teks & Tombol',  icon: Type,          core: false },
 }
-const FREE_TYPES = ['gallery', 'video', 'logoStrip', 'banner', 'richText']
+const FREE_TYPES = ['gallery', 'appShots', 'video', 'logoStrip', 'banner', 'richText']
 
 // Untuk blok core: ke mana super-admin mengedit kontennya.
 const CORE_EDIT = {
@@ -195,6 +196,59 @@ function BlockConfigFields({ type, config, setConfig }) {
             </div>
             <ImageUploadField value={it.url} onChange={url => setList('items', items.map((x, idx) => idx === i ? { ...x, url } : x))} />
             <Field label="Caption (opsional)" value={it.caption} onChange={v => setList('items', items.map((x, idx) => idx === i ? { ...x, caption: v } : x))} />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (type === 'appShots') {
+    const items = Array.isArray(c.items) ? c.items : []
+    const frame = c.frame || 'phone'
+    return (
+      <div className="space-y-3">
+        <Field label="Kicker (label kecil, opsional)" value={c.kicker} onChange={v => set('kicker', v)} placeholder="Tampilan Aplikasi" />
+        <Field label="Judul (opsional)" value={c.title} onChange={v => set('title', v)} placeholder="Begini tampilannya di HP Anda" />
+        <Field label="Subjudul (opsional)" value={c.subtitle} onChange={v => set('subtitle', v)} rows={2} />
+        <div>
+          <label className="text-xs text-muted block mb-1.5">Bingkai</label>
+          <div className="flex gap-2">
+            {[
+              { v: 'phone',   t: 'HP (potret)',      h: 'Screenshot aplikasi Android/iOS' },
+              { v: 'browser', t: 'Browser (lebar)',  h: 'Screenshot dashboard di komputer' },
+              { v: 'none',    t: 'Tanpa bingkai',    h: 'Gambar apa adanya' },
+            ].map(o => (
+              <button
+                key={o.v}
+                type="button"
+                title={o.h}
+                onClick={() => set('frame', o.v)}
+                className={`px-3 py-1.5 rounded-lg text-xs border transition-colors ${frame === o.v ? 'border-brand text-brand bg-brand/10' : 'border-dark-border text-muted hover:text-off-white'}`}
+              >
+                {o.t}
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-muted mt-1.5">
+            Gambar tidak dipotong — unggah screenshot asli apa adanya. Untuk bingkai HP, pakai screenshot potret (mis. beranda aplikasi Android).
+          </p>
+        </div>
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold text-brand">Screenshot ({items.length})</p>
+          <button type="button" onClick={() => setList('items', [...items, { url: '', caption: '' }])} className="text-xs text-brand hover:underline inline-flex items-center gap-1">
+            <Plus size={11} /> Tambah screenshot
+          </button>
+        </div>
+        {items.map((it, i) => (
+          <div key={i} className="p-3 bg-dark-surface rounded-xl border border-dark-border space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted">Screenshot {i + 1}</span>
+              <button type="button" onClick={() => setList('items', items.filter((_, idx) => idx !== i))} className="p-1 rounded text-red-400 hover:bg-red-500/10">
+                <Trash2 size={13} />
+              </button>
+            </div>
+            <ImageUploadField value={it.url} onChange={url => setList('items', items.map((x, idx) => idx === i ? { ...x, url } : x))} />
+            <Field label="Keterangan (opsional)" value={it.caption} onChange={v => setList('items', items.map((x, idx) => idx === i ? { ...x, caption: v } : x))} placeholder="Beranda aplikasi kasir" />
           </div>
         ))}
       </div>

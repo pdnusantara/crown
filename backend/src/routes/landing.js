@@ -56,7 +56,7 @@ const JSON_KEYS = ['features', 'benefits', 'trustItems', 'steps', 'sections', 'c
 // banyak instance dengan konten inline di `config`.
 const LAYOUT_KEY = 'landing_layout';
 const ORDERABLE_CORE_TYPES = ['stats', 'features', 'benefits', 'steps', 'compare', 'roi', 'pricing', 'testimonials', 'faq', 'closingCta'];
-const FREE_BLOCK_TYPES = ['gallery', 'video', 'logoStrip', 'banner', 'richText'];
+const FREE_BLOCK_TYPES = ['gallery', 'appShots', 'video', 'logoStrip', 'banner', 'richText'];
 const ALL_BLOCK_TYPES = [...ORDERABLE_CORE_TYPES, ...FREE_BLOCK_TYPES];
 
 // Urutan default = tampilan landing saat ini (tanpa hero/footer yang terkunci).

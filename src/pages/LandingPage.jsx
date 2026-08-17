@@ -1119,6 +1119,44 @@ function GallerySection({ block }) {
   )
 }
 
+// Screenshot aplikasi sungguhan — bingkai HP (potret, mis. beranda app Android)
+// atau bingkai browser (lanskap, mis. dashboard web). Beda dari GallerySection
+// yang memotong gambar ke tinggi tetap: di sini gambar TIDAK dipotong supaya
+// tampilan layar aslinya utuh terbaca.
+function AppShotsSection({ block }) {
+  const cfg = block.config || {}
+  const items = Array.isArray(cfg.items) ? cfg.items.filter(it => it && it.url) : []
+  if (items.length === 0) return null
+  const frame = cfg.frame === 'browser' ? 'browser' : cfg.frame === 'none' ? 'none' : 'phone'
+  return (
+    <section className="section">
+      <div className="wrap">
+        <FreeHead kicker={cfg.kicker} title={cfg.title} subtitle={cfg.subtitle} />
+        <div className={`shots-grid shots-${frame}`}>
+          {items.map((it, i) => (
+            <motion.figure
+              key={i}
+              className="shot"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-60px' }}
+              transition={{ duration: 0.4, delay: Math.min(i, 4) * 0.06 }}
+            >
+              <div className={`shot-frame shot-${frame}`}>
+                {frame === 'browser' && (
+                  <span className="shot-bar"><i /><i /><i /></span>
+                )}
+                <img src={it.url} alt={it.caption || `Tampilan aplikasi ${i + 1}`} loading="lazy" />
+              </div>
+              {it.caption && <figcaption>{it.caption}</figcaption>}
+            </motion.figure>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 function VideoSection({ block }) {
   const cfg = block.config || {}
   const embed = toEmbedUrl(cfg.url)
@@ -1222,7 +1260,7 @@ function BenefitsSection({ ctx }) {
   )
 }
 
-// Peta tipe blok → komponen (15 tipe; identik dengan builder & backend enum).
+// Peta tipe blok → komponen (16 tipe; identik dengan builder & backend enum).
 const BLOCK_REGISTRY = {
   stats:        StatsSection,
   features:     FeaturesSection,
@@ -1235,6 +1273,7 @@ const BLOCK_REGISTRY = {
   faq:          FaqSection,
   closingCta:   ClosingCtaSection,
   gallery:      GallerySection,
+  appShots:     AppShotsSection,
   video:        VideoSection,
   logoStrip:    LogoStripSection,
   banner:       BannerSection,

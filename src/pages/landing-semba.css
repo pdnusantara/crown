@@ -544,6 +544,37 @@ html.is-landing{scroll-behavior:smooth}
 .semba .ben-card h3{font-size:18px;line-height:1.22;font-weight:700}
 .semba .ben-card p{font-size:14.5px;color:var(--muted);line-height:1.6}
 
+
+/* ── Screenshot aplikasi (blok `appShots`) ────────────────────────────────
+   Gambar TIDAK dipotong (beda dari galeri) supaya isi layar tetap terbaca.
+   Lebar kolom mengikuti orientasi: potret buat screenshot HP, lanskap buat
+   dashboard web. */
+.semba .shots-grid{display:grid;gap:26px;margin-top:52px;justify-content:center}
+.semba .shots-phone{grid-template-columns:repeat(auto-fit,minmax(190px,220px))}
+.semba .shots-browser{grid-template-columns:repeat(auto-fit,minmax(300px,480px))}
+.semba .shots-none{grid-template-columns:repeat(auto-fit,minmax(240px,320px))}
+.semba .shot{display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center}
+.semba .shot-frame{width:100%;background:var(--paper);border:1px solid var(--line);overflow:hidden}
+.semba .shot-frame img{width:100%;display:block;height:auto}
+
+/* Bingkai HP: bezel gelap + sudut membulat, ada "pil" speaker di atas. */
+.semba .shot-frame.shot-phone{
+  border-radius:26px;padding:8px;background:var(--ink);border-color:var(--ink);
+  box-shadow:0 18px 40px rgba(22,20,15,.18);position:relative;
+}
+.semba .shot-frame.shot-phone img{border-radius:19px}
+.semba .shot-frame.shot-phone::before{
+  content:'';position:absolute;top:13px;left:50%;transform:translateX(-50%);
+  width:46px;height:4px;border-radius:99px;background:rgba(246,241,231,.35);z-index:2;
+}
+
+/* Bingkai browser: bar titik tiga ala jendela. */
+.semba .shot-frame.shot-browser{border-radius:14px;box-shadow:0 14px 34px rgba(22,20,15,.12)}
+.semba .shot-bar{display:flex;gap:6px;align-items:center;padding:10px 14px;background:var(--cream);border-bottom:1px solid var(--line)}
+.semba .shot-bar i{width:9px;height:9px;border-radius:99px;background:var(--line)}
+.semba .shot-frame.shot-none{border-radius:16px;box-shadow:0 12px 28px rgba(22,20,15,.10)}
+.semba .shot figcaption{font-size:13.5px;color:var(--muted);line-height:1.5;max-width:24ch}
+
 @media(max-width:600px){.semba .toast{left:12px;right:12px;bottom:84px;max-width:none}}
 
 /* ===== EXIT POPUP ===== */
@@ -618,6 +649,8 @@ html.is-landing{scroll-behavior:smooth}
   .semba .cta-box{padding:50px 24px}
   .semba .integ-grid{grid-template-columns:repeat(2,1fr)}
   .semba .ben-grid{grid-template-columns:1fr;gap:14px;margin-top:38px}
+  .semba .shots-phone{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+  .semba .shots-grid{gap:18px;margin-top:38px}
   .semba .ben-card{padding:22px 20px}
   .semba .guarantee{flex-direction:column;text-align:center}
   .semba .stickybar .sb-s{display:none}
