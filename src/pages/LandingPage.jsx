@@ -71,21 +71,21 @@ const FALLBACK_FEATURES = [
 
 // Keunggulan default — kartu ringkas, bahasa sehari-hari pemilik toko.
 const FALLBACK_BENEFITS = [
-  { icon: 'Wallet',          title: 'Uang di laci tidak selisih diam-diam', desc: 'Tutup kasir dihitung otomatis: uang awal, uang masuk, uang keluar. Kalau kurang, ketahuan hari itu juga.' },
-  { icon: 'Coins',           title: 'Komisi kapster dihitung sendiri', desc: 'Tiap potongan tercatat siapa yang mengerjakan. Akhir bulan tinggal lihat, tidak perlu kalkulator.' },
-  { icon: 'Percent',         title: 'Gaji bagi hasil, bulanan, atau dua-duanya', desc: 'Diatur per orang. Bonus dan potongan tinggal diisi.' },
-  { icon: 'Scissors',        title: 'Pemilik yang ikut potong tetap dapat komisi', desc: 'Tidak perlu bikin akun terpisah buat diri sendiri.' },
-  { icon: 'ListOrdered',     title: 'Antrian rapi di HP, tanpa papan tulis', desc: 'Pelanggan datang, masuk daftar. Selesai, tinggal geser statusnya.' },
-  { icon: 'CalendarClock',   title: 'Pelanggan bisa booking sendiri', desc: 'Dapat link buat ditaruh di bio Instagram atau WhatsApp, plus QR untuk ditempel di meja.' },
-  { icon: 'MapPin',          title: 'Absen karyawan pakai lokasi dan foto', desc: 'Cuma bisa absen kalau benar-benar di toko. Hasilnya langsung dipakai buat hitung gaji.' },
-  { icon: 'Building2',       title: 'Punya beberapa cabang? Semua kelihatan dari satu HP', desc: 'Bandingkan omzet tiap cabang tanpa harus datang ke sana.' },
-  { icon: 'Star',            title: 'Pelanggan langganan dapat poin', desc: 'Riwayat poinnya lengkap, jadi tidak ada ribut soal poin hilang.' },
-  { icon: 'BarChart3',       title: 'Laporan yang gampang dibaca', desc: 'Layanan paling laris, kapster paling ramai, dan sisa untung setelah gaji dan belanja.' },
-  { icon: 'Receipt',         title: 'Struk bisa dicetak atau dikirim ke WhatsApp', desc: 'Lengkap dengan nama toko dan logo.' },
-  { icon: 'CreditCard',      title: 'Terima tunai, transfer, dan QRIS', desc: 'Dicatat terpisah, jadi setoran akhir hari tidak tertukar.' },
-  { icon: 'MessageCircle',   title: 'Pelanggan dapat pesan WhatsApp otomatis', desc: 'Konfirmasi booking dan pengingat jadwal, dikirim dari nomor toko sendiri.' },
-  { icon: 'FileSpreadsheet', title: 'Data bisa diunduh ke Excel', desc: 'Transaksi, gaji, absen, belanja — semua rapi waktu dibuka.' },
-  { icon: 'Flag',            title: 'Dibuat untuk toko Indonesia', desc: 'Rupiah, tanggal Indonesia, alamat sampai kelurahan.' },
+  { icon: 'Wallet',          title: 'Kasir lebih mudah dikontrol', desc: 'Uang masuk dan keluar tercatat. Kalau ada selisih, langsung terlihat.' },
+  { icon: 'Coins',           title: 'Komisi karyawan otomatis', desc: 'Setiap transaksi tercatat, komisi langsung bisa dihitung.' },
+  { icon: 'Percent',         title: 'Atur gaji dengan mudah', desc: 'Gaji bulanan, bagi hasil, bonus, dan potongan bisa diatur sendiri.' },
+  { icon: 'Scissors',        title: 'Pemilik ikut melayani? Tetap tercatat', desc: 'Transaksi pemilik juga dicatat dan dihitung otomatis.' },
+  { icon: 'ListOrdered',     title: 'Antrian langsung dari HP', desc: 'Tidak perlu papan tulis. Tambahkan pelanggan ke antrian langsung dari HP.' },
+  { icon: 'CalendarClock',   title: 'Pelanggan bisa booking sendiri', desc: 'Bagikan link booking ke WhatsApp atau Instagram. Pelanggan pilih jadwalnya sendiri.' },
+  { icon: 'MapPin',          title: 'Absensi lebih aman', desc: 'Karyawan absen dengan lokasi dan foto.' },
+  { icon: 'Building2',       title: 'Pantau semua cabang dari HP', desc: 'Lihat penjualan setiap cabang tanpa harus datang langsung.' },
+  { icon: 'Star',            title: 'Pelanggan bisa kumpulkan poin', desc: 'Setiap belanja tercatat dan poin tersimpan otomatis.' },
+  { icon: 'BarChart3',       title: 'Laporan mudah dipahami', desc: 'Lihat penjualan, layanan terlaris, dan keuntungan dengan cepat.' },
+  { icon: 'Receipt',         title: 'Struk langsung dikirim', desc: 'Cetak atau kirim struk ke WhatsApp pelanggan.' },
+  { icon: 'CreditCard',      title: 'Semua pembayaran tercatat', desc: 'Tunai, transfer, dan QRIS tercatat dengan rapi.' },
+  { icon: 'MessageCircle',   title: 'WhatsApp otomatis', desc: 'Kirim konfirmasi booking dan pengingat ke pelanggan.' },
+  { icon: 'FileSpreadsheet', title: 'Download data ke Excel', desc: 'Data transaksi dan laporan bisa diunduh kapan saja.' },
+  { icon: 'Flag',            title: 'Cocok untuk bisnis di Indonesia', desc: 'Memakai Rupiah, format tanggal Indonesia, dan alamat lengkap Indonesia.' },
 ]
 
 const FALLBACK_TRUST = ['Tanpa kartu kredit', 'Setup 5 menit', 'Bisa dibatalkan kapan saja']
@@ -107,7 +107,7 @@ const FALLBACK_STEPS = [
 
 const FALLBACK_SECTIONS = {
   features:     { kicker: 'Fitur Lengkap',  title: 'Semua yang dibutuhkan barbershop modern.', subtitle: 'Satu aplikasi untuk operasional harian sampai keputusan bisnis. Dirancang khusus untuk barbershop — bukan template kasir generik.' },
-  benefits:     { kicker: 'Keunggulan', title: 'Yang bikin repot tiap hari, kami bereskan.', subtitle: 'Bukan janji muluk — ini hal-hal kecil yang bikin pusing tiap tutup toko dan tiap tanggal gajian.' },
+  benefits:     { kicker: 'Keunggulan', title: 'Semua urusan toko jadi lebih mudah.', subtitle: 'Tidak perlu paham teknologi. Yang bikin pusing tiap hari — hitung komisi, cocokkan uang kasir, catat antrian — dikerjakan aplikasi.' },
   steps:        { kicker: 'Cara Kerja',     title: 'Siap pakai dalam 3 langkah.', subtitle: 'Tidak perlu teknisi, tidak perlu pelatihan panjang. Daftar pagi, sore sudah jalan.' },
   compare:      { kicker: 'Sebelum vs Sesudah', title: 'Dari serba manual jadi serba otomatis.', subtitle: 'Perbedaan yang langsung terasa di hari pertama — bukan sekadar ganti alat, tapi ganti cara kerja.' },
   roi:          { kicker: 'Hitung Kebocoran Anda', title: 'Berapa rupiah yang menguap tiap bulan?', subtitle: 'Geser sesuai kondisi barbershop Anda dan lihat potensi tambahan omzet yang bisa diselamatkan.' },
