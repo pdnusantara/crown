@@ -483,10 +483,6 @@ export default function RegisterPage() {
             </div>
           </motion.div>
         </AnimatePresence>
-
-        <p className="text-center text-xs text-muted mt-6">
-          Sudah punya akun? <Link to="/login" className="text-brand hover:underline">Masuk di sini</Link>
-        </p>
       </main>
     </div>
   )
