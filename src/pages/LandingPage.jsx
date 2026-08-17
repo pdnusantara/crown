@@ -74,7 +74,6 @@ const FALLBACK_BENEFITS = [
   { icon: 'Wallet',          title: 'Kasir lebih mudah dikontrol', desc: 'Uang masuk dan keluar tercatat. Kalau ada selisih, langsung terlihat.' },
   { icon: 'Coins',           title: 'Komisi karyawan otomatis', desc: 'Setiap transaksi tercatat, komisi langsung bisa dihitung.' },
   { icon: 'Percent',         title: 'Atur gaji dengan mudah', desc: 'Gaji bulanan, bagi hasil, bonus, dan potongan bisa diatur sendiri.' },
-  { icon: 'Scissors',        title: 'Pemilik ikut melayani? Tetap tercatat', desc: 'Transaksi pemilik juga dicatat dan dihitung otomatis.' },
   { icon: 'ListOrdered',     title: 'Antrian langsung dari HP', desc: 'Tidak perlu papan tulis. Tambahkan pelanggan ke antrian langsung dari HP.' },
   { icon: 'CalendarClock',   title: 'Pelanggan bisa booking sendiri', desc: 'Bagikan link booking ke WhatsApp atau Instagram. Pelanggan pilih jadwalnya sendiri.' },
   { icon: 'MapPin',          title: 'Absensi lebih aman', desc: 'Karyawan absen dengan lokasi dan foto.' },
@@ -84,8 +83,6 @@ const FALLBACK_BENEFITS = [
   { icon: 'Receipt',         title: 'Struk langsung dikirim', desc: 'Cetak atau kirim struk ke WhatsApp pelanggan.' },
   { icon: 'CreditCard',      title: 'Semua pembayaran tercatat', desc: 'Tunai, transfer, dan QRIS tercatat dengan rapi.' },
   { icon: 'MessageCircle',   title: 'WhatsApp otomatis', desc: 'Kirim konfirmasi booking dan pengingat ke pelanggan.' },
-  { icon: 'FileSpreadsheet', title: 'Download data ke Excel', desc: 'Data transaksi dan laporan bisa diunduh kapan saja.' },
-  { icon: 'Flag',            title: 'Cocok untuk bisnis di Indonesia', desc: 'Memakai Rupiah, format tanggal Indonesia, dan alamat lengkap Indonesia.' },
 ]
 
 const FALLBACK_TRUST = ['Tanpa kartu kredit', 'Setup 5 menit', 'Bisa dibatalkan kapan saja']
