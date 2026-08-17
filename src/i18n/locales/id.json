@@ -415,7 +415,7 @@
     "receiptReceived": "Diterima",
     "receiptChange": "Kembalian",
     "receiptThanksLong": "Terima kasih sudah berkunjung!",
-    "poweredBy": "Powered by SembaPos",
+    "poweredBy": "Powered by barberos.id",
     "ratingQrTitle": "Beri Penilaian ⭐",
     "ratingQrCaption": "Pindai untuk menilai layanan kami",
     "copyRatingLink": "Salin link rating",
@@ -1779,7 +1779,7 @@
       "activeUntilDate": "Aktif hingga 31 Desember 2026",
       "perMonth": "/bulan",
       "upgradePlan": "Upgrade Paket",
-      "contactUpgrade": "Hubungi tim SembaPOS untuk upgrade",
+      "contactUpgrade": "Hubungi tim barberos.id untuk upgrade",
       "exportData": "Export Data",
       "exportDataDesc": "Download semua data bisnis Anda (cabang, layanan, staff, pelanggan, produk) sebagai file JSON.",
       "branchCountLine": "• Branches: {{count}} cabang",
@@ -2604,7 +2604,7 @@
       "stepTxDesc": "Lewat akun kasir di menu POS — tanda toko sudah aktif.",
       "openBtn": "Buka",
       "helpCenterCta": "Butuh panduan lengkap? Buka Pusat Bantuan",
-      "welcomeTitle": "Selamat datang di SembaPOS! 🎉",
+      "welcomeTitle": "Selamat datang di barberos.id! 🎉",
       "welcomeDesc": "Trial 14 hari Anda sudah aktif. Ikuti checklist \"Persiapan Toko\" di bawah — tiap langkah otomatis tercentang saat selesai.",
       "welcomeStartSetup": "Mulai Setup",
       "welcomeViewTrial": "Lihat Status Trial"
@@ -2617,7 +2617,7 @@
       "tabJadwal": "Pola Mingguan",
       "tabSetting": "Pengaturan",
       "featureOffTitle": "Fitur belum aktif",
-      "featureOffDesc": "Absensi Digital tersedia di paket Pro & Enterprise. Hubungi SembaPOS untuk mengaktifkannya.",
+      "featureOffDesc": "Absensi Digital tersedia di paket Pro & Enterprise. Hubungi barberos.id untuk mengaktifkannya.",
       "noDataToExport": "Tidak ada data untuk diekspor.",
       "csvDate": "Tanggal",
       "csvStaff": "Staf",
@@ -3203,7 +3203,7 @@
         "replyFailed": "Gagal mengirim balasan"
       },
       "title": "Support Tickets",
-      "subtitle": "Hubungi tim support platform SembaPOS",
+      "subtitle": "Hubungi tim support platform barberos.id",
       "newTicket": "Buat Tiket",
       "stats": {
         "total": "Total Tiket",
@@ -3861,7 +3861,7 @@
     },
     "dashboard": {
       "title": "Platform Dashboard",
-      "subtitle": "Pantau performa seluruh tenant SembaPOS",
+      "subtitle": "Pantau performa seluruh tenant barberos.id",
       "totalTenant": "Total Tenant",
       "trendTenantMonth": "+2 bulan ini",
       "mrr": "MRR",
@@ -3973,7 +3973,7 @@
   },
   "tickets": {
     "title": "Support Tickets",
-    "subtitle": "Hubungi tim support platform SembaPOS",
+    "subtitle": "Hubungi tim support platform barberos.id",
     "totalTickets": "Total Tiket",
     "open": "Open",
     "inProgress": "In Progress",
@@ -4173,7 +4173,7 @@
     "openProfileSettings": "Buka profil & pengaturan",
     "impersonationPrefix": "Mode Impersonation — Anda melihat sebagai",
     "exitImpersonation": "Keluar dari Impersonation",
-    "pwaBanner": "Pasang SembaPOS di HP kamu untuk pengalaman lebih baik!",
+    "pwaBanner": "Pasang barberos.id di HP kamu untuk pengalaman lebih baik!",
     "install": "Pasang",
     "offlineBanner": "Mode offline — perubahan akan tersinkronisasi saat koneksi kembali"
   },

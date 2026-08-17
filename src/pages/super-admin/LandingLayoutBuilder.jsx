@@ -52,7 +52,7 @@ const CORE_EDIT = {
   pricing:      { nav: '/super-admin/packages', note: 'Diatur di menu Paket Harga' },
   stats:        { note: 'Otomatis dari data — tanpa editor konten' },
   roi:          { note: 'Otomatis menghitung — pengunjung geser sendiri kondisi tokonya' },
-  compare:      { note: 'Daftar perbandingan bawaan — cara lama vs SembaPOS' },
+  compare:      { note: 'Daftar perbandingan bawaan — cara lama vs barberos.id' },
 }
 
 const uid = () =>

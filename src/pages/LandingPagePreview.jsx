@@ -426,7 +426,7 @@ function Testimonials() {
 
 /* ── FAQ ──────────────────────────────────────────────────────────────────── */
 const FAQS = [
-  { q: 'Perlu install aplikasi atau alat khusus?', a: 'Nggak. SembaPOS jalan langsung di browser HP, tablet, atau komputer. Cukup buka, login, langsung pakai. Mau cetak struk pun bisa lewat printer Bluetooth biasa.' },
+  { q: 'Perlu install aplikasi atau alat khusus?', a: 'Nggak. barberos.id jalan langsung di browser HP, tablet, atau komputer. Cukup buka, login, langsung pakai. Mau cetak struk pun bisa lewat printer Bluetooth biasa.' },
   { q: 'Data toko saya aman?', a: 'Aman. Semua data dienkripsi, di-backup otomatis, dan tiap orang (owner/kasir/barber) punya akses sesuai perannya. Datamu nggak bisa dilihat toko lain.' },
   { q: 'Ribet nggak buat pindah dari catatan manual?', a: 'Gampang banget. Daftar cuma semenit, ada checklist panduan, dan toko bisa jalan hari itu juga. Kalau bingung, tim kami bantu lewat WhatsApp.' },
   { q: 'Kalau punya banyak cabang gimana?', a: 'Bisa. Pantau semua cabang dari satu dashboard, lengkap dengan perbandingan omzet per cabang. Mulai paket Pro untuk 3 cabang, atau Enterprise untuk tanpa batas.' },

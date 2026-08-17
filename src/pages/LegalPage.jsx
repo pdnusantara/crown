@@ -16,7 +16,7 @@ const LAST_UPDATED = '2 Juni 2026'
 const CONTACT = {
   entity: '',                       // mis. 'PT Semba Digital Nusantara' — isi saat PT terbit
   phone: '0816-4812-342',
-  email: 'admin@sembapos.com',
+  email: 'admin@barberos.id',
   address: 'Dusun Puhun RT 7 RW 2, Desa Dukuhlor, Kecamatan Sindangagung, Kabupaten Kuningan, Provinsi Jawa Barat',
   jurisdiction: 'Kabupaten Kuningan, Jawa Barat, Indonesia',
 }
@@ -338,7 +338,7 @@ export default function LegalPage() {
   const isPrivacy = pathname.includes('privasi') || pathname.includes('privacy')
   const { data } = useLanding()
   const hero = data?.hero || {}
-  const siteName = (hero.siteName || 'SembaPOS').trim()
+  const siteName = (hero.siteName || 'barberos.id').trim()
   const email = (hero.contactEmail || '').trim() || CONTACT.email
   const logo = hero.siteLogo
 

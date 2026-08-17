@@ -92,7 +92,7 @@ const DEFAULTS = {
     compare:      { kicker: 'Sebelum vs Sesudah', title: 'Dari serba manual jadi serba otomatis', subtitle: 'Perbedaan yang langsung terasa di hari pertama — bukan sekadar ganti alat, tapi ganti cara kerja.' },
     roi:          { kicker: 'Hitung Kebocoran', title: 'Berapa rupiah yang menguap tiap bulan?', subtitle: 'Geser sesuai kondisi barbershop kamu dan lihat potensi tambahan omzet yang bisa diselamatkan.' },
     pricing:      { kicker: 'Paket Harga',    title: 'Harga jelas, tanpa kejutan', subtitle: 'Mulai gratis 14 hari. Bayar cuma kalau toko kamu makin ramai — bisa naik paket kapan saja.' },
-    testimonials: { kicker: 'Testimoni',      title: 'Kata para owner barbershop', subtitle: 'Mereka sudah pindah dari catatan manual ke SembaPOS — dan nggak mau balik lagi.' },
+    testimonials: { kicker: 'Testimoni',      title: 'Kata para owner barbershop', subtitle: 'Mereka sudah pindah dari catatan manual ke barberos.id — dan nggak mau balik lagi.' },
     faq:          { kicker: 'Tanya Jawab',    title: 'Masih ragu? Wajar kok', subtitle: 'Belum nemu jawabannya? Chat tim kami langsung lewat WhatsApp.' },
   }),
   closingCta: JSON.stringify({
@@ -109,11 +109,11 @@ const DEFAULTS = {
     { aspect: 'Banyak cabang', before: 'Harus telpon tiap cabang buat tahu omzet', after: 'Semua cabang terpantau dari satu layar' },
   ]),
   metaPixelId: '',
-  seoTitle:       'SembaPOS — Sistem Manajemen Barbershop Modern',
+  seoTitle:       'barberos.id — Sistem Manajemen Barbershop Modern',
   seoDescription: 'Kasir, antrian, booking online, multi-cabang, dan laporan pintar — semua dalam satu aplikasi yang dirancang khusus untuk barbershop. Coba gratis 14 hari, tanpa kartu kredit.',
   seoKeywords:    'aplikasi barbershop, POS barbershop, manajemen barbershop, kasir barbershop, booking barbershop, antrian barbershop',
   seoOgImage:     '',
-  siteName:       'SembaPOS',
+  siteName:       'barberos.id',
   siteLogo:       '',
   siteFavicon:    '',
 };

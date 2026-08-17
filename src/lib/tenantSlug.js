@@ -1,7 +1,7 @@
 const PLATFORM_SUBDOMAINS = ['www', 'app', 'api', 'localhost']
 
-// True kalau host saat ini adalah subdomain tenant (mis. mahkota.sembapos.com),
-// bukan apex domain (sembapos.com) atau subdomain platform (www/app/api).
+// True kalau host saat ini adalah subdomain tenant (mis. mahkota.barberos.id),
+// bukan apex domain (barberos.id) atau subdomain platform (www/app/api).
 export function isTenantSubdomain() {
   if (typeof window === 'undefined') return false
   const host = window.location.hostname.split(':')[0]
@@ -20,7 +20,7 @@ export function getTenantSlug() {
     return window.location.hostname.split(':')[0].split('.')[0]
   }
 
-  // Fallback: slug from URL path — supports sembapos.com/book/termul
+  // Fallback: slug from URL path — supports barberos.id/book/termul
   const pathMatch = window.location.pathname.match(/^\/book\/([^/?#]+)/)
   if (pathMatch?.[1]) return pathMatch[1]
 

@@ -182,7 +182,7 @@ async function notifyNewTenant(info = {}) {
   lines.push('🎉 <b>Pendaftaran Tenant Baru</b>');
   lines.push('');
   lines.push(`🏪 <b>${escapeHtml(info.name || '-')}</b>`);
-  if (info.slug)  lines.push(`🔗 ${escapeHtml(info.slug)}.sembapos.com`);
+  if (info.slug)  lines.push(`🔗 ${escapeHtml(info.slug)}.barberos.id`);
   if (info.email) lines.push(`📧 ${escapeHtml(info.email)}`);
   if (info.phone) lines.push(`📱 ${escapeHtml(info.phone)}`);
   lines.push(`📦 Paket: <b>${escapeHtml(info.packageName || 'Basic')}</b>`);
@@ -264,7 +264,7 @@ async function notifyError(info = {}) {
   if (info.tenantName)      lines.push(`🏪 Tenant: <b>${escapeHtml(info.tenantName)}</b>`);
   else if (info.tenantId)   lines.push(`🏪 Tenant: <code>${escapeHtml(info.tenantId)}</code>`);
   lines.push('');
-  lines.push('🔎 <a href="https://sembapos.com/super-admin/error-logs">Buka log error</a>');
+  lines.push('🔎 <a href="https://barberos.id/super-admin/error-logs">Buka log error</a>');
 
   try {
     return await sendMessage(lines.join('\n'));
@@ -296,7 +296,7 @@ async function testConnection() {
   try {
     await tgFetch(c.botToken, 'sendMessage', {
       chat_id: c.chatId,
-      text: '✅ <b>SembaPOS terhubung</b>\nNotifikasi pendaftaran tenant akan dikirim ke grup ini.',
+      text: '✅ <b>barberos.id terhubung</b>\nNotifikasi pendaftaran tenant akan dikirim ke grup ini.',
       parse_mode: 'HTML',
       disable_web_page_preview: true,
     });

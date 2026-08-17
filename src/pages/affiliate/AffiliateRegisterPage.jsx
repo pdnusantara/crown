@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { useAffiliateRegister } from '../../hooks/useAffiliates.js'
 
-const PLATFORM = 'SembaPOS'
+const PLATFORM = 'barberos.id'
 
 export default function AffiliateRegisterPage() {
   const register = useAffiliateRegister()

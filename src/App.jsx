@@ -141,7 +141,7 @@ function ProtectedRoute({ children, roles }) {
   return children
 }
 
-// Root redirector — landing marketing hanya untuk apex domain (sembapos.com).
+// Root redirector — landing marketing hanya untuk apex domain (barberos.id).
 // Di subdomain tenant, root langsung ke /login (deteksi hostname sinkron, tanpa
 // menunggu resolve tenant → tidak ada kedip landing). Kalau sudah login →
 // dashboard sesuai peran.
@@ -208,7 +208,7 @@ function TenantSuspended({ name }) {
         <p className="text-muted text-sm mb-1">
           Akun <span className="text-off-white font-medium">{name}</span> sedang ditangguhkan.
         </p>
-        <p className="text-muted text-sm">Hubungi SembaPOS support untuk informasi lebih lanjut.</p>
+        <p className="text-muted text-sm">Hubungi support barberos.id untuk informasi lebih lanjut.</p>
       </div>
     </div>
   )

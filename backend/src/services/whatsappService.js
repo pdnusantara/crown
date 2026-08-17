@@ -727,7 +727,7 @@ async function sendTestMessage(tenantId) {
 
   const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { timezone: true } }).catch(() => null);
   const body = [
-    'Pesan tes SembaPOS',
+    'Pesan tes barberos.id',
     '',
     'Jika Anda menerima pesan ini, integrasi WhatsApp sudah berfungsi.',
     `Waktu kirim: ${formatInTz(new Date(), tenant?.timezone)}`,
@@ -777,7 +777,7 @@ async function sendRatingLink(tenantId, transaction) {
 
   // URL halaman rating publik — selalu pakai subdomain tenant supaya tenant
   // resolver di backend dapat mengenali tenant dari host header.
-  const baseDomain = process.env.APP_BASE_DOMAIN || 'sembapos.com';
+  const baseDomain = process.env.APP_BASE_DOMAIN || 'barberos.id';
   const link = `https://${tenant.slug}.${baseDomain}/rating/${transaction.id}`;
 
   const template = (cfg.messageTemplate && cfg.messageTemplate.trim())

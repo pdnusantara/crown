@@ -161,7 +161,7 @@ export default function RegisterPage() {
         referralCode: initialRef || undefined,
         signupMeta:   getAttribution(),
       })
-      // Akun tenant TIDAK boleh aktif di domain utama (sembapos.com) — login &
+      // Akun tenant TIDAK boleh aktif di domain utama (barberos.id) — login &
       // refresh di-enforce per subdomain. Maka jangan auto-login di sini;
       // arahkan owner ke subdomain mereka untuk masuk.
       setDone({

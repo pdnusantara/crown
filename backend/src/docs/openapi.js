@@ -161,7 +161,7 @@ const tags = [...new Set(endpoints.map((e) => tagFor(e.path)))].map((name) => ({
 }));
 
 const description = `
-Dokumentasi REST API **SembaPOS** untuk kebutuhan aplikasi **Android** (semua peran: kasir/POS, barber, owner/admin, pelanggan).
+Dokumentasi REST API **barberos.id** untuk kebutuhan aplikasi **Android** (semua peran: kasir/POS, barber, owner/admin, pelanggan).
 
 ## Autentikasi (JWT)
 1. **Login** \`POST /api/auth/login\` dengan \`{ email, password }\` → dapat \`accessToken\` (umur pendek) + \`refreshToken\` (7 hari).
@@ -173,8 +173,8 @@ Dokumentasi REST API **SembaPOS** untuk kebutuhan aplikasi **Android** (semua pe
 
 ## Konteks Tenant (WAJIB)
 Setiap toko = satu *tenant*. Tentukan tenant dengan salah satu cara:
-- **Subdomain** (disarankan untuk web): panggil \`https://<slug>.sembapos.com/api/...\`
-- **Header** (disarankan untuk Android): panggil base \`https://sembapos.com/api/...\` + header **\`X-Tenant-Slug: <slug>\`** (mis. \`termul\`).
+- **Subdomain** (disarankan untuk web): panggil \`https://<slug>.barberos.id/api/...\`
+- **Header** (disarankan untuk Android): panggil base \`https://barberos.id/api/...\` + header **\`X-Tenant-Slug: <slug>\`** (mis. \`termul\`).
 
 Kebijakan login terikat domain: akun tenant **harus** login lewat tenant-nya (subdomain atau X-Tenant-Slug yang benar), bukan domain utama polos.
 
@@ -195,14 +195,14 @@ Kebijakan login terikat domain: akun tenant **harus** login lewat tenant-nya (su
 module.exports = {
   openapi: '3.0.3',
   info: {
-    title: 'SembaPOS API',
+    title: 'barberos.id API',
     version: pkgVersion,
     description,
-    contact: { name: 'SembaPOS', url: 'https://sembapos.com' },
+    contact: { name: 'barberos.id', url: 'https://barberos.id' },
   },
   servers: [
-    { url: 'https://{tenant}.sembapos.com/api', description: 'Produksi via subdomain tenant', variables: { tenant: { default: 'demo', description: 'Slug tenant toko' } } },
-    { url: 'https://sembapos.com/api', description: 'Produksi via header X-Tenant-Slug' },
+    { url: 'https://{tenant}.barberos.id/api', description: 'Produksi via subdomain tenant', variables: { tenant: { default: 'demo', description: 'Slug tenant toko' } } },
+    { url: 'https://barberos.id/api', description: 'Produksi via header X-Tenant-Slug' },
   ],
   tags,
   paths,
@@ -213,7 +213,7 @@ module.exports = {
     parameters: {
       TenantSlug: {
         name: 'X-Tenant-Slug', in: 'header', required: false,
-        description: 'Slug tenant (mis. "termul"). WAJIB jika memanggil base domain sembapos.com. Tidak perlu bila memakai subdomain tenant.',
+        description: 'Slug tenant (mis. "termul"). WAJIB jika memanggil base domain barberos.id. Tidak perlu bila memakai subdomain tenant.',
         schema: { type: 'string' },
       },
     },

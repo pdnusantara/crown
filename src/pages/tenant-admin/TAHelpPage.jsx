@@ -9,7 +9,7 @@ import { useFeatureFlags } from '../../hooks/useFeatureFlags.js'
 
 // ── /admin/bantuan — Pusat Bantuan untuk pemilik toko (tenant_admin) ──────────
 // Konten statis: panduan langkah demi langkah tiap fitur, plus tautan langsung
-// ke halaman terkait. Footer mengarah ke tiket support SembaPOS.
+// ke halaman terkait. Footer mengarah ke tiket support barberos.id.
 const CATEGORIES = [
   {
     id: 'mulai',
@@ -456,7 +456,7 @@ export default function TAHelpPage() {
       lockedAction={{ label: 'Lihat Paket', onClick: () => navigate('/admin/billing') }}
       support={{
         title: 'Masih butuh bantuan?',
-        desc: 'Kirim tiket ke tim support SembaPOS dan kami akan membantu Anda.',
+        desc: 'Kirim tiket ke tim support barberos.id dan kami akan membantu Anda.',
         action: {
           label: 'Hubungi Support',
           onClick: () => navigate('/admin/tickets'),

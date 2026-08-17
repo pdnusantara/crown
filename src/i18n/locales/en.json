@@ -415,7 +415,7 @@
     "receiptReceived": "Received",
     "receiptChange": "Change",
     "receiptThanksLong": "Thanks for visiting!",
-    "poweredBy": "Powered by SembaPos",
+    "poweredBy": "Powered by barberos.id",
     "ratingQrTitle": "Rate Us ⭐",
     "ratingQrCaption": "Scan to rate our service",
     "copyRatingLink": "Copy rating link",
@@ -1779,7 +1779,7 @@
       "activeUntilDate": "Active until December 31, 2026",
       "perMonth": "/month",
       "upgradePlan": "Upgrade Plan",
-      "contactUpgrade": "Contact the SembaPOS team to upgrade",
+      "contactUpgrade": "Contact the barberos.id team to upgrade",
       "exportData": "Export Data",
       "exportDataDesc": "Download all your business data (branches, services, staff, customers, products) as a JSON file.",
       "branchCountLine": "• Branches: {{count}}",
@@ -2604,7 +2604,7 @@
       "stepTxDesc": "Via a cashier account in the POS menu — proof your store is live.",
       "openBtn": "Open",
       "helpCenterCta": "Need a full guide? Open the Help Center",
-      "welcomeTitle": "Welcome to SembaPOS! 🎉",
+      "welcomeTitle": "Welcome to barberos.id! 🎉",
       "welcomeDesc": "Your 14-day trial is active. Follow the \"Store Setup\" checklist below — each step is checked off automatically when done.",
       "welcomeStartSetup": "Start Setup",
       "welcomeViewTrial": "View Trial Status"
@@ -2617,7 +2617,7 @@
       "tabJadwal": "Weekly Pattern",
       "tabSetting": "Settings",
       "featureOffTitle": "Feature not active",
-      "featureOffDesc": "Digital Attendance is available on the Pro & Enterprise plans. Contact SembaPOS to enable it.",
+      "featureOffDesc": "Digital Attendance is available on the Pro & Enterprise plans. Contact barberos.id to enable it.",
       "noDataToExport": "No data to export.",
       "csvDate": "Date",
       "csvStaff": "Staff",
@@ -3203,7 +3203,7 @@
         "replyFailed": "Failed to send reply"
       },
       "title": "Support Tickets",
-      "subtitle": "Contact the SembaPOS platform support team",
+      "subtitle": "Contact the barberos.id platform support team",
       "newTicket": "New Ticket",
       "stats": {
         "total": "Total Tickets",
@@ -3861,7 +3861,7 @@
     },
     "dashboard": {
       "title": "Platform Dashboard",
-      "subtitle": "Monitor performance across all SembaPOS tenants",
+      "subtitle": "Monitor performance across all barberos.id tenants",
       "totalTenant": "Total Tenants",
       "trendTenantMonth": "+2 this month",
       "mrr": "MRR",
@@ -3973,7 +3973,7 @@
   },
   "tickets": {
     "title": "Support Tickets",
-    "subtitle": "Contact the SembaPOS platform support team",
+    "subtitle": "Contact the barberos.id platform support team",
     "totalTickets": "Total Tickets",
     "open": "Open",
     "inProgress": "In Progress",
@@ -4173,7 +4173,7 @@
     "openProfileSettings": "Open profile & settings",
     "impersonationPrefix": "Impersonation Mode — you are viewing as",
     "exitImpersonation": "Exit Impersonation",
-    "pwaBanner": "Install SembaPOS on your phone for a better experience!",
+    "pwaBanner": "Install barberos.id on your phone for a better experience!",
     "install": "Install",
     "offlineBanner": "Offline mode — changes will sync when the connection is back"
   },

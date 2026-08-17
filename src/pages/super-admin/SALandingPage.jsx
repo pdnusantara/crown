@@ -168,7 +168,7 @@ function SeoEditor() {
     }
   }
 
-  const previewTitle = form.seoTitle.trim() || 'SembaPOS — Sistem Manajemen Barbershop Modern'
+  const previewTitle = form.seoTitle.trim() || 'barberos.id — Sistem Manajemen Barbershop Modern'
   const previewDesc  = form.seoDescription.trim()
     || 'Kasir, antrian, booking online, multi-cabang, dan laporan pintar — semua dalam satu aplikasi untuk barbershop.'
   const ogSrc = form.seoOgImage.trim() || '/og-image.svg'
@@ -181,7 +181,7 @@ function SeoEditor() {
           <div>
             <Input
               label="Judul halaman (title tag)"
-              placeholder="SembaPOS — Sistem Manajemen Barbershop Modern"
+              placeholder="barberos.id — Sistem Manajemen Barbershop Modern"
               value={form.seoTitle}
               onChange={e => setForm(f => ({ ...f, seoTitle: e.target.value }))}
             />
@@ -540,7 +540,7 @@ function VideoUploadField({ label, hint, value, onChange }) {
 }
 
 // ── Katalog fitur on-brand ───────────────────────────────────────────────
-// Diturunkan langsung dari Brand Guidelines SembaPOS (20 fitur berflag + sorotan
+// Diturunkan langsung dari Brand Guidelines barberos.id (20 fitur berflag + sorotan
 // fitur selalu-aktif). Tujuannya: super-admin bisa menyusun "Fitur Unggulan"
 // landing yang konsisten brand tanpa mengetik ulang ikon, judul, & deskripsi.
 // Voice mengikuti pedoman: santai, sapaan "kamu", manfaat dulu.
@@ -594,7 +594,7 @@ function FeaturePresetModal({ open, onClose, existingTitles, onAdd }) {
   )
 
   return (
-    <Modal isOpen={open} onClose={onClose} title="Katalog Fitur SembaPOS" size="xl">
+    <Modal isOpen={open} onClose={onClose} title="Katalog Fitur barberos.id" size="xl">
       <p className="text-xs text-muted mb-4">
         Pilih fitur dari Brand Guidelines untuk ditambahkan ke daftar "Fitur Unggulan". Ikon, judul, & deskripsi sudah on-brand — bisa kamu sunting lagi setelah ditambahkan.
       </p>
@@ -728,11 +728,11 @@ function HeroEditor() {
               value={form.siteName}
               onChange={e => setForm(f => ({ ...f, siteName: e.target.value }))}
               maxLength={60}
-              placeholder="SembaPOS"
+              placeholder="barberos.id"
               className="w-full appearance-none rounded-lg border border-dark-border bg-dark-surface px-3 py-2 text-sm text-off-white placeholder-muted focus:outline-none focus:border-brand/50"
             />
             <p className="text-[11px] text-muted mt-1">
-              Teks brand di pojok kiri header, footer, judul tab browser, & SEO. Dipakai saat logo gambar kosong. Kosongkan untuk default "SembaPOS".
+              Teks brand di pojok kiri header, footer, judul tab browser, & SEO. Dipakai saat logo gambar kosong. Kosongkan untuk default "barberos.id".
             </p>
           </div>
           <ImageUploadField
@@ -1326,7 +1326,7 @@ function ContentEditor() {
           </div>
         </CardHeader>
         <CardBody className="space-y-3">
-          <p className="text-xs text-muted">Tiap baris membandingkan satu aspek: tanpa SembaPOS (Sebelum) vs dengan SembaPOS (Sesudah). Kosongkan semua untuk memakai daftar bawaan.</p>
+          <p className="text-xs text-muted">Tiap baris membandingkan satu aspek: tanpa barberos.id (Sebelum) vs dengan barberos.id (Sesudah). Kosongkan semua untuk memakai daftar bawaan.</p>
           {compareRows.length === 0 && <p className="text-sm text-muted text-center py-3">Belum ada baris — memakai daftar bawaan.</p>}
           {compareRows.map((r, i) => (
             <div key={i} className="p-3 bg-dark-surface rounded-xl border border-dark-border space-y-2">
@@ -1338,8 +1338,8 @@ function ContentEditor() {
               </div>
               <Input label="Aspek" placeholder="Antrian" value={r.aspect} onChange={e => setCompareRow(i, 'aspect', e.target.value)} />
               <div className="grid sm:grid-cols-2 gap-2">
-                <Input label="Sebelum (tanpa SembaPOS)" value={r.before} onChange={e => setCompareRow(i, 'before', e.target.value)} />
-                <Input label="Sesudah (dengan SembaPOS)" value={r.after} onChange={e => setCompareRow(i, 'after', e.target.value)} />
+                <Input label="Sebelum (tanpa barberos.id)" value={r.before} onChange={e => setCompareRow(i, 'before', e.target.value)} />
+                <Input label="Sesudah (dengan barberos.id)" value={r.after} onChange={e => setCompareRow(i, 'after', e.target.value)} />
               </div>
             </div>
           ))}

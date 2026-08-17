@@ -231,7 +231,7 @@ function Testimonials() {
 }
 
 const FAQS = [
-  { q: 'Perlu install aplikasi atau alat khusus?', a: 'Nggak. SembaPOS jalan langsung di browser HP, tablet, atau komputer. Cukup buka, login, langsung pakai. Cetak struk pun bisa lewat printer Bluetooth biasa.' },
+  { q: 'Perlu install aplikasi atau alat khusus?', a: 'Nggak. barberos.id jalan langsung di browser HP, tablet, atau komputer. Cukup buka, login, langsung pakai. Cetak struk pun bisa lewat printer Bluetooth biasa.' },
   { q: 'Data toko saya aman?', a: 'Aman. Semua data dienkripsi, di-backup otomatis, dan tiap orang punya akses sesuai perannya. Datamu nggak bisa dilihat toko lain.' },
   { q: 'Ribet nggak buat pindah dari catatan manual?', a: 'Gampang. Daftar cuma semenit, ada checklist panduan, dan toko bisa jalan hari itu juga. Bingung? Tim kami bantu lewat WhatsApp.' },
   { q: 'Kalau punya banyak cabang gimana?', a: 'Bisa. Pantau semua cabang dari satu dashboard + perbandingan omzet per cabang. Mulai Pro untuk 3 cabang, atau Enterprise tanpa batas.' },

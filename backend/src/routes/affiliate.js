@@ -330,7 +330,7 @@ const claimSchema = z.object({
   note:      z.string().max(500).optional(),
 });
 
-// "budi.sembapos.com" / "https://budi.sembapos.com/.." / "Budi" → "budi"
+// "budi.barberos.id" / "https://budi.barberos.id/.." / "Budi" → "budi"
 function normalizeSlug(raw) {
   let s = String(raw).trim().toLowerCase();
   s = s.replace(/^https?:\/\//, '').split('/')[0]; // buang protokol & path

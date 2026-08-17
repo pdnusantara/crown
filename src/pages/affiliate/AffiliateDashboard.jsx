@@ -30,13 +30,13 @@ export default function AffiliateDashboard() {
   const [payoutNote, setPayoutNote] = useState('')
   const [copiedKind, setCopiedKind] = useState(null)
 
-  // Selalu pakai PLATFORM_DOMAIN (sembapos.com) — landing & form register hanya
+  // Selalu pakai PLATFORM_DOMAIN (barberos.id) — landing & form register hanya
   // tersedia di main domain, bukan subdomain tenant. Cara lama strip subdomain
   // dari window.location.host bisa salah saat di main domain itu sendiri (mis.
-  // "sembapos.com" → "com").
+  // "barberos.id" → "id").
   const refUrl  = me ? `https://${PLATFORM_DOMAIN}/register?ref=${me.referralCode}` : ''
   const shareMessage = me
-    ? `Halo! Lagi kelola barbershop? Coba SembaPOS — kasir, antrian, booking online, semua jadi satu aplikasi. Daftar via link saya, gratis 14 hari trial:\n${refUrl}`
+    ? `Halo! Lagi kelola barbershop? Coba barberos.id — kasir, antrian, booking online, semua jadi satu aplikasi. Daftar via link saya, gratis 14 hari trial:\n${refUrl}`
     : ''
 
   const handleCopy = async (text, kind) => {
@@ -49,7 +49,7 @@ export default function AffiliateDashboard() {
 
   const handleShare = async () => {
     if (navigator.share) {
-      try { await navigator.share({ title: 'SembaPOS', text: shareMessage, url: refUrl }) } catch { /* canceled */ }
+      try { await navigator.share({ title: 'barberos.id', text: shareMessage, url: refUrl }) } catch { /* canceled */ }
     } else {
       handleCopy(shareMessage, 'message')
       toast.success('Pesan tersalin — siap tempel ke chat/postingan')
@@ -96,7 +96,7 @@ export default function AffiliateDashboard() {
       <Card className="p-8 text-center max-w-md mx-auto">
         <AlertCircle size={28} className="mx-auto text-red-400 mb-3" />
         <h1 className="font-display text-xl font-bold text-off-white">Akun affiliate Anda dibekukan</h1>
-        <p className="text-muted text-sm mt-2">Komisi baru tidak akan terhitung selama dibekukan. Hubungi tim SembaPOS untuk informasi lebih lanjut.</p>
+        <p className="text-muted text-sm mt-2">Komisi baru tidak akan terhitung selama dibekukan. Hubungi tim barberos.id untuk informasi lebih lanjut.</p>
       </Card>
     )
   }
@@ -276,7 +276,7 @@ export default function AffiliateDashboard() {
             <p className="text-xs text-red-400">Metode pencairan belum diisi. Lengkapi profil dulu.</p>
           )}
           <div>
-            <label className="text-xs text-muted block mb-1.5">Catatan untuk tim SembaPOS (opsional)</label>
+            <label className="text-xs text-muted block mb-1.5">Catatan untuk tim barberos.id (opsional)</label>
             <textarea value={payoutNote} onChange={e => setPayoutNote(e.target.value)} rows={2} maxLength={500}
               className="w-full bg-dark-surface border border-dark-border rounded-xl p-3 text-sm text-off-white placeholder:text-muted focus:outline-none focus:border-brand/40"
               placeholder="Mis. mohon transfer secepatnya" />

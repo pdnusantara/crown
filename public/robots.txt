@@ -7,4 +7,4 @@ Disallow: /customer
 Disallow: /super-admin
 Disallow: /api
 
-Sitemap: https://sembapos.com/sitemap.xml
+Sitemap: https://barberos.id/sitemap.xml

@@ -23,7 +23,7 @@ const loginSchema = z.object({
 // Slug harus minimal punya 1 huruf/angka, boleh hyphen di tengah, tidak boleh
 // double-hyphen atau hyphen di awal/akhir (mencegah `---`, `-toko`, dst).
 const slugRegex = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
-const RESERVED_SLUGS = new Set(['www', 'app', 'api', 'localhost', 'admin', 'mail', 'staging', 'sembapos', 'crown']);
+const RESERVED_SLUGS = new Set(['www', 'app', 'api', 'localhost', 'admin', 'mail', 'staging', 'barberos', 'sembapos', 'crown']);
 const TRIAL_DAYS = Number(process.env.TRIAL_DAYS || 14);
 
 const registerSchema = z.object({
@@ -350,8 +350,8 @@ router.post('/login', async (req, res, next) => {
     //         tenant tersebut supaya UI bisa menampilkan tombol "Login di X"
     //
     // Tujuannya: setiap tenant punya pintu login terpisah dan tidak bocor ke
-    // `sembapos.com`. Audit log SA juga jadi konsisten (selalu dari main domain).
-    const PUBLIC_HOST = process.env.PUBLIC_HOST || 'sembapos.com';
+    // `barberos.id`. Audit log SA juga jadi konsisten (selalu dari main domain).
+    const PUBLIC_HOST = process.env.PUBLIC_HOST || 'barberos.id';
     if (req.tenant) {
       if (user.role === 'super_admin') {
         return res.status(403).json({

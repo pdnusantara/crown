@@ -71,7 +71,7 @@ export const TopBar = ({ onMenuClick, onSearchClick }) => {
     for (const [key, tkey] of Object.entries(pageTitleKeys)) {
       if (path.endsWith(key)) return t(tkey)
     }
-    return 'SembaPOS'
+    return 'barberos.id'
   }
 
   const firstName = user?.name?.split(/\s+/)[0] || t('layout.user')

@@ -69,7 +69,7 @@ const FALLBACK_FEATURES = [
 
 const FALLBACK_TRUST = ['Tanpa kartu kredit', 'Setup 5 menit', 'Bisa dibatalkan kapan saja']
 
-// Baris perbandingan "cara lama vs SembaPOS" — dipakai CompareSection (sebelum/sesudah).
+// Baris perbandingan "cara lama vs barberos.id" — dipakai CompareSection (sebelum/sesudah).
 const COMPARE_ROWS = [
   { aspect: 'Antrian',         before: 'Ditulis di kertas, sering salah urutan',       after: 'Antrian digital rapi, pelanggan lihat dari HP' },
   { aspect: 'Booking',         before: 'Balas chat WA satu-satu, sering bentrok',       after: 'Booking online 24 jam, slot terkunci otomatis' },
@@ -90,7 +90,7 @@ const FALLBACK_SECTIONS = {
   compare:      { kicker: 'Sebelum vs Sesudah', title: 'Dari serba manual jadi serba otomatis.', subtitle: 'Perbedaan yang langsung terasa di hari pertama — bukan sekadar ganti alat, tapi ganti cara kerja.' },
   roi:          { kicker: 'Hitung Kebocoran Anda', title: 'Berapa rupiah yang menguap tiap bulan?', subtitle: 'Geser sesuai kondisi barbershop Anda dan lihat potensi tambahan omzet yang bisa diselamatkan.' },
   pricing:      { kicker: 'Harga',          title: 'Harga jujur, sesuai skala Anda.', subtitle: 'Mulai gratis 14 hari. Tanpa kartu kredit, tanpa biaya tersembunyi. Batalkan kapan saja.' },
-  testimonials: { kicker: 'Kata Mereka',    title: 'Pemilik barbershop yang sudah pindah ke SembaPOS.', subtitle: 'Mereka sudah pindah dari catatan manual ke SembaPOS — dan nggak mau balik lagi.' },
+  testimonials: { kicker: 'Kata Mereka',    title: 'Pemilik barbershop yang sudah pindah ke barberos.id.', subtitle: 'Mereka sudah pindah dari catatan manual ke barberos.id — dan nggak mau balik lagi.' },
   faq:          { kicker: 'FAQ',            title: 'Pertanyaan yang sering ditanya.', subtitle: 'Belum nemu jawabannya? Chat tim kami langsung lewat WhatsApp.' },
 }
 
@@ -103,7 +103,7 @@ const FALLBACK_CLOSING = {
 const FALLBACK_FOOTER = 'Sistem manajemen barbershop modern: kasir, antrian, booking online, multi-cabang, dan laporan pintar dalam satu aplikasi.'
 
 const FALLBACK_SEO = {
-  title:       'SembaPOS — Sistem Manajemen Barbershop Modern',
+  title:       'barberos.id — Sistem Manajemen Barbershop Modern',
   description: 'Kasir, antrian, booking online, multi-cabang, dan laporan pintar — semua dalam satu aplikasi yang dirancang khusus untuk barbershop. Coba gratis 14 hari, tanpa kartu kredit.',
   keywords:    'aplikasi barbershop, POS barbershop, manajemen barbershop, kasir barbershop, booking barbershop, antrian barbershop',
 }
@@ -263,7 +263,7 @@ export default function LandingPage() {
   }, [])
 
   const hero = data?.hero || {}
-  const siteName = (hero.siteName || 'SembaPOS').trim()
+  const siteName = (hero.siteName || 'barberos.id').trim()
   const metaPixelId = hero.metaPixelId
   useEffect(() => {
     if (isPreview) return
@@ -763,7 +763,7 @@ function ReportMock() {
 function GenericMock({ feature, Icon }) {
   return (
     <div className="fv-card">
-      <div className="pos-head"><span className="t">{feature.title}</span><span className="dash-pill">SembaPOS</span></div>
+      <div className="pos-head"><span className="t">{feature.title}</span><span className="dash-pill">barberos.id</span></div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '18px 0' }}>
         <span style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(var(--accent-rgb),.14)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
           <Icon size={28} color="var(--accent-deep)" />
@@ -812,7 +812,7 @@ function CompareSection({ ctx }) {
           <motion.div className="ba-col before" initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.45 }}>
             <div className="bhead">
               <span className="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M3 12h18M3 18h18" strokeLinecap="round" /></svg></span>
-              <div><div className="bt">Tanpa SembaPOS</div><div className="bs">buku + chat WhatsApp</div></div>
+              <div><div className="bt">Tanpa barberos.id</div><div className="bs">buku + chat WhatsApp</div></div>
             </div>
             <div className="ba-list">
               {compareRows.map((r) => (
@@ -823,7 +823,7 @@ function CompareSection({ ctx }) {
           <motion.div className="ba-col after" initial={{ opacity: 0, y: 22 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.45, delay: 0.1 }}>
             <div className="bhead">
               <span className="ic"><Zap /></span>
-              <div><div className="bt">Dengan SembaPOS</div><div className="bs">semua otomatis</div></div>
+              <div><div className="bt">Dengan barberos.id</div><div className="bs">semua otomatis</div></div>
             </div>
             <div className="ba-list">
               {compareRows.map((r) => (
@@ -970,7 +970,7 @@ function PricingSection({ ctx }) {
           <span className="gic"><ShieldCheck /></span>
           <div>
             <div className="gt">Garansi 30 hari uang kembali</div>
-            <div className="gp">Coba tanpa risiko. Kalau dalam 30 hari pertama SembaPOS tidak cocok untuk barbershop Anda, kami kembalikan 100% — tanpa banyak tanya.</div>
+            <div className="gp">Coba tanpa risiko. Kalau dalam 30 hari pertama barberos.id tidak cocok untuk barbershop Anda, kami kembalikan 100% — tanpa banyak tanya.</div>
           </div>
         </div>
       </div>

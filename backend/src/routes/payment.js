@@ -6,9 +6,9 @@ const duitku   = require('../services/duitkuService');
 const { invalidateSubscriptionCache } = require('../middleware/enforceSubscription');
 const { applySuccessfulPayment } = require('../services/paymentFulfillment');
 
-const BACKEND_URL  = process.env.BACKEND_URL  || process.env.FRONTEND_URL?.replace(/\/$/, '') || 'https://sembapos.com';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://sembapos.com';
-const PUBLIC_HOST  = process.env.PUBLIC_HOST  || FRONTEND_URL.replace(/^https?:\/\//, '').replace(/\/$/, '') || 'sembapos.com';
+const BACKEND_URL  = process.env.BACKEND_URL  || process.env.FRONTEND_URL?.replace(/\/$/, '') || 'https://barberos.id';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://barberos.id';
+const PUBLIC_HOST  = process.env.PUBLIC_HOST  || FRONTEND_URL.replace(/^https?:\/\//, '').replace(/\/$/, '') || 'barberos.id';
 const ORDER_TTL_MIN = Number(process.env.PAYMENT_ORDER_TTL_MINUTES) || 60;
 
 // Tenant beroperasi & login di subdomain (login di-enforce per subdomain).
@@ -424,7 +424,7 @@ router.post('/orders/:merchantOrderId/resend', authenticate, async (req, res, ne
     }
 
     const text = [
-      '[SembaPOS] Link Pembayaran',
+      '[barberos.id] Link Pembayaran',
       '',
       `Halo ${tenant?.name || ''},`,
       `Berikut ulang link pembayaran Anda:`,

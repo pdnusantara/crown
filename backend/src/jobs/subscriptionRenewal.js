@@ -5,9 +5,9 @@ const prisma = require('../config/database');
 const duitku = require('../services/duitkuService');
 const { applySuccessfulPayment } = require('../services/paymentFulfillment');
 
-const BACKEND_URL  = process.env.BACKEND_URL  || 'https://sembapos.com';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://sembapos.com';
-const PUBLIC_HOST  = process.env.PUBLIC_HOST  || FRONTEND_URL.replace(/^https?:\/\//, '').replace(/\/$/, '') || 'sembapos.com';
+const BACKEND_URL  = process.env.BACKEND_URL  || 'https://barberos.id';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://barberos.id';
+const PUBLIC_HOST  = process.env.PUBLIC_HOST  || FRONTEND_URL.replace(/^https?:\/\//, '').replace(/\/$/, '') || 'barberos.id';
 const GRACE_DAYS   = Number(process.env.SUBSCRIPTION_GRACE_DAYS || 7);
 
 // Arahkan returnUrl Duitku ke subdomain tenant (login di-enforce per subdomain)
@@ -419,7 +419,7 @@ async function runRenewalJob() {
       });
 
       const waMsg = [
-        `[SembaPOS] Pengingat Perpanjang Langganan`,
+        `[barberos.id] Pengingat Perpanjang Langganan`,
         ``,
         `Halo ${sub.tenant.name},`,
         `Subscription ${sub.package} Anda akan berakhir dalam ${days} hari (${endStr}).`,

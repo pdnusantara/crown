@@ -182,7 +182,7 @@ function PublicBookingPageInner() {
   }, [])
 
   // SEO + share metadata. Updates the document title/description/og tags so
-  // links shared via WA/IG show the tenant's name instead of "SembaPOS".
+  // links shared via WA/IG show the tenant's name instead of "barberos.id".
   useEffect(() => {
     if (!tenantName) return
     const prevTitle = document.title
@@ -917,7 +917,7 @@ function BookShell({ accent = '#E0A82E', tenantName, tenantLogo, bp = {}, sticky
 
       <footer className="text-center py-6 px-4" style={{ borderTop: '1px solid var(--bk-border)' }}>
         <p className="text-[11px]" style={{ color: 'var(--bk-text-muted)' }}>
-          {t('publicBooking.poweredBy')} <span style={{ color: accent, fontWeight: 600 }}>SembaPos</span>
+          {t('publicBooking.poweredBy')} <span style={{ color: accent, fontWeight: 600 }}>barberos.id</span>
         </p>
       </footer>
     </div>
