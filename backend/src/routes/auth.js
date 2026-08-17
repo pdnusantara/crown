@@ -51,7 +51,15 @@ const registerSchema = z.object({
     referrer:    z.string().max(500).optional(),
     landingPath: z.string().max(500).optional(),
     ref:         z.string().max(60).optional(),
+    // Cookie pixel Meta — sinyal pencocokan terkuat untuk Conversions API.
+    // Disimpan supaya event Purchase nanti (saat bayar) masih bisa dicocokkan
+    // ke klik iklan yang sama, padahal callback pembayaran tak punya browser.
+    fbp:         z.string().max(255).optional(),
+    fbc:         z.string().max(255).optional(),
   }).partial().optional(),
+  // Id event pixel browser — dikirim ulang identik dari server supaya Meta
+  // membuang duplikatnya (tanpa ini konversi terhitung dua kali).
+  metaEventId: z.string().max(80).optional(),
 });
 
 // Tentukan kanal pendaftaran ternormalisasi untuk grouping laporan.
@@ -254,6 +262,31 @@ router.post('/register', async (req, res, next) => {
       }).catch((err) => console.error('[Register] Telegram notify failed:', err?.message || err));
     } catch (err) {
       console.error('[Register] Telegram notify error:', err?.message || err);
+    }
+
+    // Meta Conversions API — konversi utama untuk iklan. Best-effort: kegagalan
+    // dicatat di dalam service, pendaftaran tidak boleh ikut gagal.
+    try {
+      const metaCapi = require('../services/metaCapi');
+      metaCapi.sendEvent({
+        eventName: 'CompleteRegistration',
+        eventId:   body.metaEventId,
+        eventSourceUrl: signupMeta?.landingPath
+          ? `https://${process.env.PUBLIC_HOST || 'barberos.id'}${signupMeta.landingPath}`
+          : undefined,
+        user: {
+          email:      result.tenant.email,
+          phone,
+          externalId: result.tenant.id,
+          fbp:        signupMeta?.fbp,
+          fbc:        signupMeta?.fbc,
+          ip:         metaCapi.clientIp(req),
+          userAgent:  metaCapi.clientUa(req),
+        },
+        customData: { content_name: body.packageName, currency: 'IDR', status: 'trial' },
+      }).catch(() => {});
+    } catch (err) {
+      console.error('[Register] Meta CAPI error:', err?.message || err);
     }
 
     const payload = {

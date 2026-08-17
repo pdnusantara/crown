@@ -8,6 +8,7 @@ const { z }  = require('zod');
 const prisma = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { getIO } = require('../config/socket');
+const metaCapi = require('../services/metaCapi');
 
 // Broadcast ke pengunjung yang sedang membuka landing supaya kontennya segar
 // tanpa reload — sejalan dengan `package:updated` di routes/packages.js.
@@ -296,6 +297,86 @@ router.patch('/hero', authenticate, requireRole('super_admin'), async (req, res,
 });
 
 // ── Block layout: PATCH /api/landing/layout ───────────────────────────────
+
+// ── Meta Conversions API ─────────────────────────────────────────────────
+// Access token CAPI adalah RAHASIA — sengaja disimpan di key tersendiri di luar
+// SETTING_KEYS supaya tidak mungkin ikut terbawa GET /api/landing yang publik.
+const CAPI_TOKEN_KEY = 'meta_capi_token';
+const CAPI_TEST_KEY  = 'meta_capi_test_code';
+
+// Tampilkan token cukup 6 karakter terakhir — cukup untuk memastikan token mana
+// yang terpasang, tanpa membocorkan token utuh ke layar/riwayat browser.
+function maskToken(t) {
+  const v = String(t || '');
+  if (!v) return '';
+  return v.length <= 6 ? '••••' : `••••${v.slice(-6)}`;
+}
+
+// GET /api/landing/capi — status konfigurasi CAPI (token TIDAK dikembalikan utuh).
+router.get('/capi', authenticate, requireRole('super_admin'), async (req, res, next) => {
+  try {
+    const rows = await prisma.systemSetting.findMany({
+      where: { key: { in: [CAPI_TOKEN_KEY, CAPI_TEST_KEY] } },
+      select: { key: true, value: true },
+    });
+    const map = Object.fromEntries(rows.map(r => [r.key, r.value]));
+    res.json({
+      success: true,
+      data: {
+        configured:   Boolean((map[CAPI_TOKEN_KEY] || '').trim()),
+        tokenPreview: maskToken(map[CAPI_TOKEN_KEY]),
+        testCode:     map[CAPI_TEST_KEY] || '',
+      },
+    });
+  } catch (err) { next(err); }
+});
+
+const capiSchema = z.object({
+  // String kosong = hapus token (matikan CAPI). undefined = jangan diubah.
+  token:    z.string().max(400).optional(),
+  testCode: z.string().max(40).optional(),
+});
+
+// PATCH /api/landing/capi — simpan access token & test event code.
+router.patch('/capi', authenticate, requireRole('super_admin'), async (req, res, next) => {
+  try {
+    const body = capiSchema.parse(req.body);
+    const writes = [];
+    if (body.token !== undefined) {
+      const v = body.token.trim();
+      writes.push(prisma.systemSetting.upsert({
+        where: { key: CAPI_TOKEN_KEY }, update: { value: v }, create: { key: CAPI_TOKEN_KEY, value: v },
+      }));
+    }
+    if (body.testCode !== undefined) {
+      const v = body.testCode.trim();
+      writes.push(prisma.systemSetting.upsert({
+        where: { key: CAPI_TEST_KEY }, update: { value: v }, create: { key: CAPI_TEST_KEY, value: v },
+      }));
+    }
+    if (writes.length) await prisma.$transaction(writes);
+    metaCapi.clearCapiConfigCache();
+    res.json({ success: true, data: { saved: true } });
+  } catch (err) { next(err); }
+});
+
+// POST /api/landing/capi/test — kirim satu event uji ke Meta & laporkan hasilnya.
+// Dipakai super-admin untuk memastikan token benar sebelum belanja iklan.
+router.post('/capi/test', authenticate, requireRole('super_admin'), async (req, res, next) => {
+  try {
+    const result = await metaCapi.sendEvent({
+      eventName: 'PageView',
+      eventId:   `test_${crypto.randomUUID()}`,
+      user: {
+        email:     req.user?.email,
+        ip:        metaCapi.clientIp(req),
+        userAgent: metaCapi.clientUa(req),
+      },
+      eventSourceUrl: `https://${process.env.PUBLIC_HOST || 'barberos.id'}/`,
+    });
+    res.json({ success: true, data: result });
+  } catch (err) { next(err); }
+});
 
 const layoutBlockSchema = z.object({
   id:      z.string().min(1).max(64),

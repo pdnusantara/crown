@@ -127,9 +127,22 @@ router.get('/active', authenticate, requireRole('kasir', 'tenant_admin', 'super_
     } else if (req.query.tenantId) {
       where.branch = { tenantId: req.query.tenantId };
     }
-    if (req.user.role === 'kasir') {
+    // "Shift aktif" SELALU berarti shift milik pengguna yang login.
+    //
+    // Dulu `kasirId` hanya disaring untuk peran `kasir`, sehingga tenant_admin
+    // menerima shift siapa pun yang masih terbuka di cabang itu (urutan
+    // `openedAt desc` → yang paling baru menang). Dua akibatnya terbukti pada
+    // tenant `termul`: penjualan owner menempel ke laci kasir lain, dan shift
+    // owner sendiri menggantung berbulan-bulan tanpa satu pun transaksi karena
+    // tak pernah muncul lagi di layar mana pun.
+    //
+    // super_admin dikecualikan — perannya mengamati lintas tenant, bukan
+    // memegang laci kas.
+    if (req.user.role !== 'super_admin') {
       where.kasirId = req.user.id;
-      if (req.user.branchId) where.branchId = req.user.branchId;
+    }
+    if (req.user.role === 'kasir' && req.user.branchId) {
+      where.branchId = req.user.branchId;
     }
     if (req.query.branchId) where.branchId = req.query.branchId;
 

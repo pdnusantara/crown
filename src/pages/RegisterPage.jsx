@@ -9,7 +9,7 @@ import {
 import { useRegisterTenant, useCheckSlug } from '../hooks/useRegister.js'
 import { useLanding } from '../hooks/useLanding.js'
 import { useReferralCodeLookup } from '../hooks/useAffiliates.js'
-import { initMetaPixel, trackPixel } from '../lib/metaPixel.js'
+import { initMetaPixel, trackPixel, getPixelCookies, newEventId } from '../lib/metaPixel.js'
 import { formatRupiah } from '../utils/format.js'
 import { getAttribution } from '../utils/attribution.js'
 import { tenantHostname, tenantLoginUrl, PLATFORM_NAME } from '../utils/platform.js'
@@ -149,8 +149,13 @@ export default function RegisterPage() {
     if (form.password.length < 8) return setError('Password minimal 8 karakter')
     if (!form.agree) return setError('Harap setujui syarat & ketentuan')
 
+    // Satu id dipakai bersama pixel browser & Conversions API di server supaya
+    // Meta membuang duplikatnya — tanpa ini satu pendaftaran terhitung dua kali.
+    const eventId = newEventId()
+
     try {
       const result = await register.mutateAsync({
+        metaEventId:  eventId,
         packageName:  form.packageName,
         businessName: form.businessName.trim(),
         slug:         form.slug.trim().toLowerCase(),
@@ -159,7 +164,7 @@ export default function RegisterPage() {
         phone:        form.phone.trim(),
         password:     form.password,
         referralCode: initialRef || undefined,
-        signupMeta:   getAttribution(),
+        signupMeta:   { ...getAttribution(), ...getPixelCookies() },
       })
       // Akun tenant TIDAK boleh aktif di domain utama (barberos.id) — login &
       // refresh di-enforce per subdomain. Maka jangan auto-login di sini;
@@ -175,7 +180,7 @@ export default function RegisterPage() {
         content_name: form.packageName,
         value:        selectedPkg?.price || 0,
         currency:     'IDR',
-      })
+      }, eventId)
     } catch (err) {
       setError(err?.response?.data?.error || 'Pendaftaran gagal. Coba lagi.')
     }

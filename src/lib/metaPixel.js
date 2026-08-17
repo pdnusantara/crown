@@ -30,8 +30,38 @@ export function initMetaPixel(pixelId) {
 }
 
 // Kirim event (event standar Meta atau kustom). No-op bila pixel belum aktif.
-export function trackPixel(event, params) {
+//
+// `eventId` dipakai untuk event yang JUGA dikirim server lewat Conversions API.
+// Meta membuang duplikat bila id-nya sama; tanpa itu satu konversi terhitung
+// dua kali (browser + server).
+export function trackPixel(event, params, eventId) {
   if (typeof window !== 'undefined' && typeof window.fbq === 'function') {
-    window.fbq('track', event, params || undefined)
+    window.fbq('track', event, params || undefined, eventId ? { eventID: eventId } : undefined)
   }
+}
+
+// Cookie pixel Meta. `_fbp` menandai browser, `_fbc` menyimpan klik iklan
+// (turunan dari fbclid). Keduanya sinyal pencocokan terkuat untuk Conversions
+// API, jadi ikut dikirim ke server saat pendaftaran.
+function readCookie(name) {
+  if (typeof document === 'undefined') return ''
+  const hit = document.cookie.split('; ').find(c => c.startsWith(`${name}=`))
+  return hit ? decodeURIComponent(hit.slice(name.length + 1)) : ''
+}
+
+export function getPixelCookies() {
+  const out = {}
+  const fbp = readCookie('_fbp')
+  const fbc = readCookie('_fbc')
+  if (fbp) out.fbp = fbp
+  if (fbc) out.fbc = fbc
+  return out
+}
+
+// Id unik untuk satu event konversi, dipakai bersama browser & server.
+export function newEventId() {
+  try {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
+  } catch { /* fallback di bawah */ }
+  return `e_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
 }

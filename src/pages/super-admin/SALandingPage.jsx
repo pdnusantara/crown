@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import {
   // ikon UI editor
@@ -282,6 +283,126 @@ function SeoEditor() {
 // ── Pelacakan / Meta Pixel editor ────────────────────────────────────────
 // Mengatur Meta (Facebook) Pixel ID. Disimpan lewat PATCH /landing/hero yang
 // sama; landing page & halaman /register menyuntik pixel saat nilainya ada.
+// Pengaturan Conversions API — token disimpan terpisah dari konten landing dan
+// TIDAK pernah ikut GET /api/landing yang publik, jadi hanya pratinjau bertopeng
+// yang bisa dibaca dari sini.
+function CapiCard() {
+  const toast = useToast()
+  const qc = useQueryClient()
+  const { data, isLoading } = useQuery({
+    queryKey: ['landing', 'capi'],
+    queryFn: () => api.get('/landing/capi').then(r => r.data.data),
+  })
+  const [token, setToken] = useState('')
+  const [testCode, setTestCode] = useState(null)
+  const [testing, setTesting] = useState(false)
+
+  useEffect(() => {
+    if (data && testCode === null) setTestCode(data.testCode || '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data])
+
+  const save = useMutation({
+    mutationFn: (body) => api.patch('/landing/capi', body).then(r => r.data.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['landing', 'capi'] })
+      setToken('')
+      toast.success('Pengaturan Conversions API tersimpan')
+    },
+    onError: (err) => toast.error(err?.response?.data?.error || 'Gagal menyimpan'),
+  })
+
+  async function runTest() {
+    setTesting(true)
+    try {
+      const res = await api.post('/landing/capi/test').then(r => r.data.data)
+      if (res?.ok) toast.success(`Terhubung — Meta menerima ${res.received} event uji`)
+      else toast.error(`Gagal: ${res?.error || 'tidak diketahui'}`)
+    } catch (err) {
+      toast.error(err?.response?.data?.error || 'Gagal menghubungi Meta')
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  if (isLoading) return <div className="h-64 bg-dark-card rounded-2xl animate-pulse" />
+
+  const configured = Boolean(data?.configured)
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-off-white">Conversions API (event dari server)</h3>
+          <Badge variant={configured ? 'success' : 'muted'} className="text-[10px]">
+            {configured ? 'Aktif' : 'Nonaktif'}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardBody className="space-y-4">
+        <p className="text-sm text-muted">
+          Pixel browser diblokir ad-blocker dan dibatasi iOS, jadi sebagian konversi tak sampai ke Meta —
+          CPA terlihat lebih mahal dari kenyataan. Conversions API mengirim event yang sama dari server,
+          jadi tidak kena blokir. Event dikirim dengan id yang sama seperti pixel, jadi tidak terhitung dobel.
+        </p>
+        <div className="p-3 rounded-xl bg-dark-surface border border-dark-border text-xs text-muted space-y-1">
+          <p className="text-off-white font-medium">Event yang dikirim server:</p>
+          <p>• <span className="text-off-white">CompleteRegistration</span> — saat pendaftaran tenant berhasil</p>
+          <p>• <span className="text-off-white">Purchase</span> — saat pembayaran lunas, dengan nilai rupiah sebenarnya</p>
+          <p className="pt-1">Purchase adalah sinyal terpenting: Meta jadi bisa mencari orang yang mirip dengan yang benar-benar membayar, bukan sekadar yang mendaftar trial.</p>
+        </div>
+        <div>
+          <Input
+            label="Access Token"
+            type="password"
+            placeholder={configured ? `Tersimpan: ${data.tokenPreview} — isi untuk mengganti` : 'Tempel token dari Events Manager'}
+            value={token}
+            onChange={e => setToken(e.target.value)}
+            autoComplete="off"
+          />
+          <p className="text-[11px] text-muted mt-1">
+            Events Manager → pilih pixel → Settings → Conversions API → <span className="text-off-white">Generate access token</span>.
+            Pixel ID memakai yang sudah diisi di kartu sebelah.
+          </p>
+        </div>
+        <Input
+          label="Test Event Code (opsional)"
+          placeholder="TEST12345"
+          value={testCode || ''}
+          onChange={e => setTestCode(e.target.value)}
+        />
+        <p className="text-[11px] text-muted -mt-2">
+          Isi hanya saat menguji di tab <span className="text-off-white">Test Events</span>. Event dengan kode ini
+          TIDAK dihitung sebagai konversi asli — kosongkan lagi setelah selesai menguji.
+        </p>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => save.mutate({ ...(token ? { token } : {}), testCode: testCode || '' })}
+            loading={save.isPending}
+            icon={Save}
+            variant="secondary"
+            fullWidth
+          >
+            Simpan
+          </Button>
+          <Button onClick={runTest} loading={testing} disabled={!configured} variant="outline">
+            Tes Koneksi
+          </Button>
+        </div>
+        {configured && (
+          <button
+            type="button"
+            onClick={() => save.mutate({ token: '' })}
+            className="text-xs text-red-400 hover:underline"
+          >
+            Hapus token & matikan Conversions API
+          </button>
+        )}
+      </CardBody>
+    </Card>
+  )
+}
+
 function TrackingEditor() {
   const toast = useToast()
   const { data, isLoading } = useLanding()
@@ -357,6 +478,8 @@ function TrackingEditor() {
           </Button>
         </CardBody>
       </Card>
+
+      <CapiCard />
 
       <Card>
         <CardHeader><h3 className="font-semibold text-off-white">Tes & Verifikasi Pixel</h3></CardHeader>

@@ -291,6 +291,47 @@ async function applySuccessfulPayment(order) {
 
   await logBilling(null, 'duitku', 'order.success', `order:${order.merchantOrderId}`,
     `type=${order.type} amount=${order.amount}`);
+
+  // Meta Conversions API — Purchase dengan nilai rupiah sebenarnya. Ini sinyal
+  // paling berharga untuk optimisasi iklan: Meta bisa mencari orang yang mirip
+  // dengan yang BENAR-BENAR membayar, bukan sekadar yang mendaftar trial.
+  //
+  // Callback Duitku datang dari server Duitku, bukan browser pembeli — jadi
+  // tidak ada cookie pixel di request ini. Karena itu fbp/fbc yang disimpan saat
+  // pendaftaran dipakai ulang di sini supaya pembelian tetap tersambung ke klik
+  // iklan yang dulu. action_source 'website' + tanpa IP/UA browser: sengaja,
+  // sebab IP server Duitku bukan IP pembeli dan justru merusak pencocokan.
+  try {
+    const metaCapi = require('./metaCapi');
+    const tenant = await prisma.tenant.findUnique({
+      where:  { id: order.tenantId },
+      select: { id: true, email: true, phone: true, signupMeta: true },
+    });
+    if (tenant) {
+      const meta = tenant.signupMeta && typeof tenant.signupMeta === 'object' ? tenant.signupMeta : {};
+      metaCapi.sendEvent({
+        eventName: 'Purchase',
+        // Satu order = satu event. Kalau callback Duitku terkirim ulang,
+        // event_id yang sama membuat Meta membuang duplikatnya.
+        eventId:   `order_${order.id}`,
+        user: {
+          email:      tenant.email,
+          phone:      tenant.phone,
+          externalId: tenant.id,
+          fbp:        meta.fbp,
+          fbc:        meta.fbc,
+        },
+        customData: {
+          currency: 'IDR',
+          value:    order.amount,
+          content_type: 'product',
+          content_name: order.type,
+        },
+      }).catch(() => {});
+    }
+  } catch (err) {
+    console.error('[Fulfillment] Meta CAPI error:', err?.message || err);
+  }
 }
 
 module.exports = { applySuccessfulPayment };
