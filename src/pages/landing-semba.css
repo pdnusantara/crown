@@ -524,6 +524,26 @@ html.is-landing{scroll-behavior:smooth}
 .semba .toast .tav{width:38px;height:38px;border-radius:11px;background:var(--green);color:#fff;display:grid;place-items:center;font-size:18px;flex-shrink:0}
 .semba .toast .tt{font-size:13px;font-weight:700;line-height:1.3}
 .semba .toast .ts{font-size:11px;color:var(--muted);margin-top:2px;font-family:var(--mono)}
+
+/* ── Keunggulan (blok `benefits`) ─────────────────────────────────────────
+   Grid kartu ringkas: ikon + judul pendek + satu kalimat. Dipakai untuk
+   daftar panjang yang kalau ditaruh di blok `feat` (baris besar bergambar)
+   halamannya jadi kepanjangan. */
+.semba .ben-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:52px}
+.semba .ben-card{
+  background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
+  padding:26px 24px;display:flex;flex-direction:column;gap:10px;
+  transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease;
+}
+.semba .ben-card:hover{transform:translateY(-3px);border-color:rgba(var(--accent-rgb),.55);box-shadow:0 12px 30px rgba(22,20,15,.07)}
+.semba .ben-ico{
+  width:42px;height:42px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;
+  background:rgba(var(--accent-rgb),.13);color:var(--accent-deep);flex-shrink:0;
+}
+.semba .ben-ico svg{width:21px;height:21px;stroke-width:1.9}
+.semba .ben-card h3{font-size:18px;line-height:1.22;font-weight:700}
+.semba .ben-card p{font-size:14.5px;color:var(--muted);line-height:1.6}
+
 @media(max-width:600px){.semba .toast{left:12px;right:12px;bottom:84px;max-width:none}}
 
 /* ===== EXIT POPUP ===== */
@@ -571,6 +591,7 @@ html.is-landing{scroll-behavior:smooth}
   .semba .feat,.semba .feat.rev{grid-template-columns:1fr;gap:34px}
   .semba .feat.rev .feat-text{order:0}
   .semba .steps{grid-template-columns:1fr}
+  .semba .ben-grid{grid-template-columns:repeat(2,1fr)}
   .semba .step .ar{display:none}
   .semba .price-grid{grid-template-columns:1fr;max-width:440px;margin:0 auto}
   .semba .tcols{columns:2}
@@ -596,6 +617,8 @@ html.is-landing{scroll-behavior:smooth}
   .semba .hero{padding:92px 0 60px}
   .semba .cta-box{padding:50px 24px}
   .semba .integ-grid{grid-template-columns:repeat(2,1fr)}
+  .semba .ben-grid{grid-template-columns:1fr;gap:14px;margin-top:38px}
+  .semba .ben-card{padding:22px 20px}
   .semba .guarantee{flex-direction:column;text-align:center}
   .semba .stickybar .sb-s{display:none}
   .semba .stickybar-inner{padding:11px 0}

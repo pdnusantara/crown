@@ -5,7 +5,8 @@ import {
   ArrowRight, BarChart3, Building2, Calendar, CalendarClock, CalendarDays,
   Check, ChevronDown, Circle, Lock, Mail, MapPin, MessageCircle, Phone, Play,
   Receipt, Scissors, ShieldCheck, Smartphone, Sparkles, Star, TrendingUp,
-  Users, Wallet, X, ListOrdered, Zap,
+  Users, Wallet, X, ListOrdered, Zap, Coins, Percent, CreditCard,
+  FileSpreadsheet, Flag,
 } from 'lucide-react'
 import { useLanding } from '../hooks/useLanding.js'
 import { useAuthStore } from '../store/authStore.js'
@@ -53,7 +54,8 @@ const Lucide = {
   ArrowRight, BarChart3, Building2, Calendar, CalendarClock, CalendarDays,
   Check, ChevronDown, Circle, Lock, Mail, MapPin, MessageCircle, Phone, Play,
   Receipt, Scissors, ShieldCheck, Smartphone, Sparkles, Star, TrendingUp,
-  Users, Wallet, X, ListOrdered, Zap,
+  Users, Wallet, X, ListOrdered, Zap, Coins, Percent, CreditCard,
+  FileSpreadsheet, Flag,
 }
 function getIcon(name) { return Lucide[name] || Lucide.Sparkles }
 
@@ -65,6 +67,25 @@ const FALLBACK_FEATURES = [
   { icon: 'Building2',     title: 'Banyak cabang, satu layar', desc: 'Pantau semua cabang dari satu dashboard. Kelihatan mana yang paling cuan.' },
   { icon: 'TrendingUp',    title: 'Laporan yang ngerti sendiri', desc: 'Omzet harian, layanan terlaris, performa barber — kebaca otomatis tanpa Excel.' },
   { icon: 'MessageCircle', title: 'WhatsApp otomatis', desc: 'Konfirmasi booking dan struk langsung mampir ke WhatsApp pelanggan.' },
+]
+
+// Keunggulan default — kartu ringkas, bahasa sehari-hari pemilik toko.
+const FALLBACK_BENEFITS = [
+  { icon: 'Wallet',          title: 'Uang di laci tidak selisih diam-diam', desc: 'Tutup kasir dihitung otomatis: uang awal, uang masuk, uang keluar. Kalau kurang, ketahuan hari itu juga.' },
+  { icon: 'Coins',           title: 'Komisi kapster dihitung sendiri', desc: 'Tiap potongan tercatat siapa yang mengerjakan. Akhir bulan tinggal lihat, tidak perlu kalkulator.' },
+  { icon: 'Percent',         title: 'Gaji bagi hasil, bulanan, atau dua-duanya', desc: 'Diatur per orang. Bonus dan potongan tinggal diisi.' },
+  { icon: 'Scissors',        title: 'Pemilik yang ikut potong tetap dapat komisi', desc: 'Tidak perlu bikin akun terpisah buat diri sendiri.' },
+  { icon: 'ListOrdered',     title: 'Antrian rapi di HP, tanpa papan tulis', desc: 'Pelanggan datang, masuk daftar. Selesai, tinggal geser statusnya.' },
+  { icon: 'CalendarClock',   title: 'Pelanggan bisa booking sendiri', desc: 'Dapat link buat ditaruh di bio Instagram atau WhatsApp, plus QR untuk ditempel di meja.' },
+  { icon: 'MapPin',          title: 'Absen karyawan pakai lokasi dan foto', desc: 'Cuma bisa absen kalau benar-benar di toko. Hasilnya langsung dipakai buat hitung gaji.' },
+  { icon: 'Building2',       title: 'Punya beberapa cabang? Semua kelihatan dari satu HP', desc: 'Bandingkan omzet tiap cabang tanpa harus datang ke sana.' },
+  { icon: 'Star',            title: 'Pelanggan langganan dapat poin', desc: 'Riwayat poinnya lengkap, jadi tidak ada ribut soal poin hilang.' },
+  { icon: 'BarChart3',       title: 'Laporan yang gampang dibaca', desc: 'Layanan paling laris, kapster paling ramai, dan sisa untung setelah gaji dan belanja.' },
+  { icon: 'Receipt',         title: 'Struk bisa dicetak atau dikirim ke WhatsApp', desc: 'Lengkap dengan nama toko dan logo.' },
+  { icon: 'CreditCard',      title: 'Terima tunai, transfer, dan QRIS', desc: 'Dicatat terpisah, jadi setoran akhir hari tidak tertukar.' },
+  { icon: 'MessageCircle',   title: 'Pelanggan dapat pesan WhatsApp otomatis', desc: 'Konfirmasi booking dan pengingat jadwal, dikirim dari nomor toko sendiri.' },
+  { icon: 'FileSpreadsheet', title: 'Data bisa diunduh ke Excel', desc: 'Transaksi, gaji, absen, belanja — semua rapi waktu dibuka.' },
+  { icon: 'Flag',            title: 'Dibuat untuk toko Indonesia', desc: 'Rupiah, tanggal Indonesia, alamat sampai kelurahan.' },
 ]
 
 const FALLBACK_TRUST = ['Tanpa kartu kredit', 'Setup 5 menit', 'Bisa dibatalkan kapan saja']
@@ -86,6 +107,7 @@ const FALLBACK_STEPS = [
 
 const FALLBACK_SECTIONS = {
   features:     { kicker: 'Fitur Lengkap',  title: 'Semua yang dibutuhkan barbershop modern.', subtitle: 'Satu aplikasi untuk operasional harian sampai keputusan bisnis. Dirancang khusus untuk barbershop — bukan template kasir generik.' },
+  benefits:     { kicker: 'Keunggulan', title: 'Yang bikin repot tiap hari, kami bereskan.', subtitle: 'Bukan janji muluk — ini hal-hal kecil yang bikin pusing tiap tutup toko dan tiap tanggal gajian.' },
   steps:        { kicker: 'Cara Kerja',     title: 'Siap pakai dalam 3 langkah.', subtitle: 'Tidak perlu teknisi, tidak perlu pelatihan panjang. Daftar pagi, sore sudah jalan.' },
   compare:      { kicker: 'Sebelum vs Sesudah', title: 'Dari serba manual jadi serba otomatis.', subtitle: 'Perbedaan yang langsung terasa di hari pertama — bukan sekadar ganti alat, tapi ganti cara kerja.' },
   roi:          { kicker: 'Hitung Kebocoran Anda', title: 'Berapa rupiah yang menguap tiap bulan?', subtitle: 'Geser sesuai kondisi barbershop Anda dan lihat potensi tambahan omzet yang bisa diselamatkan.' },
@@ -356,6 +378,7 @@ export default function LandingPage() {
   }, [data])
 
   const features = (hero.features?.length ? hero.features : FALLBACK_FEATURES)
+  const benefits = (hero.benefits?.length ? hero.benefits : FALLBACK_BENEFITS)
   const trustItems = (hero.trustItems?.length ? hero.trustItems : FALLBACK_TRUST)
   const steps = (hero.steps?.length ? hero.steps : FALLBACK_STEPS)
   const sections = { ...FALLBACK_SECTIONS, ...(hero.sections || {}) }
@@ -378,7 +401,7 @@ export default function LandingPage() {
   const ctaLabel = isAuthenticated ? 'Buka Dashboard' : (hero.heroCtaLabel || 'Coba Gratis 14 Hari')
 
   const compareRows = (hero.compareRows?.length ? hero.compareRows : COMPARE_ROWS)
-  const ctx = { hero, features, steps, sections, compareRows, packages, testimonials, faqs, stats, isLoading, closing, waHref, siteName, showStats: hero.showStats !== false }
+  const ctx = { hero, features, benefits, steps, sections, compareRows, packages, testimonials, faqs, stats, isLoading, closing, waHref, siteName, showStats: hero.showStats !== false }
 
   return (
     <div className="semba">
@@ -1168,10 +1191,45 @@ function RichTextSection({ block }) {
   )
 }
 
-// Peta tipe blok → komponen (14 tipe; identik dengan builder & backend enum).
+// Grid keunggulan — kartu ringkas (ikon + satu kalimat). Sengaja beda dari
+// FeaturesSection yang tiap itemnya satu baris besar bergambar: daftar panjang
+// jadi tetap enak dibaca, terutama di HP.
+function BenefitsSection({ ctx }) {
+  const { benefits, sections } = ctx
+  if (!benefits?.length) return null
+  return (
+    <section className="section" id="keunggulan">
+      <div className="wrap">
+        <SectionHead {...sections.benefits} />
+        <div className="ben-grid">
+          {benefits.map((b, i) => {
+            const Icon = getIcon(b.icon)
+            return (
+              <motion.div
+                key={i}
+                className="ben-card"
+                initial={{ opacity: 0, y: 18 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-60px' }}
+                transition={{ duration: 0.35, delay: Math.min(i, 5) * 0.04 }}
+              >
+                <span className="ben-ico"><Icon /></span>
+                <h3>{b.title}</h3>
+                <p>{b.desc}</p>
+              </motion.div>
+            )
+          })}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// Peta tipe blok → komponen (15 tipe; identik dengan builder & backend enum).
 const BLOCK_REGISTRY = {
   stats:        StatsSection,
   features:     FeaturesSection,
+  benefits:     BenefitsSection,
   steps:        StepsSection,
   compare:      CompareSection,
   roi:          RoiSection,

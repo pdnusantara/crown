@@ -12,6 +12,7 @@ import {
   GripVertical, Eye, EyeOff, Edit3, Copy, Trash2, Plus, Save, Lock, Upload, Image as ImageIcon,
   BarChart3, LayoutGrid, ListChecks, Tag, MessageSquare, HelpCircle, Megaphone,
   Images, Video, Building2, Type, ExternalLink, Monitor, Smartphone, RefreshCw, Calculator, Columns2,
+  Sparkles,
 } from 'lucide-react'
 import api from '../../lib/api.js'
 import { useLanding, useUpdateLayout } from '../../hooks/useLanding.js'
@@ -27,6 +28,7 @@ import { useToast } from '../../components/ui/Toast.jsx'
 const BLOCK_META = {
   stats:        { label: 'Statistik',      icon: BarChart3,     core: true },
   features:     { label: 'Fitur',          icon: LayoutGrid,    core: true },
+  benefits:     { label: 'Keunggulan',     icon: Sparkles,      core: true },
   steps:        { label: 'Cara Mulai',     icon: ListChecks,    core: true },
   compare:      { label: 'Perbandingan',   icon: Columns2,      core: true },
   roi:          { label: 'Kalkulator ROI', icon: Calculator,    core: true },
@@ -45,6 +47,7 @@ const FREE_TYPES = ['gallery', 'video', 'logoStrip', 'banner', 'richText']
 // Untuk blok core: ke mana super-admin mengedit kontennya.
 const CORE_EDIT = {
   features:     { tab: 'hero',         note: 'Edit di tab Hero & Branding' },
+  benefits:     { tab: 'hero',         note: 'Edit di tab Hero & Branding' },
   steps:        { tab: 'content',      note: 'Edit di tab Section & Footer' },
   testimonials: { tab: 'testimonials', note: 'Edit di tab Testimoni' },
   faq:          { tab: 'faqs',         note: 'Edit di tab FAQ' },

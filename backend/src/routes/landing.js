@@ -30,6 +30,7 @@ const SETTING_KEYS = {
   contactEmail:   'landing_contact_email',   // alamat email kontak di footer
   contactAddress: 'landing_contact_address', // alamat fisik di footer
   features:     'landing_features',     // JSON: array fitur
+  benefits:     'landing_benefits',     // JSON: array keunggulan ringkas (grid kartu)
   trustItems:   'landing_trust_items',  // JSON: array string trust-line hero
   steps:        'landing_steps',        // JSON: array {title,desc} "cara mulai"
   sections:     'landing_sections',     // JSON: heading per-section
@@ -46,7 +47,7 @@ const SETTING_KEYS = {
 };
 
 // Keys yang nilainya JSON-encoded — di-parse saat baca, di-stringify saat tulis.
-const JSON_KEYS = ['features', 'trustItems', 'steps', 'sections', 'closingCta', 'compareRows'];
+const JSON_KEYS = ['features', 'benefits', 'trustItems', 'steps', 'sections', 'closingCta', 'compareRows'];
 
 // ── Block layout (block builder) ───────────────────────────────────────────
 // Tata letak landing disimpan sebagai JSON array di SystemSetting. Hero & Footer
@@ -54,7 +55,7 @@ const JSON_KEYS = ['features', 'trustItems', 'steps', 'sections', 'closingCta', 
 // kontennya dari sumber lama (hero/sections/testimoni/dll); blok "free" bisa
 // banyak instance dengan konten inline di `config`.
 const LAYOUT_KEY = 'landing_layout';
-const ORDERABLE_CORE_TYPES = ['stats', 'features', 'steps', 'compare', 'roi', 'pricing', 'testimonials', 'faq', 'closingCta'];
+const ORDERABLE_CORE_TYPES = ['stats', 'features', 'benefits', 'steps', 'compare', 'roi', 'pricing', 'testimonials', 'faq', 'closingCta'];
 const FREE_BLOCK_TYPES = ['gallery', 'video', 'logoStrip', 'banner', 'richText'];
 const ALL_BLOCK_TYPES = [...ORDERABLE_CORE_TYPES, ...FREE_BLOCK_TYPES];
 
@@ -80,6 +81,25 @@ const DEFAULTS = {
     { icon: 'MessageCircle', title: 'WhatsApp otomatis', desc: 'Konfirmasi booking dan struk langsung mampir ke WhatsApp pelanggan.' },
     { icon: 'ShieldCheck',   title: 'Aman & sesuai peran', desc: 'Owner, kasir, barber — tiap orang punya akses sendiri. Data toko tetap aman.' },
   ]),
+  // Keunggulan ringkas — kartu grid, bahasa sehari-hari pemilik toko. Beda dari
+  // `features` yang tiap itemnya satu baris besar bergambar.
+  benefits: JSON.stringify([
+    { icon: 'Wallet',          title: 'Uang di laci tidak selisih diam-diam', desc: 'Tutup kasir dihitung otomatis: uang awal, uang masuk, uang keluar. Kalau kurang, ketahuan hari itu juga.' },
+    { icon: 'Coins',           title: 'Komisi kapster dihitung sendiri', desc: 'Tiap potongan tercatat siapa yang mengerjakan. Akhir bulan tinggal lihat, tidak perlu kalkulator.' },
+    { icon: 'Percent',         title: 'Gaji bagi hasil, bulanan, atau dua-duanya', desc: 'Diatur per orang. Bonus dan potongan tinggal diisi.' },
+    { icon: 'Scissors',        title: 'Pemilik yang ikut potong tetap dapat komisi', desc: 'Tidak perlu bikin akun terpisah buat diri sendiri.' },
+    { icon: 'ListOrdered',     title: 'Antrian rapi di HP, tanpa papan tulis', desc: 'Pelanggan datang, masuk daftar. Selesai, tinggal geser statusnya.' },
+    { icon: 'CalendarClock',   title: 'Pelanggan bisa booking sendiri', desc: 'Dapat link buat ditaruh di bio Instagram atau WhatsApp, plus QR untuk ditempel di meja.' },
+    { icon: 'MapPin',          title: 'Absen karyawan pakai lokasi dan foto', desc: 'Cuma bisa absen kalau benar-benar di toko. Hasilnya langsung dipakai buat hitung gaji.' },
+    { icon: 'Building2',       title: 'Punya beberapa cabang? Semua kelihatan dari satu HP', desc: 'Bandingkan omzet tiap cabang tanpa harus datang ke sana.' },
+    { icon: 'Star',            title: 'Pelanggan langganan dapat poin', desc: 'Riwayat poinnya lengkap, jadi tidak ada ribut soal poin hilang.' },
+    { icon: 'BarChart3',       title: 'Laporan yang gampang dibaca', desc: 'Layanan paling laris, kapster paling ramai, dan sisa untung setelah gaji dan belanja.' },
+    { icon: 'Receipt',         title: 'Struk bisa dicetak atau dikirim ke WhatsApp', desc: 'Lengkap dengan nama toko dan logo.' },
+    { icon: 'CreditCard',      title: 'Terima tunai, transfer, dan QRIS', desc: 'Dicatat terpisah, jadi setoran akhir hari tidak tertukar.' },
+    { icon: 'MessageCircle',   title: 'Pelanggan dapat pesan WhatsApp otomatis', desc: 'Konfirmasi booking dan pengingat jadwal, dikirim dari nomor toko sendiri.' },
+    { icon: 'FileSpreadsheet', title: 'Data bisa diunduh ke Excel', desc: 'Transaksi, gaji, absen, belanja — semua rapi waktu dibuka.' },
+    { icon: 'Flag',            title: 'Dibuat untuk toko Indonesia', desc: 'Rupiah, tanggal Indonesia, alamat sampai kelurahan.' },
+  ]),
   trustItems: JSON.stringify(['Gratis 14 hari', 'Tanpa kartu kredit', 'Aktif langsung']),
   steps: JSON.stringify([
     { title: 'Daftar gratis',   desc: 'Bikin akun toko cuma semenit. Langsung dapat masa coba 14 hari, tanpa kartu kredit.' },
@@ -88,6 +108,7 @@ const DEFAULTS = {
   ]),
   sections: JSON.stringify({
     features:     { kicker: 'Fitur Lengkap',  title: 'Semua yang barbershop kamu butuhin', subtitle: 'Nggak perlu spreadsheet atau aplikasi terpisah. Dari kasir sampai laporan pemilik, semua sudah satu paket.' },
+    benefits:     { kicker: 'Keunggulan', title: 'Yang bikin repot tiap hari, kami bereskan', subtitle: 'Bukan janji muluk — ini hal-hal kecil yang bikin pusing tiap tutup toko dan tiap tanggal gajian.' },
     steps:        { kicker: 'Gampang Banget', title: 'Mulai cuma 3 langkah', subtitle: 'Dari daftar sampai toko jalan, bisa kelar hari ini juga. Beneran.' },
     compare:      { kicker: 'Sebelum vs Sesudah', title: 'Dari serba manual jadi serba otomatis', subtitle: 'Perbedaan yang langsung terasa di hari pertama — bukan sekadar ganti alat, tapi ganti cara kerja.' },
     roi:          { kicker: 'Hitung Kebocoran', title: 'Berapa rupiah yang menguap tiap bulan?', subtitle: 'Geser sesuai kondisi barbershop kamu dan lihat potensi tambahan omzet yang bisa diselamatkan.' },
@@ -226,6 +247,11 @@ const heroUpdateSchema = z.object({
     image: z.string().max(500).optional(),  // URL screenshot/foto opsional per fitur
     video: z.string().max(500).optional(),  // URL video opsional per fitur (diunggah)
   })).optional(),
+  benefits:     z.array(z.object({
+    icon:  z.string().max(40),
+    title: z.string().max(120),
+    desc:  z.string().max(400),
+  })).max(24).optional(),
   trustItems:   z.array(z.string().max(60)).max(6).optional(),
   steps:        z.array(z.object({
     title: z.string().max(120),

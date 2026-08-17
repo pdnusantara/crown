@@ -657,6 +657,7 @@ function HeroEditor() {
 
   const [form, setForm] = useState(null)
   const [features, setFeatures] = useState([])
+  const [benefits, setBenefits] = useState([])
   const [trustItems, setTrustItems] = useState([])
   const [showPresets, setShowPresets] = useState(false)
 
@@ -676,6 +677,7 @@ function HeroEditor() {
       // _k = kunci stabil per-fitur (bukan index) supaya kartu tak remount saat
       // tambah/hapus → cegah "lompat" & reset state field upload. Dibuang saat simpan.
       setFeatures((Array.isArray(data.hero.features) ? data.hero.features : []).map(f => ({ ...f, _k: crypto.randomUUID() })))
+      setBenefits((Array.isArray(data.hero.benefits) ? data.hero.benefits : []).map(b => ({ ...b, _k: crypto.randomUUID() })))
       setTrustItems(Array.isArray(data.hero.trustItems) ? data.hero.trustItems : [])
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -688,6 +690,7 @@ function HeroEditor() {
       await updateHero.mutateAsync({
         ...form,
         features: features.map(({ _k, ...f }) => f), // buang kunci internal
+        benefits: benefits.map(({ _k, ...b }) => b),
         trustItems: trustItems.map(t => t.trim()).filter(Boolean),
       })
       toast.success('Konten landing tersimpan')
@@ -704,6 +707,15 @@ function HeroEditor() {
   }
   function removeFeature(i) {
     setFeatures(arr => arr.filter((_, idx) => idx !== i))
+  }
+  function updateBenefit(i, key, value) {
+    setBenefits(arr => arr.map((b, idx) => idx === i ? { ...b, [key]: value } : b))
+  }
+  function addBenefit() {
+    setBenefits(arr => [...arr, { icon: 'Sparkles', title: '', desc: '', _k: crypto.randomUUID() }])
+  }
+  function removeBenefit(i) {
+    setBenefits(arr => arr.filter((_, idx) => idx !== i))
   }
   // Tambahkan fitur dari katalog brand, lewati yang judulnya sudah ada.
   function addPresets(items) {
@@ -918,6 +930,55 @@ function HeroEditor() {
           </p>
           <Button onClick={handleSave} loading={updateHero.isPending} icon={Save} fullWidth variant="secondary">
             Simpan Fitur
+          </Button>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-semibold text-off-white">Keunggulan (kartu ringkas)</h3>
+            <Button size="sm" variant="outline" icon={Plus} onClick={addBenefit}>Tambah</Button>
+          </div>
+        </CardHeader>
+        <CardBody className="space-y-3">
+          {benefits.length === 0 && (
+            <p className="text-sm text-muted text-center py-4">Belum ada keunggulan — landing memakai daftar bawaan.</p>
+          )}
+          {benefits.map((b, i) => (
+            <div key={b._k} className="p-3 bg-dark-surface rounded-xl border border-dark-border space-y-2">
+              <div className="flex items-center gap-2">
+                <Input
+                  label="Icon (Lucide)"
+                  placeholder="Wallet"
+                  value={b.icon}
+                  onChange={e => updateBenefit(i, 'icon', e.target.value)}
+                />
+                <button onClick={() => removeBenefit(i)} className="mt-5 p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+              <Input
+                label="Judul"
+                value={b.title}
+                onChange={e => updateBenefit(i, 'title', e.target.value)}
+              />
+              <div>
+                <label className="text-xs text-muted block mb-1.5">Penjelasan singkat</label>
+                <textarea
+                  rows={2}
+                  className="w-full bg-dark-card border border-dark-border text-off-white rounded-xl px-3 py-2 text-sm outline-none focus:border-brand/60"
+                  value={b.desc}
+                  onChange={e => updateBenefit(i, 'desc', e.target.value)}
+                />
+              </div>
+            </div>
+          ))}
+          <p className="text-xs text-muted">
+            Kartu ringkas (ikon + satu kalimat) — cocok untuk daftar panjang, beda dari <span className="text-off-white">Fitur Unggulan</span> yang tiap itemnya satu baris besar bergambar. Urutan kartu mengikuti urutan di sini.
+          </p>
+          <Button onClick={handleSave} loading={updateHero.isPending} icon={Save} fullWidth variant="secondary">
+            Simpan Keunggulan
           </Button>
         </CardBody>
       </Card>
@@ -1159,6 +1220,7 @@ function FAQEditor() {
 // PATCH /landing/hero (partial) yang sama dengan editor Hero.
 const SECTION_LABELS = {
   features:     'Section "Fitur"',
+  benefits:     'Section "Keunggulan"',
   steps:        'Section "Cara Mulai"',
   compare:      'Section "Sebelum vs Sesudah"',
   roi:          'Section "Kalkulator ROI"',
