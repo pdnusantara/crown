@@ -46,7 +46,13 @@ const PASSWORD = 'RahasiaUji123!';
 const SLUG = 'ujiapplogin';
 // Email diberi prefix seragam supaya cleanup bisa menyapu semuanya walau test
 // gagal di tengah jalan.
-const PREFIX = 'apptest-';
+// Prefix HARUS lebih spesifik dari 'apptest-'. Cleanup di bawah menghapus
+// user berdasarkan awalan email, dan 'apptest-' juga cocok dengan milik
+// berkas tes lain (apptest-cashout-, apptest-beranda-, apptest-scope-).
+// Karena node --test menjalankan berkas secara paralel, cleanup ini pernah
+// menghapus user berkas lain di tengah jalan — seluruh tesnya gagal login
+// dengan 401 yang menyesatkan.
+const PREFIX = 'apptest-applogin-';
 const EMAIL_KASIR = `${PREFIX}kasir@uji.local`;
 const EMAIL_NONAKTIF = `${PREFIX}nonaktif@uji.local`;
 const EMAIL_SUPERADMIN = `${PREFIX}sa@uji.local`;
